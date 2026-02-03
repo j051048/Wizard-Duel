@@ -117,7 +117,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
          <div className="max-w-2xl mx-auto flex flex-col items-center gap-2">
             <PlayerFrame 
               isPlayer={false}
-              name={duelState.aiProfile?.name || "Dark Sorcerer"}
+              name={duelState.aiProfile?.name || "黑魔法师"}
               hp={duelState.opponentHP}
               armor={duelState.opponentArmor}
               maxHp={GAME_CONFIG.maxHP}
@@ -224,9 +224,9 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           {/* 左下角：玩家状态 (PlayerFrame) - 移动端绝对定位缩放 */}
           <div className="absolute left-0 bottom-2 z-40 w-56 scale-[0.65] origin-bottom-left md:static md:w-72 md:scale-100 pointer-events-auto">
              <PlayerFrame 
-                isPlayer={true}
-                name="Player"
-                hp={duelState.playerHP}
+              isPlayer={true}
+              name="玩家"
+              hp={duelState.playerHP}
                 armor={duelState.playerArmor}
                 maxHp={GAME_CONFIG.maxHP}
                 mana={duelState.playerMana}
@@ -247,7 +247,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                 `}
               >
                 <div className="text-xl md:text-3xl">🛑</div>
-                <div className="text-[10px] md:text-xs font-bold uppercase tracking-widest mt-0.5">PASS</div>
+                <div className="text-[10px] md:text-xs font-bold uppercase tracking-widest mt-0.5">结束</div>
              </button>
              <button 
                 onClick={onSurrender}
@@ -274,7 +274,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                         isAffordable={canUse}
                         disabled={!canUse}
                       />
-                      {!canUse && <div className="absolute inset-0 bg-black/70 rounded-xl flex items-center justify-center font-bold text-xs text-white/50">USED</div>}
+                      {!canUse && <div className="absolute inset-0 bg-black/70 rounded-xl flex items-center justify-center font-bold text-xs text-white/50">已用</div>}
                     </div>
                   );
                 })}

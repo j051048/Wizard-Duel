@@ -320,6 +320,27 @@ export const SpellCard: React.FC<SpellCardProps> = ({
           </div>
         )}
       </div>
+
+      {/* 详细描述覆盖层 (Hover Overlay) - 提供完整中文释义 */}
+      <div className={`
+        absolute inset-0 z-30 flex flex-col items-center justify-center p-3 text-center
+        bg-slate-900/95 backdrop-blur-sm transition-all duration-300
+        ${isHovered && !isSmall ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+      `}>
+        <div className="mb-2 text-2xl animate-bounce">{spell.emoji}</div>
+        <h4 className={`text-sm font-bold mb-2 ${spell.color} drop-shadow-md`}>
+          {spell.name}
+        </h4>
+        <div className="w-full h-px bg-white/20 mb-2"></div>
+        <p className="text-[10px] sm:text-xs text-slate-100 leading-relaxed font-medium">
+          {spell.description}
+        </p>
+        
+        {/* 底部提示 */}
+        <div className="mt-3 text-[9px] text-white/50 bg-white/10 px-2 py-0.5 rounded-full">
+           {getMechanicName(spell.mechanic)}
+        </div>
+      </div>
       
       {/* Active Glow Effect */}
       {isSelected && (
