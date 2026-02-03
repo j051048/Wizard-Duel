@@ -43,6 +43,7 @@ export default defineConfig(({ mode }) => {
             ]
           },
           workbox: {
+            maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MiB
             globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,mp3}'],
             runtimeCaching: [
               {
@@ -52,7 +53,7 @@ export default defineConfig(({ mode }) => {
                   cacheName: 'google-fonts-cache',
                   expiration: {
                     maxEntries: 10,
-                    maxAgeSeconds: 60 * 60 * 24 * 365 // <== 365 days
+                    maxAgeSeconds: 60 * 60 * 24 * 365
                   },
                   cacheableResponse: {
                     statuses: [0, 200]
@@ -66,7 +67,7 @@ export default defineConfig(({ mode }) => {
                   cacheName: 'api-cache',
                   expiration: {
                     maxEntries: 50,
-                    maxAgeSeconds: 60 * 60 * 24 // <== 24 hours
+                    maxAgeSeconds: 60 * 60 * 24
                   }
                 }
               }
