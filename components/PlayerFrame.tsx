@@ -97,8 +97,16 @@ export const HealthBar: React.FC<HealthBarProps> = ({ current, max, isPlayer }) 
         <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t from-black/30 to-transparent z-10" />
       </div>
 
+      {/* 血条边框素材 (UI Asset) */}
+      <img 
+        src="/ui/health-bar-frame.webp" 
+        alt="frame" 
+        className="absolute -inset-1 w-[calc(100%+8px)] h-[calc(100%+8px)] pointer-events-none z-20 opacity-80 mix-blend-overlay"
+        onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+      />
+
       {/* 数值显示与图标 - 移出Bar体，更清晰 */}
-      <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+      <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
         <span className={`
           text-white text-sm font-bold drop-shadow-md tracking-wider flex items-center gap-1.5
           ${isCritical ? 'animate-pulse text-red-100' : ''}

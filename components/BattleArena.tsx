@@ -75,6 +75,16 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         {/* 氛围遮罩 */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black/80" />
         <div className="absolute inset-0 bg-purple-900/10 mix-blend-color-dodge pointer-events-none" />
+        
+        {/* 魔法阵 (UI Asset) */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-30">
+          <img 
+            src="/ui/magic-circle.webp" 
+            alt="Magic Circle" 
+            className="w-[80vw] h-[80vw] md:w-[60vh] md:h-[60vh] animate-[spin_60s_linear_infinite] opacity-60 mix-blend-screen"
+            onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+          />
+        </div>
       </div>
 
       {/* === 装饰边框与角落 === */}
@@ -85,30 +95,15 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
         {/* 角落 SVG 矢量装饰 (SVG代码保持不变) */}
         {/* 左上角 */}
-        <svg className="absolute top-0 left-0 w-24 h-24 md:w-48 md:h-48 text-amber-500/60 drop-shadow-[0_0_10px_rgba(245,158,11,0.3)]" viewBox="0 0 100 100" fill="none">
-          <path d="M0,0 L30,0 L35,5 L100,5 L100,2 L32,2 L28,-2 L-2,-2 L-2,28 L2,32 L2,100 L5,100 L5,35 L0,30 Z" fill="currentColor" />
-          <path d="M0,0 L40,0 L40,1 L1,1 L1,40 L0,40 Z" fill="currentColor" opacity="0.6" />
-          <circle cx="15" cy="15" r="2" fill="currentColor" className="animate-pulse" />
-        </svg>
-        
+        {/* 角落 装饰素材 (UI Assets) */}
+        {/* 左上角 */}
+        <img src="/ui/corner-tl.png" alt="frame" className="absolute top-0 left-0 w-24 h-24 md:w-32 md:h-32 object-contain pointer-events-none opacity-80" />
         {/* 右上角 */}
-        <svg className="absolute top-0 right-0 w-24 h-24 md:w-48 md:h-48 text-amber-500/60 drop-shadow-[0_0_10px_rgba(245,158,11,0.3)] transform scale-x-[-1]" viewBox="0 0 100 100" fill="none">
-          <path d="M0,0 L30,0 L35,5 L100,5 L100,2 L32,2 L28,-2 L-2,-2 L-2,28 L2,32 L2,100 L5,100 L5,35 L0,30 Z" fill="currentColor" />
-          <path d="M0,0 L40,0 L40,1 L1,1 L1,40 L0,40 Z" fill="currentColor" opacity="0.6" />
-          <circle cx="15" cy="15" r="2" fill="currentColor" className="animate-pulse" />
-        </svg>
-        
+        <img src="/ui/corner-tr.png" alt="frame" className="absolute top-0 right-0 w-24 h-24 md:w-32 md:h-32 object-contain pointer-events-none opacity-80" />
         {/* 左下角 */}
-        <svg className="absolute bottom-0 left-0 w-24 h-24 md:w-48 md:h-48 text-amber-500/60 drop-shadow-[0_0_10px_rgba(245,158,11,0.3)] transform scale-y-[-1]" viewBox="0 0 100 100" fill="none">
-          <path d="M0,0 L30,0 L35,5 L100,5 L100,2 L32,2 L28,-2 L-2,-2 L-2,28 L2,32 L2,100 L5,100 L5,35 L0,30 Z" fill="currentColor" />
-          <path d="M0,0 L40,0 L40,1 L1,1 L1,40 L0,40 Z" fill="currentColor" opacity="0.6" />
-        </svg>
-
+        <img src="/ui/corner-bl.png" alt="frame" className="absolute bottom-0 left-0 w-24 h-24 md:w-32 md:h-32 object-contain pointer-events-none opacity-80" />
         {/* 右下角 */}
-        <svg className="absolute bottom-0 right-0 w-24 h-24 md:w-48 md:h-48 text-amber-500/60 drop-shadow-[0_0_10px_rgba(245,158,11,0.3)] transform scale-[-1]" viewBox="0 0 100 100" fill="none">
-          <path d="M0,0 L30,0 L35,5 L100,5 L100,2 L32,2 L28,-2 L-2,-2 L-2,28 L2,32 L2,100 L5,100 L5,35 L0,30 Z" fill="currentColor" />
-          <path d="M0,0 L40,0 L40,1 L1,1 L1,40 L0,40 Z" fill="currentColor" opacity="0.6" />
-        </svg>
+        <img src="/ui/corner-br.png" alt="frame" className="absolute bottom-0 right-0 w-24 h-24 md:w-32 md:h-32 object-contain pointer-events-none opacity-80" />
       </div>
 
       {/* === 顶部控制栏 === */}
