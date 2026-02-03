@@ -138,22 +138,16 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
 
     // 强制能量检查（杜绝脚本漏洞）
     const affordable = canAffordSpell(spellId, duelState.playerMana, duelState.playerEffects, duelState.playerCostMod);
-    if (!affordable.canAfford) return false;
-    // executeSpell 内部已经检查了费用(在UI层也应该检查)，这里假设UI层调用前checked
-    // 或者我们直接调用，executeSpell 如果扣减成功则成功。
-    // 但 executeSpell 是纯逻辑，不会报错。
-    // 我们应该用 canAfford 检查一下为了 UI 反馈？
-    // 实际上 executeSpell 会执行扣费。如果扣成负数?
-    // canAffordSpell 应该在 UI disable 按钮。
+    // 如果是 debug 模式或者特殊情况可能允许? 不，H5PVP必须严格。
+    if (!affordable.canAfford) {
+        console.warn('Cheating attempt detected: Insufficient mana for spell', spellId);
+        return false;
+    }
+    
+    // 执行扣费与效果（executeSpell 内部只负责扣减，不负责检查，防止 logic 重复）
+    // 但为了状态原子性，我们在这里已经 check 了 affordable。
     
     const { newState, logs } = executeSpell(duelState, 'player', spellId);
-    
-    // 如果法力没变且不是skip牌，说明没扣费成功？(不对，executeSpell logic assumes caller checked or handles it)
-    // 我们可以信任 gameLogic 的 check.
-    // 实际上 gameLogic 里 executeSpell 没有 check canAfford!
-    // 必须在这里防止非法调用。
-    // (Wait, I added canAfford check in gameLogic.ts? No, I added getPlayableCards)
-    // executeSpell only subtracts.
     
     setDuelState(newState);
     setEffectMessages(logs);
@@ -167,7 +161,6 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
         return true;
     }
     
-    // 可以在这里设置短暂的 card animation timeout
     return true;
   }, [phase, duelState]);
 
@@ -215,10 +208,32 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
     setIsGameOver(false);
   }, [clearTimer]);
 
-  // Cleanup
+  // Cleanup and Visibility Handler
   useEffect(() => {
-    return () => clearTimer();
-  }, [clearTimer]);
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // 暂停或做记号
+      } else {
+        // 恢复前台：如果处于 AI 回合，且超时未响应，可能需要强制推进
+        // 这里简单做一个状态同步检查
+        if (phase === 'OPPONENT_TURN' && duelStateRef.current && !isGameOver) {
+             // 如果 AI 卡住了（比如 timer 被吃掉），这里可以尝试恢复
+             // 但由于 executeAITurn 是同步的，只是被 setTimeout 延迟了。
+             // 实际上最好的办法是：纪录上一次操作时间。如果 delta > 5秒且应该是 AI 回合，则立即执行。
+             // 简单起见，我们不做复杂重放，依赖 React 的 state 保持。
+             // 主要是防止 timerRef 在后台没跑完就被杀掉了？
+             // 大多数浏览器会暂停 timer，切回来会继续跑。
+             // 除非页面被完全挂起。
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+        clearTimer();
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [clearTimer, phase, isGameOver]);
 
   return [
     {

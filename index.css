@@ -151,6 +151,19 @@
     user-select: none;
   }
 
+  /* 图片防拖拽 */
+  img {
+    pointer-events: none;
+    -webkit-user-drag: none;
+  }
+
+  /* 允许部分交互元素 */
+  input, textarea, [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+    touch-action: manipulation;
+  }
+
   /* 基础滚动条样式 */
   ::-webkit-scrollbar {
     width: 8px;
