@@ -491,3 +491,5 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 };
 
 export default BattleArena;
+e x p o r t   d e f a u l t   B a t t l e A r e n a ;  
+ 

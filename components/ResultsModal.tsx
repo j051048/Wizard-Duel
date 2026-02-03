@@ -182,3 +182,5 @@ export const ResultsModal: React.FC<ResultsModalProps> = ({
     </div>
   );
 };
+e x p o r t   d e f a u l t   R e s u l t s M o d a l ;  
+ 
