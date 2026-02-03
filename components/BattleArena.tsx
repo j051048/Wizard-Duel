@@ -300,44 +300,60 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         {/* 玩家手牌 */}
         <div className="flex justify-center pb-4 relative z-30" style={{ perspective: '1000px' }}>
           {phase === 'PLAYER_TURN' ? (
-            <div className="flex items-end -space-x-4 md:-space-x-2">
-              {duelState.playerHand.length === 0 ? (
-                <div className="text-gray-500 text-sm py-8 bg-black/50 px-8 rounded-lg">牌组耗尽...</div>
-              ) : (
-                duelState.playerHand.map((spellId, index) => {
-                  const spell = getSpellById(spellId);
-                  const isAffordable = playableCards.includes(spellId);
-                  const totalCards = duelState.playerHand.length;
-                  const middleIndex = (totalCards - 1) / 2;
-                  const rotation = (index - middleIndex) * 6;
-                  const yOffset = Math.abs(index - middleIndex) * 12;
-
-                  return (
-                    <div 
-                      key={`${spellId}-${index}`} 
-                      className="relative transition-all duration-300 hover:z-50 group pointer-events-auto"
-                      style={{ 
-                        zIndex: index,
-                      }}
-                    >
-                      <div 
-                        className={`
-                          transform transition-all duration-300 origin-bottom 
-                          ${isAffordable ? 'group-hover:-translate-y-16 group-hover:rotate-0 group-hover:scale-110 cursor-pointer' : ''}
-                        `}
-                        style={{ transform: `rotate(${rotation}deg) translateY(${yOffset}px)` }}
-                      >
-                        <SpellCard 
-                          spell={spell} 
-                          onClick={() => onPlayCard(spellId)}
-                          isAffordable={isAffordable}
-                          disabled={!isAffordable}
-                        />
-                      </div>
-                    </div>
-                  );
-                })
+            <div className="flex flex-col items-center">
+              {/* 跳过按钮 (当无牌可出时显示) */}
+              {playableCards.length === 0 && (
+                 <button 
+                     onClick={() => onPlayCard('skip')}
+                     className="mb-6 px-8 py-3 bg-gray-900/90 hover:bg-gray-800 text-red-400 border border-red-500/50 rounded-full font-bold shadow-[0_0_20px_rgba(220,38,38,0.4)] backdrop-blur-md transition-all animate-bounce z-50 pointer-events-auto cursor-pointer flex items-center gap-2"
+                 >
+                     <span className="text-2xl">🏳️</span>
+                     <div className="text-left">
+                       <div className="text-sm text-gray-300">法力不足</div>
+                       <div className="text-lg font-black">跳过回合</div>
+                     </div>
+                 </button>
               )}
+
+              <div className="flex items-end -space-x-4 md:-space-x-2">
+                {duelState.playerHand.length === 0 ? (
+                  <div className="text-gray-500 text-sm py-8 bg-black/50 px-8 rounded-lg">牌组耗尽...</div>
+                ) : (
+                  duelState.playerHand.map((spellId, index) => {
+                    const spell = getSpellById(spellId);
+                    const isAffordable = playableCards.includes(spellId);
+                    const totalCards = duelState.playerHand.length;
+                    const middleIndex = (totalCards - 1) / 2;
+                    const rotation = (index - middleIndex) * 6;
+                    const yOffset = Math.abs(index - middleIndex) * 12;
+
+                    return (
+                      <div 
+                        key={`${spellId}-${index}`} 
+                        className="relative transition-all duration-300 hover:z-50 group pointer-events-auto"
+                        style={{ 
+                          zIndex: index,
+                        }}
+                      >
+                        <div 
+                          className={`
+                            transform transition-all duration-300 origin-bottom 
+                            ${isAffordable ? 'group-hover:-translate-y-16 group-hover:rotate-0 group-hover:scale-110 cursor-pointer' : 'grayscale opacity-60'}
+                          `}
+                          style={{ transform: `rotate(${rotation}deg) translateY(${yOffset}px)` }}
+                        >
+                          <SpellCard 
+                            spell={spell} 
+                            onClick={() => isAffordable && onPlayCard(spellId)}
+                            isAffordable={isAffordable}
+                            disabled={!isAffordable}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
           ) : (
             <div className="px-8 py-4 bg-black/70 backdrop-blur-md border border-purple-500/30 rounded-xl shadow-xl">

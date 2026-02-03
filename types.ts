@@ -6,7 +6,7 @@
 
 // ============ 基础类型 ============
 
-export type SpellType = "fire" | "vine" | "ice" | "thunder" | "rock";
+export type SpellType = "fire" | "vine" | "ice" | "thunder" | "rock" | "skip";
 
 export type Rarity = "common" | "uncommon" | "rare" | "mythic";
 
@@ -18,7 +18,7 @@ export type Rarity = "common" | "uncommon" | "rare" | "mythic";
  * - charge: 蓄力 - 连续使用伤害翻倍
  * - fortify: 坚韧 - 减少受到的伤害
  */
-export type Mechanic = "burn" | "tangle" | "freeze" | "charge" | "fortify";
+export type Mechanic = "burn" | "tangle" | "freeze" | "charge" | "fortify" | "skip";
 
 // ============ 卡牌定义 ============
 

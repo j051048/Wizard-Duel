@@ -109,6 +109,22 @@ export const SPELLS: Spell[] = [
     description: '造成0点伤害，但获得5点护甲。',
     shortDesc: 'Fortify: +5 甲'
   },
+  { 
+    id: 'skip', 
+    name: 'Pass Turn',        // 跳过回合
+    emoji: '🏳️', 
+    artSrc: '',               // 无图
+    color: 'text-gray-400', 
+    borderColor: 'border-gray-400',
+    shadowColor: 'rgba(156,163,175,0.5)',
+    beats: 'skip',            // 自指占位
+    manaCost: 0, 
+    damage: 0, 
+    rarity: 'common',
+    mechanic: 'skip',
+    description: '跳过本回合。',
+    shortDesc: 'Pass'
+  },
 ];
 
 // ============ 下注选项 ============
@@ -167,6 +183,7 @@ export const getMechanicName = (mechanic: string): string => {
     freeze: '冻结',
     charge: '充能',
     fortify: '坚韧',
+    skip: '跳过',
   };
   return names[mechanic] || mechanic;
 };

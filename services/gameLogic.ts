@@ -77,7 +77,7 @@ export const canAffordSpell = (
   costMod: number = 0 // [Mechanism] 增加费用修正参数
 ): { canAfford: boolean; reason?: string } => {
   const spell = getSpellById(spellId);
-  const finalCost = Math.max(0, spell.manaCost + costMod); // 费用修正
+  const finalCost = spell.id === 'skip' ? 0 : Math.max(0, spell.manaCost + costMod); // 费用修正 (跳过牌不受影响)
   
   // 检查法力是否足够
   if (mana < finalCost) {
