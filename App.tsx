@@ -1,11 +1,7 @@
 /**
  * Wizard Duel - 主应用组件
  * 
- * 重构后的架构：
- * - 使用 usePreloader 预加载资源
- * - 使用 useGameLoop 管理战斗状态机
- * - 使用 useAudioManager 管理音效
- * - 组件拆分为 LoadingScreen, Lobby, BattleArena, ResultsModal
+ * Patch 2.0: 移除废弃的 Phase 和 RoundResult 依赖
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -29,9 +25,7 @@ import { calculatePayout } from './services/gameLogic';
 import { GameState, BattleRecord, PlayerStats, SpellType } from './types';
 
 function App() {
-  // ============ Web3 状态 ============
   const { address, isConnected } = useAccount();
-
 
   // ============ 应用状态 ============
   const [isResourcesLoaded, setIsResourcesLoaded] = useState(false);
@@ -63,12 +57,10 @@ function App() {
 
   // ============ 初始化 ============
 
-  // 启动预加载
   useEffect(() => {
     startPreloading();
   }, [startPreloading]);
 
-  // 处理身份识别
   useEffect(() => {
     if (isConnected && address) {
       setActiveAddress(address);
@@ -82,43 +74,44 @@ function App() {
     }
   }, [isConnected, address]);
 
-  // 加载用户数据
   useEffect(() => {
     if (activeAddress) {
       loadUserData(activeAddress);
     }
   }, [activeAddress]);
 
-  // 加载排行榜
   useEffect(() => {
     loadLeaderboard();
   }, []);
 
-  // 监听游戏循环状态变化 - 处理游戏结束
+  // 监听游戏结束
   useEffect(() => {
     if (gameLoopState.isGameOver && gameLoopState.gameResult) {
       handleGameEnd(gameLoopState.gameResult);
     }
   }, [gameLoopState.isGameOver, gameLoopState.gameResult]);
 
-  // 监听回合结果 - 播放音效和震动
+  // ============ 音效与震动反馈 (Patch 2.0) ============
+  // 由于移除了 RoundResult，我们需要监听 Text 或 Logs 来触发反馈
   useEffect(() => {
-    if (gameLoopState.roundResult && gameLoopState.phase === 'DAMAGE_PHASE') {
-      const { outcome } = gameLoopState.roundResult;
-      
-      if (outcome === 'WIN') {
-        audioActions.playSfx('hit');
-        setIsOpponentShaking(true);
-        setTimeout(() => setIsOpponentShaking(false), 500);
-      } else if (outcome === 'LOSS') {
-        audioActions.playSfx('hit');
-        setIsPlayerShaking(true);
-        setTimeout(() => setIsPlayerShaking(false), 500);
-      } else {
-        audioActions.playSfx('block');
-      }
-    }
-  }, [gameLoopState.roundResult, gameLoopState.phase]);
+     // 简单的震动反馈：当 HP 变化时 (需要在 DuelState 里记录上一帧 HP？或者在 useGameLoop 里 emit event)
+     // 暂时简化：每次有 effectMessages 更新，播放通用音效
+     if (gameLoopState.effectMessages.length > 0) {
+        const lastMsg = gameLoopState.effectMessages[gameLoopState.effectMessages.length - 1];
+        if (lastMsg.includes('受到')) {
+            setIsPlayerShaking(true);
+            audioActions.playSfx('hit');
+            setTimeout(() => setIsPlayerShaking(false), 500);
+        } else if (lastMsg.includes('造成')) {
+            setIsOpponentShaking(true);
+            audioActions.playSfx('hit');
+            setTimeout(() => setIsOpponentShaking(false), 500);
+        } else {
+            // buffs
+        }
+     }
+  }, [gameLoopState.effectMessages, audioActions]);
+
 
   // ============ 数据加载 ============
 
@@ -147,11 +140,8 @@ function App() {
 
   // ============ 游戏逻辑 ============
 
-
-
   const handleResourcesLoaded = () => {
     setIsResourcesLoaded(true);
-    // 播放大厅 BGM
     audioActions.playBgm('lobby');
   };
 
@@ -163,8 +153,6 @@ function App() {
 
     gameLoopActions.startDuel();
     setGameState('DUEL');
-    
-    // 切换到战斗 BGM
     audioActions.playBgm('battle');
   }, [balance, selectedBet, gameLoopActions, audioActions]);
 
@@ -188,7 +176,6 @@ function App() {
     
     const { payout, isCrit } = calculatePayout(selectedBet, result);
 
-    // 播放结束音效
     if (result === 'WIN') {
       audioActions.playSfx('victory');
     } else {
@@ -234,7 +221,6 @@ function App() {
 
   // ============ 渲染 ============
 
-  // 显示加载画面
   if (!isResourcesLoaded) {
     return (
       <LoadingScreen 
@@ -246,18 +232,17 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white font-tech selection:bg-purple-500/30">
-      {/* 顶部导航（仅大厅显示） */}
+      {/* 顶部导航 */}
       {gameState === 'LOBBY' && (
         <header className="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-md border-b border-white/10 px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg">
               <Sparkles size={20} className="text-white" />
             </div>
+            {/* Title omitted for brevity */}
           </div>
 
           <div className="flex items-center gap-3">
-
-
             <div className="bg-black/60 border border-purple-500/30 rounded-xl px-4 py-2 flex items-center gap-2">
               <span className="text-purple-400 text-xs uppercase font-bold">法力</span>
               <span className="font-mono font-bold text-white">{isLoading ? '...' : balance}</span>
@@ -287,11 +272,19 @@ function App() {
             phase={gameLoopState.phase}
             playerCard={gameLoopState.playerCard}
             opponentCard={gameLoopState.opponentCard}
-            roundResult={gameLoopState.roundResult}
+            // Removed roundResult
             resultText={gameLoopState.resultText}
             effectMessages={gameLoopState.effectMessages}
             selectedBet={selectedBet}
             onPlayCard={handlePlayCard}
+            onDraft={(id) => {
+              gameLoopActions.draftCard(id);
+              audioActions.playSfx('button');
+            }}
+            onPass={() => {
+              gameLoopActions.passTurn();
+              audioActions.playSfx('button');
+            }}
             onSurrender={handleSurrender}
             isMuted={audioState.isMuted}
             onToggleMute={audioActions.toggleMute}

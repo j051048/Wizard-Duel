@@ -98,7 +98,7 @@ export const Lobby: React.FC<LobbyProps> = ({
               <BookOpen size={10} /> 玩法说明
             </button>
           </div>
-          <RulesModal isOpen={isRulesOpen} onClose={() => setIsRulesOpen(false)} />
+          {/* RulesModal 移出此区域 */}
         </section>
 
         {/* 下注选择 */}
@@ -197,6 +197,9 @@ export const Lobby: React.FC<LobbyProps> = ({
           </div>
         </section>
       </div>
+
+      {/* 规则弹窗 (移至最外层) */}
+      <RulesModal isOpen={isRulesOpen} onClose={() => setIsRulesOpen(false)} />
     </div>
   );
 };

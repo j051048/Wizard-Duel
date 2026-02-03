@@ -54,12 +54,10 @@ export interface Spell {
 export type GameState = "LOBBY" | "DUEL" | "RESULT";
 
 export type DuelPhase =
-  | "PLAYER_TURN" // 玩家选择阶段
-  | "OPPONENT_THINKING" // 对手思考中
-  | "REVEAL" // 揭牌阶段
-  | "DAMAGE_PHASE" // 伤害结算阶段
-  | "EFFECTS_PHASE" // 效果结算阶段
-  | "ROUND_RESET"; // 回合重置
+  | "DRAFT_PHASE" // 选牌阶段
+  | "PLAYER_TURN" // 玩家出牌阶段
+  | "OPPONENT_TURN" // 对手出牌阶段
+  | "ROUND_RESET"; // 回合结束/重置
 
 // ============ 状态效果 ============
 
@@ -88,6 +86,7 @@ export interface DuelState {
   playerHand: SpellType[];
   playerDeck: SpellType[];
   opponentHandSize: number;
+  draftOptions: SpellType[]; // 新增：选牌选项
 
   // 状态效果
   playerEffects: StatusEffect[];
