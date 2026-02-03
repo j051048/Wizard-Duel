@@ -38,12 +38,14 @@ export const createInitialDuelState = (): DuelState => {
   
   return {
     playerHP: GAME_CONFIG.maxHP,
+    playerArmor: 0, // [P0] 初始护甲
     opponentHP: GAME_CONFIG.maxHP,
+    opponentArmor: 0, // [P0] 初始护甲
     
     playerMana: GAME_CONFIG.startingMana,
-    playerMaxMana: GAME_CONFIG.maxMana,
+    playerMaxMana: GAME_CONFIG.startingMana, // 起始法力上限也是1
     opponentMana: GAME_CONFIG.startingMana,
-    opponentMaxMana: GAME_CONFIG.maxMana,
+    opponentMaxMana: GAME_CONFIG.startingMana,
     
     playerHand,
     playerDeck,
@@ -54,6 +56,8 @@ export const createInitialDuelState = (): DuelState => {
     
     playerLastSpell: null,
     opponentLastSpell: null,
+    playerCostMod: 0, // [Mechanism] 费用修正
+    opponentCostMod: 0,
     playerConsecutiveThunder: 0,
     opponentConsecutiveThunder: 0,
     
@@ -69,20 +73,19 @@ export const createInitialDuelState = (): DuelState => {
 export const canAffordSpell = (
   spellId: SpellType, 
   mana: number, 
-  effects: StatusEffect[]
+  effects: StatusEffect[],
+  costMod: number = 0 // [Mechanism] 增加费用修正参数
 ): { canAfford: boolean; reason?: string } => {
   const spell = getSpellById(spellId);
+  const finalCost = Math.max(0, spell.manaCost + costMod); // 费用修正
   
   // 检查法力是否足够
-  if (mana < spell.manaCost) {
-    return { canAfford: false, reason: `法力不足 (需要 ${spell.manaCost}, 当前 ${mana})` };
+  if (mana < finalCost) {
+    return { canAfford: false, reason: `法力不足 (需要 ${finalCost}, 当前 ${mana})` };
   }
   
-  // 检查是否被缠绕效果限制
-  const tangleEffect = effects.find(e => e.type === 'tangle');
-  if (tangleEffect && spell.manaCost > 2) {
-    return { canAfford: false, reason: '被缠绕！无法使用高费法术' };
-  }
+  // 检查是否被冻结（跳过攻击并非无法出牌，但也可能设计为无法出攻击牌）
+  // 暂时 Freeze 效果由外部逻辑处理（跳过出牌阶段），这里只检查费用
   
   return { canAfford: true };
 };
@@ -93,53 +96,50 @@ export const canAffordSpell = (
 export const getPlayableCards = (
   hand: SpellType[], 
   mana: number, 
-  effects: StatusEffect[]
+  effects: StatusEffect[],
+  costMod: number = 0 // [Mechanism] Pass costMod
 ): SpellType[] => {
-  return hand.filter(spellId => canAffordSpell(spellId, mana, effects).canAfford);
+  return hand.filter(spellId => canAffordSpell(spellId, mana, effects, costMod).canAfford);
 };
 
 // ============ AI 逻辑 ============
 
 /**
- * AI 选择法术 - 带策略性
+ * AI 选择法术 - 暴雪级智能 (Patch 2.0)
  */
 export const getAISpell = (
   state: DuelState, 
   playerSpellId?: SpellType
 ): SpellType => {
+  // [Logic] 考虑费用修正
   const availableSpells = SPELLS.filter(spell => 
-    canAffordSpell(spell.id, state.opponentMana, state.opponentEffects).canAfford
+    canAffordSpell(spell.id, state.opponentMana, state.opponentEffects, state.opponentCostMod).canAfford
   );
   
+  // 如果被完全封锁（无牌可出），返回 null 或基础牌（虽然规则上这会导致跳过回合，这里假设总有低费牌或休息）
+  // 实际上如果 mana < 1 且 costMod 高，可能真没牌出。
   if (availableSpells.length === 0) {
-    // 如果没有可用法术，返回最低费的
-    return 'thunder';
+    // 紧急机制：如果没有牌可出，AI "休息" (不返回 null 避免类型错误，返回 'rock' 作为空过，或者需要处理 skip)
+    // 暂时假设总能出牌，或者返回 'rock' (最低费)
+    return SPELLS[0].id; 
   }
   
-  // 如果知道玩家的选择，50%几率选择克制卡
-  if (playerSpellId && Math.random() < 0.5) {
-    const playerSpell = getSpellById(playerSpellId);
-    const counter = availableSpells.find(s => s.beats === playerSpell.id);
-    if (counter) return counter.id;
+  // [Strategy] 斩杀优先
+  const killSpell = availableSpells.find(s => s.damage >= state.playerHP + state.playerArmor);
+  if (killSpell) return killSpell.id;
+
+  // [Strategy] 连击 (Thunder)
+  if (state.opponentLastSpell === 'thunder') {
+    const thunder = availableSpells.find(s => s.id === 'thunder');
+    if (thunder) return 'thunder';
   }
+
+  // [Strategy] 费用利用率最大化 (Mana Efficient)
+  // 简单逻辑：尽量打光法力
+  const bestSpell = availableSpells.sort((a, b) => b.manaCost - a.manaCost)[0];
   
-  // 策略权重：
-  // - 低血量时倾向防御(rock)
-  // - 高法力时倾向使用高费法术
-  // - 随机选择
-  
-  if (state.opponentHP <= 2 && availableSpells.find(s => s.id === 'rock')) {
-    if (Math.random() < 0.4) return 'rock';
-  }
-  
-  if (state.opponentMana >= 3 && availableSpells.find(s => s.id === 'fire')) {
-    if (Math.random() < 0.3) return 'fire';
-  }
-  
-  // 连击逻辑：如果上回合用了 Thunder，有更高概率再用
-  if (state.opponentLastSpell === 'thunder' && availableSpells.find(s => s.id === 'thunder')) {
-    if (Math.random() < 0.6) return 'thunder';
-  }
+  // 保持一点随机性防读牌
+  if (Math.random() < 0.8) return bestSpell.id;
   
   const randomIndex = Math.floor(Math.random() * availableSpells.length);
   return availableSpells[randomIndex].id;
@@ -163,7 +163,7 @@ export const determineWinner = (
 // ============ 回合结算 ============
 
 /**
- * 处理回合开始时的效果（如灼烧伤害）
+ * 处理回合开始时的效果
  */
 export const processStartOfTurnEffects = (state: DuelState): {
   playerDamage: number;
@@ -174,19 +174,21 @@ export const processStartOfTurnEffects = (state: DuelState): {
   let opponentDamage = 0;
   const expiredEffects: string[] = [];
   
-  // 处理玩家的灼烧效果
+  // Burn: DoT 伤害 (穿透护甲? 通常 DoT 穿透护甲或先扣甲)
+  // 暴雪规则：DoT 先扣甲。
+  // 但这里简单返回 damage，由主循环处理扣血。
+  
   state.playerEffects.forEach(effect => {
     if (effect.type === 'burn' && effect.value) {
       playerDamage += effect.value;
-      expiredEffects.push('玩家受到灼烧伤害');
+      expiredEffects.push(`🔥 灼烧伤害: -${effect.value}`);
     }
   });
   
-  // 处理对手的灼烧效果
   state.opponentEffects.forEach(effect => {
     if (effect.type === 'burn' && effect.value) {
       opponentDamage += effect.value;
-      expiredEffects.push('对手受到灼烧伤害');
+      expiredEffects.push(`🔥 对手灼烧: -${effect.value}`);
     }
   });
   
@@ -194,7 +196,24 @@ export const processStartOfTurnEffects = (state: DuelState): {
 };
 
 /**
- * 核心战斗结算逻辑
+ * 伤害结算辅助函数：护甲抵扣
+ */
+const applyDamage = (hp: number, armor: number, damage: number): {  newHP: number, newArmor: number, damageDealt: number  } => {
+  let remainingDamage = damage;
+  let newArmor = armor;
+  
+  if (newArmor > 0) {
+    const absorb = Math.min(newArmor, remainingDamage);
+    newArmor -= absorb;
+    remainingDamage -= absorb;
+  }
+  
+  const newHP = Math.max(0, hp - remainingDamage);
+  return { newHP, newArmor, damageDealt: damage }; // Return total raw damage done for UI, or effective? Keeping simplified.
+};
+
+/**
+ * 核心战斗结算逻辑 (Patch 2.0)
  */
 export const resolveRound = (
   state: DuelState,
@@ -209,115 +228,146 @@ export const resolveRound = (
   const newPlayerEffects: StatusEffect[] = [];
   const newOpponentEffects: StatusEffect[] = [];
   
-  let baseDamage = 0;
-  let bonusDamage = 0;
-  let reducedDamage = 0;
+  // 基础数值
+  let playerDamage = 0;
+  let playerArmorGain = 0;
+  let opponentDamage = 0;
+  let opponentArmorGain = 0;
+
+  // 1. 机制预处理 (Charge & Fortify & Armor)
   
-  // ===== 计算基础伤害 =====
+  // Player Mechanics
+  if (playerSpell.id === 'thunder' && state.playerLastSpell === 'thunder') {
+    playerDamage = playerSpell.damage * 2;
+    triggeredEffects.push('⚡ 闪电连击！伤害翻倍');
+  } else {
+    playerDamage = playerSpell.damage;
+  }
+  if (playerSpell.armorGain) {
+    playerArmorGain = playerSpell.armorGain;
+    triggeredEffects.push(`🛡️ 获得 ${playerArmorGain} 护甲`);
+  }
+
+  // Opponent Mechanics
+  if (opponentSpell.id === 'thunder' && state.opponentLastSpell === 'thunder') {
+    opponentDamage = opponentSpell.damage * 2;
+  } else {
+    opponentDamage = opponentSpell.damage;
+  }
+  if (opponentSpell.armorGain) {
+    opponentArmorGain = opponentSpell.armorGain;
+  }
+  
+  // 2. 胜负判定与效果应用
+  
+  // 初始化下回合的费用修正 (默认重置为0，除非触发Tangle)
+  // 注意：这个返回值并不是直接覆盖 State 的 CostMod，而是作为"新效果"的一部分
+  // 我们需要在返回的 RoundResult 里包含这些状态变化，或者这函数直接改 State (不推荐，纯函数更好)
+  // 这里返回 StatusEffect，主循环负责 apply。但 CostMod 是字段。
+  // 我们将把 CostMod 的变化放到 triggeredEffects 里说明，实际数值变化需在 Loop 中处理。
+  // 实际上 DuelState 应该在外部更新。这里只计算 Result。
+  
+  // 修正：我们需要返回 "state updates" 而不只是 effects。
+  // 鉴于 types.ts 中 RoundResult 没有 costMod 字段，我们需要扩展它，或者沿用 effects 数组来传递特殊指令。
+  // 简单起见：我们将 Tangle 实现为 StatusEffect，在 getPlayableCards 里解析它。
+  // 之前的逻辑：effects.find(e => e.type === 'tangle')
+  
   if (outcome === 'WIN') {
-    baseDamage = playerSpell.damage;
-    
-    // ===== 处理进攻方机制 =====
-    
-    // Burn: 获胜后给对手添加灼烧效果
+    // Player hits Opponent
+    // Apply Mechanics
     if (playerSpell.mechanic === 'burn') {
-      newOpponentEffects.push({
-        type: 'burn',
-        duration: 1,
-        value: 1
-      });
-      triggeredEffects.push('🔥 灼烧！对手下回合将受到1点额外伤害');
+      newOpponentEffects.push({ type: 'burn', duration: 1, value: 2 });
+      triggeredEffects.push('🔥 深度灼烧！');
     }
-    
-    // Tangle: 获胜后限制对手高费法术
     if (playerSpell.mechanic === 'tangle') {
-      newOpponentEffects.push({
-        type: 'tangle',
-        duration: 1
-      });
-      triggeredEffects.push('🌿 缠绕！对手下回合无法使用费用>2的法术');
+      newOpponentEffects.push({ type: 'tangle', duration: 1, value: 2 }); // value 2 = cost increase
+      triggeredEffects.push('🌿 缠绕！对手下张法术费用 +2');
+    }
+    if (playerSpell.mechanic === 'freeze') {
+      newOpponentEffects.push({ type: 'frozen', duration: 1 });
+      triggeredEffects.push('❄️ 冻结！对手下回合跳过攻击');
     }
     
-    // Charge: 连续使用 Thunder 伤害翻倍
-    if (playerSpell.mechanic === 'charge' && state.playerLastSpell === 'thunder') {
-      bonusDamage = baseDamage; // 伤害翻倍
-      triggeredEffects.push('⚡ 蓄力完成！伤害翻倍');
+    // Deal Damage to Opponent
+    // (Opponent damage is 0 because they lost clash, UNLESS specific mechanic? Usually clash winner deals damage)
+    // In Wizard Duel original logic: Winner deals spell damage. Loser deals nothing.
+    // Patch 2.0: Stick to "Winner takes all" for simplicity, except Fortify.
+    
+    opponentDamage = 0; // Opponent spell fizzles
+    opponentArmorGain = 0; // Loser gets nothing? No, Fortify says "Gain armor".
+    if (opponentSpell.mechanic === 'fortify') {
+        opponentArmorGain = opponentSpell.armorGain || 0; // Fortify always gains armor even on loss
     }
     
   } else if (outcome === 'LOSS') {
-    baseDamage = opponentSpell.damage;
-    
-    // 对手的 Burn 效果
-    if (opponentSpell.mechanic === 'burn') {
-      newPlayerEffects.push({
-        type: 'burn',
-        duration: 1,
-        value: 1
-      });
-      triggeredEffects.push('🔥 你被灼烧了！下回合将受到1点额外伤害');
-    }
-    
-    // 对手的 Tangle 效果
-    if (opponentSpell.mechanic === 'tangle') {
-      newPlayerEffects.push({
-        type: 'tangle',
-        duration: 1
-      });
-      triggeredEffects.push('🌿 你被缠绕了！下回合无法使用费用>2的法术');
-    }
-    
-    // 对手的 Charge 效果
-    if (opponentSpell.mechanic === 'charge' && state.opponentLastSpell === 'thunder') {
-      bonusDamage = baseDamage;
-      triggeredEffects.push('⚡ 对手蓄力完成！伤害翻倍');
-    }
-    
-    // ===== 处理防守方机制 =====
-    
-    // Fortify: 即使失败也减少1点伤害
+    // Opponent hits Player
+    playerDamage = 0; // Player spell fizzles
     if (playerSpell.mechanic === 'fortify') {
-      reducedDamage = Math.min(1, baseDamage + bonusDamage);
-      triggeredEffects.push('🪨 坚韧！减少1点受到的伤害');
+        playerArmorGain = playerSpell.armorGain || 0;
     }
-  }
-  
-  // ===== Freeze: 平局时触发 =====
-  if (outcome === 'DRAW') {
-    if (playerSpell.mechanic === 'freeze') {
-      newOpponentEffects.push({
-        type: 'frozen',
-        duration: 1
-      });
-      triggeredEffects.push('❄️ 冻结！对手下回合选择受限');
+
+    if (opponentSpell.mechanic === 'burn') {
+      newPlayerEffects.push({ type: 'burn', duration: 1, value: 2 });
+      triggeredEffects.push('🔥 你被灼烧了！');
     }
-    
+    if (opponentSpell.mechanic === 'tangle') {
+      newPlayerEffects.push({ type: 'tangle', duration: 1, value: 2 });
+      triggeredEffects.push('🌿 你被缠绕！费用 +2');
+    }
     if (opponentSpell.mechanic === 'freeze') {
-      newPlayerEffects.push({
-        type: 'frozen',
-        duration: 1
-      });
-      triggeredEffects.push('❄️ 你被冻结了！下回合选择受限');
+      newPlayerEffects.push({ type: 'frozen', duration: 1 });
+      triggeredEffects.push('❄️ 你被冻结！跳过攻击');
+    }
+
+  } else {
+    // DRAW: Both hit? Or Both fizzle? Or Clash?
+    // Patch 2.0: Draw = Clash, both take small damage or no damage?
+    // Let's say Draw = Both spells cancel out, NO damage.
+    // BUT mechanics might trigger (Freeze triggers on Draw).
+    playerDamage = 0;
+    opponentDamage = 0;
+    
+    // Fortify still works
+    if (playerSpell.mechanic === 'fortify') playerArmorGain = playerSpell.armorGain || 0;
+    if (opponentSpell.mechanic === 'fortify') opponentArmorGain = opponentSpell.armorGain || 0;
+    
+    if (playerSpell.mechanic === 'freeze') {
+        newOpponentEffects.push({ type: 'frozen', duration: 1 });
+        triggeredEffects.push('❄️ 寒冰护体！冻结对手');
+    }
+    if (opponentSpell.mechanic === 'freeze') {
+        newPlayerEffects.push({ type: 'frozen', duration: 1 });
+        triggeredEffects.push('❄️ 对手寒冰护体！你被冻结');
     }
   }
-  
-  const finalDamage = Math.max(0, baseDamage + bonusDamage - reducedDamage);
-  
+
   return {
     outcome,
     playerSpell: playerSpellId,
     opponentSpell: opponentSpellId,
-    baseDamage,
-    bonusDamage,
-    reducedDamage,
-    finalDamage,
+    // 旧字段兼容
+    baseDamage: Math.max(playerDamage, opponentDamage), 
+    bonusDamage: 0,
+    reducedDamage: 0,
+    finalDamage: Math.max(playerDamage, opponentDamage),
+    
+    // 新字段 (Patch 2.0)
+    playerDamageTaken: opponentDamage, // 对手造成的伤害 = 玩家受到的伤害
+    opponentDamageTaken: playerDamage, // 玩家造成的伤害 = 对手受到的伤害
+    playerArmorGain,
+    opponentArmorGain,
+    
     triggeredEffects,
     newPlayerEffects,
-    newOpponentEffects
+    newOpponentEffects,
   };
 };
 
 /**
  * 更新对战状态
+ */
+/**
+ * 更新对战状态 (Patch 2.0)
  */
 export const applyRoundResult = (
   state: DuelState,
@@ -331,18 +381,35 @@ export const applyRoundResult = (
   // 复制状态
   const newState = { ...state };
   
-  // 扣除法力
-  newState.playerMana = Math.max(0, state.playerMana - playerSpell.manaCost);
-  newState.opponentMana = Math.max(0, state.opponentMana - opponentSpell.manaCost);
+  // 1. 扣除法力 (考虑 CostMod)
+  const playerCost = Math.max(0, playerSpell.manaCost + (state.playerCostMod || 0));
+  const opponentCost = Math.max(0, opponentSpell.manaCost + (state.opponentCostMod || 0));
   
-  // 应用伤害
-  if (result.outcome === 'WIN') {
-    newState.opponentHP = Math.max(0, state.opponentHP - result.finalDamage);
-  } else if (result.outcome === 'LOSS') {
-    newState.playerHP = Math.max(0, state.playerHP - result.finalDamage);
+  newState.playerMana = Math.max(0, state.playerMana - playerCost);
+  newState.opponentMana = Math.max(0, state.opponentMana - opponentCost);
+  
+  // 2. 应用护甲增益 (Fortify)
+  newState.playerArmor = (state.playerArmor || 0) + (result.playerArmorGain || 0);
+  newState.opponentArmor = (state.opponentArmor || 0) + (result.opponentArmorGain || 0);
+  
+  // 3. 应用伤害 (护甲抵扣逻辑)
+  if (result.playerDamageTaken > 0) {
+    const damage = result.playerDamageTaken;
+    const armor = newState.playerArmor;
+    const absorb = Math.min(armor, damage);
+    newState.playerArmor -= absorb;
+    newState.playerHP = Math.max(0, newState.playerHP - (damage - absorb));
   }
   
-  // 更新状态效果
+  if (result.opponentDamageTaken > 0) {
+    const damage = result.opponentDamageTaken;
+    const armor = newState.opponentArmor;
+    const absorb = Math.min(armor, damage);
+    newState.opponentArmor -= absorb;
+    newState.opponentHP = Math.max(0, newState.opponentHP - (damage - absorb));
+  }
+  
+  // 4. 更新状态效果
   // 先降低现有效果的持续时间，移除过期的
   newState.playerEffects = state.playerEffects
     .map(e => ({ ...e, duration: e.duration - 1 }))
@@ -356,21 +423,14 @@ export const applyRoundResult = (
   newState.playerEffects = [...newState.playerEffects, ...result.newPlayerEffects];
   newState.opponentEffects = [...newState.opponentEffects, ...result.newOpponentEffects];
   
+  // 5. 更新费用修正 (基于新效果)
+  // 如果刚才中了缠绕，下回合费用+2。
+  // 我们在 prepareNextTurn 里根据 Effects 计算 CostMod，这里只需清理。
+  // 但为了即时反馈，这里暂时不设，由 prepareNextTurn 处理下一回合状态。
+  
   // 更新连击追踪
   newState.playerLastSpell = playerSpellId;
   newState.opponentLastSpell = opponentSpellId;
-  
-  if (playerSpellId === 'thunder') {
-    newState.playerConsecutiveThunder = state.playerConsecutiveThunder + 1;
-  } else {
-    newState.playerConsecutiveThunder = 0;
-  }
-  
-  if (opponentSpellId === 'thunder') {
-    newState.opponentConsecutiveThunder = state.opponentConsecutiveThunder + 1;
-  } else {
-    newState.opponentConsecutiveThunder = 0;
-  }
   
   // 从手牌移除已使用的牌
   const cardIndex = newState.playerHand.indexOf(playerSpellId);
@@ -386,16 +446,20 @@ export const applyRoundResult = (
 };
 
 /**
- * 准备下一回合（恢复法力、抽牌）
+ * 准备下一回合（恢复法力、成长、抽牌）(Patch 2.0)
  */
 export const prepareNextTurn = (state: DuelState): DuelState => {
   const newState = { ...state };
   
-  // 恢复法力
-  newState.playerMana = GAME_CONFIG.startingMana;
-  newState.opponentMana = GAME_CONFIG.startingMana;
+  // 1. 法力成长
+  newState.playerMaxMana = Math.min(GAME_CONFIG.maxMana, state.playerMaxMana + 1);
+  newState.opponentMaxMana = Math.min(GAME_CONFIG.maxMana, state.opponentMaxMana + 1);
   
-  // 抽牌
+  // 2. 恢复法力
+  newState.playerMana = newState.playerMaxMana;
+  newState.opponentMana = newState.opponentMaxMana;
+  
+  // 3. 抽牌
   if (newState.playerHand.length < GAME_CONFIG.handSize && newState.playerDeck.length > 0) {
     const cardsToDraw = Math.min(
       GAME_CONFIG.cardsDrawnPerTurn,
@@ -403,17 +467,21 @@ export const prepareNextTurn = (state: DuelState): DuelState => {
       newState.playerDeck.length
     );
     
+    // 简单抽牌
     const drawnCards = newState.playerDeck.splice(0, cardsToDraw);
-    newState.playerHand = [...newState.playerHand, ...drawnCards];
+    newState.playerHand.push(...drawnCards);
   }
   
-  // 如果牌组用尽，重新洗一副牌组
-  if (newState.playerDeck.length === 0) {
-    newState.playerDeck = createDeck();
-  }
+  // 4. 计算费用修正 (根据当前 StatusEffects)
+  const playerTangle = newState.playerEffects.find(e => e.type === 'tangle');
+  const opponentTangle = newState.opponentEffects.find(e => e.type === 'tangle');
+  
+  newState.playerCostMod = playerTangle ? (playerTangle.value || 0) : 0;
+  newState.opponentCostMod = opponentTangle ? (opponentTangle.value || 0) : 0;
   
   return newState;
 };
+
 
 // ============ 赔率计算 ============
 

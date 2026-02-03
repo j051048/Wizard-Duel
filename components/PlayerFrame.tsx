@@ -239,6 +239,7 @@ interface PlayerFrameProps {
   isPlayer: boolean;
   name: string;
   hp: number;
+  armor?: number; // [P0] 新增护甲属性
   maxHp: number;
   mana: number;
   maxMana: number;
@@ -251,6 +252,7 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
   isPlayer,
   name,
   hp,
+  armor = 0, // 默认为 0
   maxHp,
   mana,
   maxMana,
@@ -273,6 +275,24 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
         ${isShaking ? 'animate-shake-strong' : ''}
       `}
     >
+      {/* 护甲显示 (Armor Overlay) */}
+      {armor > 0 && (
+        <div className="absolute -top-4 right-8 z-40 transition-all duration-500 animate-in fade-in zoom-in spin-in-3">
+          <div className="relative drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]">
+            {/* 盾牌背景 (CSS绘制或图片) */}
+            <div className="w-10 h-12 md:w-12 md:h-14 bg-gradient-to-b from-gray-200 to-gray-400 rounded-b-full border-2 border-gray-100 shadow-inner flex items-center justify-center">
+              <div className="absolute inset-1 border border-gray-500/30 rounded-b-full" />
+              {/* 光泽 */}
+              <div className="absolute top-0 right-0 w-1/2 h-full bg-white/20 rounded-tr-full rounded-br-full" />
+            </div>
+            
+            {/* 护甲数值 */}
+            <span className="absolute inset-0 flex items-center justify-center font-black text-gray-800 text-base md:text-lg font-mono">
+              {armor}
+            </span>
+          </div>
+        </div>
+      )}
       {/* 发光边框效果 */}
       <div className={`
         absolute -inset-0.5 rounded-2xl opacity-50 blur-sm -z-10

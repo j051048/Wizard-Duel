@@ -37,6 +37,7 @@ export interface Spell {
   // 核心数值
   manaCost: number; // 法力消耗 (1-3)
   damage: number; // 造成伤害
+  armorGain?: number; // 获得护甲
   beats: SpellType; // 克制关系
 
   // 卡牌属性
@@ -73,7 +74,9 @@ export interface StatusEffect {
 export interface DuelState {
   // 生命值
   playerHP: number;
+  playerArmor: number; // 新增：护甲
   opponentHP: number;
+  opponentArmor: number; // 新增：护甲
 
   // 法力水晶
   playerMana: number;
@@ -90,9 +93,11 @@ export interface DuelState {
   playerEffects: StatusEffect[];
   opponentEffects: StatusEffect[];
 
-  // 连击追踪 (for Charge mechanic)
+  // 连击追踪
   playerLastSpell: SpellType | null;
   opponentLastSpell: SpellType | null;
+  playerCostMod: number; // 新增：费用修正
+  opponentCostMod: number; // 新增：费用修正
   playerConsecutiveThunder: number;
   opponentConsecutiveThunder: number;
 
@@ -111,7 +116,13 @@ export interface RoundResult {
   baseDamage: number;
   bonusDamage: number;
   reducedDamage: number;
-  finalDamage: number;
+  finalDamage: number; // Deprecated or kept for compat
+
+  // Patch 2.0 Extended Result
+  playerDamageTaken: number;
+  opponentDamageTaken: number;
+  playerArmorGain: number;
+  opponentArmorGain: number;
 
   // 触发的效果
   triggeredEffects: string[];
