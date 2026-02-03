@@ -35,7 +35,18 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ progress, onComple
         ))}
       </div>
 
-      {/* Logo */}
+      {/* Logo Image */}
+      <div className="relative mb-6">
+        <div className="w-48 h-48 md:w-64 md:h-64 rounded-3xl overflow-hidden border-4 border-purple-500/30 shadow-[0_0_50px_rgba(168,85,247,0.4)] animate-float">
+          <img 
+            src="/pwa-512x512.png" 
+            alt="Wizard Duel Logo" 
+            className="w-full h-full object-cover"
+          />
+        </div>
+      </div>
+
+      {/* Logo Text */}
       <div className="relative mb-12">
         <h1 className="text-5xl md:text-6xl font-wizard font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-300 to-cyan-400">
           WIZARD DUEL

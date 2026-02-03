@@ -65,6 +65,17 @@ export const Lobby: React.FC<LobbyProps> = ({
       </div>
 
       <div className="relative z-10 max-w-md mx-auto p-4 space-y-6 pt-8">
+        {/* Logo Image */}
+        <div className="flex justify-center mb-2">
+          <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-purple-500/30 shadow-lg shadow-purple-500/20">
+            <img 
+              src="/pwa-192x192.png" 
+              alt="Logo" 
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+
         {/* Logo */}
         <div className="text-center space-y-3 mb-4">
           <h1 className="text-5xl md:text-6xl font-wizard font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-300 to-cyan-400 drop-shadow-[0_4px_20px_rgba(168,85,247,0.5)]">
