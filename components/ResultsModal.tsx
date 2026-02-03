@@ -1,8 +1,7 @@
 import React from 'react';
-import { SpellType } from '../types.ts';
+import { SpellType, Rank } from '../types.ts';
 import { getSpellById } from '../services/gameLogic.ts';
-import { Rank } from '../types.ts';
-import { RefreshCcw, Trophy, Skull, Minus, Sparkles, TrendingUp, TrendingDown } from 'lucide-react';
+import { Trophy, Skull, RefreshCcw } from 'lucide-react';
 
 interface ResultsModalProps {
   result: 'WIN' | 'LOSS' | 'DRAW' | null;
@@ -19,6 +18,15 @@ interface ResultsModalProps {
     scoreDelta: number;
   };
 }
+
+const getRankIcon = (rank: Rank) => {
+  switch (rank) {
+    case 'Iron': return '/ui/rank_iron.webp';
+    case 'Gold': return '/ui/rank_gold.webp';
+    case 'Legend': return '/ui/rank_legend.webp';
+    default: return '/ui/rank_iron.webp';
+  }
+};
 
 export const ResultsModal: React.FC<ResultsModalProps> = ({ 
   result, 
@@ -39,138 +47,138 @@ export const ResultsModal: React.FC<ResultsModalProps> = ({
   const profit = result === 'WIN' ? payout - bet : result === 'DRAW' ? 0 : -bet;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-      <div className="bg-slate-900 border border-purple-500/30 rounded-2xl p-6 max-w-sm w-full relative shadow-2xl shadow-purple-900/30 overflow-hidden">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4 overflow-hidden">
+      {/* 全局庆祝/失败背景动画 */}
+      {result === 'WIN' && (
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(234,179,8,0.15),transparent_70%)] animate-pulse" />
+          <div className="absolute top-0 left-0 w-full h-full opacity-30 bg-[url('https://www.transparenttextures.com/patterns/dust.png')] mix-blend-overlay" />
+        </div>
+      )}
+
+      {/* 顶部横幅 - 史诗级胜利/失败 */}
+      <div className="absolute top-[10%] left-0 right-0 z-50 flex flex-col items-center pointer-events-none">
+          <div className={`
+             text-center font-wizard italic font-black text-6xl md:text-8xl tracking-tighter drop-shadow-[0_0_30px_rgba(0,0,0,0.8)]
+             animate-[slideDown_0.6s_cubic-bezier(0.34,1.56,0.64,1)_forwards]
+             ${result === 'WIN' ? 'text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 via-amber-400 to-yellow-600' : 
+               result === 'LOSS' ? 'text-transparent bg-clip-text bg-gradient-to-b from-red-400 via-rose-600 to-red-900' : 'text-slate-300'}
+          `}>
+             {result === 'WIN' ? 'VICTORY' : result === 'LOSS' ? 'DEFEATED' : 'DRAW'}
+          </div>
+          <div className={`
+             h-1 w-0 bg-gradient-to-r from-transparent via-current to-transparent opacity-50
+             animate-[expandLine_0.8s_ease-out_0.2s_forwards]
+             ${result === 'WIN' ? 'text-yellow-500' : 'text-red-500'}
+          `} />
+      </div>
+
+      <div className="bg-slate-900/40 border border-white/10 rounded-3xl p-8 max-w-lg w-full relative shadow-[0_0_100px_rgba(0,0,0,1)] backdrop-blur-2xl overflow-hidden mt-12 animate-[fadeInScale_0.5s_ease-out_forwards]">
         
         {/* Background FX */}
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent pointer-events-none" />
         
-        {/* Sparkle effect for wins */}
-        {result === 'WIN' && (
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <Sparkles className="absolute top-4 left-4 text-yellow-400/30 animate-pulse" size={24} />
-            <Sparkles className="absolute top-8 right-8 text-yellow-400/20 animate-pulse" size={16} />
-            <Sparkles className="absolute bottom-12 left-8 text-yellow-400/20 animate-pulse" size={20} />
+        <div className="relative z-10">
+          {/* Main Visual: Rank Badge */}
+          <div className="relative w-40 h-40 mx-auto mb-6 flex items-center justify-center">
+             {/* Glow behind badge */}
+             <div className={`absolute inset-0 rounded-full blur-3xl opacity-40 animate-pulse
+                ${result === 'WIN' ? 'bg-yellow-500' : 'bg-red-500'}
+             `} />
+             
+             {rankUpdates ? (
+                <img 
+                  src={getRankIcon(rankUpdates.newRank)} 
+                  alt={rankUpdates.newRank} 
+                  className="w-full h-full object-contain relative z-10 drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)] animate-[float_3s_ease-in-out_infinite]"
+                />
+             ) : (
+                <div className="w-full h-full bg-slate-800 rounded-full border-4 border-slate-700 flex items-center justify-center">
+                   {result === 'WIN' ? <Trophy className="text-yellow-400" size={60} /> : <Skull className="text-red-500" size={60} />}
+                </div>
+             )}
           </div>
-        )}
-        
-        <div className="relative z-10 text-center">
-          {/* Result Icon */}
-          <div className={`
-            w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center
-            ${result === 'WIN' 
-              ? 'bg-gradient-to-br from-yellow-500 to-amber-600 shadow-[0_0_30px_rgba(250,204,21,0.4)]' 
-              : result === 'LOSS' 
-              ? 'bg-gradient-to-br from-red-600 to-red-800 shadow-[0_0_30px_rgba(239,68,68,0.3)]' 
-              : 'bg-gradient-to-br from-gray-500 to-gray-700'}
-          `}>
-            {result === 'WIN' && <Trophy className="text-white" size={28} />}
-            {result === 'LOSS' && <Skull className="text-white" size={28} />}
-            {result === 'DRAW' && <Minus className="text-white" size={28} />}
-          </div>
-
-          {/* Result Text */}
-          <h2 className={`text-3xl font-wizard font-black mb-2 tracking-wider
-            ${result === 'WIN' ? 'text-yellow-400' : 
-              result === 'LOSS' ? 'text-red-500' : 
-              'text-gray-300'}
-          `}>
-            {result === 'WIN' ? (isCrit ? '暴击!' : '胜利!') : result === 'LOSS' ? '失败' : '平局'}
-          </h2>
           
-          {isCrit && result === 'WIN' && (
-            <p className="text-yellow-300 text-xs mb-4 animate-pulse font-tech uppercase tracking-wider">
-              ⚡ 暴击加成已触发 ⚡
-            </p>
-          )}
-
-          {/* Spell Comparison */}
-          <div className="flex justify-between items-center mb-6 px-2 py-4 bg-black/30 rounded-xl border border-white/5">
-            <div className="flex flex-col items-center flex-1">
-              <span className="text-[10px] text-gray-500 mb-2 uppercase tracking-wider">你的法术</span>
-              <div className="text-4xl mb-1">{playerParams.emoji}</div>
-              <span className={`text-xs font-bold ${playerParams.color}`}>{playerParams.name}</span>
-            </div>
-            
-            <div className="text-xl font-bold text-white/20 px-2">VS</div>
-            
-            <div className="flex flex-col items-center flex-1">
-              <span className="text-[10px] text-gray-500 mb-2 uppercase tracking-wider">对手法术</span>
-              <div className="text-4xl mb-1">{oppParams.emoji}</div>
-              <span className={`text-xs font-bold ${oppParams.color}`}>{oppParams.name}</span>
-            </div>
-          </div>
-
-          {/* Payout Breakdown - Only show in non-tavern mode */}
-          {!isTavernMode && (
-            <div className="bg-black/40 rounded-xl p-4 mb-6 border border-white/5 text-left">
-              <p className="text-gray-400 text-xs font-tech mb-3 uppercase tracking-wider">结算明细</p>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm text-gray-300">
-                  <span>下注金额</span>
-                  <span className="font-mono">{bet} PTS</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className={profit >= 0 ? 'text-green-400' : 'text-red-400'}>
-                    {profit >= 0 ? '收益' : '损失'}
-                  </span>
-                  <span className={`font-mono font-bold ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {profit >= 0 ? '+' : ''}{profit} PTS
-                  </span>
-                </div>
-                <div className="border-t border-white/10 pt-2 mt-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-white font-bold">最终获得</span>
-                    <span className="font-mono font-bold text-white text-lg">{payout} PTS</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Rank Updates */}
+          {/* Rank Text & Score */}
           {rankUpdates && (
-            <div className="bg-black/40 rounded-xl p-4 mb-6 border border-white/5 text-left relative overflow-hidden">
-               {/* Rank Background Glow */}
-               <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full blur-2xl opacity-20 pointer-events-none
-                 ${rankUpdates.scoreDelta > 0 ? 'bg-yellow-500' : 'bg-blue-500'}
-               `} />
-
-               <p className="text-gray-400 text-xs font-tech mb-3 uppercase tracking-wider">段位积分</p>
-               <div className="flex justify-between items-center">
-                 <div className="flex flex-col">
-                   <span className="text-xl font-black font-wizard text-white tracking-wider flex items-center gap-2">
-                     {rankUpdates.newRank}
-                     <span className={`text-xs px-2 py-0.5 rounded-full border ${
-                       rankUpdates.scoreDelta > 0 ? 'border-green-500/30 bg-green-500/10 text-green-400' : 
-                       rankUpdates.scoreDelta < 0 ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-gray-500/30 text-gray-400'
-                     }`}>
-                        {rankUpdates.scoreDelta > 0 ? '↑' : rankUpdates.scoreDelta < 0 ? '↓' : '-'}
-                     </span>
-                   </span>
-                   <span className="text-xs text-gray-500">当前积分: {rankUpdates.newScore}</span>
-                 </div>
-                 
-                 <div className={`text-2xl font-black font-mono flex items-center gap-1
-                   ${rankUpdates.scoreDelta > 0 ? 'text-yellow-400' : rankUpdates.scoreDelta < 0 ? 'text-red-400' : 'text-gray-400'}
-                 `}>
-                    {rankUpdates.scoreDelta > 0 ? <TrendingUp size={20} /> : rankUpdates.scoreDelta < 0 ? <TrendingDown size={20} /> : null}
-                    {rankUpdates.scoreDelta > 0 ? '+' : ''}{rankUpdates.scoreDelta}
-                 </div>
+            <div className="text-center mb-8">
+               <h3 className="text-3xl font-wizard font-black text-white tracking-widest uppercase mb-1 drop-shadow-md">
+                 {rankUpdates.newRank}
+               </h3>
+               <div className="flex items-center justify-center gap-2">
+                  <span className="text-slate-400 text-sm font-bold uppercase tracking-wider font-tech">Rank Score</span>
+                  <span className="text-white font-mono font-bold text-lg">{rankUpdates.newScore}</span>
+                  <span className={`text-sm font-black transition-all ${rankUpdates.scoreDelta >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    ({rankUpdates.scoreDelta >= 0 ? '+' : ''}{rankUpdates.scoreDelta})
+                  </span>
                </div>
             </div>
           )}
 
-          {/* Play Again Button */}
+          {/* Spell Recap (Mini) */}
+          <div className="flex justify-center items-center gap-12 mb-8 opacity-80 scale-90">
+            <div className="flex flex-col items-center">
+              <div className="text-5xl mb-2 drop-shadow-lg filter grayscale-[0.2]">{playerParams.emoji}</div>
+              <span className={`text-[10px] font-black uppercase tracking-widest ${playerParams.color}`}>YOU</span>
+            </div>
+            <div className="text-white/20 font-black italic">VS</div>
+            <div className="flex flex-col items-center">
+              <div className="text-5xl mb-2 drop-shadow-lg filter grayscale-[0.2]">{oppParams.emoji}</div>
+              <span className={`text-[10px] font-black uppercase tracking-widest ${oppParams.color}`}>FOE</span>
+            </div>
+          </div>
+
+          {/* Economics */}
+          {!isTavernMode && (
+             <div className="bg-black/40 border border-white/5 rounded-2xl p-6 mb-8 flex items-center justify-between">
+                <div>
+                   <p className="text-[10px] text-slate-500 font-black uppercase tracking-wider mb-1">Total Payout</p>
+                   <p className="text-3xl font-mono font-black text-white tracking-tighter">
+                      {payout} <span className="text-xs text-purple-400 ml-1">PTS</span>
+                   </p>
+                </div>
+                <div className="text-right">
+                   <p className="text-[10px] text-slate-500 font-black uppercase tracking-wider mb-1">Profit/Loss</p>
+                   <p className={`text-xl font-mono font-black ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {profit >= 0 ? '+' : ''}{profit}
+                   </p>
+                </div>
+             </div>
+          )}
+
+          {/* Action Button */}
           <button 
             onClick={onClose}
-            className="w-full py-4 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-600 hover:to-indigo-500 text-white font-bold rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-purple-900/30"
+            className={`
+              w-full py-5 rounded-2xl font-black text-lg uppercase tracking-[0.2em] transition-all duration-300
+              ${result === 'WIN' 
+                ? 'bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600 text-black shadow-[0_10px_30px_rgba(245,158,11,0.3)] hover:shadow-[0_15px_40px_rgba(245,158,11,0.5)] hover:-translate-y-1' 
+                : 'bg-slate-800 text-white border border-white/10 hover:bg-slate-700'}
+            `}
           >
-            <RefreshCcw size={18} />
-            再来一局
+            {result === 'WIN' ? '继续征程' : '重振旗鼓'}
           </button>
         </div>
       </div>
+
+      <style>{`
+        @keyframes slideDown {
+          from { transform: translateY(-100px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes expandLine {
+          from { width: 0; }
+          to { width: 300px; }
+        }
+        @keyframes fadeInScale {
+          from { transform: scale(0.9); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-15px); }
+        }
+      `}</style>
     </div>
   );
 };

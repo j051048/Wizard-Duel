@@ -34,6 +34,17 @@ const PRELOAD_IMAGES = [
   '/effects/effect-critical.webp',
   
   // UI
+  '/ui/bg_arena.webp',
+  '/ui/card_back.webp',
+  '/ui/frame_fire.webp',
+  '/ui/frame_water.webp',
+  '/ui/frame_wind.webp',
+  '/ui/frame_earth.webp',
+  '/ui/mana_full.webp',
+  '/ui/mana_empty.webp',
+  '/ui/rank_iron.webp',
+  '/ui/rank_gold.webp',
+  '/ui/rank_legend.webp',
   '/ui/magic-circle.webp',
   '/ui/corner-tl.webp',
   '/ui/corner-tr.webp',

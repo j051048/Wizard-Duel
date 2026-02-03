@@ -135,39 +135,29 @@ interface ManaCrystalsProps {
 }
 
 export const ManaCrystals: React.FC<ManaCrystalsProps> = ({ current, max }) => (
-  <div className="flex gap-1.5 items-center justify-center py-1">
+  <div className="flex gap-1 items-center justify-center py-1">
     {Array.from({ length: max }).map((_, i) => (
       <div 
         key={i}
-        className={`
-          relative transition-all duration-300
-          ${i < current ? 'opacity-100 scale-100 brightness-110' : 'opacity-40 scale-90 grayscale'}
-        `}
-        style={{ width: '24px', height: '24px' }}
+        className="relative w-6 h-6 sm:w-8 sm:h-8 transition-transform duration-300 hover:scale-110"
       >
         <img 
-          src="/icons/icon-mana.webp" 
-          alt="Mana" 
-          className="w-full h-full object-contain drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]"
-          onError={(e) => {
-            // 图片加载失败时回退到CSS图形
-            (e.target as HTMLImageElement).style.display = 'none';
-          }}
+            src={i < current ? "/ui/mana_full.webp" : "/ui/mana_empty.webp"}
+            alt={i < current ? "Full Mana" : "Empty Mana"} 
+            className={`w-full h-full object-contain filter drop-shadow-md transition-all duration-500 ${i < current ? 'brightness-110 hover:brightness-125' : 'grayscale opacity-80'}`} 
         />
-        
-        {/* CSS 备用/充能动画 */}
-        {i < current ? (
-          <div className="absolute inset-0 bg-blue-500/30 rounded-full blur-[4px] animate-pulse -z-10" />
-        ) : (
-          <div className="absolute inset-0 bg-gray-500/20 rounded-full -z-10" />
+        {/* Active Crystal Glow */}
+        {i < current && (
+            <div className="absolute inset-2 bg-purple-500/30 rounded-full blur-[4px] animate-pulse -z-10" />
         )}
       </div>
     ))}
-    
-    {/* 数值提示 */}
-    <span className="ml-2 text-xs font-bold text-blue-300 drop-shadow-md flex items-center gap-1">
-      {current}/{max}
-    </span>
+    {/* Text value for clarity */}
+    <div className="ml-2 font-wizard font-bold text-lg text-purple-200 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] flex items-center">
+        <span>{current}</span>
+        <span className="text-purple-500/80 mx-0.5 text-sm">/</span>
+        <span className="text-sm text-purple-400">{max}</span>
+    </div>
   </div>
 );
 

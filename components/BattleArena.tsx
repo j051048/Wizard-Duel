@@ -62,9 +62,17 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   // 伤害数字动画
   const [showCritEffect, setShowCritEffect] = useState(false); // 暴击特效
 
+  const [showBloodFlash, setShowBloodFlash] = useState(false);
+  const [projectiles, setProjectiles] = useState<{id: number, type: string, x: number, y: number}[]>([]);
+
   const addDamageNumber = (damage: number, isPlayer: boolean, isCrit: boolean = false) => {
     HapticService.medium(); // 伤害数字弹出时的反馈
     if (isCrit) HapticService.heavy();
+
+    if (isPlayer) {
+       setShowBloodFlash(true);
+       setTimeout(() => setShowBloodFlash(false), 400);
+    }
 
     const id = damageIdRef.current++; // Fixed: Increment current
     
@@ -127,6 +135,25 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     }
   }, [effectMessages]);
 
+  const handlePlayCard = (spellId: SpellType) => {
+    const id = Date.now();
+    // 基础投射物定位
+    setProjectiles(prev => [...prev, { id, type: 'player', x: 50, y: 80 }]);
+    onPlayCard(spellId);
+    setTimeout(() => setProjectiles(prev => prev.filter(p => p.id !== id)), 600);
+  };
+
+  // 监听对手出牌触发投射物
+  const prevOppCard = useRef<SpellType | null>(null);
+  React.useEffect(() => {
+    if (opponentCard && opponentCard !== prevOppCard.current) {
+       const id = Date.now();
+       setProjectiles(prev => [...prev, { id, type: 'opp', x: 50, y: 15 }]);
+       setTimeout(() => setProjectiles(prev => prev.filter(p => p.id !== id)), 600);
+    }
+    prevOppCard.current = opponentCard;
+  }, [opponentCard]);
+
   // ... (rest of component)
   
   const playableCards = getPlayableCards(
@@ -137,17 +164,18 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   );
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-slate-950 select-none flex flex-col">
+    <div className="fixed inset-0 overflow-hidden bg-slate-950 select-none flex flex-col gpu-accelerated">
       {/* === 背景层 (底层) === */}
       <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-slate-900 to-purple-950" />
         <img 
-          src="/battle-bg.webp" 
-          alt="" 
-          className="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-overlay"
-          onError={(e) => (e.target as HTMLImageElement).style.opacity = '0'}
+          src="/ui/bg_arena.webp" 
+          alt="Arena" 
+          className="absolute inset-0 w-full h-full object-cover animate-[breath_20s_ease-in-out_infinite]"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/90" />
+        {/* Vignette & Atmosphere */}
+        <div className="absolute inset-0 shadow-[inset_0_0_200px_rgba(0,0,0,0.9)]" />
+        <div className="absolute inset-0 bg-black/30" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/90 via-transparent to-black/95" />
         
         {/* 魔法阵 - 优化尺寸和混合 */}
         <div className="absolute inset-0 flex items-center justify-center opacity-20">
@@ -286,16 +314,31 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
           {/* 右下角：功能按钮 - 移动端绝对定位缩放 */}
           <div className="absolute right-0 bottom-2 z-40 flex flex-col gap-2 w-20 scale-90 origin-bottom-right md:static md:w-32 md:scale-100 md:flex-col pointer-events-auto">
+             {/* 结束回合按钮 - 3D 机械质感 */}
              <button 
                 onClick={() => onPass && onPass()}
                 disabled={phase !== 'PLAYER_TURN'}
                 className={`
-                  w-full h-12 md:h-24 flex flex-col items-center justify-center rounded-xl border-2 transition-all shadow-lg
-                  ${phase === 'PLAYER_TURN' ? 'bg-amber-900/80 border-amber-500/80 hover:bg-amber-800 text-amber-100' : 'bg-slate-900/60 border-slate-700/50 opacity-50 grayscale'}
+                  relative w-full h-16 md:h-24 flex flex-col items-center justify-center rounded-xl transition-all duration-300 group/btn shadow-2xl overflow-hidden
+                  ${phase === 'PLAYER_TURN' 
+                    ? 'bg-gradient-to-b from-amber-600 to-amber-900 border-b-8 border-amber-950 active:border-b-0 active:translate-y-2 hover:brightness-110 active:shadow-inner' 
+                    : 'bg-slate-900/60 border-b-8 border-slate-950 opacity-50 grayscale cursor-not-allowed'}
                 `}
               >
-                <div className="text-xl md:text-3xl">🛑</div>
-                <div className="text-[10px] md:text-xs font-bold uppercase tracking-widest mt-0.5">结束</div>
+                {/* 内部金属光泽 */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-50 pointer-events-none" />
+                
+                <div className={`text-2xl md:text-4xl transition-transform ${phase === 'PLAYER_TURN' ? 'group-hover/btn:scale-110' : ''}`}>
+                  {phase === 'PLAYER_TURN' ? '⌛' : '💤'}
+                </div>
+                <div className="text-[10px] md:text-sm font-black uppercase tracking-tighter mt-1 text-amber-100 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
+                  {phase === 'PLAYER_TURN' ? '结束回合' : '对方回合'}
+                </div>
+
+                {/* 发光提示 */}
+                {phase === 'PLAYER_TURN' && (
+                  <div className="absolute -inset-2 bg-yellow-500/20 blur-xl animate-pulse -z-10" />
+                )}
              </button>
              <button 
                 onClick={onSurrender}
@@ -318,7 +361,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                     <div key={id} className="relative transition-all duration-300 transform hover:-translate-y-2 scale-[0.55] md:scale-90 origin-bottom">
                       <SpellCard 
                         spell={spell} 
-                        onClick={() => canUse && onPlayCard(id)}
+                        onClick={() => canUse && handlePlayCard(id)}
                         isAffordable={canUse}
                         disabled={!canUse}
                       />
@@ -354,7 +397,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                     >
                       <SpellCard 
                         spell={getSpellById(id)} 
-                        onClick={() => isAffordable && phase === 'PLAYER_TURN' && onPlayCard(id)}
+                        onClick={() => isAffordable && phase === 'PLAYER_TURN' && handlePlayCard(id)}
                         isAffordable={isAffordable}
                         disabled={!isAffordable || phase !== 'PLAYER_TURN'}
                         isSelected={false}
@@ -394,6 +437,24 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           10% { opacity: 0.8; transform: scale(1.05); }
           100% { opacity: 0; transform: scale(1); }
         }
+        @keyframes breath {
+          0%, 100% { transform: scale(1); filter: brightness(1); }
+          50% { transform: scale(1.05); filter: brightness(1.1); }
+        }
+        @keyframes projectile {
+          0% { transform: translateY(0) scale(1.5); opacity: 1; filter: blur(4px); }
+          100% { transform: translateY(-400px) scale(0.5); opacity: 0; filter: blur(10px); }
+        }
+        @keyframes projectile-opp {
+          0% { transform: translateY(0) scale(1.5); opacity: 1; filter: blur(4px); }
+          100% { transform: translateY(400px) scale(0.5); opacity: 0; filter: blur(10px); }
+        }
+        .animate-projectile {
+          animation: projectile 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .animate-projectile-opp {
+          animation: projectile-opp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
       `}</style>
 
       {/* Crit Effect Overlay */}
@@ -406,6 +467,25 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
            </div>
         </div>
       )}
+
+      {/* Blood Hurt Flash Overlay */}
+      {showBloodFlash && (
+        <div className="fixed inset-0 z-50 pointer-events-none shadow-[inset_0_0_100px_rgba(220,38,38,0.8)] animate-pulse" />
+      )}
+
+      {/* Projectiles Layer */}
+      <div className="fixed inset-0 z-40 pointer-events-none overflow-hidden">
+        {projectiles.map(p => (
+           <div 
+            key={p.id}
+            className={`absolute w-12 h-12 rounded-full blur-md z-50 ${p.type === 'player' ? 'bg-gradient-to-t from-purple-500 to-white animate-projectile' : 'bg-gradient-to-b from-red-500 to-white animate-projectile-opp'}`}
+            style={{ left: `${p.x}%`, top: `${p.y}%`, marginLeft: '-24px' }}
+           >
+              {/* 核心光点 */}
+              <div className="absolute inset-0 bg-white rounded-full scale-50 blend-screen" />
+           </div>
+        ))}
+      </div>
     </div>
   );
 };

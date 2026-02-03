@@ -76,7 +76,7 @@ export interface Spell {
 
 // ============ 游戏状态 ============
 
-export type GameState = "LOBBY" | "MODE_SELECT" | "DECK_BUILDER" | "DUEL" | "RESULT" | "TAVERN" | "MATCHMAKING";
+export type GameState = "LOBBY" | "MODE_SELECT" | "DECK_BUILDER" | "DUEL" | "RESULT" | "TAVERN" | "MATCHMAKING" | "DUNGEON_MAP";
 
 export type DuelPhase =
   | "DRAFT_PHASE" // 选牌阶段

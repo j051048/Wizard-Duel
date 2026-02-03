@@ -1,5 +1,5 @@
 import React from 'react';
-import { Crown, Zap, Sparkles } from 'lucide-react';
+import { Crown, Zap, Sparkles, Skull } from 'lucide-react';
 import { GameMode } from '../types';
 
 interface ModeSelectProps {
@@ -21,42 +21,82 @@ export const ModeSelect: React.FC<ModeSelectProps> = ({ onSelectMode, onBackToLo
       </div>
 
       {/* 模式选择 */}
-      <div className="grid md:grid-cols-2 gap-8 max-w-4xl w-full mb-8">
+      <div className="grid md:grid-cols-3 gap-6 max-w-6xl w-full mb-8">
         {/* 标准模式 */}
         <div
           onClick={() => onSelectMode('standard')}
-          className="group relative bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-2xl p-8 cursor-pointer hover:border-blue-400/50 transition-all duration-300 hover:scale-105"
+          className="group relative bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-2xl p-6 cursor-pointer hover:border-blue-400/50 transition-all duration-300 hover:scale-105"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-purple-600/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           
-          <div className="relative z-10">
-            <div className="flex items-center justify-center mb-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
-                <Crown size={32} className="text-white" />
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
+                <Crown size={24} className="text-white" />
               </div>
             </div>
             
-            <h3 className="text-2xl font-bold text-center mb-4 text-blue-400">
+            <h3 className="text-xl font-bold text-center mb-3 text-blue-400">
               标准模式
             </h3>
             
-            <p className="text-gray-300 text-center mb-6 leading-relaxed">
-              竞技体验的首选。包含当前最平衡的卡牌组合，为竞技玩家提供公平的竞争环境。
+            <p className="text-gray-400 text-center mb-4 text-sm leading-relaxed flex-1">
+              竞技体验的首选。包含最平衡的卡牌。
             </p>
             
-            <div className="space-y-2 text-sm text-gray-400">
+            <div className="space-y-1.5 text-[11px] text-gray-500">
               <div className="flex items-center gap-2">
-                <Sparkles size={16} className="text-green-400" />
-                <span>核心 + 经典 + 竞技场卡牌</span>
+                <Sparkles size={12} className="text-green-400" />
+                <span>核心 + 经典卡牌</span>
               </div>
               <div className="flex items-center gap-2">
-                <Sparkles size={16} className="text-green-400" />
-                <span>定期轮换，保持新鲜感</span>
+                <Sparkles size={12} className="text-green-400" />
+                <span>公平对战</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 冒险模式 (新) */}
+        <div
+          onClick={() => onSelectMode('wild' as any)} // For now reuse wild or better yet, change the GameMode type
+          className="group relative bg-gradient-to-br from-purple-600/30 to-indigo-900/40 border border-purple-500/50 rounded-2xl p-6 cursor-pointer hover:border-purple-400 transition-all duration-300 hover:scale-105 shadow-[0_0_20px_rgba(139,92,246,0.2)]"
+        >
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] opacity-20" />
+          <div className="absolute inset-0 bg-gradient-to-t from-purple-900/40 to-transparent" />
+          
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-14 h-14 bg-gradient-to-br from-purple-500 via-indigo-600 to-purple-800 rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(168,85,247,0.5)] animate-pulse">
+                <Skull size={28} className="text-white" />
+              </div>
+            </div>
+            
+            <h3 className="text-xl font-bold text-center mb-3 text-purple-300">
+              地牢冒险
+            </h3>
+            
+            <p className="text-gray-300 text-center mb-4 text-xs italic font-medium">
+              "在这片被遗忘的地牢中，只有最强者才能生存..."
+            </p>
+            
+            <div className="space-y-1.5 text-[11px] text-purple-200/70">
+              <div className="flex items-center gap-2">
+                <Sparkles size={12} className="text-purple-400" />
+                <span>肉鸽关卡探索</span>
               </div>
               <div className="flex items-center gap-2">
-                <Sparkles size={16} className="text-green-400" />
-                <span>适合竞技对战</span>
+                <Sparkles size={12} className="text-purple-400" />
+                <span>获得传奇神器</span>
               </div>
+              <div className="flex items-center gap-2">
+                <Sparkles size={12} className="text-purple-400" />
+                <span>逐步构筑遗物</span>
+              </div>
+            </div>
+
+            <div className="mt-4 py-1.5 bg-purple-500/20 rounded-lg text-center border border-purple-500/30">
+                <span className="text-[10px] font-black text-purple-200 uppercase tracking-widest">单人挑战</span>
             </div>
           </div>
         </div>
@@ -64,37 +104,33 @@ export const ModeSelect: React.FC<ModeSelectProps> = ({ onSelectMode, onBackToLo
         {/* 狂野模式 */}
         <div
           onClick={() => onSelectMode('wild')}
-          className="group relative bg-gradient-to-br from-orange-600/20 to-red-600/20 border border-orange-500/30 rounded-2xl p-8 cursor-pointer hover:border-orange-400/50 transition-all duration-300 hover:scale-105"
+          className="group relative bg-gradient-to-br from-orange-600/20 to-red-600/20 border border-orange-500/30 rounded-2xl p-6 cursor-pointer hover:border-orange-400/50 transition-all duration-300 hover:scale-105"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-orange-600/10 to-red-600/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           
-          <div className="relative z-10">
-            <div className="flex items-center justify-center mb-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center shadow-lg">
-                <Zap size={32} className="text-white" />
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center shadow-lg">
+                <Zap size={24} className="text-white" />
               </div>
             </div>
             
-            <h3 className="text-2xl font-bold text-center mb-4 text-orange-400">
+            <h3 className="text-xl font-bold text-center mb-3 text-orange-400">
               狂野模式
             </h3>
             
-            <p className="text-gray-300 text-center mb-6 leading-relaxed">
-              释放你的创造力。包含所有扩展包的卡牌，为休闲玩家提供无限可能。
+            <p className="text-gray-400 text-center mb-4 text-sm leading-relaxed flex-1">
+              包含所有卡牌，释放最终创造力。
             </p>
             
-            <div className="space-y-2 text-sm text-gray-400">
+            <div className="space-y-1.5 text-[11px] text-gray-500">
               <div className="flex items-center gap-2">
-                <Sparkles size={16} className="text-yellow-400" />
-                <span>所有扩展包卡牌</span>
+                <Sparkles size={12} className="text-yellow-400" />
+                <span>所有卡牌可用</span>
               </div>
               <div className="flex items-center gap-2">
-                <Sparkles size={16} className="text-yellow-400" />
-                <span>英雄技能可用</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Sparkles size={16} className="text-yellow-400" />
-                <span>适合创意构筑</span>
+                <Sparkles size={12} className="text-yellow-400" />
+                <span>适合搞怪构筑</span>
               </div>
             </div>
           </div>

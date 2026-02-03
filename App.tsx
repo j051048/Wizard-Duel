@@ -14,14 +14,18 @@ import { useGameLoop } from './hooks/useGameLoop';
 import { useAudioManager } from './hooks/useAudioManager';
 
 // Components
+// Lazy Loaded Components
+const BattleArena = React.lazy(() => import('./components/BattleArena'));
+const DeckBuilder = React.lazy(() => import('./components/DeckBuilder'));
+const DungeonMap = React.lazy(() => import('./components/DungeonMap'));
+const ResultsModal = React.lazy(() => import('./components/ResultsModal'));
+const TavernMode = React.lazy(() => import('./components/TavernMode'));
+
+// Immediate Components
 import { LoadingScreen } from './components/LoadingScreen';
 import { Lobby } from './components/Lobby';
-import { BattleArena } from './components/BattleArena';
-import { DeckBuilder } from './components/DeckBuilder';
-import { TavernMode } from './components/TavernMode';
-import { MatchmakingAnimation } from './components/MatchmakingAnimation';
 import { ModeSelect } from './components/ModeSelect';
-import { ResultsModal } from './components/ResultsModal';
+import { MatchmakingAnimation } from './components/MatchmakingAnimation';
 
 // Services & Types
 import { ApiService } from './services/api';
@@ -29,12 +33,18 @@ import { calculatePayout, AI_PROFILES } from './services/gameLogic';
 import { HapticService } from './services/haptic';
 import { calculateRankUpdate } from './services/rankSystem';
 import { GameState, BattleRecord, PlayerStats, SpellType, Deck, GameMode, Rank } from './types';
+import { DungeonRunState, DungeonNode } from './types/dungeon';
+import { DungeonService } from './services/dungeon_v2';
 
 function App() {
   // 添加全局样式
   React.useEffect(() => {
     const style = document.createElement('style');
     style.textContent = `
+      * { -webkit-tap-highlight-color: transparent; }
+      body { overscroll-behavior-y: contain; }
+      .gpu-accelerated { transform: translateZ(0); backface-visibility: hidden; perspective: 1000px; }
+      
       @keyframes damageFloat {
         0% { transform: translateY(0) scale(1); opacity: 1; }
         50% { transform: translateY(-50px) scale(1.2); opacity: 1; }
@@ -65,6 +75,9 @@ function App() {
   // 牌组状态
   const [decks, setDecks] = useState<Deck[]>([]);
   const [selectedDeck, setSelectedDeck] = useState<Deck | null>(null);
+
+  // 地牢探索状态
+  const [dungeonRun, setDungeonRun] = useState<DungeonRunState | null>(null);
 
   // 待处理的酒馆决斗
   const [pendingTavernDuel, setPendingTavernDuel] = useState<any>(null);
@@ -194,10 +207,22 @@ function App() {
     setGameState('MODE_SELECT');
   }, []);
 
-  const handleSelectMode = useCallback((mode: GameMode) => {
-    setGameMode(mode);
-    setGameState('LOBBY');
-  }, []);
+  const handleSelectMode = useCallback((mode: GameMode | 'dungeon') => {
+    if (mode === 'dungeon') {
+      if (!selectedDeck) {
+        alert('地牢模式需要先在牌组编辑器中选择一个起始牌组！');
+        setGameState('LOBBY'); // 回到大厅选牌
+        return;
+      }
+      const newRun = DungeonService.startNewRun(selectedDeck);
+      setDungeonRun(newRun);
+      setGameState('DUNGEON_MAP');
+      audioActions.playBgm('lobby');
+    } else {
+      setGameMode(mode);
+      setGameState('LOBBY');
+    }
+  }, [selectedDeck, audioActions]);
 
   const handleStartDuel = useCallback(() => {
     if (!selectedDeck) {
@@ -251,6 +276,26 @@ function App() {
   const handleBackToLobby = useCallback(() => {
     setGameState('LOBBY');
   }, []);
+
+  const handleEnterDungeonNode = useCallback((node: DungeonNode) => {
+    if (!dungeonRun) return;
+
+    if (node.type === 'BATTLE' || node.type === 'ELITE' || node.type === 'BOSS') {
+      const oppProfile = AI_PROFILES.find(p => p.difficulty === (node.type === 'BOSS' ? 'hard' : node.type === 'ELITE' ? 'medium' : 'easy')) || AI_PROFILES[0];
+      gameLoopActions.startTavernDuel(dungeonRun.deck.cards, oppProfile, 'wild');
+      setGameState('DUEL');
+      audioActions.playBgm('battle');
+    } else if (node.type === 'REST') {
+       // 回血逻辑
+       const updated = DungeonService.updateHP(dungeonRun, Math.floor(dungeonRun.maxHP * 0.3));
+       setDungeonRun(updated);
+       alert('你在营火旁休息，恢复了 30% 生命值！');
+       setDungeonRun(DungeonService.advanceNode(updated));
+    } else {
+       // 其他节点简单处理
+       setDungeonRun(DungeonService.advanceNode(dungeonRun));
+    }
+  }, [dungeonRun, gameLoopActions, audioActions]);
 
   const handleSelectDeck = useCallback((deck: Deck) => {
     setSelectedDeck(deck);
@@ -349,11 +394,26 @@ function App() {
   };
 
   const handleResetGame = useCallback(() => {
+    const wasDungeon = !!dungeonRun;
+    const isWin = finalResult?.result === 'WIN';
+
     setFinalResult(null);
     gameLoopActions.reset();
-    setGameState('LOBBY');
+    
+    if (wasDungeon) {
+      if (isWin) {
+        setDungeonRun(prev => prev ? DungeonService.advanceNode(prev) : null);
+        setGameState('DUNGEON_MAP');
+      } else {
+        setDungeonRun(null);
+        setGameState('LOBBY');
+        // Optional: show a more dramatic Game Over screen
+      }
+    } else {
+      setGameState('LOBBY');
+    }
     audioActions.playBgm('lobby');
-  }, [gameLoopActions, audioActions]);
+  }, [gameLoopActions, audioActions, dungeonRun, finalResult]);
 
   // ============ 渲染 ============
 
@@ -418,70 +478,70 @@ function App() {
           />
         )}
 
-        {gameState === 'TAVERN' && (
-          <TavernMode
-            onStartTavernDuel={handleStartTavernDuel}
-            onBackToLobby={handleBackToLobby}
-            playerStats={{ tavernWins: 0, tavernLosses: 0, bestStreak: 0 }}
-          />
-        )}
+        <React.Suspense fallback={<LoadingScreen progress={{ percentage: 100, isComplete: false, loaded: 1, total: 1, currentItem: 'Loading Module...', errors: [] }} />}>
+          {gameState === 'TAVERN' && (
+            <TavernMode
+              onStartTavernDuel={handleStartTavernDuel}
+              onBackToLobby={handleBackToLobby}
+              playerStats={{ tavernWins: 0, tavernLosses: 0, bestStreak: 0 }}
+            />
+          )}
 
-        {gameState === 'MATCHMAKING' && (
-          <MatchmakingAnimation
-            onComplete={handleMatchmakingComplete}
-            isTavernMode={!!pendingTavernDuel}
-          />
-        )}
+          {gameState === 'DUNGEON_MAP' && dungeonRun && (
+            <DungeonMap 
+              runState={dungeonRun}
+              onSelectNode={handleEnterDungeonNode}
+            />
+          )}
 
-        {gameState === 'DECK_BUILDER' && (
-          <DeckBuilder
-            onBack={() => setGameState('LOBBY')}
-            onSaveDeck={handleSaveDeck}
-            existingDecks={decks}
-            selectedDeck={selectedDeck}
-            gameMode={gameMode}
-          />
-        )}
+          {gameState === 'DECK_BUILDER' && (
+            <DeckBuilder
+              onBack={() => setGameState('LOBBY')}
+              onSaveDeck={handleSaveDeck}
+              existingDecks={decks}
+              selectedDeck={selectedDeck}
+              gameMode={gameMode}
+            />
+          )}
 
-        {gameState === 'DUEL' && gameLoopState.duelState && (
-          <BattleArena
-            duelState={gameLoopState.duelState}
-            phase={gameLoopState.phase}
-            playerCard={gameLoopState.playerCard}
-            opponentCard={gameLoopState.opponentCard}
-            // Removed roundResult
-            resultText={gameLoopState.resultText}
-            effectMessages={gameLoopState.effectMessages}
-            selectedBet={selectedBet}
-            onPlayCard={handlePlayCard}
-            onPass={() => {
-              gameLoopActions.passTurn();
-              audioActions.playSfx('button');
-            }}
-            onSurrender={handleSurrender}
-            isMuted={audioState.isMuted}
-            onToggleMute={audioActions.toggleMute}
-            isPlayerShaking={isPlayerShaking}
-            isOpponentShaking={isOpponentShaking}
-            isTavernMode={gameLoopState.duelState.isTavernMode}
-          />
-        )}
+          {gameState === 'DUEL' && gameLoopState.duelState && (
+            <BattleArena
+              duelState={gameLoopState.duelState}
+              phase={gameLoopState.phase}
+              playerCard={gameLoopState.playerCard}
+              opponentCard={gameLoopState.opponentCard}
+              resultText={gameLoopState.resultText}
+              effectMessages={gameLoopState.effectMessages}
+              selectedBet={selectedBet}
+              onPlayCard={handlePlayCard}
+              onPass={() => {
+                gameLoopActions.passTurn();
+                audioActions.playSfx('button');
+              }}
+              onSurrender={handleSurrender}
+              isMuted={audioState.isMuted}
+              onToggleMute={audioActions.toggleMute}
+              isPlayerShaking={isPlayerShaking}
+              isOpponentShaking={isOpponentShaking}
+              isTavernMode={gameLoopState.duelState.isTavernMode}
+            />
+          )}
+          {/* 结果弹窗 */}
+          {finalResult && (
+            <ResultsModal
+              result={finalResult.result}
+              playerSpell={finalResult.player}
+              opponentSpell={finalResult.opponent}
+              payout={finalResult.payout}
+              bet={selectedBet}
+              isCrit={finalResult.isCrit}
+              onClose={handleResetGame}
+              isTavernMode={gameLoopState.duelState?.isTavernMode}
+              rankUpdates={finalResult.rankUpdates}
+            />
+          )}
+        </React.Suspense>
       </main>
-
-      {/* 结果弹窗 */}
-      {finalResult && (
-        <ResultsModal
-          result={finalResult.result}
-          playerSpell={finalResult.player}
-          opponentSpell={finalResult.opponent}
-          payout={finalResult.payout}
-          bet={selectedBet}
-          isCrit={finalResult.isCrit}
-          onClose={handleResetGame}
-          isTavernMode={gameLoopState.duelState?.isTavernMode}
-          rankUpdates={finalResult.rankUpdates}
-        />
-      )}
     </div>
   );
 }
