@@ -77,11 +77,31 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         {/* 右侧边框 */}
         <div className="absolute top-0 bottom-0 right-0 w-2 bg-gradient-to-b from-transparent via-purple-500/50 to-transparent" />
 
-        {/* 角落装饰 */}
-        <img src="/ui/corner-tl.webp" className="absolute top-0 left-0 w-24 h-24 opacity-60" alt="" onError={(e) => (e.target as HTMLImageElement).style.display='none'} />
-        <img src="/ui/corner-tr.webp" className="absolute top-0 right-0 w-24 h-24 opacity-60" alt="" onError={(e) => (e.target as HTMLImageElement).style.display='none'} />
-        <img src="/ui/corner-bl.webp" className="absolute bottom-0 left-0 w-24 h-24 opacity-60" alt="" onError={(e) => (e.target as HTMLImageElement).style.display='none'} />
-        <img src="/ui/corner-br.webp" className="absolute bottom-0 right-0 w-24 h-24 opacity-60" alt="" onError={(e) => (e.target as HTMLImageElement).style.display='none'} />
+        {/* 角落装饰 - 增大尺寸并添加发光效果 */}
+        <img 
+          src="/ui/corner-tl.webp" 
+          className="absolute top-0 left-0 w-32 h-32 md:w-40 md:h-40 opacity-80 drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]" 
+          alt="" 
+          onError={(e) => (e.target as HTMLImageElement).style.display='none'} 
+        />
+        <img 
+          src="/ui/corner-tr.webp" 
+          className="absolute top-0 right-0 w-32 h-32 md:w-40 md:h-40 opacity-80 drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]" 
+          alt="" 
+          onError={(e) => (e.target as HTMLImageElement).style.display='none'} 
+        />
+        <img 
+          src="/ui/corner-bl.webp" 
+          className="absolute bottom-0 left-0 w-32 h-32 md:w-40 md:h-40 opacity-80 drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]" 
+          alt="" 
+          onError={(e) => (e.target as HTMLImageElement).style.display='none'} 
+        />
+        <img 
+          src="/ui/corner-br.webp" 
+          className="absolute bottom-0 right-0 w-32 h-32 md:w-40 md:h-40 opacity-80 drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]" 
+          alt="" 
+          onError={(e) => (e.target as HTMLImageElement).style.display='none'} 
+        />
       </div>
 
       {/* === 顶部控制栏 === */}
@@ -216,17 +236,40 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         </div>
       )}
 
-      {/* === 回合信息栏 === */}
+      {/* === 回合信息栏（增大） === */}
       <div className="absolute top-1/2 right-4 -translate-y-1/2 z-20">
-        <div className="bg-black/70 backdrop-blur-md rounded-xl p-4 border border-purple-500/30 shadow-xl text-center">
-          <div className="text-[10px] text-gray-400 font-tech uppercase tracking-widest mb-1">Round</div>
-          <div className="text-3xl font-wizard font-bold text-purple-300">{duelState.roundNumber}</div>
-          <div className="w-px h-4 bg-purple-500/30 mx-auto my-2" />
-          <div className="text-[10px] text-gray-400 font-tech uppercase tracking-widest mb-1">Wager</div>
-          <div className="text-xl font-bold text-white">{selectedBet}</div>
-          <div className="text-purple-400 text-xs">PTS</div>
+        <div className="bg-black/80 backdrop-blur-md rounded-xl p-5 border-2 border-purple-500/50 shadow-2xl text-center min-w-[80px]">
+          {/* 回合数 */}
+          <div className="text-xs text-gray-400 font-tech uppercase tracking-widest mb-1">回合</div>
+          <div className="text-4xl font-wizard font-bold text-purple-300 drop-shadow-lg">{duelState.roundNumber}</div>
+          
+          <div className="w-12 h-px bg-gradient-to-r from-transparent via-purple-500/50 to-transparent mx-auto my-3" />
+          
+          {/* 下注额 */}
+          <div className="text-xs text-gray-400 font-tech uppercase tracking-widest mb-1">下注</div>
+          <div className="text-2xl font-bold text-yellow-400 drop-shadow-lg">{selectedBet}</div>
+          <div className="text-purple-400 text-xs font-bold">积分</div>
         </div>
       </div>
+
+      {/* === 玩家回合提示（大型动画） === */}
+      {phase === 'PLAYER_TURN' && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none animate-fade-in-out">
+          <div className="relative">
+            {/* 发光背景 */}
+            <div className="absolute -inset-8 bg-purple-500/20 blur-3xl rounded-full animate-pulse" />
+            {/* 主文字 */}
+            <div className="relative px-10 py-5 bg-gradient-to-r from-purple-900/95 via-purple-800/95 to-purple-900/95 rounded-2xl border-2 border-purple-400/70 shadow-2xl shadow-purple-500/30">
+              <div className="text-3xl md:text-4xl font-wizard font-black text-white tracking-widest drop-shadow-lg text-center">
+                ⚔️ 你的回合 ⚔️
+              </div>
+              <div className="text-sm text-purple-200 text-center mt-2 font-tech animate-pulse">
+                选择一张卡牌施放
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* === 底部区域：玩家信息 + 手牌 === */}
       <div className="absolute bottom-0 left-0 right-0 z-20">
@@ -312,7 +355,17 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           to { transform: rotate(360deg); }
         }
         .animate-spin-slow {
-          animation: spin-slow 30s linear infinite;
+          animation: spin-slow 15s linear infinite;
+        }
+        
+        @keyframes fade-in-out {
+          0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+          15% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          85% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+        }
+        .animate-fade-in-out {
+          animation: fade-in-out 2.5s ease-in-out forwards;
         }
       `}</style>
     </div>
