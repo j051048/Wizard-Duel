@@ -58,7 +58,7 @@ export const Lobby: React.FC<LobbyProps> = ({
     <div className="min-h-screen relative overflow-y-auto">
       {/* 背景 */}
       <div 
-        className="absolute inset-0 bg-cover bg-center"
+        className="absolute inset-0 bg-cover bg-center pointer-events-none"
         style={{ backgroundImage: "url('/lobby-bg.webp')", willChange: 'opacity' }}
       >
         <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/80 via-purple-950/60 to-slate-950/90" />

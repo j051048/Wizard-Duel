@@ -164,7 +164,7 @@ export const SpellCard: React.FC<SpellCardProps> = ({
 
   return (
     <div 
-      className={`relative group ${isSmall ? 'w-20 h-28' : 'w-32 h-48 sm:w-36 sm:h-52'} transition-all duration-300 ${!canPlay ? 'opacity-60 grayscale-[0.5]' : ''}`}
+      className={`relative group ${isSmall ? 'w-20 h-28' : 'w-32 h-48 sm:w-36 sm:h-52'} transition-all duration-300 ${!canPlay ? 'opacity-60 grayscale-[0.5]' : ''} touch-pan-y`}
       style={{ perspective: '1000px', willChange: (isHovered && canPlay) || isSelected ? 'transform' : 'auto' }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
