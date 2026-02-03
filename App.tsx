@@ -363,7 +363,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-tech selection:bg-purple-500/30">
+    <div className="min-h-screen overflow-x-hidden overflow-y-auto bg-slate-950 text-white font-tech selection:bg-purple-500/30">
       {gameState === 'LOBBY' && (
         <header className="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-md border-b border-white/10 px-4 py-3 flex justify-between items-center safe-area-top">
           <div className="flex items-center gap-2">

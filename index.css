@@ -134,29 +134,50 @@
 }
 
 @layer base {
-  html,
+  html {
+    @apply m-0 p-0 bg-[#0f0518];
+    height: auto;
+    overflow-x: hidden;
+  }
+
   body {
-    @apply m-0 p-0 bg-[#0f0518] text-[#e2e8e0] font-tech;
-    min-height: 100%;
+    @apply m-0 p-0 text-[#e2e8e0] font-tech;
+    min-height: 100vh;
     overflow-x: hidden;
     overflow-y: auto;
-    overscroll-behavior-y: none; /* 禁用系统下拉刷新 */
     -webkit-overflow-scrolling: touch;
-    touch-action: pan-y pinch-zoom; /* 明确允许垂直平移和缩放 */
+    touch-action: pan-y pinch-zoom;
   }
 
-  /* 全局禁用触摸高亮和选择 */
+  /* 基础滚动条样式 */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #1a0b2e;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #4c1d95;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #6d28d9;
+  }
+
+  /* 交互反馈优化 */
   * {
     -webkit-tap-highlight-color: transparent;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
   }
 
-  /* 图片防拖拽 */
+  .no-select {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* 图片防拖拽但允许触摸穿透 */
   img {
-    pointer-events: none;
     -webkit-user-drag: none;
+    pointer-events: none;
   }
 
   /* 允许部分交互元素 */

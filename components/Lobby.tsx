@@ -55,7 +55,7 @@ export const Lobby: React.FC<LobbyProps> = ({
   const canStart = balance >= selectedBet;
 
   return (
-    <div className="min-h-screen relative overflow-y-auto">
+    <div className="min-h-full relative no-select">
       {/* 背景 */}
       <div 
         className="absolute inset-0 bg-cover bg-center pointer-events-none"
@@ -145,7 +145,7 @@ export const Lobby: React.FC<LobbyProps> = ({
             {SPELLS.map(spell => (
               <div 
                 key={spell.id} 
-                className="text-center p-3 bg-black/40 rounded-xl border border-white/5 hover:border-purple-500/50 transition-all group cursor-pointer"
+                className="text-center p-3 bg-black/40 rounded-xl border border-white/5 hover:border-purple-500/50 transition-all group cursor-pointer touch-manipulation"
               >
                 <div className="text-3xl mb-2 group-hover:scale-125 transition-transform">{spell.emoji}</div>
                 <div className={`text-[9px] font-bold uppercase ${spell.color}`}>
