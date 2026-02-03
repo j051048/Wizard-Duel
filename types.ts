@@ -9,6 +9,10 @@ export interface Spell {
   borderColor: string; // Border color class e.g., 'border-red-500'
   shadowColor: string; // Shadow color hex or class equivalent logic
   beats: SpellType;
+  manaCost?: number;
+  damage?: number;
+  rarity?: 'common' | 'uncommon' | 'rare' | 'mythic';
+  abilities?: string[];
 }
 
 export type GameState = 'LOBBY' | 'DUEL' | 'RESULT';

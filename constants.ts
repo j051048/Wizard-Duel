@@ -1,4 +1,4 @@
-import { Spell } from './types';
+import { Spell } from './types.ts';
 
 export const API_BASE_URL = 'https://your-api.com';
 
@@ -12,7 +12,10 @@ export const SPELLS: Spell[] = [
     color: 'text-red-500', 
     borderColor: 'border-red-500',
     shadowColor: 'rgba(239,68,68,0.5)',
-    beats: 'vine' 
+    beats: 'vine',
+    manaCost: 1,
+    damage: 1,
+    rarity: 'common'
   },
   { 
     id: 'vine', 
@@ -21,7 +24,10 @@ export const SPELLS: Spell[] = [
     color: 'text-green-500', 
     borderColor: 'border-green-500',
     shadowColor: 'rgba(34,197,94,0.5)',
-    beats: 'ice' 
+    beats: 'ice',
+    manaCost: 1,
+    damage: 1,
+    rarity: 'common'
   },
   { 
     id: 'ice', 
@@ -30,7 +36,10 @@ export const SPELLS: Spell[] = [
     color: 'text-cyan-400', 
     borderColor: 'border-cyan-400',
     shadowColor: 'rgba(34,211,238,0.5)',
-    beats: 'thunder' 
+    beats: 'thunder',
+    manaCost: 1,
+    damage: 1,
+    rarity: 'common'
   },
   { 
     id: 'thunder', 
@@ -39,7 +48,10 @@ export const SPELLS: Spell[] = [
     color: 'text-yellow-400', 
     borderColor: 'border-yellow-400',
     shadowColor: 'rgba(250,204,21,0.5)',
-    beats: 'rock' 
+    beats: 'rock',
+    manaCost: 1,
+    damage: 1,
+    rarity: 'common'
   },
   { 
     id: 'rock', 
@@ -48,7 +60,10 @@ export const SPELLS: Spell[] = [
     color: 'text-stone-400', 
     borderColor: 'border-stone-400',
     shadowColor: 'rgba(168,162,158,0.5)',
-    beats: 'fire' 
+    beats: 'fire',
+    manaCost: 1,
+    damage: 1,
+    rarity: 'common'
   },
 ];
 

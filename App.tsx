@@ -119,7 +119,7 @@ function App() {
 
     // Simulate opponent thinking
     setTimeout(() => {
-      const botSpell = getRandomSpell();
+      const botSpell = getRandomSpell(spellId);
       setOpponentCard(botSpell);
       setDuelPhase('REVEAL');
       resolveRound(spellId, botSpell);
@@ -134,21 +134,29 @@ function App() {
     const outcome = determineWinner(pSpell, oSpell);
     
     // Apply Damage
+    // Calculate new HP locally to avoid reading stale React state in async callbacks
+    let newPlayerHP = playerHP;
+    let newOpponentHP = opponentHP;
+
     if (outcome === 'WIN') {
-      setOpponentHP(prev => Math.max(0, prev - 1));
+      newOpponentHP = Math.max(0, newOpponentHP - 1);
       setRoundResultText("Victory!");
     } else if (outcome === 'LOSS') {
-      setPlayerHP(prev => Math.max(0, prev - 1));
+      newPlayerHP = Math.max(0, newPlayerHP - 1);
       setRoundResultText("Defeat!");
     } else {
       setRoundResultText("Draw!");
     }
 
+    // Update state now
+    setPlayerHP(newPlayerHP);
+    setOpponentHP(newOpponentHP);
+
     // Wait for damage animation then check win condition
     setTimeout(() => {
         checkDuelEnd(
-            outcome === 'WIN' ? opponentHP - 1 : opponentHP, 
-            outcome === 'LOSS' ? playerHP - 1 : playerHP,
+            newOpponentHP,
+            newPlayerHP,
             pSpell,
             oSpell
         );
@@ -576,6 +584,7 @@ function App() {
             playerSpell={finalResult.player}
             opponentSpell={finalResult.opponent}
             payout={finalResult.payout}
+            bet={selectedBet}
             isCrit={finalResult.isCrit}
             onClose={resetGame}
         />

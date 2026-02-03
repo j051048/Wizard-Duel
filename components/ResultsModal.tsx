@@ -8,6 +8,7 @@ interface ResultsModalProps {
   playerSpell: SpellType | null;
   opponentSpell: SpellType | null;
   payout: number;
+  bet: number;
   onClose: () => void;
   isCrit: boolean;
 }
@@ -50,12 +51,23 @@ export const ResultsModal: React.FC<ResultsModalProps> = ({ result, playerSpell,
             </div>
           </div>
 
-          <div className="bg-black/30 rounded-lg p-4 mb-6 border border-white/5">
-            <p className="text-gray-400 text-sm font-tech">Payout</p>
-            <p className="text-3xl font-bold text-white flex items-center justify-center gap-2">
-              {payout} <span className="text-purple-400 text-lg">PTS</span>
-            </p>
-            {isCrit && <p className="text-yellow-400 text-xs mt-1 animate-pulse">Luck of the Wizard applied!</p>}
+          <div className="bg-black/30 rounded-lg p-4 mb-6 border border-white/5 text-left">
+            <p className="text-gray-400 text-sm font-tech">Payout Breakdown</p>
+            <div className="mt-2">
+              <div className="flex justify-between text-xs text-gray-300">
+                <span>Wager</span>
+                <span>{bet} PTS</span>
+              </div>
+              <div className="flex justify-between text-xs text-gray-300">
+                <span>Profit</span>
+                <span className="font-bold">{Math.max(0, payout - bet)} PTS</span>
+              </div>
+              <div className="flex justify-between text-xs text-gray-300">
+                <span>Total</span>
+                <span className="font-bold">{payout} PTS</span>
+              </div>
+              {isCrit && <p className="text-yellow-400 text-xs mt-1 animate-pulse">Critical multiplier applied!</p>}
+            </div>
           </div>
 
           <button 

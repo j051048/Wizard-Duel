@@ -52,8 +52,8 @@ export const SpellCard: React.FC<SpellCardProps> = ({ spell, isSelected, onClick
       `}
     >
       {/* Mana Cost */}
-      <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-blue-600 border border-blue-400 flex items-center justify-center text-[10px] font-bold text-white shadow-md z-10">
-        1
+      <div className="absolute top-1 left-1 w-6 h-6 rounded-full bg-blue-600 border border-blue-400 flex items-center justify-center text-[10px] font-bold text-white shadow-md z-10">
+        {spell?.manaCost ?? 1}
       </div>
 
       {/* Card Art */}
@@ -73,7 +73,7 @@ export const SpellCard: React.FC<SpellCardProps> = ({ spell, isSelected, onClick
         </h3>
         {!isSmall && (
           <div className="mt-1 text-[8px] text-gray-500 font-tech uppercase tracking-wide border-t border-white/5 pt-1">
-            Beats {spell.beats}
+            Beats {spell.beats} · Damage {spell.damage ?? 1}
           </div>
         )}
       </div>

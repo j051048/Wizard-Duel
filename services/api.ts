@@ -1,4 +1,5 @@
 import { UserProfile, BattleRecord, PlayerStats } from '../types';
+import { determineWinner, calculatePayout } from './gameLogic.ts';
 
 // Mock delay helper
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -28,18 +29,32 @@ export const ApiService = {
   ): Promise<{ newBalance: number }> {
     await delay(800);
     // In real app: POST to backend to verify signature and update DB
-    
-    // Optimistic update for demo
-    mockBalance = mockBalance - bet + payout;
-    
+    // For demo backend: recompute result and payout authoritatively to prevent client tampering
+    const expectedOutcome = determineWinner(playerSpell as any, opponentSpell as any);
+    const expected = calculatePayout(bet, expectedOutcome);
+
+    // If client-submitted result/payout mismatch server calculation, prefer server calculation
+    let finalPayout = payout;
+    let finalIsCrit = isCrit;
+    let finalResult = result;
+
+    if (expectedOutcome !== result || expected.payout !== payout) {
+      finalPayout = expected.payout;
+      finalIsCrit = expected.isCrit;
+      finalResult = expectedOutcome;
+    }
+
+    // Optimistic update for demo using server-authoritative values
+    mockBalance = mockBalance - bet + finalPayout;
+
     const record: BattleRecord = {
       id: Math.random().toString(36).substr(2, 9),
       playerSpell: playerSpell as any,
       opponentSpell: opponentSpell as any,
-      result,
-      amount: result === 'WIN' ? payout - bet : (result === 'DRAW' ? payout - bet : -bet),
+      result: finalResult,
+      amount: finalResult === 'WIN' ? finalPayout - bet : (finalResult === 'DRAW' ? finalPayout - bet : -bet),
       timestamp: Date.now(),
-      isCrit
+      isCrit: finalIsCrit
     };
     
     mockHistory.unshift(record);

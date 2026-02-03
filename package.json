@@ -6,18 +6,21 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "validate-cards": "ts-node ./tools/card-validations.ts",
+    "self-test": "ts-node ./tools/self-test.ts"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.20",
+    "lucide-react": "^0.563.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "lucide-react": "^0.563.0",
-    "@tanstack/react-query": "^5.90.20",
     "wagmi": "^3.4.2"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
+    "@types/node": "^22.19.7",
     "@vitejs/plugin-react": "^5.0.0",
+    "ts-node": "^10.9.2",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }
