@@ -202,9 +202,27 @@ export interface BattleRecord {
   roundsPlayed?: number;
 }
 
+// ============ 排位系统 ============
+
+export type Rank = "Iron" | "Bronze" | "Silver" | "Gold" | "Diamond" | "Legend";
+
 export interface UserProfile {
   address: string;
   balance: number;
+  inventory?: SpellType[];
+  stats?: {
+    wins: number;
+    losses: number;
+    totalGames: number;
+    winStreak: number;
+  };
+  // 新增：排位信息
+  userRank?: Rank;
+  rankScore?: number;
+  
+  gamesHistory?: BattleRecord[];
+  createdAt?: number;
+  lastActive?: number;
 }
 
 // ============ 游戏配置 ============

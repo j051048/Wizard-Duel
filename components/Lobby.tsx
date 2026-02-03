@@ -5,14 +5,16 @@
  */
 
 import React, { useState } from 'react';
-import { Sparkles, Volume2, VolumeX, BookOpen, Settings, Crown, Zap } from 'lucide-react';
+import { Sparkles, Volume2, VolumeX, BookOpen, Settings, Crown, Zap, Shield } from 'lucide-react';
 import { SPELLS, BET_OPTIONS } from '../constants';
-import { BattleRecord, Deck, GameMode } from '../types';
+import { BattleRecord, Deck, GameMode, Rank } from '../types';
 import { RulesModal } from './RulesModal';
 import { TutorialModal } from './TutorialModal';
 
 interface LobbyProps {
   balance: number;
+  userRank: Rank;
+  rankScore: number;
   selectedBet: number;
   onSelectBet: (bet: number) => void;
   onStartDuel: () => void;
@@ -31,6 +33,8 @@ interface LobbyProps {
 
 export const Lobby: React.FC<LobbyProps> = ({
   balance,
+  userRank,
+  rankScore,
   selectedBet,
   onSelectBet,
   onStartDuel,
@@ -62,11 +66,31 @@ export const Lobby: React.FC<LobbyProps> = ({
 
       <div className="relative z-10 max-w-md mx-auto p-4 space-y-6 pt-8">
         {/* Logo */}
-        <div className="text-center space-y-3 mb-8">
+        <div className="text-center space-y-3 mb-4">
           <h1 className="text-5xl md:text-6xl font-wizard font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-300 to-cyan-400 drop-shadow-[0_4px_20px_rgba(168,85,247,0.5)]">
             WIZARD DUEL
           </h1>
           <p className="text-gray-400 text-sm font-tech tracking-[0.3em] uppercase">元素策略对战</p>
+        </div>
+
+        {/* Rank Badge */}
+        <div className="flex justify-center mb-6">
+          <div className="bg-gradient-to-r from-slate-900/90 to-slate-800/90 border border-purple-500/30 rounded-full px-6 py-2 flex items-center gap-3 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
+            <span className={`text-2xl ${
+              userRank === 'Legend' ? 'text-yellow-400 drop-shadow-[0_0_5px_rgba(250,204,21,0.8)]' :
+              userRank === 'Diamond' ? 'text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]' :
+              userRank === 'Gold' ? 'text-amber-400' :
+              userRank === 'Silver' ? 'text-gray-300' :
+              'text-orange-700'
+            }`}>
+              <Shield size={24} fill="currentColor" className="opacity-20 absolute" />
+              <Crown size={24} />
+            </span>
+            <div className="flex flex-col text-left">
+               <span className="text-xs text-purple-300 uppercase tracking-wider font-bold">{userRank} League</span>
+               <span className="text-sm font-mono text-white leading-none">{rankScore} PTS</span>
+            </div>
+          </div>
         </div>
 
         {/* 音量控制 & 教程 & 模式选择 */}

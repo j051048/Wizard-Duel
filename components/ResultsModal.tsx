@@ -1,7 +1,8 @@
 import React from 'react';
 import { SpellType } from '../types.ts';
 import { getSpellById } from '../services/gameLogic.ts';
-import { RefreshCcw, Trophy, Skull, Minus, Sparkles } from 'lucide-react';
+import { Rank } from '../types.ts';
+import { RefreshCcw, Trophy, Skull, Minus, Sparkles, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface ResultsModalProps {
   result: 'WIN' | 'LOSS' | 'DRAW' | null;
@@ -12,6 +13,11 @@ interface ResultsModalProps {
   onClose: () => void;
   isCrit: boolean;
   isTavernMode?: boolean;
+  rankUpdates?: {
+    newScore: number;
+    newRank: Rank;
+    scoreDelta: number;
+  };
 }
 
 export const ResultsModal: React.FC<ResultsModalProps> = ({ 
@@ -22,7 +28,8 @@ export const ResultsModal: React.FC<ResultsModalProps> = ({
   bet,
   onClose, 
   isCrit,
-  isTavernMode = false
+  isTavernMode = false,
+  rankUpdates
 }) => {
   if (!result || !playerSpell || !opponentSpell) return null;
 
@@ -118,6 +125,39 @@ export const ResultsModal: React.FC<ResultsModalProps> = ({
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Rank Updates */}
+          {rankUpdates && (
+            <div className="bg-black/40 rounded-xl p-4 mb-6 border border-white/5 text-left relative overflow-hidden">
+               {/* Rank Background Glow */}
+               <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full blur-2xl opacity-20 pointer-events-none
+                 ${rankUpdates.scoreDelta > 0 ? 'bg-yellow-500' : 'bg-blue-500'}
+               `} />
+
+               <p className="text-gray-400 text-xs font-tech mb-3 uppercase tracking-wider">段位积分</p>
+               <div className="flex justify-between items-center">
+                 <div className="flex flex-col">
+                   <span className="text-xl font-black font-wizard text-white tracking-wider flex items-center gap-2">
+                     {rankUpdates.newRank}
+                     <span className={`text-xs px-2 py-0.5 rounded-full border ${
+                       rankUpdates.scoreDelta > 0 ? 'border-green-500/30 bg-green-500/10 text-green-400' : 
+                       rankUpdates.scoreDelta < 0 ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-gray-500/30 text-gray-400'
+                     }`}>
+                        {rankUpdates.scoreDelta > 0 ? '↑' : rankUpdates.scoreDelta < 0 ? '↓' : '-'}
+                     </span>
+                   </span>
+                   <span className="text-xs text-gray-500">当前积分: {rankUpdates.newScore}</span>
+                 </div>
+                 
+                 <div className={`text-2xl font-black font-mono flex items-center gap-1
+                   ${rankUpdates.scoreDelta > 0 ? 'text-yellow-400' : rankUpdates.scoreDelta < 0 ? 'text-red-400' : 'text-gray-400'}
+                 `}>
+                    {rankUpdates.scoreDelta > 0 ? <TrendingUp size={20} /> : rankUpdates.scoreDelta < 0 ? <TrendingDown size={20} /> : null}
+                    {rankUpdates.scoreDelta > 0 ? '+' : ''}{rankUpdates.scoreDelta}
+                 </div>
+               </div>
             </div>
           )}
 

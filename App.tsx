@@ -26,7 +26,9 @@ import { ResultsModal } from './components/ResultsModal';
 // Services & Types
 import { ApiService } from './services/api';
 import { calculatePayout, AI_PROFILES } from './services/gameLogic';
-import { GameState, BattleRecord, PlayerStats, SpellType, Deck, GameMode } from './types';
+import { HapticService } from './services/haptic';
+import { calculateRankUpdate } from './services/rankSystem';
+import { GameState, BattleRecord, PlayerStats, SpellType, Deck, GameMode, Rank } from './types';
 
 function App() {
   // 添加全局样式
@@ -48,6 +50,11 @@ function App() {
   const [isResourcesLoaded, setIsResourcesLoaded] = useState(false);
   const [activeAddress, setActiveAddress] = useState<string | null>(null);
   const [balance, setBalance] = useState<number>(0);
+  // 新增排位系统状态
+  const [userRank, setUserRank] = useState<Rank>('Iron');
+  const [rankScore, setRankScore] = useState<number>(0);
+  const [winStreak, setWinStreak] = useState<number>(0); // 连胜状态
+  
   const [selectedBet, setSelectedBet] = useState<number>(10);
   const [gameState, setGameState] = useState<GameState>('LOBBY');
   const [gameMode, setGameMode] = useState<GameMode>('standard'); // 新增：游戏模式状态
@@ -73,6 +80,11 @@ function App() {
     opponent: SpellType;
     payout: number;
     isCrit: boolean;
+    rankUpdates?: {
+      newScore: number;
+      newRank: Rank;
+      scoreDelta: number;
+    };
   } | null>(null);
 
   // ============ 自定义 Hooks ============
@@ -199,6 +211,7 @@ function App() {
     if (success) {
       audioActions.playSfx('cardPlay');
       audioActions.playSpellSfx(spellId);
+      HapticService.medium();
     }
   }, [gameLoopActions, audioActions]);
 
@@ -269,11 +282,24 @@ function App() {
     
     const { payout, isCrit } = calculatePayout(selectedBet, result);
 
+    // 震动与音效
     if (result === 'WIN') {
       audioActions.playSfx('victory');
+      HapticService.success();
     } else {
       audioActions.playSfx('defeat');
+      HapticService.failure();
     }
+
+    // 计算连胜
+    const newStreak = result === 'WIN' ? winStreak + 1 : 0;
+    setWinStreak(newStreak);
+
+    // 计算排位分
+    const { newScore, newRank, scoreDelta } = calculateRankUpdate(rankScore, result, newStreak);
+    // 更新本地状态
+    setRankScore(newScore);
+    setUserRank(newRank);
 
     try {
       if (activeAddress) {
@@ -297,6 +323,11 @@ function App() {
         opponent: lastOpponentSpell,
         payout,
         isCrit,
+        rankUpdates: {
+          scoreDelta,
+          newScore,
+          newRank
+        }
       });
       setGameState('RESULT');
     } catch (e) {
@@ -349,6 +380,8 @@ function App() {
         {gameState === 'LOBBY' && (
           <Lobby
             balance={balance}
+            userRank={userRank}
+            rankScore={rankScore}
             selectedBet={selectedBet}
             onSelectBet={setSelectedBet}
             onStartDuel={handleStartDuel}
@@ -434,6 +467,7 @@ function App() {
           isCrit={finalResult.isCrit}
           onClose={handleResetGame}
           isTavernMode={gameLoopState.duelState?.isTavernMode}
+          rankUpdates={finalResult.rankUpdates}
         />
       )}
     </div>

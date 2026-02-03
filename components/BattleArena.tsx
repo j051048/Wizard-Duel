@@ -10,6 +10,7 @@ import { SpellType, DuelPhase, DuelState, RoundResult } from '../types';
 import { GAME_CONFIG } from '../constants';
 import { getSpellById } from '../services/gameLogic';
 import { getPlayableCards } from '../services/gameLogic';
+import { HapticService } from '../services/haptic';
 import { PlayerFrame } from './PlayerFrame';
 import { SpellCard } from './SpellCard';
 
@@ -50,25 +51,44 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 }) => {
   const [damageNumbers, setDamageNumbers] = useState<{id: number, value: number, x: number, y: number, isPlayer: boolean}[]>([]);
   const damageIdRef = useRef(0);
+  // 新增：追踪HP变化，默认值为初始HP
+  const prevPlayerHP = useRef(duelState.playerHP);
+  const prevOpponentHP = useRef(duelState.opponentHP);
+
   const playerSpellDetails = playerCard ? getSpellById(playerCard) : null;
   const oppSpellDetails = opponentCard ? getSpellById(opponentCard) : null;
 
   // 伤害数字动画
   const addDamageNumber = (damage: number, isPlayer: boolean) => {
+    HapticService.medium(); // 伤害数字弹出时的反馈
     const id = damageIdRef.current++;
-    const x = Math.random() * 100 + 50; // 随机位置
+    // ... (rest of addDamageNumber)
+    const x = Math.random() * 100 + 50; 
     const y = isPlayer ? 200 : 100;
     setDamageNumbers(prev => [...prev, { id, value: damage, x, y, isPlayer }]);
     
-    // 移除动画
     setTimeout(() => {
       setDamageNumbers(prev => prev.filter(d => d.id !== id));
     }, 1000);
   };
 
-  // 监听伤害变化添加动画 (简化版)
+  // 监听HP变化触发强力震动
+  React.useEffect(() => {
+    if (duelState.playerHP < prevPlayerHP.current) {
+        HapticService.heavy(); // 受到伤害
+    }
+    prevPlayerHP.current = duelState.playerHP;
+
+    if (duelState.opponentHP < prevOpponentHP.current) {
+        HapticService.heavy(); // 造成伤害
+    }
+    prevOpponentHP.current = duelState.opponentHP;
+  }, [duelState.playerHP, duelState.opponentHP]);
+
+  // 监听伤害变化... (existing effect can stay or merge, but keeping separate is cleaner for logic separation)
   React.useEffect(() => {
     if (effectMessages.length > 0) {
+      // ... (existing logs logic)
       const lastMsg = effectMessages[effectMessages.length - 1];
       if (lastMsg.includes('造成') || lastMsg.includes('受到')) {
         const damageMatch = lastMsg.match(/(\d+) 点伤害/);
@@ -80,6 +100,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       }
     }
   }, [effectMessages]);
+
+  // ... (rest of component)
   
   const playableCards = getPlayableCards(
     duelState.playerHand, 
