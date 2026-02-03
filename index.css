@@ -136,13 +136,13 @@
 @layer base {
   html,
   body {
-    @apply m-0 p-0 overflow-hidden bg-[#0f0518] text-[#e2e8e0] font-tech;
-    position: fixed;
-    width: 100%;
-    height: 100%;
-    overscroll-behavior: none;
+    @apply m-0 p-0 bg-[#0f0518] text-[#e2e8e0] font-tech;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: none; /* 禁用系统下拉刷新 */
     -webkit-overflow-scrolling: touch;
-    touch-action: manipulation;
+    touch-action: pan-y pinch-zoom; /* 明确允许垂直平移和缩放 */
   }
 
   /* 全局禁用触摸高亮和选择 */

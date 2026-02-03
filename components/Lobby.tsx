@@ -55,7 +55,7 @@ export const Lobby: React.FC<LobbyProps> = ({
   const canStart = balance >= selectedBet;
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="min-h-screen relative overflow-y-auto">
       {/* 背景 */}
       <div 
         className="absolute inset-0 bg-cover bg-center"
