@@ -16,7 +16,7 @@ import { SpellType } from '../types';
 const AUDIO_CONFIG = {
   bgm: {
     lobby: '/audio/bgm-lobby.mp3',
-    battle: '/audio/bgm-battle.mp3',
+    battle: '/audio/bgm-battle.mp3?v=2',
   },
   sfx: {
     cardPlay: '/audio/sfx-card-play.mp3',
