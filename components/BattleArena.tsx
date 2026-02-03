@@ -57,51 +57,56 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
   return (
     <div className="fixed inset-0 overflow-hidden">
-      {/* === 背景层 === */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('/battle-bg.webp')" }}
-      >
-        {/* 备用渐变背景 */}
-        <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/30 via-purple-950/30 to-slate-950/50" />
+      {/* === 背景图 === */}
+      <div className="absolute inset-0 z-0">
+        <img 
+          src="/backgrounds/library-desktop.webp" 
+          alt="Battle Background" 
+          className="w-full h-full object-cover hidden md:block opacity-60"
+        />
+        <img 
+          src="/backgrounds/library-mobile.webp" 
+          alt="Battle Background" 
+          className="w-full h-full object-cover md:hidden opacity-60"
+        />
+        {/* 暗角遮罩 */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
       </div>
 
-      {/* === 装饰边框 === */}
-      <div className="absolute inset-0 pointer-events-none">
-        {/* 顶部边框 */}
+      {/* === 装饰边框与角落 === */}
+      <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
+        {/* 边框线条 */}
         <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
-        {/* 底部边框 */}
         <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
-        {/* 左侧边框 */}
         <div className="absolute top-0 bottom-0 left-0 w-2 bg-gradient-to-b from-transparent via-purple-500/50 to-transparent" />
-        {/* 右侧边框 */}
         <div className="absolute top-0 bottom-0 right-0 w-2 bg-gradient-to-b from-transparent via-purple-500/50 to-transparent" />
 
-        {/* 角落装饰 - 增大尺寸并添加发光效果 */}
-        <img 
-          src="/ui/corner-tl.webp" 
-          className="absolute top-0 left-0 w-32 h-32 md:w-40 md:h-40 opacity-80 drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]" 
-          alt="" 
-          onError={(e) => (e.target as HTMLImageElement).style.display='none'} 
-        />
-        <img 
-          src="/ui/corner-tr.webp" 
-          className="absolute top-0 right-0 w-32 h-32 md:w-40 md:h-40 opacity-80 drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]" 
-          alt="" 
-          onError={(e) => (e.target as HTMLImageElement).style.display='none'} 
-        />
-        <img 
-          src="/ui/corner-bl.webp" 
-          className="absolute bottom-0 left-0 w-32 h-32 md:w-40 md:h-40 opacity-80 drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]" 
-          alt="" 
-          onError={(e) => (e.target as HTMLImageElement).style.display='none'} 
-        />
-        <img 
-          src="/ui/corner-br.webp" 
-          className="absolute bottom-0 right-0 w-32 h-32 md:w-40 md:h-40 opacity-80 drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]" 
-          alt="" 
-          onError={(e) => (e.target as HTMLImageElement).style.display='none'} 
-        />
+        {/* 角落 SVG 矢量装饰 (解决透明度遮挡问题) */}
+        {/* 左上角 */}
+        <svg className="absolute top-2 left-2 w-24 h-24 md:w-48 md:h-48 text-amber-500/80 drop-shadow-lg" viewBox="0 0 100 100" fill="none">
+          <path d="M2,2 L30,2 L35,8 L100,8 L100,5 L32,5 L28,0 L0,0 L0,28 L5,32 L5,100 L8,100 L8,35 L2,30 Z" fill="currentColor" />
+          <path d="M0,0 L40,0 L40,2 L2,2 L2,40 L0,40 Z" fill="currentColor" opacity="0.5" />
+          <circle cx="15" cy="15" r="3" fill="currentColor" className="animate-pulse" />
+        </svg>
+        
+        {/* 右上角 */}
+        <svg className="absolute top-2 right-2 w-24 h-24 md:w-48 md:h-48 text-amber-500/80 drop-shadow-lg transform scale-x-[-1]" viewBox="0 0 100 100" fill="none">
+          <path d="M2,2 L30,2 L35,8 L100,8 L100,5 L32,5 L28,0 L0,0 L0,28 L5,32 L5,100 L8,100 L8,35 L2,30 Z" fill="currentColor" />
+          <path d="M0,0 L40,0 L40,2 L2,2 L2,40 L0,40 Z" fill="currentColor" opacity="0.5" />
+          <circle cx="15" cy="15" r="3" fill="currentColor" className="animate-pulse" />
+        </svg>
+        
+        {/* 左下角 */}
+        <svg className="absolute bottom-2 left-2 w-24 h-24 md:w-48 md:h-48 text-amber-500/80 drop-shadow-lg transform scale-y-[-1]" viewBox="0 0 100 100" fill="none">
+          <path d="M2,2 L30,2 L35,8 L100,8 L100,5 L32,5 L28,0 L0,0 L0,28 L5,32 L5,100 L8,100 L8,35 L2,30 Z" fill="currentColor" />
+          <path d="M0,0 L40,0 L40,2 L2,2 L2,40 L0,40 Z" fill="currentColor" opacity="0.5" />
+        </svg>
+
+        {/* 右下角 */}
+        <svg className="absolute bottom-2 right-2 w-24 h-24 md:w-48 md:h-48 text-amber-500/80 drop-shadow-lg transform scale-[-1]" viewBox="0 0 100 100" fill="none">
+          <path d="M2,2 L30,2 L35,8 L100,8 L100,5 L32,5 L28,0 L0,0 L0,28 L5,32 L5,100 L8,100 L8,35 L2,30 Z" fill="currentColor" />
+          <path d="M0,0 L40,0 L40,2 L2,2 L2,40 L0,40 Z" fill="currentColor" opacity="0.5" />
+        </svg>
       </div>
 
       {/* === 顶部控制栏 === */}
@@ -125,29 +130,32 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       </div>
 
       {/* === 顶部区域：对手信息 === */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-full max-w-md px-4">
-        <PlayerFrame 
-          isPlayer={false}
-          name="Dark Sorcerer"
-          hp={duelState.opponentHP}
-          maxHp={GAME_CONFIG.maxHP}
-          mana={duelState.opponentMana}
-          maxMana={GAME_CONFIG.maxMana}
-          effects={duelState.opponentEffects}
-          isShaking={isOpponentShaking}
-        />
+      {/* 调整：PC端使用 max-w-2xl，移动端保持全宽但有padding */}
+      <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/90 via-black/60 to-transparent pt-4 pb-8">
+        <div className="w-full max-w-[90%] md:max-w-3xl mx-auto px-2 md:px-0 transition-all duration-300">
+          <PlayerFrame 
+            isPlayer={false}
+            name="Dark Sorcerer"
+            hp={duelState.opponentHP}
+            maxHp={GAME_CONFIG.maxHP}
+            mana={duelState.opponentMana}
+            maxMana={GAME_CONFIG.maxMana}
+            effects={duelState.opponentEffects}
+            isShaking={isOpponentShaking}
+          />
 
-        {/* 对手手牌（背面） */}
-        <div className="flex justify-center mt-3 -space-x-4">
-          {Array.from({ length: Math.min(duelState.opponentHandSize, 5) }).map((_, i) => (
-            <div 
-              key={i} 
-              className="transition-transform hover:-translate-y-1 duration-300"
-              style={{ transform: `rotate(${(i - 2) * 8}deg)` }}
-            >
-              <SpellCard isFaceDown isSmall />
-            </div>
-          ))}
+          {/* 对手手牌（背面） */}
+          <div className="flex justify-center mt-3 -space-x-4">
+            {Array.from({ length: Math.min(duelState.opponentHandSize, 5) }).map((_, i) => (
+              <div 
+                key={i} 
+                className="transition-transform hover:-translate-y-1 duration-300"
+                style={{ transform: `rotate(${(i - 2) * 8}deg)` }}
+              >
+                <SpellCard isFaceDown isSmall />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -155,14 +163,14 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         {/* 魔法阵背景 */}
         <div className="relative w-80 h-80 md:w-96 md:h-96">
-          {/* 魔法阵图片 */}
+          {/* 魔法阵图片 - 修复混合模式 */}
           <img 
             src="/ui/magic-circle.webp" 
             alt=""
-            className="absolute inset-0 w-full h-full object-contain opacity-40 animate-spin-slow"
+            className="absolute inset-0 w-full h-full object-contain opacity-50 animate-spin-slow mix-blend-screen"
             onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
           />
-          {/* CSS 备用魔法阵 */}
+          {/* CSS 备用魔法阵（当图片不可用或作为增强） */}
           <div className="absolute inset-0 rounded-full border-2 border-purple-500/30 animate-pulse" />
           <div className="absolute inset-4 rounded-full border border-purple-400/20" />
           <div className="absolute inset-8 rounded-full border border-purple-300/10" />
@@ -280,11 +288,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       )}
 
       {/* === 底部区域：玩家信息 + 手牌 === */}
-      <div className="absolute bottom-0 left-0 right-0 z-20">
+      <div className="absolute bottom-0 left-0 right-0 z-20 overflow-visible">
         {/* 玩家手牌 */}
-        <div className="flex justify-center pb-4" style={{ perspective: '1000px' }}>
+        <div className="flex justify-center pb-4 relative z-30" style={{ perspective: '1000px' }}>
           {phase === 'PLAYER_TURN' ? (
-            <div className="flex items-end">
+            <div className="flex items-end -space-x-4 md:-space-x-2">
               {duelState.playerHand.length === 0 ? (
                 <div className="text-gray-500 text-sm py-8 bg-black/50 px-8 rounded-lg">牌组耗尽...</div>
               ) : (
@@ -293,7 +301,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                   const isAffordable = playableCards.includes(spellId);
                   const totalCards = duelState.playerHand.length;
                   const middleIndex = (totalCards - 1) / 2;
-                  const rotation = (index - middleIndex) * 8;
+                  const rotation = (index - middleIndex) * 6;
                   const yOffset = Math.abs(index - middleIndex) * 12;
 
                   return (
@@ -302,12 +310,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                       className="relative transition-all duration-300 hover:z-50 group pointer-events-auto"
                       style={{ 
                         zIndex: index,
-                        marginLeft: index === 0 ? 0 : '-24px'
                       }}
                     >
                       <div 
                         className={`
-                          transform transition-all duration-300
+                          transform transition-all duration-300 origin-bottom 
                           ${isAffordable ? 'group-hover:-translate-y-16 group-hover:rotate-0 group-hover:scale-110 cursor-pointer' : ''}
                         `}
                         style={{ transform: `rotate(${rotation}deg) translateY(${yOffset}px)` }}
@@ -339,9 +346,9 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           )}
         </div>
 
-        {/* 玩家信息栏 */}
-        <div className="bg-gradient-to-t from-black/90 via-black/70 to-transparent px-4 pb-4 pt-2">
-          <div className="max-w-md mx-auto">
+        {/* 玩家信息栏 - 增加宽度限制适配宽屏 */}
+        <div className="bg-gradient-to-t from-black/90 via-black/80 to-transparent px-4 pb-6 pt-12 mt-[-40px]">
+          <div className="w-full max-w-[90%] md:max-w-3xl mx-auto transition-all duration-300">
             <PlayerFrame 
               isPlayer={true}
               name="Player Wizard"

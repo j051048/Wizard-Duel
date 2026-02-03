@@ -61,7 +61,7 @@ export const HealthBar: React.FC<HealthBarProps> = ({ current, max, isPlayer }) 
   return (
     <div className="relative">
       <div className={`
-        relative w-full h-7 bg-gray-900 rounded-lg overflow-hidden 
+        relative w-full h-7 md:h-9 bg-gray-900 rounded-lg overflow-hidden 
         border-2 ${isHurt ? 'border-red-400' : 'border-gray-700'} 
         shadow-inner transition-colors duration-200
       `}>
@@ -264,7 +264,7 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
   return (
     <div 
       className={`
-        relative p-4 rounded-2xl backdrop-blur-md transition-all duration-300
+        relative p-4 md:p-6 rounded-2xl backdrop-blur-md transition-all duration-300
         ${isPlayer 
           ? 'bg-gradient-to-br from-purple-900/90 to-indigo-900/90 border-2 border-purple-400/60' 
           : 'bg-gradient-to-br from-red-900/90 to-rose-900/90 border-2 border-red-400/60'
@@ -284,10 +284,10 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
       <div className={`absolute -top-1.5 -right-1.5 w-5 h-5 ${isPlayer ? 'bg-purple-400' : 'bg-red-400'} rotate-45 shadow-lg`} />
 
       <div className="flex items-center gap-4">
-        {/* 头像 - 增大到 80px */}
+        {/* 头像 - 增大到 80px -> 96px(md) */}
         <div 
           className={`
-            relative w-20 h-20 rounded-full overflow-hidden flex-shrink-0
+            relative w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden flex-shrink-0
             border-4 ${isPlayer ? 'border-purple-400' : 'border-red-400'}
             shadow-xl ${isPlayer ? 'shadow-purple-500/60' : 'shadow-red-500/60'}
           `}
