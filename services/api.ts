@@ -1,4 +1,4 @@
-import { UserProfile, BattleRecord, PlayerStats } from '../types';
+import { UserProfile, BattleRecord, PlayerStats, SpellType } from '../types.ts';
 import { determineWinner, calculatePayout } from './gameLogic.ts';
 
 // Mock delay helper
@@ -10,8 +10,7 @@ let mockHistory: BattleRecord[] = [];
 
 export const ApiService = {
   async getBalance(address: string): Promise<UserProfile> {
-    await delay(600); // Simulate network latency
-    // In real app: return axios.get(`${API_BASE_URL}/user/balance?address=${address}`);
+    await delay(600);
     return {
       address,
       balance: mockBalance,
@@ -23,17 +22,17 @@ export const ApiService = {
     bet: number, 
     result: 'WIN' | 'LOSS' | 'DRAW', 
     payout: number,
-    playerSpell: string,
-    opponentSpell: string,
+    playerSpell: SpellType,
+    opponentSpell: SpellType,
     isCrit: boolean
   ): Promise<{ newBalance: number }> {
     await delay(800);
-    // In real app: POST to backend to verify signature and update DB
-    // For demo backend: recompute result and payout authoritatively to prevent client tampering
-    const expectedOutcome = determineWinner(playerSpell as any, opponentSpell as any);
+    
+    // Server-side validation: recompute result and payout
+    const expectedOutcome = determineWinner(playerSpell, opponentSpell);
     const expected = calculatePayout(bet, expectedOutcome);
 
-    // If client-submitted result/payout mismatch server calculation, prefer server calculation
+    // Prefer server calculation if mismatch
     let finalPayout = payout;
     let finalIsCrit = isCrit;
     let finalResult = result;
@@ -44,15 +43,15 @@ export const ApiService = {
       finalResult = expectedOutcome;
     }
 
-    // Optimistic update for demo using server-authoritative values
+    // Update balance
     mockBalance = mockBalance - bet + finalPayout;
 
     const record: BattleRecord = {
       id: Math.random().toString(36).substr(2, 9),
-      playerSpell: playerSpell as any,
-      opponentSpell: opponentSpell as any,
+      playerSpell,
+      opponentSpell,
       result: finalResult,
-      amount: finalResult === 'WIN' ? finalPayout - bet : (finalResult === 'DRAW' ? finalPayout - bet : -bet),
+      amount: finalResult === 'WIN' ? finalPayout - bet : (finalResult === 'DRAW' ? 0 : -bet),
       timestamp: Date.now(),
       isCrit: finalIsCrit
     };
@@ -65,7 +64,6 @@ export const ApiService = {
 
   async getLeaderboard(): Promise<PlayerStats[]> {
     await delay(500);
-    // Mock data
     return Array.from({ length: 10 }).map((_, i) => ({
       address: `0x${Math.random().toString(16).substr(2, 8)}...${Math.random().toString(16).substr(2, 4)}`,
       wins: Math.floor(Math.random() * 50) + 10,
