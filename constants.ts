@@ -166,3 +166,14 @@ export const getMechanicName = (mechanic: string): string => {
   };
   return names[mechanic] || mechanic;
 };
+
+/**
+ * 根据 ID 获取法术详情
+ */
+export const getSpellById = (id: SpellType): Spell => {
+  const spell = SPELLS.find(s => s.id === id);
+  if (!spell) {
+    throw new Error(`Unknown spell: ${id}`);
+  }
+  return spell;
+};
