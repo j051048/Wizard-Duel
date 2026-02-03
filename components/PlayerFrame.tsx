@@ -59,58 +59,68 @@ export const HealthBar: React.FC<HealthBarProps> = ({ current, max, isPlayer }) 
   }, [percentage]);
   
   return (
-    <div className={`
-      relative w-full h-7 bg-gray-900 rounded-lg overflow-hidden 
-      border-2 ${isHurt ? 'border-red-400' : 'border-gray-700'} 
-      shadow-inner transition-colors duration-200
-    `}>
-      {/* 伤害层（延迟消失的红色背景） */}
-      <div 
-        className="absolute inset-0 bg-red-600/50 transition-all duration-700 ease-out"
-        style={{ width: `${prevPercentage.current}%` }}
-      />
-      
-      {/* 血量填充 */}
-      <div 
-        className={`
-          h-full relative z-10 transition-colors duration-300
-          ${isCritical 
-            ? 'bg-gradient-to-r from-red-900 to-red-600 animate-pulse' 
-            : isLow 
-              ? 'bg-gradient-to-r from-red-800 to-red-500' 
-              : 'bg-gradient-to-r from-red-700 via-red-600 to-red-500'
-          }
-        `}
-        style={{ width: `${displayPercentage}%`, transition: 'width 0.3s ease-out' }}
-      >
-        {/* 流动光效 */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+    <div className="relative">
+      <div className={`
+        relative w-full h-7 bg-gray-900 rounded-lg overflow-hidden 
+        border-2 ${isHurt ? 'border-red-400' : 'border-gray-700'} 
+        shadow-inner transition-colors duration-200
+      `}>
+        {/* 伤害层（延迟消失的红色背景） */}
+        <div 
+          className="absolute inset-0 bg-red-600/50 transition-all duration-700 ease-out"
+          style={{ width: `${prevPercentage.current}%` }}
+        />
+        
+        {/* 血量填充 */}
+        <div 
+          className={`
+            h-full relative z-10 transition-colors duration-300
+            ${isCritical 
+              ? 'bg-gradient-to-r from-red-900 to-red-600 animate-pulse' 
+              : isLow 
+                ? 'bg-gradient-to-r from-red-800 to-red-500' 
+                : 'bg-gradient-to-r from-red-700 via-red-600 to-red-500'
+            }
+          `}
+          style={{ width: `${displayPercentage}%`, transition: 'width 0.3s ease-out' }}
+        >
+          {/* 流动光效 */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+          </div>
         </div>
+        
+        {/* 顶部高光 */}
+        <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white/25 to-transparent z-10" />
+        
+        {/* 底部阴影 */}
+        <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t from-black/30 to-transparent z-10" />
       </div>
-      
-      {/* 数值显示 */}
-      <div className="absolute inset-0 flex items-center justify-center z-20">
+
+      {/* 数值显示与图标 - 移出Bar体，更清晰 */}
+      <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
         <span className={`
-          text-white text-sm font-bold drop-shadow-lg tracking-wider
-          ${isCritical ? 'animate-pulse text-red-200' : ''}
+          text-white text-sm font-bold drop-shadow-md tracking-wider flex items-center gap-1.5
+          ${isCritical ? 'animate-pulse text-red-100' : ''}
           ${isHurt ? 'scale-110' : ''}
           transition-transform duration-200
         `}>
-          {current}/{max}
+          <img 
+            src="/icons/icon-health.webp" 
+            alt="HP" 
+            className="w-4 h-4 object-contain drop-shadow-sm" 
+            onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+          />
+          <span className="drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+            {current}/{max}
+          </span>
         </span>
       </div>
-      
-      {/* 顶部高光 */}
-      <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white/25 to-transparent z-10" />
-      
-      {/* 底部阴影 */}
-      <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t from-black/30 to-transparent z-10" />
     </div>
   );
 };
 
-// ======== 子组件：法力水晶（增大尺寸） ========
+// ======== 子组件：法力水晶（使用图标素材） ========
 interface ManaCrystalsProps {
   current: number;
   max: number;
@@ -123,50 +133,37 @@ export const ManaCrystals: React.FC<ManaCrystalsProps> = ({ current, max }) => (
         key={i}
         className={`
           relative transition-all duration-300
-          ${i < current ? 'opacity-100 scale-100' : 'opacity-40 scale-90'}
+          ${i < current ? 'opacity-100 scale-100 brightness-110' : 'opacity-40 scale-90 grayscale'}
         `}
-        style={{ width: '22px', height: '28px' }}
+        style={{ width: '24px', height: '24px' }}
       >
-        {/* 水晶形状 */}
-        <div 
-          className={`
-            absolute inset-0 
-            ${i < current 
-              ? 'bg-gradient-to-b from-blue-300 via-blue-500 to-blue-800 shadow-[0_0_12px_rgba(59,130,246,0.9)]' 
-              : 'bg-gradient-to-b from-gray-500 to-gray-700'
-            }
-          `} 
-          style={{ clipPath: 'polygon(50% 0%, 100% 30%, 85% 100%, 15% 100%, 0% 30%)' }}
-        >
-          {/* 水晶高光 */}
-          {i < current && (
-            <>
-              <div className="absolute top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white/70 rounded-full blur-[2px]" />
-              <div className="absolute top-3 left-1 w-1 h-3 bg-white/30 rounded-full blur-[1px] rotate-12" />
-            </>
-          )}
-        </div>
+        <img 
+          src="/icons/icon-mana.webp" 
+          alt="Mana" 
+          className="w-full h-full object-contain drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]"
+          onError={(e) => {
+            // 图片加载失败时回退到CSS图形
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
+        />
         
-        {/* 充能动画 */}
-        {i < current && (
-          <div className="absolute inset-0 animate-pulse opacity-50">
-            <div 
-              className="absolute inset-0 bg-gradient-to-t from-blue-400/50 to-transparent"
-              style={{ clipPath: 'polygon(50% 0%, 100% 30%, 85% 100%, 15% 100%, 0% 30%)' }}
-            />
-          </div>
+        {/* CSS 备用/充能动画 */}
+        {i < current ? (
+          <div className="absolute inset-0 bg-blue-500/30 rounded-full blur-[4px] animate-pulse -z-10" />
+        ) : (
+          <div className="absolute inset-0 bg-gray-500/20 rounded-full -z-10" />
         )}
       </div>
     ))}
     
     {/* 数值提示 */}
-    <span className="ml-2 text-xs font-bold text-blue-300 drop-shadow-md">
+    <span className="ml-2 text-xs font-bold text-blue-300 drop-shadow-md flex items-center gap-1">
       {current}/{max}
     </span>
   </div>
 );
 
-// ======== 子组件：状态效果标签 ========
+// ======== 子组件：状态效果标签（使用效果素材） ========
 interface StatusEffectBadgeProps {
   effect: StatusEffect;
 }
@@ -174,17 +171,27 @@ interface StatusEffectBadgeProps {
 const StatusEffectBadge: React.FC<StatusEffectBadgeProps> = ({ effect }) => {
   const getBadgeStyle = () => {
     switch (effect.type) {
-      case 'burn':
-        return 'bg-gradient-to-r from-orange-600 to-red-600 text-orange-100 border-orange-400/60 shadow-orange-500/50';
-      case 'tangle':
-        return 'bg-gradient-to-r from-green-600 to-emerald-600 text-green-100 border-green-400/60 shadow-green-500/50';
-      case 'frozen':
-        return 'bg-gradient-to-r from-cyan-500 to-blue-500 text-cyan-100 border-cyan-400/60 shadow-cyan-500/50';
-      default:
-        return 'bg-gradient-to-r from-gray-600 to-gray-500 text-gray-100 border-gray-400/60 shadow-gray-500/50';
+      case 'burn': return 'bg-orange-950/80 border-orange-500/50 text-orange-200';
+      case 'tangle': return 'bg-green-950/80 border-green-500/50 text-green-200';
+      case 'frozen': return 'bg-cyan-950/80 border-cyan-500/50 text-cyan-200';
+      case 'charge': return 'bg-yellow-950/80 border-yellow-500/50 text-yellow-200';
+      case 'fortify': return 'bg-stone-950/80 border-stone-500/50 text-stone-200';
+      default: return 'bg-gray-900/80 border-gray-500/50 text-gray-200';
     }
   };
 
+  const getEffectIcon = () => {
+    switch (effect.type) {
+      case 'burn': return '/effects/effect-burn.webp';
+      case 'tangle': return '/effects/effect-tangle.webp';
+      case 'frozen': return '/effects/effect-freeze.webp';
+      case 'charge': return '/effects/effect-charge.webp';
+      case 'fortify': return '/effects/effect-fortify.webp';
+      default: return null;
+    }
+  };
+
+  // 备用 emoji
   const getEmoji = () => {
     switch (effect.type) {
       case 'burn': return '🔥';
@@ -194,18 +201,35 @@ const StatusEffectBadge: React.FC<StatusEffectBadgeProps> = ({ effect }) => {
     }
   };
 
+  const iconSrc = getEffectIcon();
+
   return (
     <div 
       className={`
-        px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase
-        border backdrop-blur-sm shadow-lg
+        px-3 py-1 rounded-full text-[10px] font-bold uppercase
+        border shadow-lg flex items-center gap-1.5
         ${getBadgeStyle()}
         animate-float
       `}
     >
-      <span className="mr-1">{getEmoji()}</span>
-      {getMechanicName(effect.type)}
-      {effect.duration > 1 && <span className="ml-1 opacity-80">×{effect.duration}</span>}
+      {iconSrc ? (
+        <img 
+          src={iconSrc} 
+          alt={effect.type} 
+          className="w-4 h-4 object-contain"
+          onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+        />
+      ) : (
+        <span>{getEmoji()}</span>
+      )}
+      
+      <span>{getMechanicName(effect.type)}</span>
+      
+      {effect.duration > 1 && (
+        <span className="ml-0.5 w-4 h-4 rounded-full bg-white/20 text-white flex items-center justify-center text-[9px]">
+          {effect.duration}
+        </span>
+      )}
     </div>
   );
 };

@@ -247,8 +247,16 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           
           {/* 下注额 */}
           <div className="text-xs text-gray-400 font-tech uppercase tracking-widest mb-1">下注</div>
-          <div className="text-2xl font-bold text-yellow-400 drop-shadow-lg">{selectedBet}</div>
-          <div className="text-purple-400 text-xs font-bold">积分</div>
+          <div className="flex items-center justify-center gap-1.5 text-2xl font-bold text-yellow-400 drop-shadow-lg">
+            <img 
+              src="/icons/icon-coin.webp" 
+              alt="Coin" 
+              className="w-5 h-5 object-contain"
+              onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+            />
+            {selectedBet}
+          </div>
+          <div className="text-purple-400 text-xs font-bold mt-0.5">积分</div>
         </div>
       </div>
 

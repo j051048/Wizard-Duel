@@ -48,27 +48,31 @@ export const SpellCard: React.FC<SpellCardProps> = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   
-  // FACE DOWN CARD (Card Back)
+  // FACE DOWN CARD (Card Back) - 使用真实素材
   if (isFaceDown) {
     return (
       <div className={`
         relative rounded-xl border-2 border-slate-600 bg-slate-900 overflow-hidden shadow-xl
         ${isSmall ? 'w-16 h-24' : 'w-24 h-36 sm:w-28 sm:h-40'}
-        flex items-center justify-center
-        hover:border-slate-500 transition-colors duration-300
+        hover:border-slate-500 transition-all duration-300 hover:scale-105
       `}>
-        {/* 神秘图案 */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-black" />
-        <div className="absolute inset-2 border border-slate-500/30 rounded-lg flex items-center justify-center">
+        {/* 卡背图片 */}
+        <img 
+          src="/cards/card-back.webp" 
+          alt="Card Back"
+          className="absolute inset-0 w-full h-full object-cover"
+          onError={(e) => {
+            // 图片加载失败时使用CSS备用方案
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
+        />
+        {/* CSS 备用方案 */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-black -z-10" />
+        <div className="absolute inset-2 border border-slate-500/30 rounded-lg flex items-center justify-center -z-10">
           <div className="w-10 h-10 rounded-full border-2 border-slate-500/50 flex items-center justify-center">
             <div className="w-4 h-4 bg-gradient-to-br from-purple-500 to-purple-900 rotate-45 animate-pulse" />
           </div>
         </div>
-        {/* 角落装饰 */}
-        <div className="absolute top-1 left-1 w-3 h-3 border-t-2 border-l-2 border-slate-500/40 rounded-tl" />
-        <div className="absolute top-1 right-1 w-3 h-3 border-t-2 border-r-2 border-slate-500/40 rounded-tr" />
-        <div className="absolute bottom-1 left-1 w-3 h-3 border-b-2 border-l-2 border-slate-500/40 rounded-bl" />
-        <div className="absolute bottom-1 right-1 w-3 h-3 border-b-2 border-r-2 border-slate-500/40 rounded-br" />
       </div>
     );
   }
@@ -137,30 +141,62 @@ export const SpellCard: React.FC<SpellCardProps> = ({
         {spell.damage}
       </div>
 
-      {/* Card Art */}
+      {/* Card Art - 使用真实素材 */}
       <div className={`
-        w-full aspect-square rounded-lg bg-gradient-to-br from-slate-700 to-black 
+        w-full aspect-square rounded-lg overflow-hidden
         flex items-center justify-center mt-5
-        border border-white/10 relative overflow-hidden 
+        border border-white/10 relative
         transition-all duration-300
         ${isHovered && canPlay ? 'border-white/30' : ''}
       `}>
-        {/* Background glow based on element */}
-        <div 
-          className={`absolute inset-0 transition-opacity duration-300 ${isHovered ? 'opacity-50' : 'opacity-25'}`}
-          style={{
-            background: `radial-gradient(circle at center, ${spell.shadowColor} 0%, transparent 70%)`
-          }}
-        />
+        {/* 卡牌插画 */}
+        {spell.artSrc ? (
+          <img 
+            src={spell.artSrc} 
+            alt={spell.name}
+            className={`
+              w-full h-full object-cover transition-all duration-300
+              ${isSelected ? 'scale-110' : ''} 
+              ${isHovered && canPlay ? 'scale-125' : ''}
+            `}
+            onError={(e) => {
+              // 图片加载失败时隐藏图片，显示emoji
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        ) : null}
         
-        {/* Emoji */}
+        {/* Emoji 作为备用/覆盖层 */}
         <div className={`
-          text-5xl sm:text-6xl drop-shadow-2xl transition-all duration-300 relative z-10
-          ${isSelected ? 'scale-110' : ''} 
-          ${isHovered && canPlay ? 'scale-125 animate-pulse' : ''}
+          absolute inset-0 flex items-center justify-center
+          ${spell.artSrc ? 'opacity-0' : 'opacity-100'}
         `}>
-          {spell.emoji}
+          {/* Background glow based on element */}
+          <div 
+            className={`absolute inset-0 transition-opacity duration-300 ${isHovered ? 'opacity-50' : 'opacity-25'}`}
+            style={{
+              background: `radial-gradient(circle at center, ${spell.shadowColor} 0%, transparent 70%)`
+            }}
+          />
+          <div className={`
+            text-5xl sm:text-6xl drop-shadow-2xl transition-all duration-300 relative z-10
+            ${isSelected ? 'scale-110' : ''} 
+            ${isHovered && canPlay ? 'scale-125 animate-pulse' : ''}
+          `}>
+            {spell.emoji}
+          </div>
         </div>
+        
+        {/* 图片上层光效 */}
+        {spell.artSrc && (
+          <div 
+            className={`
+              absolute inset-0 pointer-events-none transition-opacity duration-300
+              bg-gradient-to-t from-black/60 via-transparent to-transparent
+              ${isHovered && canPlay ? 'opacity-30' : 'opacity-50'}
+            `}
+          />
+        )}
         
         {/* 悬停时的粒子效果 */}
         {isHovered && canPlay && (

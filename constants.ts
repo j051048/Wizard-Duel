@@ -34,6 +34,7 @@ export const SPELLS: Spell[] = [
     id: 'fire', 
     name: 'Pyroblast',        // 火球术 - 高费高伤的进攻法术
     emoji: '🔥', 
+    artSrc: '/cards/fire-pyroblast.webp',
     color: 'text-red-500', 
     borderColor: 'border-red-500',
     shadowColor: 'rgba(239,68,68,0.5)',
@@ -49,6 +50,7 @@ export const SPELLS: Spell[] = [
     id: 'vine', 
     name: 'Entangling Roots', // 缠绕之根 - 控制型法术
     emoji: '🌿', 
+    artSrc: '/cards/vine-entangling.webp',
     color: 'text-green-500', 
     borderColor: 'border-green-500',
     shadowColor: 'rgba(34,197,94,0.5)',
@@ -64,6 +66,7 @@ export const SPELLS: Spell[] = [
     id: 'ice', 
     name: 'Frost Nova',       // 霜冻新星 - 节奏型法术
     emoji: '❄️', 
+    artSrc: '/cards/ice-frostnova.webp',
     color: 'text-cyan-400', 
     borderColor: 'border-cyan-400',
     shadowColor: 'rgba(34,211,238,0.5)',
@@ -79,6 +82,7 @@ export const SPELLS: Spell[] = [
     id: 'thunder', 
     name: 'Chain Lightning',  // 连环闪电 - 连击型法术
     emoji: '⚡', 
+    artSrc: '/cards/thunder-chainlightning.webp',
     color: 'text-yellow-400', 
     borderColor: 'border-yellow-400',
     shadowColor: 'rgba(250,204,21,0.5)',
@@ -94,6 +98,7 @@ export const SPELLS: Spell[] = [
     id: 'rock', 
     name: 'Stone Bulwark',    // 石壁屏障 - 防御型法术  
     emoji: '🪨', 
+    artSrc: '/cards/rock-bulwark.webp',
     color: 'text-stone-400', 
     borderColor: 'border-stone-400',
     shadowColor: 'rgba(168,162,158,0.5)',

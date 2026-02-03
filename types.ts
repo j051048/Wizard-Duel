@@ -27,6 +27,7 @@ export interface Spell {
   name: string;
   emoji: string;
   icon?: string;
+  artSrc?: string;  // 卡牌插画路径
 
   // 视觉样式
   color: string; // Text color class, e.g., 'text-red-500'
