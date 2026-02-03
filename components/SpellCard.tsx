@@ -198,7 +198,7 @@ export const SpellCard: React.FC<SpellCardProps> = ({
               style={{ background: `radial-gradient(circle at center, ${spell.shadowColor}, transparent 80%)` }}
             />
             {/* Main Art / Emoji */}
-             <div className="relative z-0 transform transition-transform duration-500 group-hover:scale-110">
+             <div className="absolute inset-0 z-0 transform transition-transform duration-500 group-hover:scale-110">
                 {spell.artSrc ? (
                    <img 
                     src={spell.artSrc} 
@@ -208,7 +208,7 @@ export const SpellCard: React.FC<SpellCardProps> = ({
                     className="w-full h-full object-cover" 
                    />
                 ) : (
-                   <div className="text-6xl drop-shadow-2xl grayscale-[0.2] group-hover:grayscale-0 transition-all">{spell.emoji}</div>
+                   <div className="flex items-center justify-center h-full text-6xl drop-shadow-2xl grayscale-[0.2] group-hover:grayscale-0 transition-all">{spell.emoji}</div>
                 )}
              </div>
         </div>
