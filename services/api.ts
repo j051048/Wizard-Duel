@@ -332,8 +332,10 @@ export const ApiService = {
 
     if (!response.success) {
       console.error('游戏结算失败:', response.error);
-      // 降级处理：使用本地计算
-      return { newBalance: mockBalance, verified: false };
+      // 降级处理：尝试从本地档案获取余额或保持现状
+      const profiles = _loadLocalData<Record<string, UserProfile>>(STORAGE_KEYS.PROFILE, {});
+      const profile = profiles[userId];
+      return { newBalance: profile ? profile.balance : 1000, verified: false };
     }
 
     return response.data!;

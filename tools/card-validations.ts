@@ -8,8 +8,8 @@ export function validateSpells() {
   const issues: string[] = [];
 
   SPELLS.forEach(s => {
-    // 检测零费用卡牌
-    if (s.manaCost !== undefined && s.manaCost === 0) {
+    // 检测零费用卡牌 (排除英雄技能和跳过回合)
+    if (s.manaCost !== undefined && s.manaCost === 0 && !s.id.startsWith('hero_') && s.id !== 'skip') {
       issues.push(`Zero mana cost detected for ${s.id} (${s.name})`);
     }
     

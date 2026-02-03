@@ -1,6 +1,6 @@
 import { Spell, GameConfig, SpellType, Rarity, CardSet, GameMode } from './types.ts';
 
-export const API_BASE_URL = 'https://your-api.com';
+export const API_BASE_URL = ''; // 默认为空，由 ApiService 处理环境变量或 Mock
 
 // ============ 暴雪级游戏配置 (Patch 2.0) ============
 

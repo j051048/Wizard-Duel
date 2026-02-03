@@ -58,8 +58,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   const isMobile = useIsMobile();
   const [damageNumbers, setDamageNumbers] = useState<DamageNumber[]>([]);
   const damageIdRef = useRef(0);
-  const prevPlayerHP = useRef(duelState?.playerHP || 100);
-  const prevOpponentHP = useRef(duelState?.opponentHP || 100);
+  const prevPlayerHP = useRef(duelState?.playerHP || GAME_CONFIG.maxHP);
+  const prevOpponentHP = useRef(duelState?.opponentHP || GAME_CONFIG.maxHP);
 
   const playerSpellDetails = playerCard ? getSpellById(playerCard) : null;
   const oppSpellDetails = opponentCard ? getSpellById(opponentCard) : null;
@@ -245,8 +245,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
              <div className="absolute z-50 animate-bounce">
                 <div className={`
                   px-8 py-4 rounded-xl font-wizard text-3xl md:text-5xl font-black shadow-[0_0_50px_rgba(0,0,0,0.5)]
-                  ${resultText.includes('Win') ? 'bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-600 text-white' : 
-                    resultText.includes('Loss') ? 'bg-gradient-to-r from-red-700 via-rose-600 to-red-800 text-white' : 
+                  ${resultText.toUpperCase().includes('WIN') ? 'bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-600 text-white' : 
+                    resultText.toUpperCase().includes('LOSS') ? 'bg-gradient-to-r from-red-700 via-rose-600 to-red-800 text-white' : 
                     'bg-slate-800/90 text-white border border-slate-500 backdrop-blur-lg'}
                 `}>
                   {resultText}
