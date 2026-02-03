@@ -67,7 +67,7 @@ export interface Spell {
   // 卡牌属性
   rarity: Rarity;
   mechanic: Mechanic;
-  cardSet: CardSet; // 新增：卡牌所属扩展包
+  cardSet?: CardSet; // 新增：卡牌所属扩展包
 
   // 描述文本
   description: string;
@@ -111,6 +111,7 @@ export interface DuelState {
   playerHand: SpellType[];
   playerDeck: SpellType[];
   opponentHandSize: number;
+  opponentDeck: SpellType[];
 
   // 状态效果
   playerEffects: StatusEffect[];
@@ -172,7 +173,13 @@ export interface Deck {
   lastUsed: number;
 }
 
-// ============ 玩家数据 ============
+export interface PlayerStats {
+  address: string;
+  wins: number;
+  losses: number;
+  draws: number;
+  totalEarnings: number;
+}
 
 export interface PlayerData {
   selectedDeck: Deck | null;

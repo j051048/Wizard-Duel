@@ -10,7 +10,7 @@ import {
 } from '../types';
 import { 
   createInitialDuelState, executeSpell, executeAITurn,
-  prepareNextTurn, generateDraftOptions, drawCard
+  prepareNextTurn, drawCard
 } from '../services/gameLogic';
 
 // 阶段持续时间 (毫秒)
@@ -205,7 +205,6 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
       startDuel,
       startTavernDuel,
       playCard,
-      draftCard,
       passTurn,
       reset,
     }

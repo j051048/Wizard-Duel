@@ -409,7 +409,7 @@ export const calculatePayout = (
  * @deprecated
  */
 export const getRandomSpell = (playerSpellId?: SpellType): SpellType => {
-  return generateDraftOptions(1)[0];
+  return SPELLS[Math.floor(Math.random() * 10)].id;
 };
 
 export const determineWinner = (p: SpellType, o: SpellType) => 'DRAW'; // Deprecated stub
@@ -535,6 +535,7 @@ export const createTavernDuelState = (playerDeck: SpellType[], aiProfile: AIProf
     roundNumber: 0,
     isTavernMode: true,
     aiProfile,
+    opponentDeck: shuffledAIDeck,
 
     heroSkillsUsed: false
   };

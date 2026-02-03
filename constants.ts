@@ -1,4 +1,4 @@
-import { Spell, GameConfig, SpellType } from './types.ts';
+import { Spell, GameConfig, SpellType, Rarity, CardSet, GameMode } from './types.ts';
 
 export const API_BASE_URL = 'https://your-api.com';
 
@@ -110,7 +110,9 @@ export const SPELLS: Spell[] = [
     damage: 0,                // 无攻击力
     armorGain: 5,             // 纯防御
     rarity: 'common',
-    mechanic: 'fortify',    cardSet: 'core',          // 核心卡牌，永远可用    description: '造成0点伤害，但获得5点护甲。',
+    mechanic: 'fortify',
+    cardSet: 'core',
+    description: '造成0点伤害，但获得5点护甲。',
     shortDesc: 'Fortify: +5 甲'
   },
   // 新增卡牌扩展池
@@ -641,13 +643,21 @@ export const CRIT_MULTIPLIER = 1.0;   // 失效
 /**
  * 创建初始牌组：每种元素各4张，共20张
  */
-export const createDeck = (): SpellType[] => {
+export const createDeck = (baseCards?: SpellType[]): SpellType[] => {
   const deck: SpellType[] = [];
-  const elements: SpellType[] = ['fire', 'vine', 'ice', 'thunder', 'rock'];
+  const elements: SpellType[] = baseCards || ['fire', 'vine', 'ice', 'thunder', 'rock'];
   
-  for (const element of elements) {
-    for (let i = 0; i < 4; i++) { // Increase to 4 copies
-      deck.push(element);
+  if (baseCards) {
+    // 如果提供了基础卡池，随机选择填充到20张
+    for (let i = 0; i < 20; i++) {
+        deck.push(elements[Math.floor(Math.random() * elements.length)]);
+    }
+  } else {
+    // 默认平均分配
+    for (const element of elements) {
+        for (let i = 0; i < 4; i++) { 
+          deck.push(element);
+        }
     }
   }
   
