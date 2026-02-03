@@ -25,7 +25,7 @@ import { ResultsModal } from './components/ResultsModal';
 
 // Services & Types
 import { ApiService } from './services/api';
-import { calculatePayout } from './services/gameLogic';
+import { calculatePayout, AI_PROFILES } from './services/gameLogic';
 import { GameState, BattleRecord, PlayerStats, SpellType, Deck, GameMode } from './types';
 
 function App() {
@@ -251,12 +251,13 @@ function App() {
 
   const handleMatchmakingComplete = useCallback(() => {
     if (pendingTavernDuel) {
-      // 开始酒馆决斗
+      // 开始预设的酒馆/AI对决
       gameLoopActions.startTavernDuel(selectedDeck!.cards, pendingTavernDuel, gameMode);
       setPendingTavernDuel(null);
     } else {
-      // 开始普通决斗
-      gameLoopActions.startDuel(selectedDeck!.cards, gameMode);
+      // 模拟对战：随机选择一个中高难度的AI作为对手 (排除第一个入门级)
+      const mockOpponent = AI_PROFILES[Math.floor(Math.random() * (AI_PROFILES.length - 1)) + 1];
+      gameLoopActions.startTavernDuel(selectedDeck!.cards, mockOpponent, gameMode);
     }
     setGameState('DUEL');
     audioActions.playBgm('battle');

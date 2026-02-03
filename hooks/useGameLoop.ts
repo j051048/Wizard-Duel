@@ -6,11 +6,11 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { 
-  SpellType, DuelPhase, DuelState, RoundResult, GameMode
+  SpellType, DuelPhase, DuelState, RoundResult, GameMode, AIProfile
 } from '../types';
 import { 
   createInitialDuelState, executeSpell, executeAITurn,
-  prepareNextTurn, drawCard
+  prepareNextTurn, drawCard, createTavernDuelState
 } from '../services/gameLogic';
 
 // 阶段持续时间 (毫秒)
@@ -86,9 +86,8 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
   }, [startNewRound]);
 
   // 开始酒馆模式对战
-  const startTavernDuel = useCallback((deck: SpellType[], aiProfile: any, gameMode: GameMode = 'standard') => {
-    const { createTavernDuelState } = require('../services/gameLogic');
-    let initialState = createTavernDuelState(deck, aiProfile, gameMode);
+  const startTavernDuel = useCallback((deck: SpellType[], aiProfile: AIProfile, gameMode: GameMode = 'standard') => {
+    const initialState = createTavernDuelState(deck, aiProfile, gameMode);
     // 初始状态下 roundNumber = 0，我们需要直接进入第一回合 Draft
     startNewRound(initialState);
 

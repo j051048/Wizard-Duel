@@ -54,12 +54,17 @@ export const MatchmakingAnimation: React.FC<MatchmakingAnimationProps> = ({
 
     // Update steps based on progress
     let cumulativeTime = 0;
+    const timeouts: NodeJS.Timeout[] = [];
     stepDurations.forEach((duration, index) => {
       cumulativeTime += duration;
-      setTimeout(() => setCurrentStep(index), cumulativeTime);
+      const t = setTimeout(() => setCurrentStep(index), cumulativeTime);
+      timeouts.push(t);
     });
 
-    return () => clearInterval(interval);
+    return () => {
+        clearInterval(interval);
+        timeouts.forEach(t => clearTimeout(t));
+    };
   }, [onComplete]);
 
   const currentStepData = steps[Math.min(currentStep, steps.length - 1)];

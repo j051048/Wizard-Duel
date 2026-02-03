@@ -5,22 +5,12 @@
  */
 
 import { 
-  SpellType, 
-  Spell, 
-  StatusEffect, 
-  DuelState, 
-  RoundResult,
-  Mechanic,
-  GameMode
-} from '../types.ts';
+  DuelState, SpellType, Spell, GameMode, StatusEffect, AIProfile
+} from '../types';
 import { 
-  SPELLS, 
-  GAME_CONFIG, 
-  createDeck,
-  CRIT_CHANCE, 
-  WIN_MULTIPLIER, 
-  CRIT_MULTIPLIER 
-} from '../constants.ts';
+  SPELLS, GAME_CONFIG, createDeck, getCardsForMode,
+  CRIT_CHANCE, WIN_MULTIPLIER, CRIT_MULTIPLIER
+} from '../constants';
 
 // ============ 卡牌查询 ============
 
@@ -49,7 +39,6 @@ export const createInitialDuelState = (playerDeck: SpellType[], gameMode: GameMo
   const remainingDeck = shuffledDeck.slice(5);
   
   // 为对手创建基于游戏模式的牌组
-  const { getCardsForMode } = require('../constants');
   const availableSpells = getCardsForMode(gameMode);
   const opponentDeck = createDeck(availableSpells.map(s => s.id));
   const shuffledOpponentDeck = [...opponentDeck].sort(() => Math.random() - 0.5);
@@ -416,13 +405,8 @@ export const determineWinner = (p: SpellType, o: SpellType) => 'DRAW'; // Deprec
 
 // ============ AI对手逻辑 ============
 
-export interface AIProfile {
-  name: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  description: string;
-  avatar: string;
-  strategy: 'aggressive' | 'defensive' | 'balanced';
-}
+// 已在 types.ts 中定义，此处删除重复定义以避免冲突
+
 
 export const AI_PROFILES: AIProfile[] = [
   {
@@ -543,7 +527,6 @@ export const createTavernDuelState = (playerDeck: SpellType[], aiProfile: AIProf
 
 const generateTavernAIDeck = (aiProfile: AIProfile, gameMode: GameMode = 'standard'): SpellType[] => {
   // 根据游戏模式获取可用卡牌
-  const { getCardsForMode } = require('../constants');
   const availableSpells = getCardsForMode(gameMode);
   const baseCards = availableSpells.map(s => s.id);
   const deckSize = 20;
