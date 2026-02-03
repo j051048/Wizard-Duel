@@ -13,6 +13,18 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { SpellType } from '../types';
 
 // 音效配置
+// 使用单例管理 AudioContext 以防止 iOS 崩溃
+let globalAudioCtx: AudioContext | null = null;
+const getAudioContext = () => {
+    if (!globalAudioCtx) {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+            globalAudioCtx = new AudioContextClass();
+        }
+    }
+    return globalAudioCtx;
+};
+
 const AUDIO_CONFIG = {
   bgm: {
     lobby: '/audio/bgm-lobby.mp3',
@@ -289,43 +301,37 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
     };
   }, []);
 
-  // 用户交互解锁音频逻辑 (针对 iOS)
-  const unlockAudio = useCallback(() => {
-    if (!isAudioBlocked) return;
-    
-    // 尝试直接播放 BGM
-    if (bgmRef.current) {
-      bgmRef.current.play().then(() => {
-        setIsAudioBlocked(false);
-      }).catch(err => {
-        // 创建静音 AudioContext 以彻底解锁
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioContextClass) {
-          const ctx = new AudioContextClass();
-          ctx.resume().then(() => {
-            const buffer = ctx.createBuffer(1, 1, 22050);
-            const source = ctx.createBufferSource();
-            source.buffer = buffer;
-            source.connect(ctx.destination);
-            source.start(0);
-            setIsAudioBlocked(false);
-            if (bgmRef.current) bgmRef.current.play();
-          });
-        }
-      });
-    }
-  }, [isAudioBlocked]);
-
+  // 用户交互解锁音频逻辑 (修复 iOS AutoPlay Policy)
   useEffect(() => {
-    if (isAudioBlocked) {
-      window.addEventListener('click', unlockAudio, { once: true });
-      window.addEventListener('touchstart', unlockAudio, { once: true });
-      return () => {
-        window.removeEventListener('click', unlockAudio);
-        window.removeEventListener('touchstart', unlockAudio);
-      };
+    const unlock = () => {
+        const ctx = getAudioContext();
+        if (ctx && ctx.state === 'suspended') {
+            ctx.resume().then(() => {
+                // 播放静音 buffer 彻底激活
+                const buffer = ctx.createBuffer(1, 1, 22050);
+                const source = ctx.createBufferSource();
+                source.buffer = buffer;
+                source.connect(ctx.destination);
+                source.start(0);
+                
+                setIsAudioBlocked(false);
+                if (bgmRef.current && isPlaying) {
+                   bgmRef.current.play().catch(() => {});
+                }
+            });
+        }
+    };
+
+    if (isAudioBlocked || (getAudioContext()?.state === 'suspended')) {
+        window.addEventListener('click', unlock, { once: true });
+        window.addEventListener('touchstart', unlock, { once: true });
     }
-  }, [isAudioBlocked, unlockAudio]);
+    
+    return () => {
+        window.removeEventListener('click', unlock);
+        window.removeEventListener('touchstart', unlock);
+    };
+  }, [isAudioBlocked, isPlaying]);
 
   const state: AudioManagerState = {
     isMuted,

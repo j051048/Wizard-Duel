@@ -120,11 +120,22 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     }
   }, [effectMessages]);
 
+  // 追踪组件挂载状态，防止异步回调内存泄漏
+  const isMounted = useRef(true);
+  useEffect(() => {
+    isMounted.current = true;
+    return () => { isMounted.current = false; };
+  }, []);
+
   const handlePlayCard = (spellId: SpellType) => {
     const id = Date.now();
     setProjectiles(prev => [...prev, { id, type: 'player', x: 50, y: 80 }]);
     onPlayCard(spellId);
-    setTimeout(() => setProjectiles(prev => prev.filter(p => p.id !== id)), 600);
+    setTimeout(() => {
+      if (isMounted.current) {
+        setProjectiles(prev => prev.filter(p => p.id !== id));
+      }
+    }, 600);
   };
 
   const prevOppCard = useRef<SpellType | null>(null);
@@ -132,7 +143,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     if (opponentCard && opponentCard !== prevOppCard.current) {
        const id = Date.now();
        setProjectiles(prev => [...prev, { id, type: 'opp', x: 50, y: 15 }]);
-       setTimeout(() => setProjectiles(prev => prev.filter(p => p.id !== id)), 600);
+       setTimeout(() => {
+         if (isMounted.current) {
+           setProjectiles(prev => prev.filter(p => p.id !== id));
+         }
+       }, 600);
     }
     prevOppCard.current = opponentCard;
   }, [opponentCard]);
@@ -164,8 +179,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
             alt="" 
             decoding="async"
             loading="lazy"
-            className="w-[120vw] h-[120vw] md:w-[90vh] md:h-[90vh] animate-spin mix-blend-screen"
-            style={{ animationDuration: '120s' }}
+            className="w-[90vh] h-[90vh] animate-spin opacity-50"
+            style={{ animationDuration: '60s' }}
             onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
           />
         </div>
