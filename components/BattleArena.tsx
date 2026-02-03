@@ -63,16 +63,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-slate-900 to-purple-950" />
         
         {/* 背景图片 */}
+        {/* 背景图片 */}
         <img 
-          src="/backgrounds/library-desktop.webp" 
+          src="/battle-bg.webp" 
           alt="Battle Background" 
-          className="absolute inset-0 w-full h-full object-cover opacity-50 hidden md:block mix-blend-overlay"
-          onError={(e) => (e.target as HTMLImageElement).style.opacity = '0'}
-        />
-        <img 
-          src="/backgrounds/library-mobile.webp" 
-          alt="Battle Background" 
-          className="absolute inset-0 w-full h-full object-cover opacity-50 md:hidden mix-blend-overlay"
+          className="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-overlay"
           onError={(e) => (e.target as HTMLImageElement).style.opacity = '0'}
         />
         
