@@ -205,7 +205,18 @@ export const SpellCard: React.FC<SpellCardProps> = ({
                     alt={spell.name} 
                     loading="lazy"
                     decoding="async"
-                    className="w-full h-full object-cover" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      // 如果图片挂了，回退到显示 Emoji 容器
+                      const parent = e.currentTarget.parentElement;
+                      if (parent) {
+                        const fallback = document.createElement('div');
+                        fallback.className = 'flex items-center justify-center h-full text-6xl drop-shadow-2xl grayscale-[0.2] transition-all';
+                        fallback.innerHTML = spell.emoji;
+                        parent.appendChild(fallback);
+                      }
+                    }} 
                    />
                 ) : (
                    <div className="flex items-center justify-center h-full text-6xl drop-shadow-2xl grayscale-[0.2] group-hover:grayscale-0 transition-all">{spell.emoji}</div>

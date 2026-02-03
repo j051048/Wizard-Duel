@@ -187,8 +187,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       </div>
 
       {/* === 顶部：对手区 === */}
-      <div className="w-full pt-4 px-4 z-20 flex-shrink-0">
-         <div className="max-w-2xl mx-auto flex flex-col items-center gap-2">
+      <div className="w-full pt-2 px-2 z-20 flex-shrink-0 flex flex-col items-center">
+          <div className="w-full max-w-sm transform transition-all duration-300 origin-top scale-90 md:scale-100">
             <PlayerFrame 
               isPlayer={false}
               name={duelState.aiProfile?.name || "黑魔法师"}
@@ -201,42 +201,38 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
               isShaking={isOpponentShaking}
               avatarSrc={duelState.aiProfile?.avatar}
             />
-            <div className="flex justify-center -space-x-6 scale-75 origin-top">
+          </div>
+          <div className="flex justify-center -space-x-4 scale-75 origin-top mt-1">
               {Array.from({ length: Math.min(duelState.opponentHandSize, 5) }).map((_, i) => (
                 <div key={i} style={{ transform: `rotate(${(i - 2) * 4}deg)` }}>
                   <SpellCard isFaceDown isSmall />
                 </div>
               ))}
-            </div>
-         </div>
+          </div>
       </div>
 
       {/* === 中间：战斗动画区 === */}
-      <div className="flex-1 relative z-10 flex items-center justify-center my-4 overflow-visible">
+      <div className="flex-1 relative z-10 flex flex-col items-center justify-center my-0 overflow-visible pointer-events-none">
+        {/* Opponent Active Card */}
         <div className={`
-             absolute top-[10%] transition-all duration-700 transform
-             ${opponentCard ? 'translate-y-0 opacity-100 scale-100' : '-translate-y-20 opacity-0 scale-90'}
+             transition-all duration-500 transform mb-4
+             ${opponentCard ? 'translate-y-0 opacity-100 scale-100' : '-translate-y-8 opacity-0 scale-90'}
         `}>
           {oppSpellDetails && opponentCard && (
-            <div className="relative group">
-              <div className="absolute -inset-8 bg-red-600/30 blur-2xl rounded-full animate-pulse" />
-              <div className="relative p-1 bg-red-950/40 border border-red-500/30 rounded-2xl backdrop-blur-sm">
-                <SpellCard spell={oppSpellDetails} disabled isSmall={isMobile} />
-              </div>
+            <div className="relative group pointer-events-auto">
+               <SpellCard spell={oppSpellDetails} disabled isSmall={isMobile} />
             </div>
           )}
         </div>
 
+        {/* Player Active Card */}
         <div className={`
-             absolute bottom-[10%] transition-all duration-500 transform
-             ${playerCard ? 'translate-y-0 opacity-100 scale-110' : 'translate-y-20 opacity-0 scale-90'}
+             transition-all duration-500 transform mt-4
+             ${playerCard ? 'translate-y-0 opacity-100 scale-110' : 'translate-y-8 opacity-0 scale-90'}
         `}>
           {playerSpellDetails && playerCard && (
-            <div className="relative group">
-              <div className="absolute -inset-8 bg-purple-600/40 blur-2xl rounded-full animate-pulse" />
-              <div className="relative p-1 bg-purple-950/40 border border-purple-500/30 rounded-2xl backdrop-blur-sm">
-                <SpellCard spell={playerSpellDetails} isSelected disabled isSmall={isMobile} />
-              </div>
+            <div className="relative group pointer-events-auto">
+               <SpellCard spell={playerSpellDetails} isSelected disabled isSmall={isMobile} />
             </div>
           )}
         </div>
@@ -284,109 +280,103 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       </div>
 
       {/* === 底部：玩家操作区 === */}
-      <div className="w-full bg-gradient-to-t from-black via-black/80 to-transparent pt-4 pb-2 px-1 z-30 flex-shrink-0 relative safe-area-bottom">
-        <div className="max-w-6xl mx-auto h-full relative flex flex-col justify-end">
+      <div className="w-full bg-gradient-to-t from-black via-black/80 to-transparent pt-2 pb-1 px-2 z-30 flex-shrink-0 relative safe-area-bottom">
+        <div className="max-w-6xl mx-auto flex flex-col gap-2">
           
-          <div className="absolute left-0 bottom-2 z-40 w-56 scale-[0.65] origin-bottom-left md:static md:w-72 md:scale-100 pointer-events-auto">
-             <PlayerFrame 
-              isPlayer={true}
-              name="玩家"
-              hp={duelState.playerHP}
-              armor={duelState.playerArmor}
-              maxHp={GAME_CONFIG.maxHP}
-              mana={duelState.playerMana}
-              maxMana={duelState.playerMaxMana}
-              effects={duelState.playerEffects}
-              isShaking={isPlayerShaking}
-              />
-          </div>
+          {/* Top Row: Hero Skills & Hand */}
+          <div className="flex justify-between items-end relative h-28 md:h-40">
+             
+             {/* Left: Player Stats (Mobile Compact) */}
+             <div className="absolute left-0 bottom-0 z-40 w-48 md:w-64 transform scale-90 md:scale-100 origin-bottom-left">
+                <PlayerFrame 
+                  isPlayer={true}
+                  name="玩家"
+                  hp={duelState.playerHP}
+                  armor={duelState.playerArmor}
+                  maxHp={GAME_CONFIG.maxHP}
+                  mana={duelState.playerMana}
+                  maxMana={duelState.playerMaxMana}
+                  effects={duelState.playerEffects}
+                  isShaking={isPlayerShaking}
+                />
+             </div>
 
-          <div className="absolute right-0 bottom-2 z-40 flex flex-col gap-2 w-20 scale-90 origin-bottom-right md:static md:w-32 md:scale-100 md:flex-col pointer-events-auto">
-             <button 
-                onClick={() => onPass && onPass()}
-                disabled={phase !== 'PLAYER_TURN'}
-                className={`
-                  relative w-full h-16 md:h-24 flex flex-col items-center justify-center rounded-xl transition-all duration-300 group/btn shadow-2xl overflow-hidden
-                  ${phase === 'PLAYER_TURN' 
-                    ? 'bg-gradient-to-b from-amber-600 to-amber-900 border-b-8 border-amber-950 active:border-b-0 active:translate-y-2 hover:brightness-110 active:shadow-inner' 
-                    : 'bg-slate-900/60 border-b-8 border-slate-950 opacity-50 grayscale cursor-not-allowed'}
-                `}
-              >
-                <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-50 pointer-events-none" />
-                <div className={`text-2xl md:text-4xl transition-transform ${phase === 'PLAYER_TURN' ? 'group-hover/btn:scale-110' : ''}`}>
-                  {phase === 'PLAYER_TURN' ? '⏭️' : '💤'}
-                </div>
-                <div className="text-[10px] md:text-sm font-black uppercase tracking-tighter mt-1 text-amber-100 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
-                  {phase === 'PLAYER_TURN' ? '结束回合' : '对方回合'}
-                </div>
-                {phase === 'PLAYER_TURN' && (
-                  <div className="absolute -inset-2 bg-yellow-500/20 blur-xl animate-pulse -z-10" />
-                )}
-             </button>
-             <button 
-                onClick={onSurrender}
-                className="w-full h-8 md:h-10 flex items-center justify-center gap-1 rounded-lg border border-red-500/30 bg-red-950/60 text-[10px] font-bold text-red-300 hover:bg-red-900/80"
-              >
-                <LogOut size={10} strokeWidth={3} />
-                <span>退出</span>
-             </button>
-          </div>
+             {/* Center: Hand Cards */}
+             <div className="flex-1 flex justify-center items-end pl-44 md:pl-64 pr-16 md:pr-32 pb-2">
+                <div className="flex justify-center items-end -space-x-8 md:-space-x-4 min-h-[100px]">
+                    {duelState.playerHand.map((id, index) => {
+                      const isAffordable = playableCards.includes(id);
+                      const total = duelState.playerHand.length;
+                      const middleIndex = (total - 1) / 2;
+                      const rotation = (index - middleIndex) * 5;
+                      const yOffset = Math.abs(index - middleIndex) * 6;
 
-          <div className="w-full flex flex-col items-center justify-end md:pl-72 md:pr-32 pb-1 md:pb-0 relative z-30 pointer-events-none">
-            <div className="flex justify-center gap-2 mb-1 md:mb-4 pointer-events-auto">
-                {(['hero_fire', 'hero_vine', 'hero_ice', 'hero_thunder', 'hero_rock'] as const).map((id) => {
+                      return (
+                        <div 
+                          key={`${id}-${index}`} 
+                          className={`
+                            relative transition-all duration-300 transform origin-bottom
+                            ${phase === 'PLAYER_TURN' && isAffordable ? 'active:-translate-y-8 md:hover:-translate-y-16 hover:scale-110' : ''}
+                          `}
+                          style={{ 
+                            zIndex: index + 10,
+                            transform: `rotate(${rotation}deg) translateY(${yOffset}px)`,
+                          }}
+                        >
+                          <SpellCard 
+                            spell={getSpellById(id)} 
+                            onClick={() => isAffordable && phase === 'PLAYER_TURN' && handlePlayCard(id)}
+                            isAffordable={isAffordable}
+                            disabled={!isAffordable || phase !== 'PLAYER_TURN'}
+                            isSelected={false}
+                            isSmall={isMobile}
+                          />
+                        </div>
+                      );
+                    })}
+                </div>
+             </div>
+
+             {/* Right: End Turn Button */}
+             <div className="absolute right-0 bottom-0 z-40 w-14 md:w-28 flex flex-col gap-2">
+                 <button 
+                    onClick={() => onPass && onPass()}
+                    disabled={phase !== 'PLAYER_TURN'}
+                    className={`
+                      relative w-full aspect-square flex flex-col items-center justify-center rounded-lg shadow-lg
+                      ${phase === 'PLAYER_TURN' 
+                        ? 'bg-amber-600 border-2 border-amber-400 animate-pulse' 
+                        : 'bg-slate-800 border-2 border-slate-700 grayscale opacity-70'}
+                    `}
+                  >
+                    <div className="text-xl md:text-3xl">{phase === 'PLAYER_TURN' ? '⏭️' : '⏳'}</div>
+                 </button>
+                 <button 
+                    onClick={onSurrender}
+                    className="w-full h-8 flex items-center justify-center rounded bg-red-900/50 border border-red-500/20 text-red-300 text-xs"
+                  >
+                    <LogOut size={12} />
+                 </button>
+             </div>
+          </div>
+          
+          {/* Hero Skills Bar (Optional / Above) */}
+          <div className="flex justify-center gap-2 pb-1">
+             {(['hero_fire', 'hero_vine', 'hero_ice', 'hero_thunder', 'hero_rock'] as const).map((id) => {
                   const spell = getSpellById(id);
                   const canUse = phase === 'PLAYER_TURN' && !duelState.heroSkillsUsed;
                   return (
-                    <div key={id} className="relative transition-all duration-300 transform hover:-translate-y-2 scale-[0.55] md:scale-90 origin-bottom">
+                    <div key={id} className="transform scale-75 md:scale-90 origin-bottom hover:-translate-y-1 transition-transform">
                       <SpellCard 
                         spell={spell} 
                         onClick={() => canUse && handlePlayCard(id)}
                         isAffordable={canUse}
                         disabled={!canUse}
-                      />
-                      {!canUse && <div className="absolute inset-0 bg-black/70 rounded-xl flex items-center justify-center font-bold text-xs text-white/50">已用</div>}
-                    </div>
-                  );
-                })}
-            </div>
-
-            <div className="flex justify-center items-end -space-x-10 md:-space-x-4 pointer-events-auto min-h-[100px] md:min-h-[160px]">
-                {duelState.playerHand.map((id, index) => {
-                  const isAffordable = playableCards.includes(id);
-                  const total = duelState.playerHand.length;
-                  const middleIndex = (total - 1) / 2;
-                  const rotation = (index - middleIndex) * 5;
-                  const yOffset = Math.abs(index - middleIndex) * (isMobile ? 6 : 10);
-
-                  return (
-                    <div 
-                      key={`${id}-${index}`} 
-                      className={`
-                        relative transition-all duration-300 transform origin-bottom
-                        ${phase === 'PLAYER_TURN' && isAffordable ? 'hover:-translate-y-16 hover:scale-125 hover:z-50 cursor-pointer' : ''}
-                      `}
-                      style={{ 
-                        zIndex: index,
-                        transform: `rotate(${rotation}deg) translateY(${yOffset}px)`,
-                        marginLeft: index === 0 ? 0 : isMobile ? '-30px' : '-40px'
-                      }}
-                    >
-                      <SpellCard 
-                        spell={getSpellById(id)} 
-                        onClick={() => isAffordable && phase === 'PLAYER_TURN' && handlePlayCard(id)}
-                        isAffordable={isAffordable}
-                        disabled={!isAffordable || phase !== 'PLAYER_TURN'}
-                        isSelected={false}
-                        isSmall={isMobile}
+                        isSmall
                       />
                     </div>
                   );
-                })}
-                {duelState.playerHand.length === 0 && (
-                   <div className="h-24 flex items-center text-white/30 text-xs italic">空手牌</div>
-                )}
-            </div>
+             })}
           </div>
 
         </div>
