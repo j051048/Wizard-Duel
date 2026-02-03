@@ -110,7 +110,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       }
 
       if (lastMsg.includes('造成') || lastMsg.includes('受到')) {
-        const damageMatch = lastMsg.match(/(\d+)\s*点伤害/);
+        const damageMatch = lastMsg.match(new RegExp("(\\d+)\\s*点伤害"));
         if (damageMatch) {
           const damage = parseInt(damageMatch[1]);
           const isPlayerTarget = lastMsg.includes('受到'); 
