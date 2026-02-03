@@ -1,14 +1,4 @@
-/**
- * MatchmakingAnimation - 匹配动画组件
- *
- * 专业游戏级设计：
- * - 动态匹配进度条
- * - 对手预览动画
- * - 匹配状态反馈
- * - 流畅的过渡效果
- */
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Swords, Search, User, Clock, Zap } from 'lucide-react';
 
 interface MatchmakingAnimationProps {
@@ -28,6 +18,15 @@ export const MatchmakingAnimation: React.FC<MatchmakingAnimationProps> = ({
   const [currentStep, setCurrentStep] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
 
+  // 预生成背景粒子位置（解决性能与抖动问题）
+  const particles = useMemo(() => Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    left: `${Math.random() * 100}%`,
+    top: `${Math.random() * 100}%`,
+    delay: `${Math.random() * 2}s`,
+    duration: `${2 + Math.random() * 2}s`
+  })), []);
+
   const steps = [
     { icon: Search, text: '搜索可用对手...', duration: 800 },
     { icon: User, text: '找到匹配对手', duration: 600 },
@@ -45,14 +44,13 @@ export const MatchmakingAnimation: React.FC<MatchmakingAnimationProps> = ({
         const newProgress = prev + (100 / totalTime) * 50; // 50ms interval
         if (newProgress >= 100) {
           setIsComplete(true);
-          setTimeout(onComplete, 500); // Wait for animation to finish
+          setTimeout(onComplete, 500);
           return 100;
         }
         return newProgress;
       });
     }, 50);
 
-    // Update steps based on progress
     let cumulativeTime = 0;
     const timeouts: NodeJS.Timeout[] = [];
     stepDurations.forEach((duration, index) => {
@@ -73,17 +71,16 @@ export const MatchmakingAnimation: React.FC<MatchmakingAnimationProps> = ({
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center z-50">
       {/* Background Effects */}
-      <div className="absolute inset-0 overflow-hidden">
-        {/* Floating particles */}
-        {[...Array(20)].map((_, i) => (
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {particles.map((p) => (
           <div
-            key={i}
+            key={p.id}
             className="absolute w-2 h-2 bg-purple-400 rounded-full animate-pulse opacity-30"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 2}s`,
-              animationDuration: `${2 + Math.random() * 2}s`
+              left: p.left,
+              top: p.top,
+              animationDelay: p.delay,
+              animationDuration: p.duration
             }}
           />
         ))}
@@ -98,7 +95,6 @@ export const MatchmakingAnimation: React.FC<MatchmakingAnimationProps> = ({
 
       {/* Main Content */}
       <div className="relative z-10 text-center space-y-8 max-w-md mx-auto px-6">
-        {/* Title */}
         <div className="space-y-2">
           <h1 className="text-4xl font-wizard font-bold text-white">
             {isTavernMode ? '🏰 进入酒馆' : '⚔️ 匹配对手'}
@@ -108,9 +104,7 @@ export const MatchmakingAnimation: React.FC<MatchmakingAnimationProps> = ({
           </p>
         </div>
 
-        {/* Progress Visualization */}
         <div className="space-y-6">
-          {/* Step Icon */}
           <div className="flex justify-center">
             <div className={`
               w-20 h-20 rounded-full flex items-center justify-center transition-all duration-500
@@ -128,7 +122,6 @@ export const MatchmakingAnimation: React.FC<MatchmakingAnimationProps> = ({
             </div>
           </div>
 
-          {/* Step Text */}
           <div className="space-y-2">
             <p className="text-xl font-bold text-white transition-all duration-300">
               {currentStepData.text}
@@ -140,7 +133,6 @@ export const MatchmakingAnimation: React.FC<MatchmakingAnimationProps> = ({
             )}
           </div>
 
-          {/* Progress Bar */}
           <div className="space-y-3">
             <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
               <div
@@ -156,7 +148,6 @@ export const MatchmakingAnimation: React.FC<MatchmakingAnimationProps> = ({
           </div>
         </div>
 
-        {/* Opponent Preview (when found) */}
         {currentStep >= 1 && (
           <div className={`
             bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-600
@@ -164,11 +155,11 @@ export const MatchmakingAnimation: React.FC<MatchmakingAnimationProps> = ({
             ${currentStep >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}
           `}>
             <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-2xl">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-2xl overflow-hidden">
                 {opponentAvatar ? (
-                  <img src={opponentAvatar} alt={opponentName} className="w-full h-full rounded-full object-cover" />
+                  <img src={opponentAvatar} alt={opponentName} className="w-full h-full object-cover" />
                 ) : (
-                  isTavernMode ? '🤖' : '👤'
+                  <span className="text-2xl">{isTavernMode ? '🤖' : '👤'}</span>
                 )}
               </div>
               <div className="text-left">
@@ -181,7 +172,6 @@ export const MatchmakingAnimation: React.FC<MatchmakingAnimationProps> = ({
           </div>
         )}
 
-        {/* Loading Dots */}
         <div className="flex justify-center space-x-2">
           {[0, 1, 2].map((i) => (
             <div
@@ -192,30 +182,15 @@ export const MatchmakingAnimation: React.FC<MatchmakingAnimationProps> = ({
           ))}
         </div>
 
-        {/* Completion Message */}
         {isComplete && (
-          <div className="text-center space-y-2 animate-fade-in">
+          <div className="text-center space-y-2 animate-[fade-in-up_0.5s_ease-out]">
             <div className="text-6xl animate-bounce">⚔️</div>
             <p className="text-2xl font-bold text-green-400">准备战斗!</p>
           </div>
         )}
       </div>
-
-      <style>{`
-        .animation-delay-300 {
-          animation-delay: 0.3s;
-        }
-        .animation-delay-600 {
-          animation-delay: 0.6s;
-        }
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.5s ease-out;
-        }
-      `}</style>
     </div>
   );
 };
+
+export default MatchmakingAnimation;

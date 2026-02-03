@@ -19,6 +19,18 @@ export default defineConfig(({ mode }) => {
           '@': path.resolve(__dirname, '.'),
         }
       },
+      build: {
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              'vendor-react': ['react', 'react-dom'],
+              'vendor-web3': ['wagmi', 'viem', '@tanstack/react-query'],
+              'game-core': ['./services/gameLogic.ts', './services/api.ts'],
+            },
+          },
+        },
+        chunkSizeWarningLimit: 800,
+      },
       esbuild: {
         legalComments: 'none'
       }

@@ -1,10 +1,4 @@
-/**
- * LoadingScreen - 游戏加载画面组件
- * 
- * 显示资源预加载进度，带有精美动画效果
- */
-
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Sparkles } from 'lucide-react';
 import type { PreloadProgress } from '../hooks/usePreloader';
 
@@ -14,19 +8,28 @@ interface LoadingScreenProps {
 }
 
 export const LoadingScreen: React.FC<LoadingScreenProps> = ({ progress, onComplete }) => {
+  // 预生成背景粒子位置（解决性能与抖动问题）
+  const particles = useMemo(() => Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    left: `${Math.random() * 100}%`,
+    top: `${Math.random() * 100}%`,
+    delay: `${Math.random() * 2}s`,
+    opacity: 0.3 + Math.random() * 0.5,
+  })), []);
+
   return (
     <div className="fixed inset-0 bg-gradient-to-b from-indigo-950 via-purple-950 to-slate-950 flex flex-col items-center justify-center z-50">
       {/* 背景魔法粒子 */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {Array.from({ length: 20 }).map((_, i) => (
+        {particles.map((p) => (
           <div
-            key={i}
+            key={p.id}
             className="absolute w-1 h-1 bg-purple-400 rounded-full animate-pulse"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 2}s`,
-              opacity: 0.3 + Math.random() * 0.5,
+              left: p.left,
+              top: p.top,
+              animationDelay: p.delay,
+              opacity: p.opacity,
             }}
           />
         ))}
@@ -92,17 +95,6 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ progress, onComple
       <p className="absolute bottom-4 text-gray-600 text-xs font-tech">
         v1.0.0 | Antigravity Interactive
       </p>
-
-      {/* 动画样式 */}
-      <style>{`
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(200%); }
-        }
-        .animate-shimmer {
-          animation: shimmer 2s infinite;
-        }
-      `}</style>
     </div>
   );
 };

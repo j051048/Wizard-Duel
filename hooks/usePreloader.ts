@@ -122,8 +122,9 @@ export function usePreloader() {
   }, []);
 
   const startPreloading = useCallback(async () => {
-    const allResources = [...PRELOAD_IMAGES];
+    const allResources = [...PRELOAD_IMAGES, ...PRELOAD_AUDIO];
     const total = allResources.length;
+    let loadedCount = 0;
     const errors: string[] = [];
     
     setProgress({
@@ -135,29 +136,34 @@ export function usePreloader() {
       errors: [],
     });
 
-    for (let i = 0; i < allResources.length; i++) {
-      const resource = allResources[i];
+    // 分离图片和音频，优先加载关键图片
+    const BATCH_SIZE = 6;
+    for (let i = 0; i < allResources.length; i += BATCH_SIZE) {
+      const batch = allResources.slice(i, i + BATCH_SIZE);
       
-      setProgress(prev => ({
-        ...prev,
-        currentItem: resource,
-      }));
-
-      try {
-        if (resource.endsWith('.mp3') || resource.endsWith('.wav')) {
-          await preloadAudio(resource);
-        } else {
-          await preloadImage(resource);
+      await Promise.all(batch.map(async (resource) => {
+        try {
+          if (resource.endsWith('.mp3') || resource.endsWith('.wav')) {
+            // 给音频加载加一个 2s 超时，防止因网络问题卡死
+            await Promise.race([
+              preloadAudio(resource),
+              new Promise((resolve) => setTimeout(resolve, 2000))
+            ]);
+          } else {
+            await preloadImage(resource);
+          }
+        } catch (e) {
+          errors.push(resource);
+        } finally {
+          loadedCount++;
+          setProgress(prev => ({
+            ...prev,
+            loaded: loadedCount,
+            percentage: Math.floor((loadedCount / total) * 100),
+            currentItem: resource,
+            errors,
+          }));
         }
-      } catch (e) {
-        errors.push(resource);
-      }
-
-      setProgress(prev => ({
-        ...prev,
-        loaded: i + 1,
-        percentage: Math.floor(((i + 1) / total) * 100),
-        errors,
       }));
     }
 

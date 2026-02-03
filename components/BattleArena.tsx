@@ -1,10 +1,8 @@
 /**
  * BattleArena - 战斗场景组件 (Patch 2.0 Turn-Based)
- * 
- * 包含Draft选择、多卡连击界面、Pass按钮
  */
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { LogOut, Volume2, VolumeX } from 'lucide-react';
 import { SpellType, DuelPhase, DuelState } from '../types';
 import { GAME_CONFIG } from '../constants';
@@ -13,6 +11,7 @@ import { getPlayableCards } from '../services/gameLogic';
 import { HapticService } from '../services/haptic';
 import { PlayerFrame } from './PlayerFrame';
 import { SpellCard } from './SpellCard';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 interface BattleArenaProps {
   duelState: DuelState;
@@ -48,7 +47,6 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   opponentCard,
   resultText,
   effectMessages,
-  selectedBet,
   onPlayCard,
   onPass,
   onSurrender,
@@ -56,24 +54,22 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   onToggleMute,
   isPlayerShaking = false,
   isOpponentShaking = false,
-  isTavernMode = false,
 }) => {
+  const isMobile = useIsMobile();
   const [damageNumbers, setDamageNumbers] = useState<DamageNumber[]>([]);
   const damageIdRef = useRef(0);
-  // 追踪HP变化，默认值为初始HP
   const prevPlayerHP = useRef(duelState?.playerHP || 100);
   const prevOpponentHP = useRef(duelState?.opponentHP || 100);
 
   const playerSpellDetails = playerCard ? getSpellById(playerCard) : null;
   const oppSpellDetails = opponentCard ? getSpellById(opponentCard) : null;
 
-  // 暴击特效状态
   const [showCritEffect, setShowCritEffect] = useState(false);
   const [showBloodFlash, setShowBloodFlash] = useState(false);
   const [projectiles, setProjectiles] = useState<{id: number, type: string, x: number, y: number}[]>([]);
 
   const addDamageNumber = (damage: number, isPlayer: boolean, isCrit: boolean = false) => {
-    HapticService.medium(); // 伤害数字弹出时的反馈
+    HapticService.medium();
     if (isCrit) HapticService.heavy();
 
     if (isPlayer) {
@@ -82,10 +78,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     }
 
     const id = damageIdRef.current++;
-    
-    // Position logic
-    const x = isPlayer ? 50 + Math.random() * 50 : 50 + Math.random() * 50; 
-    const y = isPlayer ? 150 : 50;
+    const x = 50 + (Math.random() - 0.5) * 20; 
+    const y = isPlayer ? 65 : 25;
     setDamageNumbers(prev => [...prev, { id, value: damage, x, y, isPlayer, isCrit }]);
     
     setTimeout(() => {
@@ -93,8 +87,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     }, 1200);
   };
 
-  // 监听HP变化触发强力震动 & 伤害显示
-  React.useEffect(() => {
+  useEffect(() => {
     if (duelState.playerHP < prevPlayerHP.current) {
         HapticService.heavy(); 
     }
@@ -106,8 +99,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     prevOpponentHP.current = duelState.opponentHP;
   }, [duelState.playerHP, duelState.opponentHP]);
 
-  // 监听战斗日志以触发特效
-  React.useEffect(() => {
+  useEffect(() => {
     if (effectMessages.length > 0) {
       const lastMsg = effectMessages[effectMessages.length - 1];
       const isCrit = lastMsg.includes('暴击');
@@ -118,16 +110,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       }
 
       if (lastMsg.includes('造成') || lastMsg.includes('受到')) {
-        // 修复：正确匹配伤害数字
         const damageMatch = lastMsg.match(/(\d+)\s*点伤害/);
         if (damageMatch) {
           const damage = parseInt(damageMatch[1]);
-          // "受到" 表示玩家受到伤害
-          // "造成" 通常表示玩家造成伤害（对手受伤）
-          const isPlayerTarget = lastMsg.includes('受到') || (lastMsg.includes('造成') && lastMsg.includes('对手')); 
-          const isOpponentTarget = !isPlayerTarget;
-
-          addDamageNumber(damage, isOpponentTarget, isCrit); 
+          const isPlayerTarget = lastMsg.includes('受到'); 
+          addDamageNumber(damage, isPlayerTarget, isCrit); 
         }
       }
     }
@@ -135,15 +122,13 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
   const handlePlayCard = (spellId: SpellType) => {
     const id = Date.now();
-    // 基础投射物定位
     setProjectiles(prev => [...prev, { id, type: 'player', x: 50, y: 80 }]);
     onPlayCard(spellId);
     setTimeout(() => setProjectiles(prev => prev.filter(p => p.id !== id)), 600);
   };
 
-  // 监听对手出牌触发投射物
   const prevOppCard = useRef<SpellType | null>(null);
-  React.useEffect(() => {
+  useEffect(() => {
     if (opponentCard && opponentCard !== prevOppCard.current) {
        const id = Date.now();
        setProjectiles(prev => [...prev, { id, type: 'opp', x: 50, y: 15 }]);
@@ -152,7 +137,6 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     prevOppCard.current = opponentCard;
   }, [opponentCard]);
 
-  // 使用 useMemo 优化可打出卡牌计算
   const playableCards = useMemo(() => getPlayableCards(
     duelState.playerHand, 
     duelState.playerMana, 
@@ -162,24 +146,23 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-slate-950 select-none flex flex-col">
-      {/* === 背景层(底层) === */}
+      {/* === 背景层 === */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <img 
           src="/ui/bg_arena.webp" 
           alt="Arena" 
           className="absolute inset-0 w-full h-full object-cover animate-[breath_20s_ease-in-out_infinite]"
         />
-        {/* Vignette & Atmosphere */}
         <div className="absolute inset-0 shadow-[inset_0_0_200px_rgba(0,0,0,0.9)]" />
         <div className="absolute inset-0 bg-black/30" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/90 via-transparent to-black/95" />
         
-        {/* 魔法阵 - 优化尺寸和混合 */}
         <div className="absolute inset-0 flex items-center justify-center opacity-20">
           <img 
             src="/ui/magic-circle.webp" 
             alt="" 
-            className="w-[120vw] h-[120vw] md:w-[90vh] md:h-[90vh] animate-[spin_120s_linear_infinite] mix-blend-screen"
+            className="w-[120vw] h-[120vw] md:w-[90vh] md:h-[90vh] animate-spin mix-blend-screen"
+            style={{ animationDuration: '120s' }}
             onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
           />
         </div>
@@ -198,9 +181,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
               maxMana={duelState.opponentMaxMana} 
               effects={duelState.opponentEffects}
               isShaking={isOpponentShaking}
-              avatar={duelState.aiProfile?.avatar}
+              avatarSrc={duelState.aiProfile?.avatar}
             />
-            {/* 对手手牌预览 - 紧凑型 */}
             <div className="flex justify-center -space-x-6 scale-75 origin-top">
               {Array.from({ length: Math.min(duelState.opponentHandSize, 5) }).map((_, i) => (
                 <div key={i} style={{ transform: `rotate(${(i - 2) * 4}deg)` }}>
@@ -211,41 +193,36 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
          </div>
       </div>
 
-      {/* === 中间：战斗动画区 (自适应增长) === */}
+      {/* === 中间：战斗动画区 === */}
       <div className="flex-1 relative z-10 flex items-center justify-center my-4 overflow-visible">
-        {/* 对手出牌 */}
         <div className={`
-             absolute top-[10%]
-             transition-all duration-700 transform
+             absolute top-[10%] transition-all duration-700 transform
              ${opponentCard ? 'translate-y-0 opacity-100 scale-100' : '-translate-y-20 opacity-0 scale-90'}
         `}>
           {oppSpellDetails && opponentCard && (
             <div className="relative group">
               <div className="absolute -inset-8 bg-red-600/30 blur-2xl rounded-full animate-pulse" />
               <div className="relative p-1 bg-red-950/40 border border-red-500/30 rounded-2xl backdrop-blur-sm">
-                <SpellCard spell={oppSpellDetails} disabled isSmall={window.innerWidth < 768} />
+                <SpellCard spell={oppSpellDetails} disabled isSmall={isMobile} />
               </div>
             </div>
           )}
         </div>
 
-        {/* 玩家出牌 */}
         <div className={`
-             absolute bottom-[10%]
-             transition-all duration-500 transform
+             absolute bottom-[10%] transition-all duration-500 transform
              ${playerCard ? 'translate-y-0 opacity-100 scale-110' : 'translate-y-20 opacity-0 scale-90'}
         `}>
           {playerSpellDetails && playerCard && (
             <div className="relative group">
               <div className="absolute -inset-8 bg-purple-600/40 blur-2xl rounded-full animate-pulse" />
               <div className="relative p-1 bg-purple-950/40 border border-purple-500/30 rounded-2xl backdrop-blur-sm">
-                <SpellCard spell={playerSpellDetails} isSelected disabled isSmall={window.innerWidth < 768} />
+                <SpellCard spell={playerSpellDetails} isSelected disabled isSmall={isMobile} />
               </div>
             </div>
           )}
         </div>
         
-        {/* 结果文字 */}
         {resultText && (
              <div className="absolute z-50 animate-bounce">
                 <div className={`
@@ -259,24 +236,21 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
              </div>
         )}
 
-        {/* 伤害数字 */}
         {damageNumbers.map(damage => (
           <div
             key={damage.id}
             className={`absolute pointer-events-none text-5xl font-black italic drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] ${
               damage.isPlayer ? 'text-red-500' : 'text-blue-400'
-            }`}
+            } animate-[damageFloat_0.8s_ease-out_forwards]`}
             style={{
               left: `${damage.x}%`,
               top: `${damage.y}%`,
-              animation: 'damageFloat 0.8s ease-out forwards'
             }}
           >
             -{damage.value}
           </div>
         ))}
 
-        {/* 提示信息 */}
         {effectMessages.length > 0 && (
           <div className="absolute top-1/2 -translate-y-1/2 flex flex-col items-center gap-2 pointer-events-none w-full max-w-sm px-4">
             {effectMessages.slice(-2).map((msg, i) => (
@@ -290,28 +264,25 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         )}
       </div>
 
-      {/* === 底部：玩家操作区 (固定底部) === */}
-      <div className="w-full bg-gradient-to-t from-black via-black/80 to-transparent pt-4 pb-2 px-1 z-30 flex-shrink-0 relative">
+      {/* === 底部：玩家操作区 === */}
+      <div className="w-full bg-gradient-to-t from-black via-black/80 to-transparent pt-4 pb-2 px-1 z-30 flex-shrink-0 relative safe-area-bottom">
         <div className="max-w-6xl mx-auto h-full relative flex flex-col justify-end">
           
-          {/* 左下角：玩家状态(PlayerFrame) - 移动端绝对定位缩放 */}
           <div className="absolute left-0 bottom-2 z-40 w-56 scale-[0.65] origin-bottom-left md:static md:w-72 md:scale-100 pointer-events-auto">
              <PlayerFrame 
               isPlayer={true}
               name="玩家"
               hp={duelState.playerHP}
-                armor={duelState.playerArmor}
-                maxHp={GAME_CONFIG.maxHP}
-                mana={duelState.playerMana}
-                maxMana={duelState.playerMaxMana}
-                effects={duelState.playerEffects}
-                isShaking={isPlayerShaking}
+              armor={duelState.playerArmor}
+              maxHp={GAME_CONFIG.maxHP}
+              mana={duelState.playerMana}
+              maxMana={duelState.playerMaxMana}
+              effects={duelState.playerEffects}
+              isShaking={isPlayerShaking}
               />
           </div>
 
-          {/* 右下角：功能按钮 - 移动端绝对定位缩放 */}
           <div className="absolute right-0 bottom-2 z-40 flex flex-col gap-2 w-20 scale-90 origin-bottom-right md:static md:w-32 md:scale-100 md:flex-col pointer-events-auto">
-             {/* 结束回合按钮 - 3D 机械质感 */}
              <button 
                 onClick={() => onPass && onPass()}
                 disabled={phase !== 'PLAYER_TURN'}
@@ -322,17 +293,13 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                     : 'bg-slate-900/60 border-b-8 border-slate-950 opacity-50 grayscale cursor-not-allowed'}
                 `}
               >
-                {/* 内部金属光泽 */}
                 <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-50 pointer-events-none" />
-                
                 <div className={`text-2xl md:text-4xl transition-transform ${phase === 'PLAYER_TURN' ? 'group-hover/btn:scale-110' : ''}`}>
                   {phase === 'PLAYER_TURN' ? '⏭️' : '💤'}
                 </div>
                 <div className="text-[10px] md:text-sm font-black uppercase tracking-tighter mt-1 text-amber-100 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
                   {phase === 'PLAYER_TURN' ? '结束回合' : '对方回合'}
                 </div>
-
-                {/* 发光提示 */}
                 {phase === 'PLAYER_TURN' && (
                   <div className="absolute -inset-2 bg-yellow-500/20 blur-xl animate-pulse -z-10" />
                 )}
@@ -346,10 +313,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
              </button>
           </div>
 
-          {/* 中间：手牌区与技能区 - 移动端两侧留空防止遮挡 */}
           <div className="w-full flex flex-col items-center justify-end md:pl-72 md:pr-32 pb-1 md:pb-0 relative z-30 pointer-events-none">
-            
-            {/* 英雄技能行 */}
             <div className="flex justify-center gap-2 mb-1 md:mb-4 pointer-events-auto">
                 {(['hero_fire', 'hero_vine', 'hero_ice', 'hero_thunder', 'hero_rock'] as const).map((id) => {
                   const spell = getSpellById(id);
@@ -368,15 +332,13 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                 })}
             </div>
 
-            {/* 主手牌区 */}
             <div className="flex justify-center items-end -space-x-10 md:-space-x-4 pointer-events-auto min-h-[100px] md:min-h-[160px]">
                 {duelState.playerHand.map((id, index) => {
                   const isAffordable = playableCards.includes(id);
                   const total = duelState.playerHand.length;
                   const middleIndex = (total - 1) / 2;
-                  // 移动端扇形展开修正
                   const rotation = (index - middleIndex) * 5;
-                  const yOffset = Math.abs(index - middleIndex) * (window.innerWidth < 768 ? 6 : 10);
+                  const yOffset = Math.abs(index - middleIndex) * (isMobile ? 6 : 10);
 
                   return (
                     <div 
@@ -388,7 +350,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                       style={{ 
                         zIndex: index,
                         transform: `rotate(${rotation}deg) translateY(${yOffset}px)`,
-                        marginLeft: index === 0 ? 0 : window.innerWidth < 768 ? '-30px' : '-40px'
+                        marginLeft: index === 0 ? 0 : isMobile ? '-30px' : '-40px'
                       }}
                     >
                       <SpellCard 
@@ -397,7 +359,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                         isAffordable={isAffordable}
                         disabled={!isAffordable || phase !== 'PLAYER_TURN'}
                         isSelected={false}
-                        isSmall={window.innerWidth < 768}
+                        isSmall={isMobile}
                       />
                     </div>
                   );
@@ -411,49 +373,12 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         </div>
       </div>
 
-      {/* 辅助层：声音控制 */}
-      <div className="fixed top-4 right-4 z-40">
+      <div className="fixed top-4 right-4 z-40 safe-area-top">
         <button onClick={onToggleMute} className="p-2 bg-black/40 backdrop-blur-md rounded-lg border border-white/10 text-white/60">
            {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
         </button>
       </div>
 
-      <style>{`
-        @keyframes damageFloat {
-          0% { transform: translateY(0) scale(0.5); opacity: 0; }
-          20% { opacity: 1; transform: translateY(-20px) scale(1.2); }
-          100% { transform: translateY(-80px) scale(1); opacity: 0; }
-        }
-        @keyframes fade-in-up {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes critFlash {
-          0% { opacity: 0; transform: scale(1); }
-          10% { opacity: 0.8; transform: scale(1.05); }
-          100% { opacity: 0; transform: scale(1); }
-        }
-        @keyframes breath {
-          0%, 100% { transform: scale(1); filter: brightness(1); }
-          50% { transform: scale(1.05); filter: brightness(1.1); }
-        }
-        @keyframes projectile {
-          0% { transform: translateY(0) scale(1.5); opacity: 1; filter: blur(4px); }
-          100% { transform: translateY(-400px) scale(0.5); opacity: 0; filter: blur(10px); }
-        }
-        @keyframes projectile-opp {
-          0% { transform: translateY(0) scale(1.5); opacity: 1; filter: blur(4px); }
-          100% { transform: translateY(400px) scale(0.5); opacity: 0; filter: blur(10px); }
-        }
-        .animate-projectile {
-          animation: projectile 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        .animate-projectile-opp {
-          animation: projectile-opp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-      `}</style>
-
-      {/* Crit Effect Overlay */}
       {showCritEffect && (
         <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center">
            <div className="absolute inset-0 bg-white/30 animate-[critFlash_0.5s_ease-out_forwards] mix-blend-overlay" />
@@ -464,12 +389,10 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         </div>
       )}
 
-      {/* Blood Hurt Flash Overlay */}
       {showBloodFlash && (
         <div className="fixed inset-0 z-50 pointer-events-none shadow-[inset_0_0_100px_rgba(220,38,38,0.8)] animate-pulse" />
       )}
 
-      {/* Projectiles Layer */}
       <div className="fixed inset-0 z-40 pointer-events-none overflow-hidden">
         {projectiles.map(p => (
            <div 
@@ -477,7 +400,6 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
             className={`absolute w-12 h-12 rounded-full blur-md z-50 ${p.type === 'player' ? 'bg-gradient-to-t from-purple-500 to-white animate-projectile' : 'bg-gradient-to-b from-red-500 to-white animate-projectile-opp'}`}
             style={{ left: `${p.x}%`, top: `${p.y}%`, marginLeft: '-24px' }}
            >
-              {/* 核心光点 */}
               <div className="absolute inset-0 bg-white rounded-full scale-50 blend-screen" />
            </div>
         ))}

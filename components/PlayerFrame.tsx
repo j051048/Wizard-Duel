@@ -39,24 +39,35 @@ export const HealthBar: React.FC<HealthBarProps> = ({ current, max, isPlayer }) 
     prevPercentage.current = percentage;
     
     // 平滑过渡到目标值
-    const diff = percentage - displayPercentage;
-    if (Math.abs(diff) > 0.5) {
-      const step = diff / 10;
-      const timer = setInterval(() => {
-        setDisplayPercentage(prev => {
-          const next = prev + step;
-          if ((step > 0 && next >= percentage) || (step < 0 && next <= percentage)) {
-            clearInterval(timer);
-            return percentage;
-          }
-          return next;
-        });
-      }, 30);
-      return () => clearInterval(timer);
-    } else {
+    if (Math.abs(percentage - displayPercentage) < 0.5) {
       setDisplayPercentage(percentage);
+      return;
     }
+
+    let rafId: number;
+    const startTime = performance.now();
+    const startValue = displayPercentage;
+    const endValue = percentage;
+    const duration = 400; // 400ms 动画时长
+
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const nextValue = startValue + (endValue - startValue) * eased;
+      
+      setDisplayPercentage(nextValue);
+
+      if (progress < 1) {
+        rafId = requestAnimationFrame(animate);
+      }
+    };
+
+    rafId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(rafId);
   }, [percentage]);
+
   
   return (
     <div className="relative">
@@ -333,41 +344,9 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
         </div>
       )}
 
-      <style>{`
-        @keyframes shake-strong {
-          0%, 100% { transform: translateX(0) rotate(0); }
-          10% { transform: translateX(-6px) rotate(-1deg); }
-          20% { transform: translateX(6px) rotate(1deg); }
-          30% { transform: translateX(-6px) rotate(-1deg); }
-          40% { transform: translateX(6px) rotate(1deg); }
-          50% { transform: translateX(-4px) rotate(0); }
-          60% { transform: translateX(4px) rotate(0); }
-          70% { transform: translateX(-2px) rotate(0); }
-          80% { transform: translateX(2px) rotate(0); }
-          90% { transform: translateX(-1px) rotate(0); }
-        }
-        .animate-shake-strong {
-          animation: shake-strong 0.6s ease-in-out;
-        }
-        
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-        .animate-shimmer {
-          animation: shimmer 2s infinite;
-        }
-        
-        @keyframes float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-2px); }
-        }
-        .animate-float {
-          animation: float 2s ease-in-out infinite;
-        }
-      `}</style>
     </div>
   );
 };
+
 
 export default PlayerFrame;

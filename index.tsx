@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { injected } from 'wagmi/connectors';
 
 import ErrorBoundary from './components/ErrorBoundary';
+import './index.css';
 
 // Wagmi Configuration
 const config = createConfig({

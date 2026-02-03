@@ -87,6 +87,7 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
   const [bgmVolume, setBgmVolume] = useState(0.2); // 默认 BGM 音量降低
   const [sfxVolume, setSfxVolume] = useState(0.4); // 默认 SFX 音量降低
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isAudioBlocked, setIsAudioBlocked] = useState(false);
 
   const bgmRef = useRef<HTMLAudioElement | null>(null);
   const sfxPoolRef = useRef<Map<string, HTMLAudioElement>>(new Map());
@@ -159,6 +160,7 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
       bgmRef.current.volume = isMuted ? 0 : bgmVolume;
       
       bgmRef.current.play().catch(() => {
+        setIsAudioBlocked(true);
         console.log('BGM autoplay blocked, waiting for user interaction');
       });
       
@@ -286,6 +288,44 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
       sfxPoolRef.current.clear();
     };
   }, []);
+
+  // 用户交互解锁音频逻辑 (针对 iOS)
+  const unlockAudio = useCallback(() => {
+    if (!isAudioBlocked) return;
+    
+    // 尝试直接播放 BGM
+    if (bgmRef.current) {
+      bgmRef.current.play().then(() => {
+        setIsAudioBlocked(false);
+      }).catch(err => {
+        // 创建静音 AudioContext 以彻底解锁
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          const ctx = new AudioContextClass();
+          ctx.resume().then(() => {
+            const buffer = ctx.createBuffer(1, 1, 22050);
+            const source = ctx.createBufferSource();
+            source.buffer = buffer;
+            source.connect(ctx.destination);
+            source.start(0);
+            setIsAudioBlocked(false);
+            if (bgmRef.current) bgmRef.current.play();
+          });
+        }
+      });
+    }
+  }, [isAudioBlocked]);
+
+  useEffect(() => {
+    if (isAudioBlocked) {
+      window.addEventListener('click', unlockAudio, { once: true });
+      window.addEventListener('touchstart', unlockAudio, { once: true });
+      return () => {
+        window.removeEventListener('click', unlockAudio);
+        window.removeEventListener('touchstart', unlockAudio);
+      };
+    }
+  }, [isAudioBlocked, unlockAudio]);
 
   const state: AudioManagerState = {
     isMuted,
