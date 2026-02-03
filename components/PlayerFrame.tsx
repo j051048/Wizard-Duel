@@ -260,7 +260,7 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
   isPlayer,
   name,
   hp,
-  armor = 0, // 默认为 0
+  armor = 0,
   maxHp,
   mana,
   maxMana,
@@ -274,50 +274,33 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
   return (
     <div 
       className={`
-        relative p-4 md:p-6 rounded-2xl backdrop-blur-md transition-all duration-300
+        relative p-2 md:p-4 rounded-xl md:rounded-2xl backdrop-blur-md transition-all duration-300
         ${isPlayer 
-          ? 'bg-gradient-to-br from-purple-900/90 to-indigo-900/90 border-2 border-purple-400/60' 
-          : 'bg-gradient-to-br from-red-900/90 to-rose-900/90 border-2 border-red-400/60'
+          ? 'bg-gradient-to-br from-purple-900/80 to-indigo-950/90 border border-purple-400/40' 
+          : 'bg-gradient-to-br from-red-900/80 to-rose-950/90 border border-red-400/40'
         }
-        shadow-2xl
+        shadow-2xl flex flex-col gap-1
         ${isShaking ? 'animate-shake-strong' : ''}
       `}
     >
-      {/* 护甲显示 (Armor Overlay) */}
+      {/* 护甲显示 */}
       {armor > 0 && (
-        <div className="absolute -top-4 right-8 z-40 transition-all duration-500 animate-in fade-in zoom-in spin-in-3">
+        <div className="absolute -top-3 -right-2 z-40 transition-all duration-500 scale-75 md:scale-100">
           <div className="relative drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]">
-            {/* 盾牌背景 (CSS绘制或图片) */}
-            <div className="w-10 h-12 md:w-12 md:h-14 bg-gradient-to-b from-gray-200 to-gray-400 rounded-b-full border-2 border-gray-100 shadow-inner flex items-center justify-center">
-              <div className="absolute inset-1 border border-gray-500/30 rounded-b-full" />
-              {/* 光泽 */}
-              <div className="absolute top-0 right-0 w-1/2 h-full bg-white/20 rounded-tr-full rounded-br-full" />
+            <div className="w-10 h-12 bg-gradient-to-b from-gray-200 to-gray-400 rounded-b-full border-2 border-gray-100 shadow-inner flex items-center justify-center">
+              <span className="font-black text-gray-800 text-base">{armor}</span>
             </div>
-            
-            {/* 护甲数值 */}
-            <span className="absolute inset-0 flex items-center justify-center font-black text-gray-800 text-base md:text-lg font-mono">
-              {armor}
-            </span>
           </div>
         </div>
       )}
-      {/* 发光边框效果 */}
-      <div className={`
-        absolute -inset-0.5 rounded-2xl opacity-50 blur-sm -z-10
-        ${isPlayer ? 'bg-purple-500' : 'bg-red-500'}
-      `} />
 
-      {/* 装饰角标 */}
-      <div className={`absolute -top-1.5 -left-1.5 w-5 h-5 ${isPlayer ? 'bg-purple-400' : 'bg-red-400'} rotate-45 shadow-lg`} />
-      <div className={`absolute -top-1.5 -right-1.5 w-5 h-5 ${isPlayer ? 'bg-purple-400' : 'bg-red-400'} rotate-45 shadow-lg`} />
-
-      <div className="flex items-center gap-4">
-        {/* 头像 - 增大到 80px -> 96px(md) */}
+      <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
+        {/* 头像 */}
         <div 
           className={`
-            relative w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden flex-shrink-0
-            border-4 ${isPlayer ? 'border-purple-400' : 'border-red-400'}
-            shadow-xl ${isPlayer ? 'shadow-purple-500/60' : 'shadow-red-500/60'}
+            relative w-12 h-12 md:w-20 md:h-20 rounded-full overflow-hidden flex-shrink-0
+            border-2 md:border-4 ${isPlayer ? 'border-purple-400' : 'border-red-400'}
+            shadow-lg
           `}
         >
           <img 
@@ -329,56 +312,37 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
               target.style.display = 'none';
               if (target.parentElement) {
                 target.parentElement.innerHTML = `
-                  <div class="w-full h-full flex items-center justify-center text-4xl ${isPlayer ? 'bg-purple-900' : 'bg-red-900'}">
+                  <div class="w-full h-full flex items-center justify-center text-xl md:text-3xl ${isPlayer ? 'bg-purple-900' : 'bg-red-900'}">
                     ${defaultAvatar}
                   </div>
                 `;
               }
             }}
           />
-          {/* 头像边框光效 */}
-          <div className={`
-            absolute inset-0 rounded-full 
-            border-2 ${isPlayer ? 'border-purple-200/40' : 'border-red-200/40'} 
-            animate-pulse
-          `} />
-          
-          {/* 外圈发光 */}
-          <div className={`
-            absolute -inset-1 rounded-full opacity-40 blur-sm -z-10
-            ${isPlayer ? 'bg-purple-400' : 'bg-red-400'}
-          `} />
         </div>
 
         {/* 信息区 */}
-        <div className="flex-1 space-y-2.5 min-w-0">
-          {/* 名称 */}
+        <div className="flex-1 min-w-0 flex flex-col justify-center">
           <div className={`
-            text-base font-wizard font-bold tracking-widest truncate
+            text-xs md:text-sm font-wizard font-bold tracking-wider truncate mb-1
             ${isPlayer ? 'text-purple-100' : 'text-red-100'}
-            drop-shadow-lg
           `}>
             {name}
           </div>
-
-          {/* 血条 */}
           <HealthBar current={hp} max={maxHp} isPlayer={isPlayer} />
-
-          {/* 法力水晶 */}
           <ManaCrystals current={mana} max={maxMana} />
         </div>
       </div>
 
       {/* 状态效果 */}
       {effects.length > 0 && (
-        <div className="flex gap-2 mt-3 justify-center flex-wrap">
+        <div className="flex gap-1 mt-1 justify-start flex-wrap">
           {effects.map((effect, i) => (
             <StatusEffectBadge key={`${effect.type}-${i}`} effect={effect} />
           ))}
         </div>
       )}
 
-      {/* 动画样式 */}
       <style>{`
         @keyframes shake-strong {
           0%, 100% { transform: translateX(0) rotate(0); }
