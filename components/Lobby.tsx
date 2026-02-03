@@ -4,10 +4,11 @@
  * 包含法术预览、下注选择、开始对战等功能
  */
 
-import React from 'react';
-import { Sparkles, Volume2, VolumeX } from 'lucide-react';
+import React, { useState } from 'react';
+import { Sparkles, Volume2, VolumeX, BookOpen } from 'lucide-react';
 import { SPELLS, BET_OPTIONS } from '../constants';
 import { BattleRecord } from '../types';
+import { RulesModal } from './RulesModal';
 
 interface LobbyProps {
   balance: number;
@@ -30,6 +31,7 @@ export const Lobby: React.FC<LobbyProps> = ({
   onToggleMute,
   isLoading = false,
 }) => {
+  const [isRulesOpen, setIsRulesOpen] = useState(false);
   const canStart = balance >= selectedBet;
 
   return (
@@ -85,9 +87,18 @@ export const Lobby: React.FC<LobbyProps> = ({
               </div>
             ))}
           </div>
-          <p className="text-[10px] text-gray-500 mt-3 text-center">
-            🔥→🌿→❄️→⚡→🪨→🔥 克制循环
-          </p>
+          <div className="flex justify-between items-center mt-3 px-1">
+            <p className="text-[10px] text-gray-500">
+              🔥→🌿→❄️→⚡→🪨→🔥 克制循环
+            </p>
+            <button 
+              onClick={() => setIsRulesOpen(true)}
+              className="text-[10px] text-purple-400 hover:text-purple-300 border border-purple-500/30 px-2 py-1 rounded hover:bg-purple-500/10 transition-colors flex items-center gap-1"
+            >
+              <BookOpen size={10} /> 玩法说明
+            </button>
+          </div>
+          <RulesModal isOpen={isRulesOpen} onClose={() => setIsRulesOpen(false)} />
         </section>
 
         {/* 下注选择 */}
