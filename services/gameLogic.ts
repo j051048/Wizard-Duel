@@ -138,17 +138,15 @@ export const executeSpell = (
   const isPlayer = caster === 'player';
 
   // 1.1 英雄技能检查 (每回合只能使用一次)
-  const isHeroSkill = spellId.startsWith('hero_');
-  if (isHeroSkill) {
-    if (isPlayer ? newState.heroSkillsUsed : true) { // 暂时假设AI不使用英雄技能
-      logs.push(isPlayer ? `本回合已使用过英雄技能` : `对手尝试使用英雄技能但失败了`);
-      return { newState, logs };
-    }
-    // 标记已使用英雄技能
-    if (isPlayer) {
+    const isHeroSkill = spellId.startsWith('hero_');
+    if (isHeroSkill) {
+      if (newState.heroSkillsUsed) {
+        logs.push(isPlayer ? `本回合已使用过英雄技能` : `对手尝试再次使用英雄技能但失败了`);
+        return { newState, logs };
+      }
+      // 标记已使用英雄技能
       newState.heroSkillsUsed = true;
     }
-  }
   const myCostMod = isPlayer ? newState.playerCostMod : newState.opponentCostMod;
   
   const targetArmor = isPlayer ? newState.opponentArmor : newState.playerArmor;
@@ -466,11 +464,17 @@ export const executeAITurn = (state: DuelState): { newState: DuelState, logs: st
   // 简单模拟 Draft：回合开始时 AI 应该也获得了手牌 (+1 HandSize)
   // 我们在 prepareNextTurn 里处理了 opponentHandSize + 1
   
-  while (cardsPlayed < maxCards && currentState.opponentMana > 0) {
+  while (cardsPlayed < maxCards && currentState.opponentMana >= 0) {
       const spellId = pickBestSpellForAI(currentState);
-      if (!spellId) break; // 买不起任何牌
+      if (!spellId) break; 
       
       const result = executeSpell(currentState, 'opponent', spellId);
+      
+      // 如果状态没变（例如因为某种检查失败了），我们主动中断，防止死循环或无效浪费
+      if (result.newState === currentState && result.logs.length === currentState.playerHP) { // 这是一个极端检查，通常不会发生
+         break;
+      }
+
       currentState = result.newState;
       logs.push(...result.logs);
       cardsPlayed++;
