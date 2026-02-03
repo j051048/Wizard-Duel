@@ -7,8 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "validate-cards": "ts-node ./tools/card-validations.ts",
-    "self-test": "ts-node ./tools/self-test.ts"
+    "validate-cards": "tsx ./tools/card-validations.ts",
+    "self-test": "tsx ./tools/self-test.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.20",
@@ -22,6 +22,7 @@
     "@vitejs/plugin-react": "^5.0.0",
     "sharp": "^0.34.5",
     "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vite": "^6.2.0"
   }

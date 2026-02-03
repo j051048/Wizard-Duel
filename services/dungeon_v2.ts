@@ -4,15 +4,15 @@ import { Deck } from '../types';
 const INITIAL_PLAYER_HP = 100;
 
 export const ARTIFACTS: Artifact[] = [
-  { id: 'phoenix_feather', name: '·ï»ËÓðÃ«', description: 'ÉúÃüÖµµÍÓÚ 20% Ê±£¬ÏÂ³¡Õ½¶·¿ªÊ¼Ç°»Ö¸´ 20 µãÉúÃü¡£', icon: '' },
-  { id: 'arcane_focus', name: '°ÂÊõºËÐÄ', description: 'Ã¿³¡Õ½¶·¿ªÊ¼Ê±¶îÍâ»ñµÃ 1 µã³õÊ¼·¨Á¦¡£', icon: '' },
-  { id: 'dragon_scale', name: 'ÁúÁÛ', description: 'ÊÜµ½µÄËùÓÐÉËº¦¼õÉÙ 1 µã¡£', icon: '' },
-  { id: 'mana_magnet', name: '·¨Á¦´ÅÌú', description: 'Õ½¶·»ñÊ¤ºó¶îÍâ»ñµÃ 10% µÄ·¨Á¦½ð±Ò¡£', icon: '' },
+  { id: 'phoenix_feather', name: 'å‡¤å‡°ä¹‹ç¾½', description: 'æˆ˜æ–—èƒœåˆ©æ—¶æœ‰20%å‡ çŽ‡åœ¨ä¸‹åœºæˆ˜æ–—å¼€å§‹å‰æ¢å¤20ç‚¹ç”Ÿå‘½å€¼', icon: 'ðŸª¶', rarity: 'RARE', effectType: 'HEAL_BATTLE_END', value: 20 },
+  { id: 'arcane_focus', name: 'å¥¥æœ¯èšç„¦', description: 'æ¯åœºæˆ˜æ–—å¼€å§‹æ—¶èŽ·å¾—1ç‚¹é¢å¤–æ³•åŠ›æ°´æ™¶', icon: 'ðŸ”®', rarity: 'COMMON', effectType: 'BUFF_DAMAGE', value: 1 },
+  { id: 'dragon_scale', name: 'é¾™é³ž', description: 'æœ€å¤§ç”Ÿå‘½å€¼å¢žåŠ 1ç‚¹ã€‚', icon: 'ðŸ²', rarity: 'COMMON', effectType: 'MAX_HP_UP', value: 1 },
+  { id: 'mana_magnet', name: 'æ³•åŠ›ç£çŸ³', description: 'æˆ˜æ–—èƒœåˆ©åŽèŽ·å¾—10%çš„é¢å¤–é‡‘å¸å¥–åŠ±', icon: 'ðŸ§²', rarity: 'LEGENDARY', effectType: 'DISCOUNT_SPELL', value: 10 },
 ];
 
 export const DungeonService = {
   startNewRun(baseDeck: Deck): DungeonRunState {
-    const runId = 'run_' + (Get-Date).Ticks;
+    const runId = 'run_' + Date.now();
     const nodeTypes = ['BATTLE', 'BATTLE', 'REST', 'EVENT', 'ELITE', 'BATTLE', 'REST', 'SHOP', 'BATTLE', 'BOSS'] as NodeType[];
     const map = nodeTypes.map((type, index) => ({
       id: 'node_' + index,

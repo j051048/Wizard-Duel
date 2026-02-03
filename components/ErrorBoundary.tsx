@@ -11,7 +11,7 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
-class ErrorBoundary extends React.Component<Props, State> {
+class ErrorBoundary extends (React.Component as any)<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = {

@@ -6,11 +6,11 @@
 
 import { 
   DuelState, SpellType, Spell, GameMode, StatusEffect, AIProfile
-} from '../types';
+} from '../types.ts';
 import { 
   SPELLS, GAME_CONFIG, createDeck, getCardsForMode,
   CRIT_CHANCE, WIN_MULTIPLIER, CRIT_MULTIPLIER, shuffleArray
-} from '../constants';
+} from '../constants.ts';
 
 // ============ 卡牌查询 ============
 
@@ -487,7 +487,29 @@ export const getRandomSpell = (playerSpellId?: SpellType): SpellType => {
   return SPELLS[Math.floor(Math.random() * 10)].id;
 };
 
-export const determineWinner = (p: SpellType, o: SpellType) => 'DRAW'; // Deprecated stub
+export const determineWinner = (p: SpellType, o: SpellType): 'WIN' | 'LOSS' | 'DRAW' => {
+  const playerSpell = getSpellById(p);
+  const opponentSpell = getSpellById(o);
+  
+  // 检查克制关系
+  if (playerSpell.beats === opponentSpell.id) {
+    return 'WIN';
+  }
+  if (opponentSpell.beats === playerSpell.id) {
+    return 'LOSS';
+  }
+  
+  // 如果没有克制关系，比较伤害
+  if (playerSpell.damage > opponentSpell.damage) {
+    return 'WIN';
+  }
+  if (opponentSpell.damage > playerSpell.damage) {
+    return 'LOSS';
+  }
+  
+  // 伤害相等时平局
+  return 'DRAW';
+};
 
 // ============ AI对手逻辑 ============
 
