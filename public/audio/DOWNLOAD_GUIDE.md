@@ -34,8 +34,8 @@
 
 | 文件名 | 建议音乐 |
 |--------|----------|
-| bgm-lobby.mp3 | 搜索 "fantasy" 或 "ambient" |
-| bgm-battle.mp3 | 搜索 "battle" 或 "action" |
+| bgm-lobby.mp3 | Start Menu Screen (Soothing) | [下载 (GitHub)](https://github.com/0xabad1dea/glorytales/blob/master/tracks/002%20-%20Start%20Menu%20Screen.mp3) - 点击右侧 "Download raw file" |
+| bgm-battle.mp3 | 搜索 "battle" 或 "action" | [Mixkit Game Music](https://mixkit.co/free-stock-music/game/) |
 
 ---
 
