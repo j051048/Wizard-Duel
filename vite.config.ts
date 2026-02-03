@@ -89,7 +89,6 @@ export default defineConfig(({ mode }) => {
             manualChunks: {
               'vendor-react': ['react', 'react-dom'],
               'vendor-web3': ['wagmi', 'viem', '@tanstack/react-query'],
-              'game-core': ['./services/gameLogic.ts', './services/api.ts'],
             },
           },
         },

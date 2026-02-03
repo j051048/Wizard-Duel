@@ -110,9 +110,9 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       }
 
       if (lastMsg.includes('造成') || lastMsg.includes('受到')) {
-        const damageMatch = lastMsg.match(new RegExp("(\\d+)\\s*点伤害"));
-        if (damageMatch) {
-          const damage = parseInt(damageMatch[1]);
+        const match = lastMsg.match(/(\d+)\s*点伤害/);
+        if (match) {
+          const damage = parseInt(match[1]);
           const isPlayerTarget = lastMsg.includes('受到'); 
           addDamageNumber(damage, isPlayerTarget, isCrit); 
         }
@@ -145,28 +145,27 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   ), [duelState.playerHand, duelState.playerMana, duelState.playerEffects, duelState.playerCostMod]);
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-slate-950 select-none flex flex-col">
+    <div className="fixed inset-0 overflow-hidden bg-slate-950 select-none flex flex-col z-40">
       {/* === 背景层 === */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <img 
           src="/ui/bg_arena.webp" 
-          alt="Arena" 
+          alt="Arena Background"
           decoding="async"
-          className="absolute inset-0 w-full h-full object-cover animate-[breath_20s_ease-in-out_infinite]"
-          style={{ willChange: 'transform, filter' }}
+          loading="lazy"
+          className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay scale-110 blur-[2px] optimize-gpu"
+          style={{ objectPosition: 'center 40%' }}
         />
-        <div className="absolute inset-0 shadow-[inset_0_0_200px_rgba(0,0,0,0.9)]" />
-        <div className="absolute inset-0 bg-black/30" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/90 via-transparent to-black/95" />
-        
-        <div className="absolute inset-0 flex items-center justify-center opacity-20">
+        <div className="absolute inset-0 bg-slate-950/20" />
+        {/* 中心法阵 */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-30">
           <img 
-            src="/ui/magic-circle.webp" 
+            src="/ui/magic-portal.webp" 
             alt="" 
             decoding="async"
             loading="lazy"
             className="w-[120vw] h-[120vw] md:w-[90vh] md:h-[90vh] animate-spin mix-blend-screen"
-            style={{ animationDuration: '120s', willChange: 'transform' }}
+            style={{ animationDuration: '120s' }}
             onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
           />
         </div>

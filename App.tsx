@@ -440,26 +440,33 @@ function App() {
             />
           )}
 
-          {gameState === 'DUEL' && gameLoopState.duelState && (
-            <BattleArena
-              duelState={gameLoopState.duelState}
-              phase={gameLoopState.phase}
-              playerCard={gameLoopState.playerCard}
-              opponentCard={gameLoopState.opponentCard}
-              resultText={gameLoopState.resultText}
-              effectMessages={gameLoopState.effectMessages}
-              selectedBet={selectedBet}
-              onPlayCard={handlePlayCard}
-              onPass={() => {
-                gameLoopActions.passTurn();
-                audioActions.playSfx('button');
-              }}
-              onSurrender={handleSurrender}
-              isMuted={audioState.isMuted}
-              onToggleMute={audioActions.toggleMute}
-              isPlayerShaking={isPlayerShaking}
-              isOpponentShaking={isOpponentShaking}
-            />
+          {gameState === 'DUEL' && (
+            gameLoopState.duelState ? (
+              <BattleArena
+                duelState={gameLoopState.duelState}
+                phase={gameLoopState.phase}
+                playerCard={gameLoopState.playerCard}
+                opponentCard={gameLoopState.opponentCard}
+                resultText={gameLoopState.resultText}
+                effectMessages={gameLoopState.effectMessages}
+                selectedBet={selectedBet}
+                onPlayCard={handlePlayCard}
+                onPass={() => {
+                  gameLoopActions.passTurn();
+                  audioActions.playSfx('button');
+                }}
+                onSurrender={handleSurrender}
+                isMuted={audioState.isMuted}
+                onToggleMute={audioActions.toggleMute}
+                isPlayerShaking={isPlayerShaking}
+                isOpponentShaking={isOpponentShaking}
+              />
+            ) : (
+              <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-50">
+                <div className="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mb-4" />
+                <p className="text-purple-300 font-tech animate-pulse">正在同步法术波长...</p>
+              </div>
+            )
           )}
 
           {finalResult && (
