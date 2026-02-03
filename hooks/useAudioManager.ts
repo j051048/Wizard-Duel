@@ -30,6 +30,7 @@ const AUDIO_CONFIG = {
       ice: '/audio/sfx-spell-ice.mp3',
       thunder: '/audio/sfx-spell-thunder.mp3',
       rock: '/audio/sfx-spell-rock.mp3',
+      skip: '/audio/sfx-card-play.mp3', // Placeholder for skip
     },
   },
   // 音效冷却时间配置（毫秒）- 已调整以减少噪音
