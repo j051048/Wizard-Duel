@@ -59,43 +59,69 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   const oppSpellDetails = opponentCard ? getSpellById(opponentCard) : null;
 
   // 伤害数字动画
-  const addDamageNumber = (damage: number, isPlayer: boolean) => {
+  // 伤害数字动画
+  const [showCritEffect, setShowCritEffect] = useState(false); // 暴击特效
+
+  const addDamageNumber = (damage: number, isPlayer: boolean, isCrit: boolean = false) => {
     HapticService.medium(); // 伤害数字弹出时的反馈
-    const id = damageIdRef.current++;
-    // ... (rest of addDamageNumber)
-    const x = Math.random() * 100 + 50; 
-    const y = isPlayer ? 200 : 100;
-    setDamageNumbers(prev => [...prev, { id, value: damage, x, y, isPlayer }]);
+    if (isCrit) HapticService.heavy();
+
+    const id = damageIdRef.current++; // Fixed: Increment current
+    
+    // Position logic...
+    const x = isPlayer ? 50 + Math.random() * 50 : 50 + Math.random() * 50; 
+    const y = isPlayer ? 150 : 50; // Adjusted for visibility
+    setDamageNumbers(prev => [...prev, { id, value: damage, x, y, isPlayer, isCrit }]);
     
     setTimeout(() => {
       setDamageNumbers(prev => prev.filter(d => d.id !== id));
-    }, 1000);
+    }, 1200);
   };
 
-  // 监听HP变化触发强力震动
+  // 监听HP变化触发强力震动 & 伤害显示
   React.useEffect(() => {
     if (duelState.playerHP < prevPlayerHP.current) {
-        HapticService.heavy(); // 受到伤害
+        HapticService.heavy(); 
     }
     prevPlayerHP.current = duelState.playerHP;
 
     if (duelState.opponentHP < prevOpponentHP.current) {
-        HapticService.heavy(); // 造成伤害
+        HapticService.heavy(); 
     }
     prevOpponentHP.current = duelState.opponentHP;
   }, [duelState.playerHP, duelState.opponentHP]);
 
-  // 监听伤害变化... (existing effect can stay or merge, but keeping separate is cleaner for logic separation)
+  // 监听战斗日志以触发特效
   React.useEffect(() => {
     if (effectMessages.length > 0) {
-      // ... (existing logs logic)
       const lastMsg = effectMessages[effectMessages.length - 1];
+      const isCrit = lastMsg.includes('暴击');
+      
+      if (isCrit) {
+        setShowCritEffect(true);
+        setTimeout(() => setShowCritEffect(false), 800); // 闪光持续时间
+      }
+
       if (lastMsg.includes('造成') || lastMsg.includes('受到')) {
         const damageMatch = lastMsg.match(/(\d+) 点伤害/);
         if (damageMatch) {
           const damage = parseInt(damageMatch[1]);
-          const isPlayerDamage = lastMsg.includes('造成');
-          addDamageNumber(damage, isPlayerDamage);
+          // "造成" means player dealt damage (opponent took it)
+          // "受到" means player took damage
+          // But wait, "造成" usually implies Subject (Player?) dealt to Object? 
+          // Log usually says "你造成了 X 点伤害" or "对手造成了 X 点伤害".
+          // Or "你受到 X 点伤害". 
+          // Let's assume standard log format.
+          // Correct mapping based on typical log: "Player dealt X" -> isPlayer (SOURCE) damage? No, isPlayerUsually means TARGET in this context?
+          // Let's stick to simple: if "受到" (took damage), it's consistent with HP check.
+          
+          const isPlayerTarget = lastMsg.includes('受到') || (lastMsg.includes('造成') && lastMsg.includes('对手')); 
+          // If "对手造成...", Player is target. 
+          // If "你造成...", Opponent is target.
+          // Simplified:
+          const isOpponentTarget = !isPlayerTarget;
+
+          addDamageNumber(damage, isOpponentTarget, isCrit); 
         }
       }
     }
@@ -363,7 +389,23 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes critFlash {
+          0% { opacity: 0; transform: scale(1); }
+          10% { opacity: 0.8; transform: scale(1.05); }
+          100% { opacity: 0; transform: scale(1); }
+        }
       `}</style>
+
+      {/* Crit Effect Overlay */}
+      {showCritEffect && (
+        <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center">
+           <div className="absolute inset-0 bg-white/30 animate-[critFlash_0.5s_ease-out_forwards] mix-blend-overlay" />
+           <div className="absolute inset-0 bg-red-500/10 animate-[pulse_0.2s_ease-in-out_2]" />
+           <div className="text-6xl font-black text-yellow-400 drop-shadow-[0_0_10px_rgba(255,0,0,0.8)] animate-[bounce_0.5s_infinite] rotate-[-15deg] border-4 border-red-500 bg-black/50 p-4 rounded-xl uppercase tracking-widest">
+             CRITICAL!
+           </div>
+        </div>
+      )}
     </div>
   );
 };

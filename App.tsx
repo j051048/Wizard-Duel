@@ -155,8 +155,15 @@ function App() {
   const loadUserData = async (addr: string) => {
     setIsLoading(true);
     try {
-      const profile = await ApiService.getBalance(addr);
+      const profile = await ApiService.getProfile(addr);
       setBalance(profile.balance);
+      if (profile.userRank) setUserRank(profile.userRank);
+      if (profile.rankScore) setRankScore(profile.rankScore);
+      if (profile.stats?.winStreak) setWinStreak(profile.stats.winStreak);
+
+      const userDecks = await ApiService.getDecks(addr);
+      setDecks(userDecks);
+
       const hist = await ApiService.getHistory(addr);
       setHistory(hist);
     } catch (e) {
@@ -249,7 +256,12 @@ function App() {
     setSelectedDeck(deck);
   }, []);
 
-  const handleSaveDeck = useCallback((deck: Deck) => {
+  const handleSaveDeck = useCallback(async (deck: Deck) => {
+    // 保存到后端/LocalStorage
+    if (activeAddress) {
+       await ApiService.saveDeck(activeAddress, deck);
+    }
+
     const existingIndex = decks.findIndex(d => d.id === deck.id);
     if (existingIndex >= 0) {
       const newDecks = [...decks];
@@ -260,7 +272,7 @@ function App() {
     }
     setSelectedDeck(deck);
     setGameState('LOBBY');
-  }, [decks]);
+  }, [decks, activeAddress]);
 
   const handleMatchmakingComplete = useCallback(() => {
     if (pendingTavernDuel) {

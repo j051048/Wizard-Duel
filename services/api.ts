@@ -13,7 +13,7 @@
  * - VITE_USE_MOCK: 是否使用 Mock 数据 (true/false)
  */
 
-import { UserProfile, BattleRecord, PlayerStats, SpellType } from '../types';
+import { UserProfile, BattleRecord, PlayerStats, SpellType, Deck, Rank } from '../types';
 import { determineWinner, calculatePayout } from './gameLogic';
 
 // Vite 环境变量类型声明
@@ -101,8 +101,29 @@ async function apiRequest<T>(
   }
 }
 
-// ============ Mock 数据存储 ============
+// LocalStorage Keys
+const STORAGE_KEYS = {
+  PROFILE: 'wizard_user_profile',
+  DECKS: 'wizard_user_decks',
+  HISTORY: 'wizard_battle_history'
+};
 
+// Helper to load/save local data
+const _loadLocalData = <T>(key: string, defaultVal: T): T => {
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : defaultVal;
+  } catch {
+    return defaultVal;
+  }
+};
+
+const _saveLocalData = (key: string, data: any) => {
+  localStorage.setItem(key, JSON.stringify(data));
+};
+
+// ============ Mock 数据存储 (In-Memory Fallback) ============
+// Note: We now primarily use LocalStorage in Mock Mode
 let mockBalance = 1000;
 let mockHistory: BattleRecord[] = [];
 const mockDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -125,6 +146,8 @@ export interface SettleGameRequest {
   roundNumber?: number;
   finalPlayerHP?: number;
   finalOpponentHP?: number;
+  newScore?: number;
+  newRank?: Rank;
 }
 
 /**
@@ -145,20 +168,36 @@ export const ApiService = {
   // ---------- 用户相关 ----------
   
   /**
-   * 获取用户余额/积分
+   * 获取用户完整档案 (包括排位、积分、统计)
    */
-  async getBalance(userId: string): Promise<UserProfile> {
+  async getProfile(userId: string): Promise<UserProfile> {
     if (CONFIG.useMock) {
       await mockDelay(300);
-      return { address: userId, balance: mockBalance };
+      const profiles = _loadLocalData<Record<string, UserProfile>>(STORAGE_KEYS.PROFILE, {});
+      
+      if (!profiles[userId]) {
+        // Init new profile
+        profiles[userId] = {
+          address: userId,
+          balance: 1000,
+          userRank: 'Iron',
+          rankScore: 0,
+          stats: { wins: 0, losses: 0, totalGames: 0, winStreak: 0 }
+        };
+        _saveLocalData(STORAGE_KEYS.PROFILE, profiles);
+      }
+      
+      return profiles[userId];
     }
+    // TODO: Real API implementation
+    return { address: userId, balance: 0 }; 
+  },
 
-    const response = await apiRequest<{ balance: number }>(`/api/users/${userId}/balance`);
-    if (!response.success) {
-      console.error('获取余额失败:', response.error);
-      return { address: userId, balance: 0 };
-    }
-    return { address: userId, balance: response.data!.balance };
+  /**
+   * 获取用户余额/积分 (Compatible wrapper)
+   */
+  async getBalance(userId: string): Promise<UserProfile> {
+    return this.getProfile(userId);
   },
 
   /**
@@ -174,6 +213,32 @@ export const ApiService = {
       body: JSON.stringify({ userId, ...metadata }),
     });
     return response.success;
+  },
+
+  // ---------- 牌组管理 (NEW) ----------
+
+  async getDecks(userId: string): Promise<Deck[]> {
+    if (CONFIG.useMock) {
+      const allDecks = _loadLocalData<Record<string, Deck[]>>(STORAGE_KEYS.DECKS, {});
+      return allDecks[userId] || [];
+    }
+    return []; // TODO: Real API
+  },
+
+  async saveDeck(userId: string, deck: Deck): Promise<void> {
+    if (CONFIG.useMock) {
+      const allDecks = _loadLocalData<Record<string, Deck[]>>(STORAGE_KEYS.DECKS, {});
+      const userDecks = allDecks[userId] || [];
+      
+      const idx = userDecks.findIndex(d => d.id === deck.id);
+      if (idx >= 0) userDecks[idx] = deck;
+      else userDecks.push(deck);
+      
+      allDecks[userId] = userDecks;
+      _saveLocalData(STORAGE_KEYS.DECKS, allDecks);
+      return;
+    }
+    // TODO: Real API
   },
 
   // ---------- 游戏相关 ----------
@@ -195,41 +260,64 @@ export const ApiService = {
     playerSpell: SpellType,
     opponentSpell: SpellType,
     isCrit: boolean,
-    gameMetadata?: { gameId?: string; roundNumber?: number; finalPlayerHP?: number; finalOpponentHP?: number }
+    gameMetadata?: { gameId?: string; roundNumber?: number; finalPlayerHP?: number; finalOpponentHP?: number },
+    newScore?: number,
+    newRank?: Rank
   ): Promise<{ newBalance: number; verified: boolean }> {
     if (CONFIG.useMock) {
       await mockDelay(500);
       
-      // Mock 模式下的服务端验证逻辑
-      const expectedOutcome = determineWinner(playerSpell, opponentSpell);
-      const expected = calculatePayout(bet, expectedOutcome);
+      const profiles = _loadLocalData<Record<string, UserProfile>>(STORAGE_KEYS.PROFILE, {});
+      const profile = profiles[userId] || { 
+        address: userId, 
+        balance: 1000, 
+        userRank: 'Iron', 
+        rankScore: 0, 
+        stats: { wins: 0, losses: 0, totalGames: 0, winStreak: 0 } 
+      };
+
+      // Update Balance
+      const profit = result === 'WIN' ? payout - bet : (result === 'DRAW' ? 0 : -bet);
+      profile.balance = Math.max(0, profile.balance + profit);
       
-      let finalPayout = payout;
-      let finalResult = result;
-      
-      if (expectedOutcome !== result) {
-        console.warn('结果验证失败，使用服务端计算值');
-        finalPayout = expected.payout;
-        finalResult = expectedOutcome;
+      // Update Rank
+      if (typeof newScore === 'number') profile.rankScore = newScore;
+      if (newRank) profile.userRank = newRank;
+
+      // Update Stats
+      if (!profile.stats) profile.stats = { wins: 0, losses: 0, totalGames: 0, winStreak: 0 };
+      profile.stats.totalGames++;
+      if (result === 'WIN') {
+        profile.stats.wins++;
+        profile.stats.winStreak++;
+      } else if (result === 'LOSS') {
+        profile.stats.losses++;
+        profile.stats.winStreak = 0;
       }
 
-      // 更新余额
-      mockBalance = mockBalance - bet + finalPayout;
+      profiles[userId] = profile;
+      _saveLocalData(STORAGE_KEYS.PROFILE, profiles);
 
-      // 记录历史
+      // Record History
+      const histories = _loadLocalData<Record<string, BattleRecord[]>>(STORAGE_KEYS.HISTORY, {});
+      const userHistory = histories[userId] || [];
+      
       const record: BattleRecord = {
         id: Math.random().toString(36).substr(2, 9),
         playerSpell,
         opponentSpell,
-        result: finalResult,
-        amount: finalResult === 'WIN' ? finalPayout - bet : (finalResult === 'DRAW' ? 0 : -bet),
+        result,
+        amount: profit,
         timestamp: Date.now(),
-        isCrit: expected.isCrit,
+        isCrit,
       };
-      mockHistory.unshift(record);
-      if (mockHistory.length > 20) mockHistory.pop();
+      
+      userHistory.unshift(record);
+      if (userHistory.length > 50) userHistory.pop();
+      histories[userId] = userHistory;
+      _saveLocalData(STORAGE_KEYS.HISTORY, histories);
 
-      return { newBalance: mockBalance, verified: true };
+      return { newBalance: profile.balance, verified: true };
     }
 
     // 生产模式：调用真实后端
@@ -242,6 +330,7 @@ export const ApiService = {
       opponentSpell,
       isCrit,
       ...gameMetadata,
+      newScore, newRank // Pass these if backend supports it
     };
 
     const response = await apiRequest<{ newBalance: number; verified: boolean }>('/api/games/settle', {
@@ -286,8 +375,18 @@ export const ApiService = {
   async changePoints(request: PointsChangeRequest): Promise<{ newBalance: number; success: boolean }> {
     if (CONFIG.useMock) {
       await mockDelay(300);
-      mockBalance += request.amount;
-      return { newBalance: mockBalance, success: true };
+      const profiles = _loadLocalData<Record<string, UserProfile>>(STORAGE_KEYS.PROFILE, {});
+      const profile = profiles[request.userId] || { 
+        address: request.userId, 
+        balance: 1000, 
+        userRank: 'Iron', 
+        rankScore: 0, 
+        stats: { wins: 0, losses: 0, totalGames: 0, winStreak: 0 } 
+      };
+      profile.balance += request.amount;
+      profiles[request.userId] = profile;
+      _saveLocalData(STORAGE_KEYS.PROFILE, profiles);
+      return { newBalance: profile.balance, success: true };
     }
 
     const response = await apiRequest<{ newBalance: number }>('/api/points/change', {
@@ -310,8 +409,18 @@ export const ApiService = {
     if (CONFIG.useMock) {
       await mockDelay(500);
       const bonus = 50;
-      mockBalance += bonus;
-      return { amount: bonus, newBalance: mockBalance };
+      const profiles = _loadLocalData<Record<string, UserProfile>>(STORAGE_KEYS.PROFILE, {});
+      const profile = profiles[userId] || { 
+        address: userId, 
+        balance: 1000, 
+        userRank: 'Iron', 
+        rankScore: 0, 
+        stats: { wins: 0, losses: 0, totalGames: 0, winStreak: 0 } 
+      };
+      profile.balance += bonus;
+      profiles[userId] = profile;
+      _saveLocalData(STORAGE_KEYS.PROFILE, profiles);
+      return { amount: bonus, newBalance: profile.balance };
     }
 
     const response = await apiRequest<{ amount: number; newBalance: number }>(`/api/users/${userId}/daily-bonus`, {
@@ -329,7 +438,8 @@ export const ApiService = {
   async getHistory(userId: string, limit = 20): Promise<BattleRecord[]> {
     if (CONFIG.useMock) {
       await mockDelay(200);
-      return mockHistory.slice(0, limit);
+      const histories = _loadLocalData<Record<string, BattleRecord[]>>(STORAGE_KEYS.HISTORY, {});
+      return (histories[userId] || []).slice(0, limit);
     }
 
     const response = await apiRequest<{ records: BattleRecord[] }>(`/api/users/${userId}/history?limit=${limit}`);
@@ -342,6 +452,14 @@ export const ApiService = {
   async getLeaderboard(type: 'daily' | 'weekly' | 'all' = 'all', limit = 10): Promise<PlayerStats[]> {
     if (CONFIG.useMock) {
       await mockDelay(300);
+      return ApiService._getMockLeaderboard(limit);
+    }
+
+    const response = await apiRequest<{ leaderboard: PlayerStats[] }>(`/api/leaderboard?type=${type}&limit=${limit}`);
+    return response.success ? response.data!.leaderboard : [];
+  },
+
+  _getMockLeaderboard(limit: number) {
       return Array.from({ length: limit }).map((_, i) => ({
         address: `0x${Math.random().toString(16).substr(2, 8)}...${Math.random().toString(16).substr(2, 4)}`,
         wins: Math.floor(Math.random() * 50) + 10,
@@ -349,10 +467,6 @@ export const ApiService = {
         draws: Math.floor(Math.random() * 20),
         totalEarnings: Math.floor(Math.random() * 10000),
       })).sort((a, b) => b.totalEarnings - a.totalEarnings);
-    }
-
-    const response = await apiRequest<{ leaderboard: PlayerStats[] }>(`/api/leaderboard?type=${type}&limit=${limit}`);
-    return response.success ? response.data!.leaderboard : [];
   },
 
   // ---------- 外部集成 ----------
