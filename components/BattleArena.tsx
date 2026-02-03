@@ -46,10 +46,12 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   onToggleMute,
   isPlayerShaking = false,
   isOpponentShaking = false,
+  isTavernMode = false,
 }) => {
   const [damageNumbers, setDamageNumbers] = useState<{id: number, value: number, x: number, y: number, isPlayer: boolean}[]>([]);
   const damageIdRef = useRef(0);
   const playerSpellDetails = playerCard ? getSpellById(playerCard) : null;
+  const oppSpellDetails = opponentCard ? getSpellById(opponentCard) : null;
 
   // 伤害数字动画
   const addDamageNumber = (damage: number, isPlayer: boolean) => {
@@ -144,14 +146,15 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         <div className="w-full max-w-[90%] md:max-w-3xl mx-auto px-2 md:px-0 transition-all duration-300">
           <PlayerFrame 
             isPlayer={false}
-            name="Dark Sorcerer"
+            name={duelState.aiProfile?.name || "Dark Sorcerer"}
             hp={duelState.opponentHP}
             armor={duelState.opponentArmor}
             maxHp={GAME_CONFIG.maxHP}
             mana={duelState.opponentMana}
-            maxMana={duelState.opponentMaxMana} // Fix: Use correct maxMana
+            maxMana={duelState.opponentMaxMana} 
             effects={duelState.opponentEffects}
             isShaking={isOpponentShaking}
+            avatar={duelState.aiProfile?.avatar}
           />
 
           {/* 对手手牌数显示 */}
