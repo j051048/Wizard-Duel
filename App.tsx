@@ -232,6 +232,10 @@ function App() {
     setGameState('LOBBY');
   }, []);
 
+  const handleSelectDeck = useCallback((deck: Deck) => {
+    setSelectedDeck(deck);
+  }, []);
+
   const handleSaveDeck = useCallback((deck: Deck) => {
     const existingIndex = decks.findIndex(d => d.id === deck.id);
     if (existingIndex >= 0) {
