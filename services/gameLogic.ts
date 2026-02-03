@@ -267,14 +267,48 @@ export const executeSpell = (
     }
   }
   
-  if (spell.mechanic === 'draw') {
-    // 抽牌逻辑已在回合开始处理，这里可以添加额外抽牌
-    logs.push(`📚 抽2张牌`);
-    // 实现抽2张牌的逻辑
-    // Note: 原始代码这里只是 push log，没有实际 draw 逻辑。我们需要补充吗？
-    // 原始代码: logs.push(`📚 抽2张牌`); End. 
-    // 看起来原始代码就没有实现 draw effect。为了不引入意外变动，保持原样，或者...
-    // 既然用户只关心抵消，我们不要动这个 unrelated bug unless requested.
+    if (spell.mechanic === 'draw') {
+    // 实现抽牌效果
+    if (isPlayer) {
+      let cardsDrawn = 0;
+      for (let i = 0; i < 2; i++) {
+        if (newState.playerDeck.length > 0 && newState.playerHand.length < 10) {
+          const result = drawCard(newState.playerDeck, newState.playerHand, newState.playerFatigue);
+          newState.playerDeck = result.newDeck;
+          newState.playerHand = result.newHand;
+          newState.playerFatigue = result.newFatigue;
+          if (result.fatigueDamage > 0) {
+            newState.playerHP = Math.max(0, newState.playerHP - result.fatigueDamage);
+            logs.push(`疲劳伤害：${result.fatigueDamage}`);
+          } else {
+            cardsDrawn++;
+          }
+        }
+      }
+      if (cardsDrawn > 0) {
+        logs.push(`📚 抽了${cardsDrawn}张牌`);
+      }
+    } else {
+      // AI 抽牌
+      let cardsDrawn = 0;
+      for (let i = 0; i < 2; i++) {
+        if (newState.opponentDeck.length > 0 && newState.opponentHandSize < 10) {
+          const result = drawCard(newState.opponentDeck, [], newState.opponentFatigue);
+          newState.opponentDeck = result.newDeck;
+          newState.opponentFatigue = result.newFatigue;
+          if (result.fatigueDamage > 0) {
+            newState.opponentHP = Math.max(0, newState.opponentHP - result.fatigueDamage);
+            logs.push(`对手疲劳伤害：${result.fatigueDamage}`);
+          } else {
+            newState.opponentHandSize++;
+            cardsDrawn++;
+          }
+        }
+      }
+      if (cardsDrawn > 0) {
+        logs.push(`📚 对手抽了${cardsDrawn}张牌`);
+      }
+    }
   }
   
   if (spell.mechanic === 'silence') {
@@ -360,17 +394,54 @@ const pickBestSpellForAI = (state: DuelState): SpellType | null => {
    
    if (affordable.length === 0) return null;
    
-   // 优先斩杀
-   const kill = affordable.find(s => s.damage >= state.playerHP + state.playerArmor);
-   if (kill) return kill.id;
+   // 1. 优先斩杀：如果能一击击杀玩家
+   const killShot = affordable.find(s => s.damage >= state.playerHP + state.playerArmor);
+   if (killShot) return killShot.id;
    
-   // 优先连击
-   if (state.opponentLastSpell === 'thunder') {
-     const t = affordable.find(s => s.id === 'thunder');
-     if (t) return t.id;
+   // 2. 低血量时优先防御或治疗
+   if (state.opponentHP <= 10) {
+     // 优先治疗
+     const healSpell = affordable.find(s => s.mechanic === 'heal');
+     if (healSpell) return healSpell.id;
+     
+     // 其次叠甲
+     const armorSpell = affordable.find(s => (s.armorGain || 0) >= 5);
+     if (armorSpell) return armorSpell.id;
    }
    
-   // 随机
+   // 3. 雷电连击优化
+   if (state.opponentLastSpell && (state.opponentLastSpell.startsWith('thunder') || state.opponentLastSpell === 'hero_thunder')) {
+     const thunderSpells = affordable.filter(s => s.id.startsWith('thunder'));
+     if (thunderSpells.length > 0) {
+       // 选择伤害最高的雷电
+       thunderSpells.sort((a, b) => b.damage - a.damage);
+       return thunderSpells[0].id;
+     }
+   }
+   
+   // 4. 元素克制：如果知道玩家上次用了什么，尝试克制
+   if (state.playerLastSpell) {
+     const counterSpell = affordable.find(s => s.beats === state.playerLastSpell);
+     if (counterSpell && counterSpell.damage > 0) {
+       return counterSpell.id;
+     }
+   }
+   
+   // 5. 优先高伤害卡牌（性价比考虑）
+   const damageSpells = affordable.filter(s => s.damage > 0);
+   if (damageSpells.length > 0) {
+     // 按伤害/费用比排序
+     damageSpells.sort((a, b) => {
+       const ratioA = a.damage / Math.max(1, a.manaCost);
+       const ratioB = b.damage / Math.max(1, b.manaCost);
+       return ratioB - ratioA;
+     });
+     // 有一定随机性，不总是选最优
+     const topChoices = damageSpells.slice(0, Math.min(3, damageSpells.length));
+     return topChoices[Math.floor(Math.random() * topChoices.length)].id;
+   }
+   
+   // 6. 随机选择
    return affordable[Math.floor(Math.random() * affordable.length)].id;
 };
 

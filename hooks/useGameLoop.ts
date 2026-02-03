@@ -51,6 +51,12 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
   const [gameResult, setGameResult] = useState<'WIN' | 'LOSS' | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // 使用 ref 追踪最新的 duelState，解决闭包问题
+  const duelStateRef = useRef<DuelState | null>(null);
+  useEffect(() => {
+    duelStateRef.current = duelState;
+  }, [duelState]);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) {
@@ -165,7 +171,7 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
     return true;
   }, [phase, duelState]);
 
-  // 玩家结束回合
+    // 玩家结束回合
   const passTurn = useCallback(() => {
     if (phase !== 'PLAYER_TURN' || !duelState) return;
     
@@ -176,18 +182,11 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
     // 延迟执行 AI，模拟思考
     clearTimer();
     timerRef.current = setTimeout(() => {
-        if (!duelState) return; // Should allow current state ref?
-        // 使用 functional update 拿到最新的 state (in case playCard updated it recently)
-        // 但 passTurn 是同步的。
-        // 然而 AI turn 需要基于 pass 后的 state。
+        // 使用 ref 获取最新的状态，避免闭包陷阱
+        const currentState = duelStateRef.current;
+        if (!currentState) return;
         
-        // 我们最好在 useEffect 里监听 phase change?
-        // OR just execute here with ref to latest state?
-        // 这里的 duelState 是闭包里的旧值吗？
-        // passTurn 是 useCallback，依赖 [duelState]。
-        // 所以 duelState 是最新的。
-        
-        const { newState, logs } = executeAITurn(duelState);
+        const { newState, logs } = executeAITurn(currentState);
         setDuelState(newState);
         setEffectMessages(logs); // Show AI logs
         

@@ -16,14 +16,6 @@
 import { UserProfile, BattleRecord, PlayerStats, SpellType, Deck, Rank } from '../types';
 import { determineWinner, calculatePayout } from './gameLogic';
 
-// Vite 环境变量类型声明
-declare const import_meta_env: {
-  VITE_API_BASE_URL?: string;
-  VITE_SUPABASE_URL?: string;
-  VITE_SUPABASE_ANON_KEY?: string;
-  VITE_USE_MOCK?: string;
-};
-
 // 安全获取环境变量
 const getEnv = (key: string): string => {
   try {

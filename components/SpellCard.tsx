@@ -38,6 +38,19 @@ const getMechanicIcon = (mechanic?: string) => {
 
 // ... (imports)
 
+// 根据卡牌ID推断元素类型
+const getElementFromId = (id: string): string => {
+  if (id.startsWith('fire') || id.startsWith('hero_fire')) return 'fire';
+  if (id.startsWith('vine') || id.startsWith('hero_vine')) return 'nature';
+  if (id.startsWith('ice') || id.startsWith('hero_ice')) return 'water';
+  if (id.startsWith('thunder') || id.startsWith('hero_thunder')) return 'wind';
+  if (id.startsWith('rock') || id.startsWith('hero_rock')) return 'earth';
+  if (id === 'healing') return 'water';
+  if (id === 'aoe' || id === 'draw') return 'wind';
+  if (id === 'silence') return 'earth';
+  return 'wind'; // 默认
+};
+
 // 映射元素属性到边框素材
 const getFrameImage = (element: string) => {
   switch (element) {
@@ -97,9 +110,9 @@ export const SpellCard: React.FC<SpellCardProps> = ({
 
   if (!spell) return null;
 
-  const canPlay = isAffordable && !disabled;
+    const canPlay = isAffordable && !disabled;
   const mechanicIcon = getMechanicIcon(spell.mechanic);
-  const frameImage = getFrameImage(spell.element);
+  const frameImage = getFrameImage(getElementFromId(spell.id));
 
   // 稀有度样式
   const getRarityStyles = (rarity: string) => {

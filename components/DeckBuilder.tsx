@@ -10,7 +10,7 @@
 
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 import { ArrowLeft, Save, Trash2, Plus } from 'lucide-react';
 
@@ -264,34 +264,19 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-96 overflow-y-auto">
 
-              {cardPool.map((spell) => (
-
-                <div key={spell.id} className="relative">
-
+                            {cardPool.map((spell) => (
+                <div key={spell.id} className="relative cursor-pointer hover:scale-105 transition-transform">
                   <SpellCard
-
                     spell={spell}
-
                     onClick={() => addCard(spell.id)}
-
-                    className="cursor-pointer hover:scale-105 transition-transform"
-
                   />
-
                   <button
-
                     onClick={() => addCard(spell.id)}
-
                     className="absolute top-1 right-1 bg-green-600 hover:bg-green-500 rounded-full w-6 h-6 flex items-center justify-center text-xs"
-
                   >
-
                     <Plus size={12} />
-
                   </button>
-
                 </div>
-
               ))}
 
             </div>
@@ -308,44 +293,24 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-96 overflow-y-auto">
 
-              {Object.entries(cardCounts).map(([spellId, count]) => {
-
+                            {Object.entries(cardCounts).map(([spellId, count]) => {
                 const spell = getSpellById(spellId as SpellType);
-
                 return (
-
-                  <div key={spellId} className="relative">
-
+                  <div key={spellId} className="relative opacity-75">
                     <SpellCard
-
                       spell={spell}
-
-                      className="opacity-75"
-
                     />
-
-                    <div className="absolute top-1 left-1 bg-blue-600 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
-
+                    <div className="absolute top-1 left-1 bg-blue-600 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold text-white">
                       {count}
-
                     </div>
-
                     <button
-
                       onClick={() => removeCard(spellId as SpellType)}
-
                       className="absolute top-1 right-1 bg-red-600 hover:bg-red-500 rounded-full w-6 h-6 flex items-center justify-center text-xs"
-
                     >
-
                       <Trash2 size={12} />
-
                     </button>
-
                   </div>
-
                 );
-
               })}
 
             </div>

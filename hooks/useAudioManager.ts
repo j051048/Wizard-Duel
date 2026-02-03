@@ -24,14 +24,25 @@ const AUDIO_CONFIG = {
     block: '/audio/sfx-block.mp3',
     victory: '/audio/sfx-victory.mp3',
     defeat: '/audio/sfx-defeat.mp3',
-    spell: {
+        spell: {
       fire: '/audio/sfx-spell-fire.mp3',
       vine: '/audio/sfx-spell-vine.mp3',
       ice: '/audio/sfx-spell-ice.mp3',
       thunder: '/audio/sfx-spell-thunder.mp3',
       rock: '/audio/sfx-spell-rock.mp3',
-      skip: '/audio/sfx-card-play.mp3', // Placeholder for skip
-    },
+      skip: '/audio/sfx-card-play.mp3',
+      // 特殊卡牌音效映射到已有音效
+      healing: '/audio/sfx-spell-ice.mp3',
+      aoe: '/audio/sfx-spell-fire.mp3',
+      draw: '/audio/sfx-card-play.mp3',
+      silence: '/audio/sfx-spell-rock.mp3',
+      // 英雄技能使用对应元素音效
+      hero_fire: '/audio/sfx-spell-fire.mp3',
+      hero_vine: '/audio/sfx-spell-vine.mp3',
+      hero_ice: '/audio/sfx-spell-ice.mp3',
+      hero_thunder: '/audio/sfx-spell-thunder.mp3',
+      hero_rock: '/audio/sfx-spell-rock.mp3',
+    } as Record<string, string>,
   },
   // 音效冷却时间配置（毫秒）- 已调整以减少噪音
   cooldowns: {
@@ -204,7 +215,7 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
     }
   }, [isMuted, sfxVolume, getAudioInstance, isOnCooldown, setCooldown]);
 
-  // 播放法术音效
+    // 播放法术音效
   const playSpellSfx = useCallback((spellType: SpellType) => {
     if (isMuted) return;
 
@@ -213,8 +224,24 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
       return;
     }
 
-    const src = AUDIO_CONFIG.sfx.spell[spellType];
-    if (!src) return;
+    // 提取基础元素类型（处理 fire2, fire3, hero_fire 等变体）
+    let baseElement = spellType;
+    
+    // 处理数字后缀 (fire2, ice3, etc.)
+    const numericMatch = spellType.match(/^([a-z]+)\d+$/);
+    if (numericMatch) {
+      baseElement = numericMatch[1] as SpellType;
+    }
+    
+    // 直接查找音效源，如果找不到则使用基础元素
+    let src = AUDIO_CONFIG.sfx.spell[spellType];
+    if (!src) {
+      src = AUDIO_CONFIG.sfx.spell[baseElement];
+    }
+    if (!src) {
+      // 最终回退到火焰音效
+      src = AUDIO_CONFIG.sfx.spell.fire;
+    }
 
     try {
       const audio = getAudioInstance(src);

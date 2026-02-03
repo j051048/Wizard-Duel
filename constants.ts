@@ -415,7 +415,7 @@ export const SPELLS: Spell[] = [
   },
   { 
     id: 'thunder5', 
-    name: '雷电风暴',  // Lightning Storm
+    name: '雷神之怒',  // Thunder God's Wrath
     emoji: '⚡', 
     artSrc: '/cards/thunder-storm.webp',
     color: 'text-yellow-400', 

@@ -37,9 +37,14 @@ import { DungeonRunState, DungeonNode } from './types/dungeon';
 import { DungeonService } from './services/dungeon_v2';
 
 function App() {
-  // 添加全局样式
+    // 添加全局样式（使用 ID 确保只注入一次）
   React.useEffect(() => {
+    const styleId = 'wizard-duel-global-styles';
+    // 检查是否已存在
+    if (document.getElementById(styleId)) return;
+    
     const style = document.createElement('style');
+    style.id = styleId;
     style.textContent = `
       * { -webkit-tap-highlight-color: transparent; }
       body { overscroll-behavior-y: contain; }
@@ -51,7 +56,7 @@ function App() {
       }
     `;
     document.head.appendChild(style);
-    return () => document.head.removeChild(style);
+    // 不在卸载时移除，因为这是全局样式
   }, []);
   const { address, isConnected } = useAccount();
 
