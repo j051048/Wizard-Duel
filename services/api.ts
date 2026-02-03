@@ -1,80 +1,436 @@
-import { UserProfile, BattleRecord, PlayerStats, SpellType } from '../types.ts';
-import { determineWinner, calculatePayout } from './gameLogic.ts';
+/**
+ * API 服务层 - 支持 Zeabur 后端和 Supabase 积分系统
+ * 
+ * 架构说明：
+ * - 开发模式：使用 Mock 数据
+ * - 生产模式：连接真实后端 API
+ * - 支持 Supabase 积分系统对接
+ * 
+ * 环境变量：
+ * - VITE_API_BASE_URL: 后端 API 地址
+ * - VITE_SUPABASE_URL: Supabase 项目 URL
+ * - VITE_SUPABASE_ANON_KEY: Supabase 匿名密钥
+ * - VITE_USE_MOCK: 是否使用 Mock 数据 (true/false)
+ */
 
-// Mock delay helper
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+import { UserProfile, BattleRecord, PlayerStats, SpellType } from '../types';
+import { determineWinner, calculatePayout } from './gameLogic';
 
-// Mock Data Storage (In-memory for MVP demo)
+// Vite 环境变量类型声明
+declare const import_meta_env: {
+  VITE_API_BASE_URL?: string;
+  VITE_SUPABASE_URL?: string;
+  VITE_SUPABASE_ANON_KEY?: string;
+  VITE_USE_MOCK?: string;
+};
+
+// 安全获取环境变量
+const getEnv = (key: string): string => {
+  try {
+    // @ts-ignore - Vite 环境变量
+    return import.meta.env?.[key] || '';
+  } catch {
+    return '';
+  }
+};
+
+// ============ 配置 ============
+
+const CONFIG = {
+  // API 基础地址 (来自环境变量或默认值)
+  apiBaseUrl: getEnv('VITE_API_BASE_URL'),
+  
+  // Supabase 配置
+  supabaseUrl: getEnv('VITE_SUPABASE_URL'),
+  supabaseAnonKey: getEnv('VITE_SUPABASE_ANON_KEY'),
+  
+  // 是否使用 Mock 模式（无后端时自动启用）
+  useMock: getEnv('VITE_USE_MOCK') === 'true' || !getEnv('VITE_API_BASE_URL'),
+  
+  // 请求超时时间
+  timeout: 10000,
+};
+
+// ============ HTTP 工具函数 ============
+
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+async function apiRequest<T>(
+  endpoint: string, 
+  options: RequestInit = {}
+): Promise<ApiResponse<T>> {
+  if (CONFIG.useMock) {
+    throw new Error('Mock mode - should not reach here');
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), CONFIG.timeout);
+
+  try {
+    const response = await fetch(`${CONFIG.apiBaseUrl}${endpoint}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return { 
+        success: false, 
+        error: errorData.message || `HTTP ${response.status}` 
+      };
+    }
+
+    const data = await response.json();
+    return { success: true, data };
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      return { success: false, error: '请求超时' };
+    }
+    return { success: false, error: error.message };
+  }
+}
+
+// ============ Mock 数据存储 ============
+
 let mockBalance = 1000;
 let mockHistory: BattleRecord[] = [];
+const mockDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// ============ API 接口定义 ============
+
+/**
+ * 游戏结算请求参数
+ */
+export interface SettleGameRequest {
+  userId: string;
+  bet: number;
+  result: 'WIN' | 'LOSS' | 'DRAW';
+  payout: number;
+  playerSpell: SpellType;
+  opponentSpell: SpellType;
+  isCrit: boolean;
+  // 游戏元数据
+  gameId?: string;
+  roundNumber?: number;
+  finalPlayerHP?: number;
+  finalOpponentHP?: number;
+}
+
+/**
+ * 积分变更请求参数
+ */
+export interface PointsChangeRequest {
+  userId: string;
+  amount: number;
+  reason: 'game_bet' | 'game_win' | 'game_loss' | 'daily_bonus' | 'achievement' | 'admin_adjust';
+  gameId?: string;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * API 服务对象
+ */
 export const ApiService = {
-  async getBalance(address: string): Promise<UserProfile> {
-    await delay(600);
-    return {
-      address,
-      balance: mockBalance,
-    };
+  // ---------- 用户相关 ----------
+  
+  /**
+   * 获取用户余额/积分
+   */
+  async getBalance(userId: string): Promise<UserProfile> {
+    if (CONFIG.useMock) {
+      await mockDelay(300);
+      return { address: userId, balance: mockBalance };
+    }
+
+    const response = await apiRequest<{ balance: number }>(`/api/users/${userId}/balance`);
+    if (!response.success) {
+      console.error('获取余额失败:', response.error);
+      return { address: userId, balance: 0 };
+    }
+    return { address: userId, balance: response.data!.balance };
   },
 
+  /**
+   * 同步用户状态到后端（首次登录时调用）
+   */
+  async syncUser(userId: string, metadata?: { walletAddress?: string }): Promise<boolean> {
+    if (CONFIG.useMock) {
+      return true;
+    }
+
+    const response = await apiRequest<{ success: boolean }>('/api/users/sync', {
+      method: 'POST',
+      body: JSON.stringify({ userId, ...metadata }),
+    });
+    return response.success;
+  },
+
+  // ---------- 游戏相关 ----------
+
+  /**
+   * 游戏结算 - 核心接口
+   * 
+   * 后端应该：
+   * 1. 验证游戏结果（防作弊）
+   * 2. 计算积分变更
+   * 3. 更新用户余额
+   * 4. 记录游戏历史
+   */
   async settleGame(
-    address: string, 
-    bet: number, 
-    result: 'WIN' | 'LOSS' | 'DRAW', 
+    userId: string,
+    bet: number,
+    result: 'WIN' | 'LOSS' | 'DRAW',
     payout: number,
     playerSpell: SpellType,
     opponentSpell: SpellType,
-    isCrit: boolean
-  ): Promise<{ newBalance: number }> {
-    await delay(800);
-    
-    // Server-side validation: recompute result and payout
-    const expectedOutcome = determineWinner(playerSpell, opponentSpell);
-    const expected = calculatePayout(bet, expectedOutcome);
+    isCrit: boolean,
+    gameMetadata?: { gameId?: string; roundNumber?: number; finalPlayerHP?: number; finalOpponentHP?: number }
+  ): Promise<{ newBalance: number; verified: boolean }> {
+    if (CONFIG.useMock) {
+      await mockDelay(500);
+      
+      // Mock 模式下的服务端验证逻辑
+      const expectedOutcome = determineWinner(playerSpell, opponentSpell);
+      const expected = calculatePayout(bet, expectedOutcome);
+      
+      let finalPayout = payout;
+      let finalResult = result;
+      
+      if (expectedOutcome !== result) {
+        console.warn('结果验证失败，使用服务端计算值');
+        finalPayout = expected.payout;
+        finalResult = expectedOutcome;
+      }
 
-    // Prefer server calculation if mismatch
-    let finalPayout = payout;
-    let finalIsCrit = isCrit;
-    let finalResult = result;
+      // 更新余额
+      mockBalance = mockBalance - bet + finalPayout;
 
-    if (expectedOutcome !== result || expected.payout !== payout) {
-      finalPayout = expected.payout;
-      finalIsCrit = expected.isCrit;
-      finalResult = expectedOutcome;
+      // 记录历史
+      const record: BattleRecord = {
+        id: Math.random().toString(36).substr(2, 9),
+        playerSpell,
+        opponentSpell,
+        result: finalResult,
+        amount: finalResult === 'WIN' ? finalPayout - bet : (finalResult === 'DRAW' ? 0 : -bet),
+        timestamp: Date.now(),
+        isCrit: expected.isCrit,
+      };
+      mockHistory.unshift(record);
+      if (mockHistory.length > 20) mockHistory.pop();
+
+      return { newBalance: mockBalance, verified: true };
     }
 
-    // Update balance
-    mockBalance = mockBalance - bet + finalPayout;
-
-    const record: BattleRecord = {
-      id: Math.random().toString(36).substr(2, 9),
+    // 生产模式：调用真实后端
+    const request: SettleGameRequest = {
+      userId,
+      bet,
+      result,
+      payout,
       playerSpell,
       opponentSpell,
-      result: finalResult,
-      amount: finalResult === 'WIN' ? finalPayout - bet : (finalResult === 'DRAW' ? 0 : -bet),
-      timestamp: Date.now(),
-      isCrit: finalIsCrit
+      isCrit,
+      ...gameMetadata,
     };
-    
-    mockHistory.unshift(record);
-    if (mockHistory.length > 10) mockHistory.pop();
 
-    return { newBalance: mockBalance };
+    const response = await apiRequest<{ newBalance: number; verified: boolean }>('/api/games/settle', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+
+    if (!response.success) {
+      console.error('游戏结算失败:', response.error);
+      // 降级处理：使用本地计算
+      return { newBalance: mockBalance, verified: false };
+    }
+
+    return response.data!;
   },
 
-  async getLeaderboard(): Promise<PlayerStats[]> {
-    await delay(500);
-    return Array.from({ length: 10 }).map((_, i) => ({
-      address: `0x${Math.random().toString(16).substr(2, 8)}...${Math.random().toString(16).substr(2, 4)}`,
-      wins: Math.floor(Math.random() * 50) + 10,
-      losses: Math.floor(Math.random() * 40),
-      draws: Math.floor(Math.random() * 20),
-      totalEarnings: Math.floor(Math.random() * 10000)
-    })).sort((a, b) => b.totalEarnings - a.totalEarnings);
+  /**
+   * 创建新游戏会话（可选，用于防作弊）
+   */
+  async createGameSession(userId: string, bet: number): Promise<{ gameId: string; seed?: string } | null> {
+    if (CONFIG.useMock) {
+      return { 
+        gameId: `game_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+        seed: Math.random().toString(36).substr(2, 16),
+      };
+    }
+
+    const response = await apiRequest<{ gameId: string; seed: string }>('/api/games/create', {
+      method: 'POST',
+      body: JSON.stringify({ userId, bet }),
+    });
+
+    return response.success ? response.data! : null;
   },
 
-  async getHistory(address: string): Promise<BattleRecord[]> {
-    await delay(400);
-    return mockHistory;
-  }
+  // ---------- 积分相关 ----------
+
+  /**
+   * 通用积分变更接口
+   * 用于：每日签到、成就奖励、管理员调整等
+   */
+  async changePoints(request: PointsChangeRequest): Promise<{ newBalance: number; success: boolean }> {
+    if (CONFIG.useMock) {
+      await mockDelay(300);
+      mockBalance += request.amount;
+      return { newBalance: mockBalance, success: true };
+    }
+
+    const response = await apiRequest<{ newBalance: number }>('/api/points/change', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+
+    if (!response.success) {
+      console.error('积分变更失败:', response.error);
+      return { newBalance: mockBalance, success: false };
+    }
+
+    return { newBalance: response.data!.newBalance, success: true };
+  },
+
+  /**
+   * 领取每日签到奖励
+   */
+  async claimDailyBonus(userId: string): Promise<{ amount: number; newBalance: number } | null> {
+    if (CONFIG.useMock) {
+      await mockDelay(500);
+      const bonus = 50;
+      mockBalance += bonus;
+      return { amount: bonus, newBalance: mockBalance };
+    }
+
+    const response = await apiRequest<{ amount: number; newBalance: number }>(`/api/users/${userId}/daily-bonus`, {
+      method: 'POST',
+    });
+
+    return response.success ? response.data! : null;
+  },
+
+  // ---------- 历史记录 ----------
+
+  /**
+   * 获取游戏历史
+   */
+  async getHistory(userId: string, limit = 20): Promise<BattleRecord[]> {
+    if (CONFIG.useMock) {
+      await mockDelay(200);
+      return mockHistory.slice(0, limit);
+    }
+
+    const response = await apiRequest<{ records: BattleRecord[] }>(`/api/users/${userId}/history?limit=${limit}`);
+    return response.success ? response.data!.records : [];
+  },
+
+  /**
+   * 获取排行榜
+   */
+  async getLeaderboard(type: 'daily' | 'weekly' | 'all' = 'all', limit = 10): Promise<PlayerStats[]> {
+    if (CONFIG.useMock) {
+      await mockDelay(300);
+      return Array.from({ length: limit }).map((_, i) => ({
+        address: `0x${Math.random().toString(16).substr(2, 8)}...${Math.random().toString(16).substr(2, 4)}`,
+        wins: Math.floor(Math.random() * 50) + 10,
+        losses: Math.floor(Math.random() * 40),
+        draws: Math.floor(Math.random() * 20),
+        totalEarnings: Math.floor(Math.random() * 10000),
+      })).sort((a, b) => b.totalEarnings - a.totalEarnings);
+    }
+
+    const response = await apiRequest<{ leaderboard: PlayerStats[] }>(`/api/leaderboard?type=${type}&limit=${limit}`);
+    return response.success ? response.data!.leaderboard : [];
+  },
+
+  // ---------- 外部集成 ----------
+
+  /**
+   * 从外部应用接收积分（用于嵌入其他App时）
+   * 
+   * 调用方式：
+   * - 父应用通过 postMessage 发送积分信息
+   * - 或通过 URL 参数传递初始积分
+   */
+  async receiveExternalPoints(
+    source: 'parent_app' | 'url_param' | 'api',
+    data: { userId: string; points: number; token?: string }
+  ): Promise<{ success: boolean; balance: number }> {
+    if (CONFIG.useMock) {
+      mockBalance = data.points;
+      return { success: true, balance: mockBalance };
+    }
+
+    const response = await apiRequest<{ balance: number }>('/api/integration/receive-points', {
+      method: 'POST',
+      body: JSON.stringify({ source, ...data }),
+    });
+
+    if (response.success) {
+      return { success: true, balance: response.data!.balance };
+    }
+    return { success: false, balance: 0 };
+  },
+
+  /**
+   * 向外部应用报告积分变更（用于嵌入其他App时）
+   */
+  notifyExternalApp(event: 'balance_change' | 'game_end' | 'ready', data: any): void {
+    // 使用 postMessage 通知父应用
+    if (window.parent !== window) {
+      window.parent.postMessage({
+        type: `wizard_duel_${event}`,
+        ...data,
+      }, '*');
+    }
+
+    // 触发自定义事件（供宿主应用监听）
+    window.dispatchEvent(new CustomEvent(`wizardDuel:${event}`, { detail: data }));
+  },
+
+  // ---------- 配置和状态 ----------
+
+  /**
+   * 获取当前配置状态
+   */
+  getConfig() {
+    return {
+      isMockMode: CONFIG.useMock,
+      hasBackend: !!CONFIG.apiBaseUrl,
+      hasSupabase: !!CONFIG.supabaseUrl,
+    };
+  },
+
+  /**
+   * 健康检查
+   */
+  async healthCheck(): Promise<{ api: boolean; supabase: boolean }> {
+    if (CONFIG.useMock) {
+      return { api: false, supabase: false };
+    }
+
+    const apiHealthy = await apiRequest('/api/health').then(r => r.success).catch(() => false);
+    const supabaseHealthy = CONFIG.supabaseUrl 
+      ? await fetch(`${CONFIG.supabaseUrl}/rest/v1/`).then(r => r.ok).catch(() => false)
+      : false;
+
+    return { api: apiHealthy, supabase: supabaseHealthy };
+  },
 };
+
+// ============ 类型导出 ============
+
+export type { ApiResponse };
+export default ApiService;

@@ -1,56 +1,62 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Wizard Duel | Web3 Arcane Battle</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Space+Grotesk:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Space+Grotesk:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
     <script>
       tailwind.config = {
         theme: {
           extend: {
             fontFamily: {
-              wizard: ['Cinzel', 'serif'],
-              tech: ['Space Grotesk', 'sans-serif'],
+              wizard: ["Cinzel", "serif"],
+              tech: ["Space Grotesk", "sans-serif"],
             },
             colors: {
               arcane: {
-                50: '#f5f3ff',
-                100: '#ede9fe',
-                500: '#8b5cf6',
-                700: '#6d28d9',
-                900: '#4c1d95',
-                950: '#2e1065', // Deep void
+                50: "#f5f3ff",
+                100: "#ede9fe",
+                500: "#8b5cf6",
+                700: "#6d28d9",
+                900: "#4c1d95",
+                950: "#2e1065", // Deep void
               },
-              mana: '#00f0ff',
-              gold: '#ffd700',
+              mana: "#00f0ff",
+              gold: "#ffd700",
             },
             animation: {
-              'float': 'float 3s ease-in-out infinite',
-              'glow': 'glow 2s ease-in-out infinite alternate',
-              'cast': 'cast 0.5s ease-out forwards',
+              float: "float 3s ease-in-out infinite",
+              glow: "glow 2s ease-in-out infinite alternate",
+              cast: "cast 0.5s ease-out forwards",
             },
             keyframes: {
               float: {
-                '0%, 100%': { transform: 'translateY(0)' },
-                '50%': { transform: 'translateY(-10px)' },
+                "0%, 100%": { transform: "translateY(0)" },
+                "50%": { transform: "translateY(-10px)" },
               },
               glow: {
-                '0%': { boxShadow: '0 0 5px #8b5cf6' },
-                '100%': { boxShadow: '0 0 20px #8b5cf6, 0 0 10px #00f0ff' },
+                "0%": { boxShadow: "0 0 5px #8b5cf6" },
+                "100%": { boxShadow: "0 0 20px #8b5cf6, 0 0 10px #00f0ff" },
               },
               cast: {
-                '0%': { transform: 'scale(1)', opacity: '1' },
-                '50%': { transform: 'scale(1.2) rotate(5deg)', opacity: '0.8' },
-                '100%': { transform: 'scale(0) translateY(-100px)', opacity: '0' },
-              }
-            }
-          }
-        }
-      }
+                "0%": { transform: "scale(1)", opacity: "1" },
+                "50%": { transform: "scale(1.2) rotate(5deg)", opacity: "0.8" },
+                "100%": {
+                  transform: "scale(0) translateY(-100px)",
+                  opacity: "0",
+                },
+              },
+            },
+          },
+        },
+      };
     </script>
     <style>
       body {
@@ -62,31 +68,32 @@
         width: 8px;
       }
       ::-webkit-scrollbar-track {
-        background: #1a0b2e; 
+        background: #1a0b2e;
       }
       ::-webkit-scrollbar-thumb {
-        background: #4c1d95; 
+        background: #4c1d95;
         border-radius: 4px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #6d28d9; 
+        background: #6d28d9;
       }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "react": "https://esm.sh/react@^19.2.4",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
-    "@tanstack/react-query": "https://esm.sh/@tanstack/react-query@^5.90.20",
-    "wagmi/": "https://esm.sh/wagmi@^3.4.2/",
-    "wagmi": "https://esm.sh/wagmi@^3.4.2"
-  }
-}
-</script>
-</head>
+    <script type="importmap">
+      {
+        "imports": {
+          "react/": "https://esm.sh/react@^19.2.4/",
+          "react": "https://esm.sh/react@^19.2.4",
+          "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+          "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
+          "@tanstack/react-query": "https://esm.sh/@tanstack/react-query@^5.90.20",
+          "wagmi/": "https://esm.sh/wagmi@^3.4.2/",
+          "wagmi": "https://esm.sh/wagmi@^3.4.2"
+        }
+      }
+    </script>
+  </head>
   <body>
     <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
