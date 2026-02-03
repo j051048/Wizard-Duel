@@ -10,42 +10,42 @@ import { useState, useEffect, useCallback } from 'react';
 // 需要预加载的图片资源列表
 const PRELOAD_IMAGES = [
   // 背景
-  '/battle-bg.jpg',
-  '/lobby-bg.jpg',
+  '/battle-bg.webp',
+  '/lobby-bg.webp',
   
   // 头像
-  '/avatars/player-wizard.png',
-  '/avatars/opponent-sorcerer.png',
+  '/avatars/player-wizard.webp',
+  '/avatars/opponent-sorcerer.webp',
   
   // 卡牌
-  '/cards/fire-pyroblast.png',
-  '/cards/vine-entangling.png',
-  '/cards/ice-frostnova.png',
-  '/cards/thunder-chainlightning.png',
-  '/cards/rock-bulwark.png',
-  '/cards/card-back.png',
+  '/cards/fire-pyroblast.webp',
+  '/cards/vine-entangling.webp',
+  '/cards/ice-frostnova.webp',
+  '/cards/thunder-chainlightning.webp',
+  '/cards/rock-bulwark.webp',
+  '/cards/card-back.webp',
   
   // 特效
-  '/effects/effect-burn.png',
-  '/effects/effect-tangle.png',
-  '/effects/effect-freeze.png',
-  '/effects/effect-charge.png',
-  '/effects/effect-fortify.png',
-  '/effects/effect-critical.png',
+  '/effects/effect-burn.webp',
+  '/effects/effect-tangle.webp',
+  '/effects/effect-freeze.webp',
+  '/effects/effect-charge.webp',
+  '/effects/effect-fortify.webp',
+  '/effects/effect-critical.webp',
   
   // UI
-  '/ui/magic-circle.png',
-  '/ui/corner-tl.png',
-  '/ui/corner-tr.png',
-  '/ui/corner-bl.png',
-  '/ui/corner-br.png',
-  '/ui/mana-crystal.png',
-  '/ui/health-bar-frame.png',
+  '/ui/magic-circle.webp',
+  '/ui/corner-tl.webp',
+  '/ui/corner-tr.webp',
+  '/ui/corner-bl.webp',
+  '/ui/corner-br.webp',
+  '/ui/mana-crystal.webp',
+  '/ui/health-bar-frame.webp',
   
   // 图标
-  '/icons/icon-mana.png',
-  '/icons/icon-health.png',
-  '/icons/icon-coin.png',
+  '/icons/icon-mana.webp',
+  '/icons/icon-health.webp',
+  '/icons/icon-coin.webp',
 ];
 
 // 需要预加载的音效资源列表

@@ -37,7 +37,7 @@ export const Lobby: React.FC<LobbyProps> = ({
       {/* 背景 */}
       <div 
         className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: "url('/lobby-bg.jpg')" }}
+        style={{ backgroundImage: "url('/lobby-bg.webp')" }}
       >
         <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/80 via-purple-950/60 to-slate-950/90" />
       </div>

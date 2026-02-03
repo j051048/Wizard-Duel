@@ -60,7 +60,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       {/* === 背景层 === */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('/battle-bg.jpg')" }}
+        style={{ backgroundImage: "url('/battle-bg.webp')" }}
       >
         {/* 备用渐变背景 */}
         <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/30 via-purple-950/30 to-slate-950/50" />
@@ -78,10 +78,10 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         <div className="absolute top-0 bottom-0 right-0 w-2 bg-gradient-to-b from-transparent via-purple-500/50 to-transparent" />
 
         {/* 角落装饰 */}
-        <img src="/ui/corner-tl.png" className="absolute top-0 left-0 w-24 h-24 opacity-60" alt="" onError={(e) => (e.target as HTMLImageElement).style.display='none'} />
-        <img src="/ui/corner-tr.png" className="absolute top-0 right-0 w-24 h-24 opacity-60" alt="" onError={(e) => (e.target as HTMLImageElement).style.display='none'} />
-        <img src="/ui/corner-bl.png" className="absolute bottom-0 left-0 w-24 h-24 opacity-60" alt="" onError={(e) => (e.target as HTMLImageElement).style.display='none'} />
-        <img src="/ui/corner-br.png" className="absolute bottom-0 right-0 w-24 h-24 opacity-60" alt="" onError={(e) => (e.target as HTMLImageElement).style.display='none'} />
+        <img src="/ui/corner-tl.webp" className="absolute top-0 left-0 w-24 h-24 opacity-60" alt="" onError={(e) => (e.target as HTMLImageElement).style.display='none'} />
+        <img src="/ui/corner-tr.webp" className="absolute top-0 right-0 w-24 h-24 opacity-60" alt="" onError={(e) => (e.target as HTMLImageElement).style.display='none'} />
+        <img src="/ui/corner-bl.webp" className="absolute bottom-0 left-0 w-24 h-24 opacity-60" alt="" onError={(e) => (e.target as HTMLImageElement).style.display='none'} />
+        <img src="/ui/corner-br.webp" className="absolute bottom-0 right-0 w-24 h-24 opacity-60" alt="" onError={(e) => (e.target as HTMLImageElement).style.display='none'} />
       </div>
 
       {/* === 顶部控制栏 === */}
@@ -137,7 +137,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         <div className="relative w-80 h-80 md:w-96 md:h-96">
           {/* 魔法阵图片 */}
           <img 
-            src="/ui/magic-circle.png" 
+            src="/ui/magic-circle.webp" 
             alt=""
             className="absolute inset-0 w-full h-full object-contain opacity-40 animate-spin-slow"
             onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}

@@ -153,7 +153,7 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
   isShaking = false,
 }) => {
   const defaultAvatar = isPlayer ? '🧙‍♂️' : '💀';
-  const actualAvatarSrc = avatarSrc || (isPlayer ? '/avatars/player-wizard.png' : '/avatars/opponent-sorcerer.png');
+  const actualAvatarSrc = avatarSrc || (isPlayer ? '/avatars/player-wizard.webp' : '/avatars/opponent-sorcerer.webp');
 
   return (
     <div 
