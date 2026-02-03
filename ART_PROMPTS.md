@@ -141,19 +141,148 @@ Ornate health bar frame UI element, horizontal rectangular border design, dark m
 
 ---
 
-## 🏆 游戏图标 (3张)
+## 🃏 扩展包卡牌 - 经典 & 竞技场 (19张)
 
-### 24. 法力水晶图标 (`public/icons/icon-mana.png`) [透明背景]
+### 27. 火球术 (`public/cards/fire-fireball.webp`)
 ```text
-Magical mana crystal icon, brilliant blue-purple gemstone, faceted diamond shape, glowing magical energy inside with sparkle, game UI element icon, simple clean design, isolated on white background, Hearthstone icon style, vibrant blue purple colors, 4k quality --no background
+Intricate focused ball of orange fire flying through a stone dungeon, dynamic motion blur, embers and magical sparks, Hearthstone card art style, digital painting, highly detailed, vibrant lighting --ar 1:1
 ```
 
-### 25. 生命之心图标 (`public/icons/icon-health.png`) [透明背景]
+### 28. 纠缠根须 (`public/cards/vine-roots.webp`)
 ```text
-Magical heart health icon, ruby red crystal heart shape, glowing life energy with pulse effect, game UI health indicator icon, simple clean design, isolated on white background, fantasy game icon style, vibrant red with pink highlights, 4k quality --no background
+Thick magical tree roots bursting upward from moist soil, winding around thin air, glowing green energy veins, deep forest background, Hearthstone style, digital illustration --ar 1:1
 ```
 
-### 26. 金币图标 (`public/icons/icon-coin.png`) [透明背景]
+### 29. 霜冻新星 (`public/cards/ice-nova.webp`)
 ```text
-Fantasy gold coin currency icon, ancient magical golden coin, arcane star symbol engraved on surface, shiny metallic gold with glint highlight, game UI currency indicator, simple clean design, isolated on white background, Hearthstone gold coin style, 4k quality --no background
+Circular explosion of frost and jagged ice shards radiating from center, brilliant cyan and white colors, crystalline textures, cold mist, Hearthstone card art style --ar 1:1
+```
+
+### 30. 连锁闪电 (`public/cards/thunder-chain.webp`)
+```text
+A fork of bright yellow lightning jumping between three metallic rune stones, electric arcs, storm atmosphere, dynamic energy lines, Hearthstone style --ar 1:1
+```
+
+### 31. 石墙 (`public/cards/rock-wall.webp`)
+```text
+Solid wall of massive granite slabs rising from a desert floor, ancient protective runes carved in stone, heavy stone texture, earth elemental magic, Hearthstone style --ar 1:1
+```
+
+### 32. 地狱爆破 (`public/cards/fire-inferno.webp`)
+```text
+Massive explosion of deep red and black demonic flames, hellfire pillar, ash and smoke, ominous magical runes, epic fantasy art, Hearthstone style --ar 1:1
+```
+
+### 33. 荆棘鞭笞 (`public/cards/vine-whip.webp`)
+```text
+Long flexible whip made of thorny vines glowing with toxic green light, sharp thorns, whip crack motion, forest magic, Hearthstone card art style --ar 1:1
+```
+
+### 34. 寒冰屏障 (`public/cards/ice-block.webp`)
+```text
+A wizard encased in a massive translucent block of blue jagged ice, refracted light, protective aura, winter background, Hearthstone card illustration --ar 1:1
+```
+
+### 35. 雷暴 (`public/cards/thunder-storm.webp`)
+```text
+Multiple lightning strikes hitting a lake from dark swirling clouds, heavy rain, dramatic dark sky, electric yellow and purple lighting, Hearthstone style --ar 1:1
+```
+
+### 36. 地震 (`public/cards/rock-quake.webp`)
+```text
+Ground splitting open with glowing orange magma visible below, falling rocks and debris, chaotic tectonic energy, earthshaking moment, Hearthstone style --ar 1:1
+```
+
+### 37. 火花 (`public/cards/fire-spark.webp`)
+```text
+Small intense white-blue sparks of magical fire jumping between fingertips, bokeh magical background, vibrant particles, Hearthstone style --ar 1:1
+```
+
+### 38. 藤蔓鞭打 (`public/cards/vine-lash.webp`)
+```text
+Quick green vine lashing out like a snake, sharp leaves, morning dew, vibrant green lighting, forest background, Hearthstone style --ar 1:1
+```
+
+### 39. 冻伤 (`public/cards/ice-bite.webp`)
+```text
+Close up of a hand or object turning into ice from within, frost patterns, numbing blue glow, crystalline details, Hearthstone style --ar 1:1
+```
+
+### 40. 静电冲击 (`public/cards/thunder-shock.webp`)
+```text
+Blue static electricity crackling around a copper orb, arcs of energy, magical laboratory, experimental magic, Hearthstone style --ar 1:1
+```
+
+### 41. 小石子 (`public/cards/rock-pebble.webp`)
+```text
+A small polished stone glowing with internal earth energy, floating above a patch of dirt, humble but powerful, Hearthstone style --ar 1:1
+```
+
+### 42. 火焰波 (`public/cards/fire-wave.webp`)
+```text
+Wave of roaring fire moving across a scorched plain, heat distortion, epic scale, molten rock, Hearthstone card art style --ar 1:1
+```
+
+### 43. 森林之握 (`public/cards/vine-grasp.webp`)
+```text
+A giant hand formed of living vines reaching out from a thicket, forest magic, ethereal green lighting, druidic power, Hearthstone style --ar 1:1
+```
+
+### 44. 绝对零度 (`public/cards/ice-zero.webp`)
+```text
+A desolate landscape where time and air are frozen, cosmic frost particles, absolute silence, glowing blue core, masterpiece, Hearthstone style --ar 1:1
+```
+
+### 45. 山岳 (`public/cards/rock-mountain.webp`)
+```text
+A massive jagged mountain peak floating in the sky, ancient stone fortress built on top, clouds, impenetrable rock, Hearthstone style --ar 1:1
+```
+
+### 46. 治疗波 (`public/cards/healing-wave.webp`)
+```text
+Gentle wave of translucent blue water glowing with gold light, restorative energy, water droplets, calming atmosphere, Hearthstone style --ar 1:1
+```
+
+### 47. 奥术爆炸 (`public/cards/aoe-explosion.webp`)
+```text
+Explosion of purple arcane energy shards, cosmic patterns, magic runes, shattering air, vibrant purple and pink, Hearthstone style --ar 1:1
+```
+
+### 48. 奥术智慧 (`public/cards/draw-intellect.webp`)
+```text
+Floating ancient books and scrolls with glowing blue ink, floating eyes of wisdom, library of arcane knowledge, Hearthstone style --ar 1:1
+```
+
+### 49. 沉默 (`public/cards/silence.webp`)
+```text
+A finger made of grey smoke placed over ghostly lips, silencing runes fading, grey and muted tones, mystical aura, Hearthstone style --ar 1:1
+```
+
+---
+
+## 👑 英雄技能 - 遗产系列 (5张)
+
+### 50. 火焰精通 (`public/cards/hero-fire-mastery.webp`)
+```text
+A flaming crown floating above a wizard's head, eternal fire, phoenix feathers, golden throne room background, epic regal magic, Hearthstone style --ar 1:1
+```
+
+### 51. 自然呼唤 (`public/cards/hero-vine-call.webp`)
+```text
+A golden spectral stag appearing in a sunlit grove, ethereal forest light, druidic ritual, nature's protection, Hearthstone style --ar 1:1
+```
+
+### 52. 冰霜护盾 (`public/cards/hero-ice-shield.webp`)
+```text
+A large hexagonal shield made of diamond-hard ice with a golden magical frame, frost crystals, defensive stance, Hearthstone style --ar 1:1
+```
+
+### 53. 风暴涌动 (`public/cards/hero-thunder-surge.webp`)
+```text
+A floating hand holding a sapphire orb brimming with concentrated lightning, energy overflowing, storm mage power, Hearthstone style --ar 1:1
+```
+
+### 54. 大地震颤 (`public/cards/hero-rock-earthquake.webp`)
+```text
+A massive fist made of tectonic rock plates punching the ground, shockwaves, ancient earth power, Hearthstone style --ar 1:1
 ```

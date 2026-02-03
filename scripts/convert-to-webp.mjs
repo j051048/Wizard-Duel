@@ -104,11 +104,17 @@ async function processDirectory(dirConfig) {
   
   for (const file of imageFiles) {
     const inputPath = path.join(dirPath, file);
-    const outputName = file.replace(/\.(png|jpg|jpeg)$/i, '.webp');
+    
+    // 规范化文件名: 小写, 空格变横杠
+    let normalizedName = file.replace(/\.(png|jpg|jpeg)$/i, '');
+    normalizedName = normalizedName.toLowerCase().trim().split(/\s+/).join('-');
+    
+    const outputName = `${normalizedName}.webp`;
     const outputPath = path.join(dirPath, outputName);
     
     const result = await convertImage(inputPath, outputPath, {
       resize: dirConfig.resize,
+      // 如果目标文件已存在且是同名转换，这其实没问题，因为 outputName 变了
     });
     
     if (result) {
