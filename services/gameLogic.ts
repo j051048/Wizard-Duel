@@ -183,48 +183,80 @@ export const executeSpell = (
   let damage = spell.damage;
   let armorGain = spell.armorGain || 0;
   
-  // 3.1 元素克制检查 (Exploit Weakness)
+  // [New] 3.0 环境压制检查 (Counter Logic)
+  // 如果对手上一张牌克制当前牌，则当前牌伤害被抵消
+  let isCountered = false;
   if (targetLastSpell) {
+    const lastSpellObj = getSpellById(targetLastSpell);
+    if (lastSpellObj.beats === spell.id) {
+      isCountered = true;
+      damage = 0; // 伤害完全被抵消
+      logs.push(isPlayer 
+        ? `🚫 你的 [${spell.name}] 被残留的 [${lastSpellObj.name}] 抵消了！(0伤害)` 
+        : `🚫 对手的 [${spell.name}] 被你的 [${lastSpellObj.name}] 完全阻挡！`);
+    }
+  }
+
+  // 3.1 元素克制检查 (Exploit Weakness) - 只有未被抵消时才生效
+  if (!isCountered && targetLastSpell) {
     if (spell.beats === targetLastSpell) {
       damage = Math.floor(damage * 1.5);
       logs.push(isPlayer ? `🌊 属性克制！你的${spell.name}造成暴击！` : `🔥 对手识破了你的法术！造成暴击！`);
     }
   }
 
-  // 3.2 机制处理 (Thunder, Charge)
+  // 3.2 机制处理 (Thunder, Charge) - 被抵消时不触发连击增伤
   const myLastSpell = isPlayer ? newState.playerLastSpell : newState.opponentLastSpell;
-  if (spell.id === 'thunder' && myLastSpell === 'thunder') {
+  if (!isCountered && spell.id === 'thunder' && myLastSpell === 'thunder') {
     damage = Math.floor(damage * 1.5);
     logs.push(`⚡ 闪电连击！伤害增加50%！`);
   }
 
   // 3.3 状态效果 (Mechanics)
   const newEffects: StatusEffect[] = [];
-  if (spell.mechanic === 'burn') {
-    // 限制：最多叠加3层燃烧
-    const currentBurnCount = (isPlayer ? newState.opponentEffects : newState.playerEffects).filter(e => e.type === 'burn').length;
-    if (currentBurnCount < 3) {
-      newEffects.push({ type: 'burn', duration: 2, value: 2 });
-      logs.push(isPlayer ? `🔥 对手被灼烧了` : `🔥 你被灼烧了`);
-    } else {
-      logs.push(`🔥 灼烧层数已满`);
+  
+  // 攻击性特效：如果被抵消则无法施加
+  if (!isCountered) {
+    if (spell.mechanic === 'burn') {
+      // 限制：最多叠加3层燃烧
+      const currentBurnCount = (isPlayer ? newState.opponentEffects : newState.playerEffects).filter(e => e.type === 'burn').length;
+      if (currentBurnCount < 3) {
+        newEffects.push({ type: 'burn', duration: 2, value: 2 });
+        logs.push(isPlayer ? `🔥 对手被灼烧了` : `🔥 你被灼烧了`);
+      } else {
+        logs.push(`🔥 灼烧层数已满`);
+      }
+    }
+    if (spell.mechanic === 'tangle') {
+      newEffects.push({ type: 'tangle', duration: 1, value: 2 });
+      logs.push(isPlayer ? `🌿 缠绕对手` : `🌿 你被缠绕`);
+    }
+    if (spell.mechanic === 'freeze') {
+      // 检查是否有冷冻免疫 (thawed)
+      const hasImmunity = (isPlayer ? newState.opponentEffects : newState.playerEffects).some(e => e.type === 'thawed');
+      if (!hasImmunity) {
+        newEffects.push({ type: 'frozen', duration: 1 });
+        logs.push(isPlayer ? `❄️ 冻结对手` : `❄️ 你被冻结`);
+      } else {
+        logs.push(`🛡️ 免疫冻结！`);
+      }
+    }
+    if (spell.mechanic === 'aoe') {
+        // AOE: 基础伤害(已在damage中) + 额外伤害
+        // 如果被抵消，这里也不触发
+        const baseDamage = damage;
+        const extraDamage = 2; // 额外伤害也应该被视为攻击的一部分
+        if (isPlayer) {
+          newState.opponentHP = Math.max(0, newState.opponentHP - extraDamage);
+          logs.push(`💥 AOE爆炸！造成 ${extraDamage} 点溅射伤害`);
+        } else {
+          newState.playerHP = Math.max(0, newState.playerHP - extraDamage);
+          logs.push(`💥 受到AOE爆炸！${extraDamage} 点溅射伤害`);
+        }
     }
   }
-  if (spell.mechanic === 'tangle') {
-    newEffects.push({ type: 'tangle', duration: 1, value: 2 });
-    logs.push(isPlayer ? `🌿 缠绕对手` : `🌿 你被缠绕`);
-  }
-  if (spell.mechanic === 'freeze') {
-    // 检查是否有冷冻免疫 (thawed)
-    const hasImmunity = (isPlayer ? newState.opponentEffects : newState.playerEffects).some(e => e.type === 'thawed');
-    if (!hasImmunity) {
-      newEffects.push({ type: 'frozen', duration: 1 });
-      logs.push(isPlayer ? `❄️ 冻结对手` : `❄️ 你被冻结`);
-    } else {
-      logs.push(`🛡️ 免疫冻结！`);
-    }
-  }
-  // 新机制处理
+
+  // 辅助/自身特效：即使被抵消通常也能生效 (或者也可以选择部分失效，这里暂且保留)
   if (spell.mechanic === 'heal') {
     if (isPlayer) {
       newState.playerHP = Math.min(GAME_CONFIG.maxHP, newState.playerHP + 5);
@@ -234,29 +266,30 @@ export const executeSpell = (
       logs.push(`💙 对手恢复5点生命值`);
     }
   }
-  if (spell.mechanic === 'aoe') {
-    // AOE: 基础伤害 + 额外伤害（无视护甲）
-    const baseDamage = damage;
-    const extraDamage = 2;
-    if (isPlayer) {
-      newState.opponentHP = Math.max(0, newState.opponentHP - extraDamage);
-      logs.push(`💥 AOE爆炸！造成${baseDamage}点伤害 + ${extraDamage}点额外伤害`);
-    } else {
-      newState.playerHP = Math.max(0, newState.playerHP - extraDamage);
-      logs.push(`💥 受到AOE爆炸！${baseDamage}点伤害 + ${extraDamage}点额外伤害`);
-    }
-  }
+  
   if (spell.mechanic === 'draw') {
     // 抽牌逻辑已在回合开始处理，这里可以添加额外抽牌
     logs.push(`📚 抽2张牌`);
+    // 实现抽2张牌的逻辑
+    // Note: 原始代码这里只是 push log，没有实际 draw 逻辑。我们需要补充吗？
+    // 原始代码: logs.push(`📚 抽2张牌`); End. 
+    // 看起来原始代码就没有实现 draw effect。为了不引入意外变动，保持原样，或者...
+    // 既然用户只关心抵消，我们不要动这个 unrelated bug unless requested.
   }
+  
   if (spell.mechanic === 'silence') {
-    if (isPlayer) {
-      newState.opponentEffects = [];
-      logs.push(`🤫 沉默对手，移除所有状态效果`);
+    // 沉默是针对对手的，如果被抵消了，沉默也应该失败？
+    // 逻辑上：Silence 是解除魔法。如果被 Counter，就是解除失败。
+    if (!isCountered) {
+        if (isPlayer) {
+          newState.opponentEffects = [];
+          logs.push(`🤫 沉默对手，移除所有状态效果`);
+        } else {
+          newState.playerEffects = [];
+          logs.push(`🤫 被沉默，移除所有状态效果`);
+        }
     } else {
-      newState.playerEffects = [];
-      logs.push(`🤫 被沉默，移除所有状态效果`);
+         logs.push(`🤫 沉默法术失效了！`);
     }
   }
   // Fortify
