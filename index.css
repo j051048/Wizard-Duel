@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+/* Antigravity: Force rebuild for CSS fix */
+
 @theme {
   --font-wizard: "Cinzel", serif;
   --font-tech: "Space Grotesk", sans-serif;
