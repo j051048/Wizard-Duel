@@ -43,7 +43,6 @@ function App() {
     style.textContent = `
       * { -webkit-tap-highlight-color: transparent; }
       body { overscroll-behavior-y: contain; }
-      .gpu-accelerated { transform: translateZ(0); backface-visibility: hidden; perspective: 1000px; }
       
       @keyframes damageFloat {
         0% { transform: translateY(0) scale(1); opacity: 1; }

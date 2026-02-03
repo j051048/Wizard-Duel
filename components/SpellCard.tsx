@@ -157,7 +157,7 @@ export const SpellCard: React.FC<SpellCardProps> = ({
     >
       <div 
         className={`
-          relative w-full h-full transition-transform duration-100 ease-out preserve-3d gpu-accelerated
+          relative w-full h-full transition-transform duration-100 ease-out preserve-3d
           ${isSelected ? 'scale-110 z-20' : ''}
           ${isHovered && canPlay ? 'scale-110 z-20' : ''}
         `}
