@@ -56,56 +56,62 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   const isRevealPhase = phase === 'REVEAL' || phase === 'DAMAGE_PHASE' || phase === 'EFFECTS_PHASE' || phase === 'ROUND_RESET';
 
   return (
-    <div className="fixed inset-0 overflow-hidden">
+    <div className="fixed inset-0 overflow-hidden bg-slate-950">
       {/* === 背景图 === */}
       <div className="absolute inset-0 z-0">
+        {/* 基础底色（防止图片加载失败变全黑） */}
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-slate-900 to-purple-950" />
+        
+        {/* 背景图片 */}
         <img 
           src="/backgrounds/library-desktop.webp" 
           alt="Battle Background" 
-          className="w-full h-full object-cover hidden md:block opacity-60"
+          className="absolute inset-0 w-full h-full object-cover opacity-50 hidden md:block mix-blend-overlay"
+          onError={(e) => (e.target as HTMLImageElement).style.opacity = '0'}
         />
         <img 
           src="/backgrounds/library-mobile.webp" 
           alt="Battle Background" 
-          className="w-full h-full object-cover md:hidden opacity-60"
+          className="absolute inset-0 w-full h-full object-cover opacity-50 md:hidden mix-blend-overlay"
+          onError={(e) => (e.target as HTMLImageElement).style.opacity = '0'}
         />
-        {/* 暗角遮罩 */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
+        
+        {/* 氛围遮罩 */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black/80" />
+        <div className="absolute inset-0 bg-purple-900/10 mix-blend-color-dodge pointer-events-none" />
       </div>
 
       {/* === 装饰边框与角落 === */}
       <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
         {/* 边框线条 */}
-        <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
-        <div className="absolute top-0 bottom-0 left-0 w-2 bg-gradient-to-b from-transparent via-purple-500/50 to-transparent" />
-        <div className="absolute top-0 bottom-0 right-0 w-2 bg-gradient-to-b from-transparent via-purple-500/50 to-transparent" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-purple-500/40 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-purple-500/40 to-transparent" />
 
-        {/* 角落 SVG 矢量装饰 (解决透明度遮挡问题) */}
+        {/* 角落 SVG 矢量装饰 (SVG代码保持不变) */}
         {/* 左上角 */}
-        <svg className="absolute top-2 left-2 w-24 h-24 md:w-48 md:h-48 text-amber-500/80 drop-shadow-lg" viewBox="0 0 100 100" fill="none">
-          <path d="M2,2 L30,2 L35,8 L100,8 L100,5 L32,5 L28,0 L0,0 L0,28 L5,32 L5,100 L8,100 L8,35 L2,30 Z" fill="currentColor" />
-          <path d="M0,0 L40,0 L40,2 L2,2 L2,40 L0,40 Z" fill="currentColor" opacity="0.5" />
-          <circle cx="15" cy="15" r="3" fill="currentColor" className="animate-pulse" />
+        <svg className="absolute top-0 left-0 w-24 h-24 md:w-48 md:h-48 text-amber-500/60 drop-shadow-[0_0_10px_rgba(245,158,11,0.3)]" viewBox="0 0 100 100" fill="none">
+          <path d="M0,0 L30,0 L35,5 L100,5 L100,2 L32,2 L28,-2 L-2,-2 L-2,28 L2,32 L2,100 L5,100 L5,35 L0,30 Z" fill="currentColor" />
+          <path d="M0,0 L40,0 L40,1 L1,1 L1,40 L0,40 Z" fill="currentColor" opacity="0.6" />
+          <circle cx="15" cy="15" r="2" fill="currentColor" className="animate-pulse" />
         </svg>
         
         {/* 右上角 */}
-        <svg className="absolute top-2 right-2 w-24 h-24 md:w-48 md:h-48 text-amber-500/80 drop-shadow-lg transform scale-x-[-1]" viewBox="0 0 100 100" fill="none">
-          <path d="M2,2 L30,2 L35,8 L100,8 L100,5 L32,5 L28,0 L0,0 L0,28 L5,32 L5,100 L8,100 L8,35 L2,30 Z" fill="currentColor" />
-          <path d="M0,0 L40,0 L40,2 L2,2 L2,40 L0,40 Z" fill="currentColor" opacity="0.5" />
-          <circle cx="15" cy="15" r="3" fill="currentColor" className="animate-pulse" />
+        <svg className="absolute top-0 right-0 w-24 h-24 md:w-48 md:h-48 text-amber-500/60 drop-shadow-[0_0_10px_rgba(245,158,11,0.3)] transform scale-x-[-1]" viewBox="0 0 100 100" fill="none">
+          <path d="M0,0 L30,0 L35,5 L100,5 L100,2 L32,2 L28,-2 L-2,-2 L-2,28 L2,32 L2,100 L5,100 L5,35 L0,30 Z" fill="currentColor" />
+          <path d="M0,0 L40,0 L40,1 L1,1 L1,40 L0,40 Z" fill="currentColor" opacity="0.6" />
+          <circle cx="15" cy="15" r="2" fill="currentColor" className="animate-pulse" />
         </svg>
         
         {/* 左下角 */}
-        <svg className="absolute bottom-2 left-2 w-24 h-24 md:w-48 md:h-48 text-amber-500/80 drop-shadow-lg transform scale-y-[-1]" viewBox="0 0 100 100" fill="none">
-          <path d="M2,2 L30,2 L35,8 L100,8 L100,5 L32,5 L28,0 L0,0 L0,28 L5,32 L5,100 L8,100 L8,35 L2,30 Z" fill="currentColor" />
-          <path d="M0,0 L40,0 L40,2 L2,2 L2,40 L0,40 Z" fill="currentColor" opacity="0.5" />
+        <svg className="absolute bottom-0 left-0 w-24 h-24 md:w-48 md:h-48 text-amber-500/60 drop-shadow-[0_0_10px_rgba(245,158,11,0.3)] transform scale-y-[-1]" viewBox="0 0 100 100" fill="none">
+          <path d="M0,0 L30,0 L35,5 L100,5 L100,2 L32,2 L28,-2 L-2,-2 L-2,28 L2,32 L2,100 L5,100 L5,35 L0,30 Z" fill="currentColor" />
+          <path d="M0,0 L40,0 L40,1 L1,1 L1,40 L0,40 Z" fill="currentColor" opacity="0.6" />
         </svg>
 
         {/* 右下角 */}
-        <svg className="absolute bottom-2 right-2 w-24 h-24 md:w-48 md:h-48 text-amber-500/80 drop-shadow-lg transform scale-[-1]" viewBox="0 0 100 100" fill="none">
-          <path d="M2,2 L30,2 L35,8 L100,8 L100,5 L32,5 L28,0 L0,0 L0,28 L5,32 L5,100 L8,100 L8,35 L2,30 Z" fill="currentColor" />
-          <path d="M0,0 L40,0 L40,2 L2,2 L2,40 L0,40 Z" fill="currentColor" opacity="0.5" />
+        <svg className="absolute bottom-0 right-0 w-24 h-24 md:w-48 md:h-48 text-amber-500/60 drop-shadow-[0_0_10px_rgba(245,158,11,0.3)] transform scale-[-1]" viewBox="0 0 100 100" fill="none">
+          <path d="M0,0 L30,0 L35,5 L100,5 L100,2 L32,2 L28,-2 L-2,-2 L-2,28 L2,32 L2,100 L5,100 L5,35 L0,30 Z" fill="currentColor" />
+          <path d="M0,0 L40,0 L40,1 L1,1 L1,40 L0,40 Z" fill="currentColor" opacity="0.6" />
         </svg>
       </div>
 
@@ -131,7 +137,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
       {/* === 顶部区域：对手信息 === */}
       {/* 调整：PC端使用 max-w-2xl，移动端保持全宽但有padding */}
-      <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/90 via-black/60 to-transparent pt-4 pb-8">
+      <div className="absolute top-0 left-0 right-0 z-20 pt-4 pb-8">
         <div className="w-full max-w-[90%] md:max-w-3xl mx-auto px-2 md:px-0 transition-all duration-300">
           <PlayerFrame 
             isPlayer={false}
@@ -159,24 +165,34 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         </div>
       </div>
 
-      {/* === 中央战场：魔法阵 === */}
+      {/* === 中央战场：CSS 魔法阵 (移除图片) === */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        {/* 魔法阵背景 */}
-        <div className="relative w-80 h-80 md:w-96 md:h-96">
-          {/* 魔法阵图片 - 修复混合模式 */}
-          <img 
-            src="/ui/magic-circle.webp" 
-            alt=""
-            className="absolute inset-0 w-full h-full object-contain opacity-50 animate-spin-slow mix-blend-screen"
-            onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
-          />
-          {/* CSS 备用魔法阵（当图片不可用或作为增强） */}
-          <div className="absolute inset-0 rounded-full border-2 border-purple-500/30 animate-pulse" />
-          <div className="absolute inset-4 rounded-full border border-purple-400/20" />
-          <div className="absolute inset-8 rounded-full border border-purple-300/10" />
+        <div className="relative w-80 h-80 md:w-96 md:h-96 flex items-center justify-center">
+          
+          {/* CSS 魔法阵 - 外圈 */}
+          <div className="absolute inset-0 rounded-full border border-purple-500/20 animate-spin-slow-reverse border-dashed" />
+          
+          {/* CSS 魔法阵 - 中圈 (旋转) */}
+          <div className="absolute inset-8 rounded-full border border-purple-400/30 animate-spin-slow">
+            <div className="absolute inset-0 border-t-2 border-b-2 border-purple-400/50 rounded-full" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-4 h-4 bg-purple-500/50 rounded-full blur-sm" />
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-4 bg-purple-500/50 rounded-full blur-sm" />
+          </div>
+
+          {/* CSS 魔法阵 - 内圈 (脉冲) */}
+          <div className="absolute inset-20 rounded-full border-2 border-purple-300/40 animate-pulse bg-purple-900/10">
+            <div className="absolute inset-0 flex items-center justify-center opacity-30">
+               {/* 简单的几何图形 */}
+               <div className="w-32 h-32 border border-purple-300/30 transform rotate-45" />
+               <div className="absolute w-32 h-32 border border-purple-300/30" />
+            </div>
+          </div>
+          
+          {/* 核心光晕 */}
+          <div className="absolute inset-0 bg-purple-600/5 blur-3xl rounded-full" />
 
           {/* 卡牌对决区域 */}
-          <div className="absolute inset-0 flex items-center justify-center gap-12 md:gap-20">
+          <div className="absolute inset-0 flex items-center justify-center gap-12 md:gap-20 z-10">
             {/* 对手出牌 */}
             <div className={`
               transition-all duration-700 transform

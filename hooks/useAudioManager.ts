@@ -32,14 +32,14 @@ const AUDIO_CONFIG = {
       rock: '/audio/sfx-spell-rock.mp3',
     },
   },
-  // 音效冷却时间配置（毫秒）
+  // 音效冷却时间配置（毫秒）- 已调整以减少噪音
   cooldowns: {
-    cardPlay: 200,    // 出牌音效冷却
-    hit: 300,         // 命中音效冷却
-    block: 300,       // 格挡音效冷却
-    spell: 400,       // 法术音效冷却
-    victory: 1000,    // 胜利音效冷却
-    defeat: 1000,     // 失败音效冷却
+    cardPlay: 500,    // 出牌音效冷却 (原200)
+    hit: 600,         // 命中音效冷却 (原300)
+    block: 600,       // 格挡音效冷却 (原300)
+    spell: 800,       // 法术音效冷却 (原400)
+    victory: 2000,    // 胜利音效冷却
+    defeat: 2000,     // 失败音效冷却
   } as Record<string, number>,
 };
 
@@ -72,8 +72,8 @@ export interface AudioManagerActions {
 
 export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
   const [isMuted, setIsMuted] = useState(false);
-  const [bgmVolume, setBgmVolume] = useState(0.3);
-  const [sfxVolume, setSfxVolume] = useState(0.5);
+  const [bgmVolume, setBgmVolume] = useState(0.2); // 默认 BGM 音量降低
+  const [sfxVolume, setSfxVolume] = useState(0.4); // 默认 SFX 音量降低
   const [isPlaying, setIsPlaying] = useState(false);
 
   const bgmRef = useRef<HTMLAudioElement | null>(null);
