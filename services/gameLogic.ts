@@ -394,11 +394,20 @@ const pickBestSpellForAI = (state: DuelState): SpellType | null => {
    
    if (affordable.length === 0) return null;
    
-   // 1. 优先斩杀：如果能一击击杀玩家
+   // 1. 优先英雄技能 (如果还没用过)
+   if (!state.heroSkillsUsed) {
+      // 对手根据难度或随机选择一个英雄技能调用（逻辑上AI目前没有手牌中的技能卡，所以直接模拟ID）
+      const heroSkillId: SpellType = 'hero_fire'; 
+      if (canAffordSpell(heroSkillId, state.opponentMana, state.opponentEffects, state.opponentCostMod).canAfford) {
+        return heroSkillId;
+      }
+   }
+
+   // 2. 优先斩杀：如果能一击击杀玩家
    const killShot = affordable.find(s => s.damage >= state.playerHP + state.playerArmor);
    if (killShot) return killShot.id;
    
-   // 2. 低血量时优先防御或治疗
+   // 3. 低血量时优先防御或治疗
    if (state.opponentHP <= 10) {
      // 优先治疗
      const healSpell = affordable.find(s => s.mechanic === 'heal');
@@ -409,7 +418,7 @@ const pickBestSpellForAI = (state: DuelState): SpellType | null => {
      if (armorSpell) return armorSpell.id;
    }
    
-   // 3. 雷电连击优化
+   // 4. 雷电连击优化
    if (state.opponentLastSpell && (state.opponentLastSpell.startsWith('thunder') || state.opponentLastSpell === 'hero_thunder')) {
      const thunderSpells = affordable.filter(s => s.id.startsWith('thunder'));
      if (thunderSpells.length > 0) {
@@ -419,7 +428,7 @@ const pickBestSpellForAI = (state: DuelState): SpellType | null => {
      }
    }
    
-   // 4. 元素克制：如果知道玩家上次用了什么，尝试克制
+   // 5. 元素克制：如果知道玩家上次用了什么，尝试克制
    if (state.playerLastSpell) {
      const counterSpell = affordable.find(s => s.beats === state.playerLastSpell);
      if (counterSpell && counterSpell.damage > 0) {
@@ -427,7 +436,7 @@ const pickBestSpellForAI = (state: DuelState): SpellType | null => {
      }
    }
    
-   // 5. 优先高伤害卡牌（性价比考虑）
+   // 6. 优先高伤害卡牌（性价比考虑）
    const damageSpells = affordable.filter(s => s.damage > 0);
    if (damageSpells.length > 0) {
      // 按伤害/费用比排序
@@ -441,7 +450,7 @@ const pickBestSpellForAI = (state: DuelState): SpellType | null => {
      return topChoices[Math.floor(Math.random() * topChoices.length)].id;
    }
    
-   // 6. 随机选择
+   // 7. 随机选择
    return affordable[Math.floor(Math.random() * affordable.length)].id;
 };
 
@@ -591,22 +600,22 @@ export const AI_PROFILES: AIProfile[] = [
   {
     name: '新手法师',
     difficulty: 'easy',
-    description: '基础AI，随机选择卡牌',
-    avatar: '/avatars/ai-easy.webp',
+    description: '法师学徒，正在通过实践学习基础的元素相克原理。',
+    avatar: '/avatars/ai-easy.png',
     strategy: 'balanced'
   },
   {
     name: '战斗法师',
     difficulty: 'medium',
-    description: '偏好高伤害卡牌',
-    avatar: '/avatars/ai-medium.webp',
+    description: '经验丰富的战场指挥官，擅长通过高爆发法术迅速压制对手。',
+    avatar: '/avatars/ai-medium.png',
     strategy: 'aggressive'
   },
   {
-    name: '防御法师',
+    name: '大法师梅林',
     difficulty: 'hard',
-    description: '优先使用控制和治疗',
-    avatar: '/avatars/ai-hard.webp',
+    description: '掌握了禁忌奥秘的强者，能够看穿你的每一次出牌并进行完美反制。',
+    avatar: '/avatars/ai-hard.png',
     strategy: 'defensive'
   }
 ];

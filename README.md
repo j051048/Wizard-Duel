@@ -1,20 +1,56 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# 🧙‍♂️ Wizard Duel (巫师对决)
 
-# Run and deploy your AI Studio app
+一个基于五大元素的策略卡牌对战游戏。
 
-This contains everything you need to run your app locally.
+![Game Banner](https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6)
 
-View your app in AI Studio: https://ai.studio/apps/drive/1F5E2bCXCij3WUnDBW79q5vFLedPpADqy
+## 🌟 核心特性
 
-## Run Locally
+- **🔥 五种元素**: 火、紫藤、冰、雷、石头。每种元素都有独特的克制关系和特殊效果。
+- **💥 深度策略**: 引入法力水晶系统、手牌管理以及多回合连击（Combo）机制。
+- **🎭 精英 AI**: 挑战三种不同难度的 AI 对手，从新手法师到大法师梅林。
+- **🎨 视觉盛宴**: 所有卡牌插画与 AI 头像均由先进 AI 模型生成，风格统一且精美。
+- **🎵 沉浸音频**: 独立的大厅与战斗背景音乐，以及丰富的施法与战斗音效。
+- **📦 收集与构筑**: 开启卡包收集传说卡牌，在牌组构建器中打造你的专属战斗风格。
 
-**Prerequisites:**  Node.js
+## 🎮 玩法介绍
 
+1. **元素相克**:
+   - 🔥 **火** 克制 🌿 **紫藤**
+   - 🌿 **紫藤** 克制 ❄️ **冰**
+   - ❄️ **冰** 克制 ⚡ **雷**
+   - ⚡ **雷** 克制 🪨 **石头**
+   - 🪨 **石头** 克制 🔥 **火**
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+2. **法力系统**: 每一回合你的法力上限增加，合理规划每回合的法力消耗是通往胜利的关键。
+3. **连击机制**: 连续使用相同元素的卡牌（如雷系）将触发连击增伤效果！
+
+## 🛠️ 本地开发
+
+**环境要求:** Node.js (建议 v16+)
+
+1. **克隆仓库**:
+   ```bash
+   git clone https://github.com/j051048/Wizard-Duel.git
+   cd Wizard-Duel
+   ```
+
+2. **安装依赖**:
+   ```bash
+   npm install
+   ```
+
+3. **配置 API Key**:
+   在根目录下创建 `.env.local` 文件，并填写您的 Gemini API Key：
+   ```env
+   VITE_GEMINI_API_KEY=your_actual_api_key_here
+   ```
+
+4. **启动项目**:
+   ```bash
+   npm run dev
+   ```
+
+## 📜 许可
+
+本项目仅供学习与交流使用。所有生成的素材版权归原作者所有。
