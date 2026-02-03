@@ -9,8 +9,8 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
-import { Wallet, Sparkles } from 'lucide-react';
+import { useAccount } from 'wagmi';
+import { Sparkles } from 'lucide-react';
 
 // Hooks
 import { usePreloader } from './hooks/usePreloader';
@@ -31,8 +31,7 @@ import { GameState, BattleRecord, PlayerStats, SpellType } from './types';
 function App() {
   // ============ Web3 状态 ============
   const { address, isConnected } = useAccount();
-  const { connectors, connect } = useConnect();
-  const { disconnect } = useDisconnect();
+
 
   // ============ 应用状态 ============
   const [isResourcesLoaded, setIsResourcesLoaded] = useState(false);
@@ -148,10 +147,7 @@ function App() {
 
   // ============ 游戏逻辑 ============
 
-  const handleConnect = () => {
-    const connector = connectors[0];
-    if (connector) connect({ connector });
-  };
+
 
   const handleResourcesLoaded = () => {
     setIsResourcesLoaded(true);
@@ -260,15 +256,7 @@ function App() {
           </div>
 
           <div className="flex items-center gap-3">
-            {!isConnected && (
-              <button
-                onClick={handleConnect}
-                className="hidden md:flex items-center gap-2 text-xs font-bold text-purple-300 hover:text-white transition-colors px-3 py-2 rounded-lg hover:bg-white/5"
-              >
-                <Wallet size={14} />
-                <span>连接钱包</span>
-              </button>
-            )}
+
 
             <div className="bg-black/60 border border-purple-500/30 rounded-xl px-4 py-2 flex items-center gap-2">
               <span className="text-purple-400 text-xs uppercase font-bold">法力</span>
