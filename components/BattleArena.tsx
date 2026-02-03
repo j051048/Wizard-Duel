@@ -160,7 +160,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   ), [duelState.playerHand, duelState.playerMana, duelState.playerEffects, duelState.playerCostMod]);
 
   return (
-    <div className="min-h-screen overflow-y-auto bg-slate-950 no-select flex flex-col z-40 relative">
+    <div className="relative min-h-full w-full bg-slate-950 no-select flex flex-col z-40">
       {/* === 背景层 === */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <img 
