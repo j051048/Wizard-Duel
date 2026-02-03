@@ -151,7 +151,9 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         <img 
           src="/ui/bg_arena.webp" 
           alt="Arena" 
+          decoding="async"
           className="absolute inset-0 w-full h-full object-cover animate-[breath_20s_ease-in-out_infinite]"
+          style={{ willChange: 'transform, filter' }}
         />
         <div className="absolute inset-0 shadow-[inset_0_0_200px_rgba(0,0,0,0.9)]" />
         <div className="absolute inset-0 bg-black/30" />
@@ -161,8 +163,10 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           <img 
             src="/ui/magic-circle.webp" 
             alt="" 
+            decoding="async"
+            loading="lazy"
             className="w-[120vw] h-[120vw] md:w-[90vh] md:h-[90vh] animate-spin mix-blend-screen"
-            style={{ animationDuration: '120s' }}
+            style={{ animationDuration: '120s', willChange: 'transform' }}
             onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
           />
         </div>
@@ -237,16 +241,17 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         )}
 
         {damageNumbers.map(damage => (
-          <div
-            key={damage.id}
-            className={`absolute pointer-events-none text-5xl font-black italic drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] ${
-              damage.isPlayer ? 'text-red-500' : 'text-blue-400'
-            } animate-[damageFloat_0.8s_ease-out_forwards]`}
-            style={{
-              left: `${damage.x}%`,
-              top: `${damage.y}%`,
-            }}
-          >
+            <div 
+              key={damage.id} 
+              className={`absolute pointer-events-none text-5xl font-black italic drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] ${
+                damage.isPlayer ? 'text-red-500' : 'text-blue-400'
+              } animate-[damageFloat_0.8s_ease-out_forwards]`}
+              style={{
+                left: `${damage.x}%`,
+                top: `${damage.y}%`,
+                willChange: 'transform, opacity'
+              }}
+            >
             -{damage.value}
           </div>
         ))}

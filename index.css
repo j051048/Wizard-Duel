@@ -180,4 +180,9 @@
   .animation-delay-600 {
     animation-delay: 600ms;
   }
+  .optimize-gpu {
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
 }

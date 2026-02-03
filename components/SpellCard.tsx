@@ -102,6 +102,8 @@ export const SpellCard: React.FC<SpellCardProps> = ({
         <img 
           src="/ui/card_back.webp" 
           alt="Card Back"
+          loading="lazy"
+          decoding="async"
           className="w-full h-full object-contain drop-shadow-xl"
         />
       </div>
@@ -163,7 +165,7 @@ export const SpellCard: React.FC<SpellCardProps> = ({
   return (
     <div 
       className={`relative group ${isSmall ? 'w-20 h-28' : 'w-32 h-48 sm:w-36 sm:h-52'} transition-all duration-300 ${!canPlay ? 'opacity-60 grayscale-[0.5]' : ''}`}
-      style={{ perspective: '1000px' }}
+      style={{ perspective: '1000px', willChange: (isHovered && canPlay) || isSelected ? 'transform' : 'auto' }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       onClick={canPlay ? onClick : undefined}
@@ -198,7 +200,13 @@ export const SpellCard: React.FC<SpellCardProps> = ({
             {/* Main Art / Emoji */}
              <div className="relative z-0 transform transition-transform duration-500 group-hover:scale-110">
                 {spell.artSrc ? (
-                   <img src={spell.artSrc} alt={spell.name} className="w-full h-full object-cover" />
+                   <img 
+                    src={spell.artSrc} 
+                    alt={spell.name} 
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover" 
+                   />
                 ) : (
                    <div className="text-6xl drop-shadow-2xl grayscale-[0.2] group-hover:grayscale-0 transition-all">{spell.emoji}</div>
                 )}
@@ -207,7 +215,13 @@ export const SpellCard: React.FC<SpellCardProps> = ({
 
         {/* Layer 2: Frame (Front) */}
         <div className="absolute inset-0 pointer-events-none z-10 drop-shadow-lg">
-           <img src={frameImage} alt="frame" className="w-full h-full object-fill scale-[1.12]" />
+           <img 
+              src={frameImage} 
+              alt="frame" 
+              loading="lazy"
+              decoding="async"
+              className="w-full h-full object-fill scale-[1.12]" 
+            />
         </div>
 
         {/* Layer 3: Stats & Text (Overlay) */}
