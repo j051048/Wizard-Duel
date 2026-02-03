@@ -28,3 +28,9 @@
 - [Zapsplat](https://www.zapsplat.com/)
 
 **注意**: 请确保使用的音效符合商业使用许可。
+
+## ��Դ��Դ (Credits)
+
+- **Comfortable Mystery** (bgm-battle.mp3) by Kevin MacLeod (incompetech.com)
+  Licensed under Creative Commons: By Attribution 3.0 License
+  http://creativecommons.org/licenses/by/3.0/
