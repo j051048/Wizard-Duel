@@ -88,7 +88,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       </div>
 
       {/* === 装饰边框与角落 === */}
-      <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
         {/* 边框线条 */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-purple-500/40 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-purple-500/40 to-transparent" />
