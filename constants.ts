@@ -28,6 +28,7 @@ export const MAX_HP = GAME_CONFIG.maxHP;
  * 🪨 Rock: 纯防御/叠甲 (1费 0伤 +5甲)
  */
 export const SPELLS: Spell[] = [
+  // 现有卡牌
   { 
     id: 'fire', 
     name: 'Pyroblast',        // 炎爆术
@@ -41,6 +42,7 @@ export const SPELLS: Spell[] = [
     damage: 6,                // 极高伤害 (20% HP)
     rarity: 'mythic',
     mechanic: 'burn',
+    cardSet: 'core',          // 核心卡牌，永远可用
     description: '造成6点伤害。如果获胜，下回合对手额外受到2点燃烧伤害。',
     shortDesc: 'Burn: +2 DoT'
   },
@@ -57,6 +59,7 @@ export const SPELLS: Spell[] = [
     damage: 3,                // 标准模型
     rarity: 'rare',
     mechanic: 'tangle',
+    cardSet: 'core',          // 核心卡牌，永远可用
     description: '造成3点伤害。如果获胜，对手下一张法术费用增加(2)点。',
     shortDesc: 'Tangle: 费用+2'
   },
@@ -73,6 +76,7 @@ export const SPELLS: Spell[] = [
     damage: 4,                // 稍微高一点的伤害
     rarity: 'rare',
     mechanic: 'freeze',
+    cardSet: 'core',          // 核心卡牌，永远可用
     description: '造成4点伤害。如果平局或胜利，冻结对手（下回合如果再次对决失败，跳过攻击阶段）。',
     shortDesc: 'Freeze: 冻结'
   },
@@ -89,8 +93,9 @@ export const SPELLS: Spell[] = [
     damage: 4,                // 超模一点点
     rarity: 'common',
     mechanic: 'charge',
-    description: '造成4点伤害。如果你上回合使用了闪电箭，伤害翻倍(8)。',
-    shortDesc: 'Charge: 连击x2'
+    cardSet: 'core',          // 核心卡牌，永远可用
+    description: '造成4点伤害。如果你上回合使用了闪电箭，伤害增加50%(6点)。',
+    shortDesc: 'Charge: 连击+50%'
   },
   { 
     id: 'rock', 
@@ -105,9 +110,503 @@ export const SPELLS: Spell[] = [
     damage: 0,                // 无攻击力
     armorGain: 5,             // 纯防御
     rarity: 'common',
-    mechanic: 'fortify',
-    description: '造成0点伤害，但获得5点护甲。',
+    mechanic: 'fortify',    cardSet: 'core',          // 核心卡牌，永远可用    description: '造成0点伤害，但获得5点护甲。',
     shortDesc: 'Fortify: +5 甲'
+  },
+  // 新增卡牌扩展池
+  { 
+    id: 'fire2', 
+    name: 'Fireball',         // 火球术
+    emoji: '🔥', 
+    artSrc: '/cards/fire-fireball.webp',
+    color: 'text-red-500', 
+    borderColor: 'border-red-500',
+    shadowColor: 'rgba(239,68,68,0.5)',
+    beats: 'vine',
+    manaCost: 3,
+    damage: 5,
+    rarity: 'common',
+    mechanic: 'burn',
+    cardSet: 'classic',       // 经典扩展包
+    description: '造成5点伤害。如果获胜，下回合对手额外受到1点燃烧伤害。',
+    shortDesc: 'Burn: +1 DoT'
+  },
+  { 
+    id: 'vine2', 
+    name: 'Entangling Roots', // 纠缠根须
+    emoji: '🌿', 
+    artSrc: '/cards/vine-roots.webp',
+    color: 'text-green-500', 
+    borderColor: 'border-green-500',
+    shadowColor: 'rgba(34,197,94,0.5)',
+    beats: 'ice',
+    manaCost: 1,
+    damage: 2,
+    rarity: 'common',
+    mechanic: 'tangle',
+    cardSet: 'classic',       // 经典扩展包
+    description: '造成2点伤害。如果获胜，对手下一张法术费用增加(1)点。',
+    shortDesc: 'Tangle: 费用+1'
+  },
+  { 
+    id: 'ice2', 
+    name: 'Frost Nova',       // 霜冻新星
+    emoji: '❄️', 
+    artSrc: '/cards/ice-nova.webp',
+    color: 'text-cyan-400', 
+    borderColor: 'border-cyan-400',
+    shadowColor: 'rgba(34,211,238,0.5)',
+    beats: 'thunder',
+    manaCost: 2,
+    damage: 3,
+    rarity: 'common',
+    mechanic: 'freeze',
+    description: '造成3点伤害。如果平局或胜利，冻结对手（下回合如果再次对决失败，跳过攻击阶段）。',
+    shortDesc: 'Freeze: 冻结'
+  },
+  { 
+    id: 'thunder2', 
+    name: 'Chain Lightning',  // 连锁闪电
+    emoji: '⚡', 
+    artSrc: '/cards/thunder-chain.webp',
+    color: 'text-yellow-400', 
+    borderColor: 'border-yellow-400',
+    shadowColor: 'rgba(250,204,21,0.5)',
+    beats: 'rock',
+    manaCost: 3,
+    damage: 3,
+    rarity: 'rare',
+    mechanic: 'charge',
+    description: '造成3点伤害。如果你上回合使用了雷系法术，伤害翻倍(6)。',
+    shortDesc: 'Charge: 连击x2'
+  },
+  { 
+    id: 'rock2', 
+    name: 'Stone Wall',       // 石墙
+    emoji: '🪨', 
+    artSrc: '/cards/rock-wall.webp',
+    color: 'text-stone-400', 
+    borderColor: 'border-stone-400',
+    shadowColor: 'rgba(168,162,158,0.5)',
+    beats: 'fire',
+    manaCost: 2,
+    damage: 0,
+    armorGain: 7,
+    rarity: 'rare',
+    mechanic: 'fortify',
+    description: '造成0点伤害，但获得7点护甲。',
+    shortDesc: 'Fortify: +7 甲'
+  },
+  // 继续添加更多卡牌至30+
+  { 
+    id: 'fire3', 
+    name: 'Inferno Blast',    // 地狱爆破
+    emoji: '🔥', 
+    artSrc: '/cards/fire-inferno.webp',
+    color: 'text-red-500', 
+    borderColor: 'border-red-500',
+    shadowColor: 'rgba(239,68,68,0.5)',
+    beats: 'vine',
+    manaCost: 5,
+    damage: 8,
+    rarity: 'mythic',
+    mechanic: 'burn',
+    description: '造成8点伤害。如果获胜，下回合对手额外受到3点燃烧伤害。',
+    shortDesc: 'Burn: +3 DoT'
+  },
+  { 
+    id: 'vine3', 
+    name: 'Thorn Whip',       // 荆棘鞭笞
+    emoji: '🌿', 
+    artSrc: '/cards/vine-whip.webp',
+    color: 'text-green-500', 
+    borderColor: 'border-green-500',
+    shadowColor: 'rgba(34,197,94,0.5)',
+    beats: 'ice',
+    manaCost: 3,
+    damage: 4,
+    rarity: 'rare',
+    mechanic: 'tangle',
+    description: '造成4点伤害。如果获胜，对手下一张法术费用增加(3)点。',
+    shortDesc: 'Tangle: 费用+3'
+  },
+  { 
+    id: 'ice3', 
+    name: 'Ice Block',        // 寒冰屏障
+    emoji: '❄️', 
+    artSrc: '/cards/ice-block.webp',
+    color: 'text-cyan-400', 
+    borderColor: 'border-cyan-400',
+    shadowColor: 'rgba(34,211,238,0.5)',
+    beats: 'thunder',
+    manaCost: 4,
+    damage: 2,
+    armorGain: 6,
+    rarity: 'rare',
+    mechanic: 'freeze',
+    description: '造成2点伤害，获得6点护甲。如果平局或胜利，冻结对手。',
+    shortDesc: 'Freeze + Fortify'
+  },
+  { 
+    id: 'thunder3', 
+    name: 'Thunderstorm',     // 雷暴
+    emoji: '⚡', 
+    artSrc: '/cards/thunder-storm.webp',
+    color: 'text-yellow-400', 
+    borderColor: 'border-yellow-400',
+    shadowColor: 'rgba(250,204,21,0.5)',
+    beats: 'rock',
+    manaCost: 4,
+    damage: 6,
+    rarity: 'mythic',
+    mechanic: 'charge',
+    description: '造成6点伤害。如果你上回合使用了雷系法术，伤害翻倍(12)。',
+    shortDesc: 'Charge: 连击x2'
+  },
+  { 
+    id: 'rock3', 
+    name: 'Earthquake',        // 地震
+    emoji: '🪨', 
+    artSrc: '/cards/rock-quake.webp',
+    color: 'text-stone-400', 
+    borderColor: 'border-stone-400',
+    shadowColor: 'rgba(168,162,158,0.5)',
+    beats: 'fire',
+    manaCost: 5,
+    damage: 5,
+    armorGain: 10,
+    rarity: 'mythic',
+    mechanic: 'fortify',
+    description: '造成5点伤害，但获得10点护甲。',
+    shortDesc: 'Fortify: +10 甲'
+  },
+  // 添加更多低费卡
+  { 
+    id: 'fire4', 
+    name: 'Spark',            // 火花
+    emoji: '🔥', 
+    artSrc: '/cards/fire-spark.webp',
+    color: 'text-red-500', 
+    borderColor: 'border-red-500',
+    shadowColor: 'rgba(239,68,68,0.5)',
+    beats: 'vine',
+    manaCost: 1,
+    damage: 2,
+    rarity: 'common',
+    mechanic: 'burn',
+    description: '造成2点伤害。如果获胜，下回合对手额外受到1点燃烧伤害。',
+    shortDesc: 'Burn: +1 DoT'
+  },
+  { 
+    id: 'vine4', 
+    name: 'Vine Lash',        // 藤蔓鞭打
+    emoji: '🌿', 
+    artSrc: '/cards/vine-lash.webp',
+    color: 'text-green-500', 
+    borderColor: 'border-green-500',
+    shadowColor: 'rgba(34,197,94,0.5)',
+    beats: 'ice',
+    manaCost: 1,
+    damage: 1,
+    rarity: 'common',
+    mechanic: 'tangle',
+    description: '造成1点伤害。如果获胜，对手下一张法术费用增加(1)点。',
+    shortDesc: 'Tangle: 费用+1'
+  },
+  { 
+    id: 'ice4', 
+    name: 'Frostbite',        // 冻伤
+    emoji: '❄️', 
+    artSrc: '/cards/ice-bite.webp',
+    color: 'text-cyan-400', 
+    borderColor: 'border-cyan-400',
+    shadowColor: 'rgba(34,211,238,0.5)',
+    beats: 'thunder',
+    manaCost: 1,
+    damage: 2,
+    rarity: 'common',
+    mechanic: 'freeze',
+    description: '造成2点伤害。如果平局或胜利，冻结对手。',
+    shortDesc: 'Freeze'
+  },
+  { 
+    id: 'thunder4', 
+    name: 'Static Shock',     // 静电冲击
+    emoji: '⚡', 
+    artSrc: '/cards/thunder-shock.webp',
+    color: 'text-yellow-400', 
+    borderColor: 'border-yellow-400',
+    shadowColor: 'rgba(250,204,21,0.5)',
+    beats: 'rock',
+    manaCost: 1,
+    damage: 2,
+    rarity: 'common',
+    mechanic: 'charge',
+    description: '造成2点伤害。如果你上回合使用了雷系法术，伤害翻倍(4)。',
+    shortDesc: 'Charge: 连击x2'
+  },
+  { 
+    id: 'rock4', 
+    name: 'Pebble',           // 小石子
+    emoji: '🪨', 
+    artSrc: '/cards/rock-pebble.webp',
+    color: 'text-stone-400', 
+    borderColor: 'border-stone-400',
+    shadowColor: 'rgba(168,162,158,0.5)',
+    beats: 'fire',
+    manaCost: 1,
+    damage: 0,
+    armorGain: 3,
+    rarity: 'common',
+    mechanic: 'fortify',
+    description: '造成0点伤害，但获得3点护甲。',
+    shortDesc: 'Fortify: +3 甲'
+  },
+  // 再添加一些中费卡
+  { 
+    id: 'fire5', 
+    name: 'Flame Wave',       // 火焰波
+    emoji: '🔥', 
+    artSrc: '/cards/fire-wave.webp',
+    color: 'text-red-500', 
+    borderColor: 'border-red-500',
+    shadowColor: 'rgba(239,68,68,0.5)',
+    beats: 'vine',
+    manaCost: 6,
+    damage: 10,
+    rarity: 'mythic',
+    mechanic: 'burn',
+    description: '造成10点伤害。如果获胜，下回合对手额外受到4点燃烧伤害。',
+    shortDesc: 'Burn: +4 DoT'
+  },
+  { 
+    id: 'vine5', 
+    name: 'Forest\'s Grasp',  // 森林之握
+    emoji: '🌿', 
+    artSrc: '/cards/vine-grasp.webp',
+    color: 'text-green-500', 
+    borderColor: 'border-green-500',
+    shadowColor: 'rgba(34,197,94,0.5)',
+    beats: 'ice',
+    manaCost: 4,
+    damage: 5,
+    rarity: 'rare',
+    mechanic: 'tangle',
+    description: '造成5点伤害。如果获胜，对手下一张法术费用增加(4)点。',
+    shortDesc: 'Tangle: 费用+4'
+  },
+  { 
+    id: 'ice5', 
+    name: 'Absolute Zero',    // 绝对零度
+    emoji: '❄️', 
+    artSrc: '/cards/ice-zero.webp',
+    color: 'text-cyan-400', 
+    borderColor: 'border-cyan-400',
+    shadowColor: 'rgba(34,211,238,0.5)',
+    beats: 'thunder',
+    manaCost: 6,
+    damage: 8,
+    rarity: 'mythic',
+    mechanic: 'freeze',
+    description: '造成8点伤害。如果平局或胜利，冻结对手两回合。',
+    shortDesc: 'Freeze x2'
+  },
+  { 
+    id: 'thunder5', 
+    name: 'Lightning Storm',  // 雷电风暴
+    emoji: '⚡', 
+    artSrc: '/cards/thunder-storm.webp',
+    color: 'text-yellow-400', 
+    borderColor: 'border-yellow-400',
+    shadowColor: 'rgba(250,204,21,0.5)',
+    beats: 'rock',
+    manaCost: 5,
+    damage: 7,
+    rarity: 'mythic',
+    mechanic: 'charge',
+    description: '造成7点伤害。如果你上回合使用了雷系法术，伤害翻倍(14)。',
+    shortDesc: 'Charge: 连击x2'
+  },
+  { 
+    id: 'rock5', 
+    name: 'Mountain',         // 山岳
+    emoji: '🪨', 
+    artSrc: '/cards/rock-mountain.webp',
+    color: 'text-stone-400', 
+    borderColor: 'border-stone-400',
+    shadowColor: 'rgba(168,162,158,0.5)',
+    beats: 'fire',
+    manaCost: 6,
+    damage: 6,
+    armorGain: 15,
+    rarity: 'mythic',
+    mechanic: 'fortify',
+    description: '造成6点伤害，但获得15点护甲。',
+    shortDesc: 'Fortify: +15 甲'
+  },
+  // 新增机制卡牌
+  { 
+    id: 'healing', 
+    name: 'Healing Wave',     // 治疗波
+    emoji: '💙', 
+    artSrc: '/cards/healing-wave.webp',
+    color: 'text-blue-500', 
+    borderColor: 'border-blue-500',
+    shadowColor: 'rgba(59,130,246,0.5)',
+    beats: 'healing',         // 自指
+    manaCost: 2,
+    damage: 0,
+    armorGain: 0,
+    rarity: 'rare',
+    mechanic: 'heal',
+    cardSet: 'tournament',    // 竞技场扩展包
+    description: '恢复5点生命值。',
+    shortDesc: 'Heal: +5 HP'
+  },
+  { 
+    id: 'aoe', 
+    name: 'Arcane Explosion', // 奥术爆炸
+    emoji: '💥', 
+    artSrc: '/cards/aoe-explosion.webp',
+    color: 'text-purple-500', 
+    borderColor: 'border-purple-500',
+    shadowColor: 'rgba(147,51,234,0.5)',
+    beats: 'aoe',             // 自指
+    manaCost: 4,
+    damage: 3,
+    armorGain: 0,
+    rarity: 'rare',
+    mechanic: 'aoe',
+    cardSet: 'tournament',    // 竞技场扩展包
+    description: '造成3点伤害，并对对手造成额外2点伤害（无视护甲）。',
+    shortDesc: 'AOE: 3+2'
+  },
+  { 
+    id: 'draw', 
+    name: 'Arcane Intellect', // 奥术智慧
+    emoji: '📚', 
+    artSrc: '/cards/draw-intellect.webp',
+    color: 'text-indigo-500', 
+    borderColor: 'border-indigo-500',
+    shadowColor: 'rgba(99,102,241,0.5)',
+    beats: 'draw',            // 自指
+    manaCost: 3,
+    damage: 0,
+    armorGain: 0,
+    rarity: 'rare',
+    mechanic: 'draw',
+    cardSet: 'tournament',    // 竞技场扩展包
+    description: '抽2张牌。',
+    shortDesc: 'Draw: +2'
+  },
+  { 
+    id: 'silence', 
+    name: 'Silence',          // 沉默
+    emoji: '🤫', 
+    artSrc: '/cards/silence.webp',
+    color: 'text-gray-500', 
+    borderColor: 'border-gray-500',
+    shadowColor: 'rgba(107,114,128,0.5)',
+    beats: 'silence',         // 自指
+    manaCost: 1,
+    damage: 0,
+    armorGain: 0,
+    rarity: 'common',
+    mechanic: 'silence',
+    cardSet: 'tournament',    // 竞技场扩展包
+    description: '移除对手所有状态效果。',
+    shortDesc: 'Silence'
+  },
+  // ============ 英雄技能系统 ============
+  { 
+    id: 'hero_fire', 
+    name: 'Fire Mastery',     // 火焰精通
+    emoji: '🔥👑', 
+    artSrc: '/cards/hero-fire-mastery.webp',
+    color: 'text-red-400', 
+    borderColor: 'border-red-400',
+    shadowColor: 'rgba(248,113,113,0.6)',
+    beats: 'hero_fire',       // 自指
+    manaCost: 0,              // 免费技能
+    damage: 2,
+    armorGain: 0,
+    rarity: 'mythic',
+    mechanic: 'burn',
+    cardSet: 'legacy',        // 遗产扩展包
+    description: '造成2点伤害。如果获胜，下回合对手额外受到1点燃烧伤害。（英雄技能：每回合可用1次）',
+    shortDesc: 'Hero: Burn +1'
+  },
+  { 
+    id: 'hero_vine', 
+    name: 'Nature\'s Call',   // 自然呼唤
+    emoji: '🌿🌟', 
+    artSrc: '/cards/hero-vine-call.webp',
+    color: 'text-green-400', 
+    borderColor: 'border-green-400',
+    shadowColor: 'rgba(74,222,128,0.6)',
+    beats: 'hero_vine',       // 自指
+    manaCost: 0,              // 免费技能
+    damage: 0,
+    armorGain: 3,
+    rarity: 'mythic',
+    mechanic: 'heal',
+    cardSet: 'legacy',        // 遗产扩展包
+    description: '获得3点护甲并抽1张牌。（英雄技能：每回合可用1次）',
+    shortDesc: 'Hero: +3甲 +1抽'
+  },
+  { 
+    id: 'hero_ice', 
+    name: 'Frost Shield',     // 冰霜护盾
+    emoji: '❄️🛡️', 
+    artSrc: '/cards/hero-ice-shield.webp',
+    color: 'text-cyan-400', 
+    borderColor: 'border-cyan-400',
+    shadowColor: 'rgba(34,211,238,0.6)',
+    beats: 'hero_ice',        // 自指
+    manaCost: 0,              // 免费技能
+    damage: 0,
+    armorGain: 5,
+    rarity: 'mythic',
+    mechanic: 'freeze',
+    cardSet: 'legacy',        // 遗产扩展包
+    description: '获得5点护甲。如果下回合对手攻击失败，冻结对手。（英雄技能：每回合可用1次）',
+    shortDesc: 'Hero: +5甲 Freeze'
+  },
+  { 
+    id: 'hero_thunder', 
+    name: 'Storm Surge',      // 风暴涌动
+    emoji: '⚡🌩️', 
+    artSrc: '/cards/hero-thunder-surge.webp',
+    color: 'text-yellow-400', 
+    borderColor: 'border-yellow-400',
+    shadowColor: 'rgba(250,204,21,0.6)',
+    beats: 'hero_thunder',    // 自指
+    manaCost: 0,              // 免费技能
+    damage: 1,
+    armorGain: 0,
+    rarity: 'mythic',
+    mechanic: 'charge',
+    cardSet: 'legacy',        // 遗产扩展包
+    description: '造成1点伤害。如果你上回合使用了雷系法术或技能，伤害翻倍。（英雄技能：每回合可用1次）',
+    shortDesc: 'Hero: Charge x2'
+  },
+  { 
+    id: 'hero_rock', 
+    name: 'Earthquake',       // 地震
+    emoji: '🪨💥', 
+    artSrc: '/cards/hero-rock-earthquake.webp',
+    color: 'text-stone-400', 
+    borderColor: 'border-stone-400',
+    shadowColor: 'rgba(168,162,158,0.6)',
+    beats: 'hero_rock',       // 自指
+    manaCost: 0,              // 免费技能
+    damage: 0,
+    armorGain: 8,
+    rarity: 'mythic',
+    mechanic: 'fortify',
+    cardSet: 'legacy',        // 遗产扩展包
+    description: '获得8点护甲。（英雄技能：每回合可用1次）',
+    shortDesc: 'Hero: +8 甲'
   },
   { 
     id: 'skip', 
@@ -189,12 +688,97 @@ export const getMechanicName = (mechanic: string): string => {
 };
 
 /**
- * 根据 ID 获取法术详情
+ * 开包系统 - 保底机制
+ * 5包保底稀有，10包保底史诗，20包保底传说
  */
-export const getSpellById = (id: SpellType): Spell => {
-  const spell = SPELLS.find(s => s.id === id);
-  if (!spell) {
-    throw new Error(`Unknown spell: ${id}`);
+export const PACK_CONFIG = {
+  cost: 100, // 每个卡包价格
+  cardsPerPack: 5,
+  pitySystem: {
+    rare: { threshold: 5, guaranteed: false },
+    mythic: { threshold: 10, guaranteed: false },
+    legendary: { threshold: 20, guaranteed: false }
   }
-  return spell;
 };
+
+/**
+ * 开包逻辑
+ */
+export const openPack = (currentPity: { rare: number, mythic: number, legendary: number }): { cards: Spell[], newPity: typeof currentPity } => {
+  const cards: Spell[] = [];
+  let newPity = { ...currentPity };
+  
+  for (let i = 0; i < PACK_CONFIG.cardsPerPack; i++) {
+    let rarity: Rarity = 'common';
+    const rand = Math.random();
+    
+    // 保底检查
+    if (newPity.legendary >= PACK_CONFIG.pitySystem.legendary.threshold) {
+      rarity = 'mythic'; // 传说保底
+      newPity.legendary = 0;
+    } else if (newPity.mythic >= PACK_CONFIG.pitySystem.mythic.threshold) {
+      rarity = 'mythic'; // 史诗保底
+      newPity.mythic = 0;
+    } else if (newPity.rare >= PACK_CONFIG.pitySystem.rare.threshold) {
+      rarity = 'rare'; // 稀有保底
+      newPity.rare = 0;
+    } else {
+      // 正常概率
+      if (rand < 0.6) rarity = 'common';
+      else if (rand < 0.85) rarity = 'common'; // 调整概率
+      else if (rand < 0.95) rarity = 'rare';
+      else if (rand < 0.99) rarity = 'mythic';
+      else rarity = 'mythic'; // 传说极低概率
+    }
+    
+    // 选择该稀有度的随机卡牌
+    const availableCards = SPELLS.filter(s => s.rarity === rarity && s.id !== 'skip');
+    const randomCard = availableCards[Math.floor(Math.random() * availableCards.length)];
+    cards.push(randomCard);
+    
+    // 更新保底计数器
+    if (rarity === 'common') {
+      newPity.rare++;
+      newPity.mythic++;
+      newPity.legendary++;
+    } else if (rarity === 'rare') {
+      newPity.rare = 0;
+      newPity.mythic++;
+      newPity.legendary++;
+    } else if (rarity === 'mythic') {
+      newPity.rare = 0;
+      newPity.mythic = 0;
+      newPity.legendary++;
+    }
+  }
+  
+  return { cards, newPity };
+};
+
+// ============ 卡牌轮换系统 ============
+
+/**
+ * 标准模式：只包含当前和经典卡牌
+ * 狂野模式：包含所有卡牌
+ */
+export const STANDARD_SETS: CardSet[] = ['core', 'classic', 'tournament'];
+export const WILD_SETS: CardSet[] = ['core', 'classic', 'tournament', 'legacy'];
+
+/**
+ * 根据游戏模式过滤卡牌
+ */
+export function getCardsForMode(gameMode: GameMode): Spell[] {
+  const allowedSets = gameMode === 'standard' ? STANDARD_SETS : WILD_SETS;
+  return SPELLS.filter(spell => allowedSets.includes(spell.cardSet));
+}
+
+/**
+ * 检查卡牌是否在指定模式中可用
+ */
+export function isCardAvailableInMode(cardId: SpellType, gameMode: GameMode): boolean {
+  const card = SPELLS.find(s => s.id === cardId);
+  if (!card) return false;
+  
+  const allowedSets = gameMode === 'standard' ? STANDARD_SETS : WILD_SETS;
+  return allowedSets.includes(card.cardSet);
+}

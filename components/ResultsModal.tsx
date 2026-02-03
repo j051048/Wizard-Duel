@@ -11,6 +11,7 @@ interface ResultsModalProps {
   bet: number;
   onClose: () => void;
   isCrit: boolean;
+  isTavernMode?: boolean;
 }
 
 export const ResultsModal: React.FC<ResultsModalProps> = ({ 
@@ -20,7 +21,8 @@ export const ResultsModal: React.FC<ResultsModalProps> = ({
   payout, 
   bet,
   onClose, 
-  isCrit 
+  isCrit,
+  isTavernMode = false
 }) => {
   if (!result || !playerSpell || !opponentSpell) return null;
 
@@ -92,30 +94,32 @@ export const ResultsModal: React.FC<ResultsModalProps> = ({
             </div>
           </div>
 
-          {/* Payout Breakdown */}
-          <div className="bg-black/40 rounded-xl p-4 mb-6 border border-white/5 text-left">
-            <p className="text-gray-400 text-xs font-tech mb-3 uppercase tracking-wider">结算明细</p>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm text-gray-300">
-                <span>下注金额</span>
-                <span className="font-mono">{bet} PTS</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className={profit >= 0 ? 'text-green-400' : 'text-red-400'}>
-                  {profit >= 0 ? '收益' : '损失'}
-                </span>
-                <span className={`font-mono font-bold ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {profit >= 0 ? '+' : ''}{profit} PTS
-                </span>
-              </div>
-              <div className="border-t border-white/10 pt-2 mt-2">
+          {/* Payout Breakdown - Only show in non-tavern mode */}
+          {!isTavernMode && (
+            <div className="bg-black/40 rounded-xl p-4 mb-6 border border-white/5 text-left">
+              <p className="text-gray-400 text-xs font-tech mb-3 uppercase tracking-wider">结算明细</p>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm text-gray-300">
+                  <span>下注金额</span>
+                  <span className="font-mono">{bet} PTS</span>
+                </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-white font-bold">最终获得</span>
-                  <span className="font-mono font-bold text-white text-lg">{payout} PTS</span>
+                  <span className={profit >= 0 ? 'text-green-400' : 'text-red-400'}>
+                    {profit >= 0 ? '收益' : '损失'}
+                  </span>
+                  <span className={`font-mono font-bold ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {profit >= 0 ? '+' : ''}{profit} PTS
+                  </span>
+                </div>
+                <div className="border-t border-white/10 pt-2 mt-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-white font-bold">最终获得</span>
+                    <span className="font-mono font-bold text-white text-lg">{payout} PTS</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Play Again Button */}
           <button 

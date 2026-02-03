@@ -4,10 +4,11 @@
  * 包含Draft选择、多卡连击界面、Pass按钮
  */
 
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { Sparkles, LogOut, Volume2, VolumeX, ArrowRight, Hand } from 'lucide-react';
 import { SpellType, DuelPhase, DuelState, RoundResult } from '../types';
-import { GAME_CONFIG, getSpellById } from '../constants';
+import { GAME_CONFIG } from '../constants';
+import { getSpellById } from '../services/gameLogic';
 import { getPlayableCards } from '../services/gameLogic';
 import { PlayerFrame } from './PlayerFrame';
 import { SpellCard } from './SpellCard';
@@ -21,13 +22,13 @@ interface BattleArenaProps {
   effectMessages: string[];
   selectedBet: number;
   onPlayCard: (spellId: SpellType) => void;
-  onDraft?: (spellId: SpellType) => void;
   onPass?: () => void;
   onSurrender: () => void;
   isMuted: boolean;
   onToggleMute: () => void;
   isPlayerShaking?: boolean;
   isOpponentShaking?: boolean;
+  isTavernMode?: boolean;
 }
 
 export const BattleArena: React.FC<BattleArenaProps> = ({
@@ -39,7 +40,6 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   effectMessages,
   selectedBet,
   onPlayCard,
-  onDraft,
   onPass,
   onSurrender,
   isMuted,
@@ -47,8 +47,37 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   isPlayerShaking = false,
   isOpponentShaking = false,
 }) => {
-  const oppSpellDetails = opponentCard ? getSpellById(opponentCard) : null;
+  const [damageNumbers, setDamageNumbers] = useState<{id: number, value: number, x: number, y: number, isPlayer: boolean}[]>([]);
+  const damageIdRef = useRef(0);
   const playerSpellDetails = playerCard ? getSpellById(playerCard) : null;
+
+  // 伤害数字动画
+  const addDamageNumber = (damage: number, isPlayer: boolean) => {
+    const id = damageIdRef.current++;
+    const x = Math.random() * 100 + 50; // 随机位置
+    const y = isPlayer ? 200 : 100;
+    setDamageNumbers(prev => [...prev, { id, value: damage, x, y, isPlayer }]);
+    
+    // 移除动画
+    setTimeout(() => {
+      setDamageNumbers(prev => prev.filter(d => d.id !== id));
+    }, 1000);
+  };
+
+  // 监听伤害变化添加动画 (简化版)
+  React.useEffect(() => {
+    if (effectMessages.length > 0) {
+      const lastMsg = effectMessages[effectMessages.length - 1];
+      if (lastMsg.includes('造成') || lastMsg.includes('受到')) {
+        const damageMatch = lastMsg.match(/(\d+) 点伤害/);
+        if (damageMatch) {
+          const damage = parseInt(damageMatch[1]);
+          const isPlayerDamage = lastMsg.includes('造成');
+          addDamageNumber(damage, isPlayerDamage);
+        }
+      }
+    }
+  }, [effectMessages]);
   
   const playableCards = getPlayableCards(
     duelState.playerHand, 
@@ -140,39 +169,28 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         </div>
       </div>
 
-      {/* === Draft 阶段遮罩 === */}
-      {phase === 'DRAFT_PHASE' && (
-         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-           <h2 className="text-3xl font-wizard font-bold text-white mb-8 drop-shadow-[0_0_10px_rgba(168,85,247,0.8)]">
-             选择你的法术
-           </h2>
-           <div className="flex gap-4 md:gap-8 flex-wrap justify-center px-4">
-             {duelState.draftOptions.map((spellId, idx) => {
-               const spell = getSpellById(spellId);
-               return (
-                 <div 
-                   key={idx} 
-                   className="transform hover:scale-105 transition-all duration-300 cursor-pointer hover:rotate-1"
-                   onClick={() => onDraft && onDraft(spellId)}
-                 >
-                   <SpellCard spell={spell} />
-                   <div className="mt-4 text-center">
-                     <button className="px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-full font-bold shadow-lg border border-purple-400/50">
-                       选择
-                     </button>
-                   </div>
-                 </div>
-               );
-             })}
-           </div>
-         </div>
-      )}
+      {/* === 伤害数字动画 === */}
+      {damageNumbers.map(damage => (
+        <div
+          key={damage.id}
+          className={`absolute pointer-events-none text-4xl font-bold animate-bounce ${
+            damage.isPlayer ? 'text-red-400' : 'text-blue-400'
+          }`}
+          style={{
+            left: `${damage.x}%`,
+            top: `${damage.y}%`,
+            animation: 'damageFloat 1s ease-out forwards'
+          }}
+        >
+          -{damage.value}
+        </div>
+      ))}
 
       {/* === 中央战场区域 === */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
         {/* 对手打出的牌 */}
         <div className={`
-             absolute top-[30%]
+             absolute top-[25%] md:top-[30%]
              transition-all duration-700 transform
              ${opponentCard ? 'translate-y-0 opacity-100 scale-100' : '-translate-y-10 opacity-0 scale-90'}
         `}>
@@ -180,23 +198,22 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
             <div className="relative">
               <div className="absolute -inset-4 bg-red-500/20 blur-xl rounded-full" />
               <div className="bg-red-950/80 p-1 rounded-xl border border-red-500/50">
-                 <SpellCard spell={oppSpellDetails} disabled />
-              </div> 
-              {/* 这里可以加一个 "Opponent Played" 标签 */}
+                 <SpellCard spell={oppSpellDetails} disabled isSmall={window.innerWidth < 768} />
+              </div>
             </div>
           )}
         </div>
 
         {/* 玩家打出的牌 (Temporary animation) */}
         <div className={`
-             absolute bottom-[30%]
+             absolute bottom-[25%] md:bottom-[30%]
              transition-all duration-500 transform
              ${playerCard ? 'translate-y-0 opacity-100 scale-110' : 'translate-y-10 opacity-0 scale-90'}
         `}>
           {playerSpellDetails && playerCard && (
             <div className="relative">
               <div className="absolute -inset-4 bg-purple-500/30 blur-xl rounded-full" />
-              <SpellCard spell={playerSpellDetails} isSelected disabled />
+              <SpellCard spell={playerSpellDetails} isSelected disabled isSmall={window.innerWidth < 768} />
             </div>
           )}
         </div>
@@ -238,7 +255,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         <div className="w-full max-w-[90%] md:max-w-5xl mx-auto relative h-[250px] flex items-end justify-center">
             
             {/* 玩家信息框 (Absolute Left) */}
-            <div className="absolute left-0 bottom-4 w-[280px] z-20 pointer-events-auto">
+            <div className="absolute left-0 bottom-4 w-[240px] md:w-[280px] z-20 pointer-events-auto">
                <PlayerFrame 
                   isPlayer={true}
                   name="Player Wizard"
@@ -252,27 +269,64 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                 />
             </div>
 
+            {/* 英雄技能区域 */}
+            <div className="relative z-30 mb-4 flex items-center justify-center pointer-events-auto">
+              <div className="flex gap-2 md:gap-4">
+                {(['hero_fire', 'hero_vine', 'hero_ice', 'hero_thunder', 'hero_rock'] as const).map((heroSkillId) => {
+                  const spell = getSpellById(heroSkillId);
+                  const canUse = phase === 'PLAYER_TURN' && !duelState.heroSkillsUsed;
+                  
+                  return (
+                    <div 
+                      key={heroSkillId}
+                      className="relative transition-all duration-300 hover:z-50 group"
+                    >
+                      <div className={`
+                         transform transition-all duration-200
+                         ${canUse 
+                           ? 'group-hover:-translate-y-4 group-hover:scale-110 cursor-pointer' 
+                           : 'grayscale brightness-75 opacity-60 cursor-not-allowed'}
+                      `}>
+                        <SpellCard 
+                          spell={spell} 
+                          onClick={() => canUse && onPlayCard(heroSkillId)}
+                          isAffordable={canUse}
+                          disabled={!canUse}
+                          isSmall={true}
+                        />
+                        {!canUse && (
+                          <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">已使用</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* 手牌区域 (Center) */}
-            <div className="relative z-30 mb-6 flex items-end justify-center pointer-events-auto min-w-[300px]">
+            <div className="relative z-30 mb-6 flex items-end justify-center pointer-events-auto min-w-[300px] max-w-full overflow-x-auto">
                 {duelState.playerHand.length === 0 ? (
                   <div className="text-gray-500 text-sm py-4 bg-black/50 px-6 rounded-lg backdrop-blur-md border border-gray-700">
                     手牌耗尽
                   </div>
                 ) : (
-                  <div className="flex -space-x-8 md:-space-x-6 hover:space-x-2 transition-all duration-300 px-4 py-2">
+                  <div className="flex -space-x-12 md:-space-x-6 hover:space-x-2 transition-all duration-300 px-4 py-2 max-w-full">
                     {duelState.playerHand.map((spellId, index) => {
                       const spell = getSpellById(spellId);
                       const isAffordable = playableCards.includes(spellId);
-                      // Calculate slight arc
+                      // Calculate slight arc - reduce on mobile
                       const totalCards = duelState.playerHand.length;
                       const middleIndex = (totalCards - 1) / 2;
-                      const rotation = (index - middleIndex) * 3;
-                      const yOffset = Math.abs(index - middleIndex) * 5;
+                      const rotation = (index - middleIndex) * 2; // Reduced from 3
+                      const yOffset = Math.abs(index - middleIndex) * 3; // Reduced from 5
 
                       return (
                         <div 
                           key={`${spellId}-${index}`} 
-                          className="relative transition-all duration-300 hover:z-50 group"
+                          className="relative transition-all duration-300 hover:z-50 group flex-shrink-0"
                           style={{ 
                             zIndex: index,
                             transform: `rotate(${rotation}deg) translateY(${yOffset}px)`,
@@ -281,7 +335,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                           <div className={`
                              transform transition-all duration-200
                              ${isAffordable && phase === 'PLAYER_TURN' 
-                               ? 'group-hover:-translate-y-12 group-hover:scale-110 cursor-pointer' 
+                               ? 'group-hover:-translate-y-8 md:group-hover:-translate-y-12 group-hover:scale-105 md:group-hover:scale-110 cursor-pointer' 
                                : 'grayscale brightness-75 opacity-90'}
                           `}>
                             <SpellCard 
@@ -289,6 +343,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                               onClick={() => isAffordable && phase === 'PLAYER_TURN' && onPlayCard(spellId)}
                               isAffordable={isAffordable}
                               disabled={!isAffordable || phase !== 'PLAYER_TURN'}
+                              isSmall={window.innerWidth < 768} // Smaller cards on mobile
                             />
                           </div>
                         </div>
@@ -299,26 +354,26 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
             </div>
 
             {/* Pass 按钮 (Absolute Right in the red box area) */}
-            <div className="absolute right-0 bottom-4 w-[120px] h-[100px] flex items-center justify-center z-20 pointer-events-auto">
+            <div className="absolute right-0 bottom-4 w-[100px] md:w-[120px] h-[80px] md:h-[100px] flex items-center justify-center z-20 pointer-events-auto">
                 <button 
                   onClick={() => onPass && onPass()}
                   disabled={phase !== 'PLAYER_TURN'}
                   className={`
                     group relative w-full h-full flex flex-col items-center justify-center
-                    rounded-xl border-2 transition-all duration-300
+                    rounded-xl border-2 transition-all duration-300 touch-manipulation
                     ${phase === 'PLAYER_TURN' 
-                      ? 'bg-amber-900/80 border-amber-500 hover:bg-amber-800 hover:shadow-[0_0_20px_rgba(245,158,11,0.5)] cursor-pointer' 
+                      ? 'bg-amber-900/80 border-amber-500 hover:bg-amber-800 active:bg-amber-700 hover:shadow-[0_0_20px_rgba(245,158,11,0.5)] cursor-pointer' 
                       : 'bg-gray-900/50 border-gray-700 opacity-50 cursor-not-allowed'}
                   `}
                 >
-                   {/* 屯牌提示 */}
-                   <div className="absolute -top-10 right-0 bg-black/80 text-xs text-amber-200 px-2 py-1 rounded border border-amber-500/30 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                   {/* 屯牌提示 - Hide on mobile */}
+                   <div className="hidden md:block absolute -top-10 right-0 bg-black/80 text-xs text-amber-200 px-2 py-1 rounded border border-amber-500/30 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                       结束回合 (保留手牌)
                    </div>
 
-                   <span className="text-4xl text-amber-500 group-hover:scale-110 transition-transform">🛑</span>
-                   <span className="text-amber-100 font-bold mt-1 text-sm tracking-wider">结束回合</span>
-                   <span className="text-[10px] text-amber-300/60 uppercase">Pass Turn</span>
+                   <span className="text-3xl md:text-4xl text-amber-500 group-hover:scale-110 transition-transform">🛑</span>
+                   <span className="text-amber-100 font-bold mt-1 text-xs md:text-sm tracking-wider">结束回合</span>
+                   <span className="text-[9px] md:text-[10px] text-amber-300/60 uppercase">Pass</span>
                 </button>
             </div>
         </div>

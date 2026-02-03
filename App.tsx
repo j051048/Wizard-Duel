@@ -17,14 +17,31 @@ import { useAudioManager } from './hooks/useAudioManager';
 import { LoadingScreen } from './components/LoadingScreen';
 import { Lobby } from './components/Lobby';
 import { BattleArena } from './components/BattleArena';
+import { DeckBuilder } from './components/DeckBuilder';
+import { TavernMode } from './components/TavernMode';
+import { MatchmakingAnimation } from './components/MatchmakingAnimation';
+import { ModeSelect } from './components/ModeSelect';
 import { ResultsModal } from './components/ResultsModal';
 
 // Services & Types
 import { ApiService } from './services/api';
 import { calculatePayout } from './services/gameLogic';
-import { GameState, BattleRecord, PlayerStats, SpellType } from './types';
+import { GameState, BattleRecord, PlayerStats, SpellType, Deck, GameMode } from './types';
 
 function App() {
+  // 添加全局样式
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes damageFloat {
+        0% { transform: translateY(0) scale(1); opacity: 1; }
+        50% { transform: translateY(-50px) scale(1.2); opacity: 1; }
+        100% { transform: translateY(-100px) scale(0.8); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
   const { address, isConnected } = useAccount();
 
   // ============ 应用状态 ============
@@ -33,9 +50,17 @@ function App() {
   const [balance, setBalance] = useState<number>(0);
   const [selectedBet, setSelectedBet] = useState<number>(10);
   const [gameState, setGameState] = useState<GameState>('LOBBY');
+  const [gameMode, setGameMode] = useState<GameMode>('standard'); // 新增：游戏模式状态
   const [history, setHistory] = useState<BattleRecord[]>([]);
   const [leaderboard, setLeaderboard] = useState<PlayerStats[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // 牌组状态
+  const [decks, setDecks] = useState<Deck[]>([]);
+  const [selectedDeck, setSelectedDeck] = useState<Deck | null>(null);
+
+  // 待处理的酒馆决斗
+  const [pendingTavernDuel, setPendingTavernDuel] = useState<any>(null);
 
   // 动画状态
   const [isPlayerShaking, setIsPlayerShaking] = useState(false);
@@ -145,16 +170,29 @@ function App() {
     audioActions.playBgm('lobby');
   };
 
+  // 游戏模式选择
+  const handleOpenModeSelect = useCallback(() => {
+    setGameState('MODE_SELECT');
+  }, []);
+
+  const handleSelectMode = useCallback((mode: GameMode) => {
+    setGameMode(mode);
+    setGameState('LOBBY');
+  }, []);
+
   const handleStartDuel = useCallback(() => {
+    if (!selectedDeck) {
+      alert('请先选择或创建牌组！');
+      return;
+    }
     if (balance < selectedBet) {
       alert('法力点数不足！');
       return;
     }
 
-    gameLoopActions.startDuel();
-    setGameState('DUEL');
-    audioActions.playBgm('battle');
-  }, [balance, selectedBet, gameLoopActions, audioActions]);
+    // 先进入匹配动画状态
+    setGameState('MATCHMAKING');
+  }, [selectedDeck, balance, selectedBet]);
 
   const handlePlayCard = useCallback((spellId: SpellType) => {
     const success = gameLoopActions.playCard(spellId);
@@ -169,6 +207,56 @@ function App() {
     setGameState('LOBBY');
     audioActions.playBgm('lobby');
   }, [gameLoopActions, audioActions]);
+
+  // 牌组管理
+  const handleOpenDeckBuilder = useCallback(() => {
+    setGameState('DECK_BUILDER');
+  }, []);
+
+  const handleOpenTavernMode = useCallback(() => {
+    setGameState('TAVERN');
+  }, []);
+
+  const handleStartTavernDuel = useCallback((aiProfile: any) => {
+    if (!selectedDeck) {
+      alert('请先选择或创建牌组！');
+      return;
+    }
+
+    // 先进入匹配动画状态
+    setGameState('MATCHMAKING');
+    setPendingTavernDuel(aiProfile);
+  }, [selectedDeck]);
+
+  const handleBackToLobby = useCallback(() => {
+    setGameState('LOBBY');
+  }, []);
+
+  const handleSaveDeck = useCallback((deck: Deck) => {
+    const existingIndex = decks.findIndex(d => d.id === deck.id);
+    if (existingIndex >= 0) {
+      const newDecks = [...decks];
+      newDecks[existingIndex] = deck;
+      setDecks(newDecks);
+    } else {
+      setDecks([...decks, deck]);
+    }
+    setSelectedDeck(deck);
+    setGameState('LOBBY');
+  }, [decks]);
+
+  const handleMatchmakingComplete = useCallback(() => {
+    if (pendingTavernDuel) {
+      // 开始酒馆决斗
+      gameLoopActions.startTavernDuel(selectedDeck!.cards, pendingTavernDuel, gameMode);
+      setPendingTavernDuel(null);
+    } else {
+      // 开始普通决斗
+      gameLoopActions.startDuel(selectedDeck!.cards, gameMode);
+    }
+    setGameState('DUEL');
+    audioActions.playBgm('battle');
+  }, [pendingTavernDuel, selectedDeck, gameMode, gameLoopActions, audioActions]);
 
   const handleGameEnd = async (result: 'WIN' | 'LOSS') => {
     const lastPlayerSpell = gameLoopState.playerCard || 'fire';
@@ -263,6 +351,45 @@ function App() {
             isMuted={audioState.isMuted}
             onToggleMute={audioActions.toggleMute}
             isLoading={isLoading}
+            decks={decks}
+            selectedDeck={selectedDeck}
+            onOpenDeckBuilder={handleOpenDeckBuilder}
+            onSelectDeck={handleSelectDeck}
+            onOpenTavernMode={handleOpenTavernMode}
+            gameMode={gameMode}
+            onOpenModeSelect={handleOpenModeSelect}
+          />
+        )}
+
+        {gameState === 'MODE_SELECT' && (
+          <ModeSelect
+            onSelectMode={handleSelectMode}
+            onBackToLobby={handleBackToLobby}
+          />
+        )}
+
+        {gameState === 'TAVERN' && (
+          <TavernMode
+            onStartTavernDuel={handleStartTavernDuel}
+            onBackToLobby={handleBackToLobby}
+            playerStats={{ tavernWins: 0, tavernLosses: 0, bestStreak: 0 }}
+          />
+        )}
+
+        {gameState === 'MATCHMAKING' && (
+          <MatchmakingAnimation
+            onComplete={handleMatchmakingComplete}
+            isTavernMode={!!pendingTavernDuel}
+          />
+        )}
+
+        {gameState === 'DECK_BUILDER' && (
+          <DeckBuilder
+            onBack={() => setGameState('LOBBY')}
+            onSaveDeck={handleSaveDeck}
+            existingDecks={decks}
+            selectedDeck={selectedDeck}
+            gameMode={gameMode}
           />
         )}
 
@@ -277,10 +404,6 @@ function App() {
             effectMessages={gameLoopState.effectMessages}
             selectedBet={selectedBet}
             onPlayCard={handlePlayCard}
-            onDraft={(id) => {
-              gameLoopActions.draftCard(id);
-              audioActions.playSfx('button');
-            }}
             onPass={() => {
               gameLoopActions.passTurn();
               audioActions.playSfx('button');
@@ -290,6 +413,7 @@ function App() {
             onToggleMute={audioActions.toggleMute}
             isPlayerShaking={isPlayerShaking}
             isOpponentShaking={isOpponentShaking}
+            isTavernMode={gameLoopState.duelState.isTavernMode}
           />
         )}
       </main>
@@ -304,6 +428,7 @@ function App() {
           bet={selectedBet}
           isCrit={finalResult.isCrit}
           onClose={handleResetGame}
+          isTavernMode={gameLoopState.duelState?.isTavernMode}
         />
       )}
     </div>

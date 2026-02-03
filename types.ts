@@ -4,9 +4,17 @@
  * 全新设计：支持法力系统、手牌管理、状态效果的卡牌对战游戏
  */
 
-// ============ 基础类型 ============
+// ============ AI对手 ============
 
-export type SpellType = "fire" | "vine" | "ice" | "thunder" | "rock" | "skip";
+export interface AIProfile {
+  name: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  description: string;
+  avatar: string;
+  strategy: 'aggressive' | 'defensive' | 'balanced';
+}
+
+export type SpellType = "fire" | "vine" | "ice" | "thunder" | "rock" | "fire2" | "vine2" | "ice2" | "thunder2" | "rock2" | "fire3" | "vine3" | "ice3" | "thunder3" | "rock3" | "fire4" | "vine4" | "ice4" | "thunder4" | "rock4" | "fire5" | "vine5" | "ice5" | "thunder5" | "rock5" | "healing" | "aoe" | "draw" | "silence" | "hero_fire" | "hero_vine" | "hero_ice" | "hero_thunder" | "hero_rock" | "skip";
 
 export type Rarity = "common" | "uncommon" | "rare" | "mythic";
 
@@ -18,7 +26,23 @@ export type Rarity = "common" | "uncommon" | "rare" | "mythic";
  * - charge: 蓄力 - 连续使用伤害翻倍
  * - fortify: 坚韧 - 减少受到的伤害
  */
-export type Mechanic = "burn" | "tangle" | "freeze" | "charge" | "fortify" | "skip";
+export type Mechanic = "burn" | "tangle" | "freeze" | "charge" | "fortify" | "heal" | "aoe" | "draw" | "silence" | "skip";
+
+/**
+ * 卡牌版本/扩展包
+ * - core: 核心卡牌 (永远可用)
+ * - classic: 经典扩展 (标准模式可用)
+ * - tournament: 竞技场扩展 (当前标准)
+ * - legacy: 遗产扩展 (狂野模式可用)
+ */
+export type CardSet = "core" | "classic" | "tournament" | "legacy";
+
+/**
+ * 游戏模式
+ * - standard: 标准模式 (只包含当前和经典卡牌)
+ * - wild: 狂野模式 (包含所有卡牌)
+ */
+export type GameMode = "standard" | "wild";
 
 // ============ 卡牌定义 ============
 
@@ -43,6 +67,7 @@ export interface Spell {
   // 卡牌属性
   rarity: Rarity;
   mechanic: Mechanic;
+  cardSet: CardSet; // 新增：卡牌所属扩展包
 
   // 描述文本
   description: string;
@@ -51,7 +76,7 @@ export interface Spell {
 
 // ============ 游戏状态 ============
 
-export type GameState = "LOBBY" | "DUEL" | "RESULT";
+export type GameState = "LOBBY" | "MODE_SELECT" | "DECK_BUILDER" | "DUEL" | "RESULT" | "TAVERN" | "MATCHMAKING";
 
 export type DuelPhase =
   | "DRAFT_PHASE" // 选牌阶段
@@ -86,7 +111,6 @@ export interface DuelState {
   playerHand: SpellType[];
   playerDeck: SpellType[];
   opponentHandSize: number;
-  draftOptions: SpellType[]; // 新增：选牌选项
 
   // 状态效果
   playerEffects: StatusEffect[];
@@ -102,6 +126,13 @@ export interface DuelState {
 
   // 当前回合信息
   roundNumber: number;
+
+  // 酒馆模式
+  isTavernMode?: boolean;
+  aiProfile?: AIProfile;
+
+  // 英雄技能系统
+  heroSkillsUsed?: boolean; // 本回合是否已使用英雄技能
 }
 
 // ============ 回合结果 ============
@@ -131,14 +162,22 @@ export interface RoundResult {
   newOpponentEffects: StatusEffect[];
 }
 
+// ============ 牌组系统 ============
+
+export interface Deck {
+  id: string;
+  name: string;
+  cards: SpellType[];
+  createdAt: number;
+  lastUsed: number;
+}
+
 // ============ 玩家数据 ============
 
-export interface PlayerStats {
-  address: string;
-  wins: number;
-  losses: number;
-  draws: number;
-  totalEarnings: number;
+export interface PlayerData {
+  selectedDeck: Deck | null;
+  decks: Deck[];
+  stats: PlayerStats;
 }
 
 export interface BattleRecord {

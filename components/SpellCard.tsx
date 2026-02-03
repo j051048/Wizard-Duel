@@ -82,6 +82,50 @@ export const SpellCard: React.FC<SpellCardProps> = ({
   const canPlay = isAffordable && !disabled;
   const mechanicIcon = getMechanicIcon(spell.mechanic);
 
+  // 稀有度样式
+  const getRarityStyles = (rarity: string) => {
+    switch (rarity) {
+      case 'mythic':
+        return {
+          borderGlow: '0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 215, 0, 0.4)',
+          particleColor: 'rgba(255, 215, 0, 0.6)',
+          borderClass: 'border-yellow-400',
+          glowClass: 'shadow-yellow-400/50',
+          backgroundGradient: 'bg-gradient-to-br from-yellow-900/20 to-orange-900/20',
+          particles: true
+        };
+      case 'rare':
+        return {
+          borderGlow: '0 0 15px rgba(0, 191, 255, 0.6)',
+          particleColor: 'rgba(0, 191, 255, 0.4)',
+          borderClass: 'border-blue-400',
+          glowClass: 'shadow-blue-400/40',
+          backgroundGradient: 'bg-gradient-to-br from-blue-900/20 to-cyan-900/20',
+          particles: true
+        };
+      case 'uncommon':
+        return {
+          borderGlow: '0 0 10px rgba(34, 197, 94, 0.5)',
+          particleColor: 'rgba(34, 197, 94, 0.3)',
+          borderClass: 'border-green-400',
+          glowClass: 'shadow-green-400/30',
+          backgroundGradient: 'bg-gradient-to-br from-green-900/20 to-emerald-900/20',
+          particles: false
+        };
+      default: // common
+        return {
+          borderGlow: 'none',
+          particleColor: 'rgba(255, 255, 255, 0.2)',
+          borderClass: 'border-gray-500',
+          glowClass: 'shadow-gray-500/20',
+          backgroundGradient: 'bg-gradient-to-br from-gray-900/10 to-slate-900/10',
+          particles: false
+        };
+    }
+  };
+
+  const rarityStyles = getRarityStyles(spell.rarity);
+
   return (
     <button
       onClick={canPlay ? onClick : undefined}
@@ -90,20 +134,20 @@ export const SpellCard: React.FC<SpellCardProps> = ({
       onMouseLeave={() => setIsHovered(false)}
       style={{
         boxShadow: isSelected 
-          ? `0 0 30px ${spell.shadowColor}, 0 0 60px ${spell.shadowColor}40` 
+          ? `${rarityStyles.borderGlow}, 0 0 60px ${spell.shadowColor}40` 
           : isHovered && canPlay 
-            ? `0 0 20px ${spell.shadowColor}80, 0 8px 25px rgba(0,0,0,0.5)` 
-            : '0 4px 15px rgba(0,0,0,0.3)',
+            ? `${rarityStyles.borderGlow}, 0 8px 25px rgba(0,0,0,0.5)` 
+            : `0 4px 15px rgba(0,0,0,0.3), ${rarityStyles.borderGlow}`,
         transform: isHovered && canPlay ? 'translateY(-8px) scale(1.05)' : 'none',
       }}
       className={`
         relative group flex flex-col items-center justify-between rounded-xl transition-all duration-300
-        border-2 overflow-hidden
-        ${isSmall ? 'w-20 h-28 p-2' : 'w-32 h-48 p-2.5 sm:w-36 sm:h-52'}
+        border-2 overflow-hidden touch-manipulation
+        ${isSmall ? 'w-20 h-28 p-2 min-h-[44px]' : 'w-32 h-48 p-2.5 sm:w-36 sm:h-52 min-h-[44px]'}
         ${!canPlay ? 'opacity-50 cursor-not-allowed grayscale-[0.7]' : 'cursor-pointer'}
         ${isSelected 
-          ? `bg-slate-900 ${spell.borderColor} scale-105 z-20` 
-          : `bg-gradient-to-b from-slate-800 to-slate-900 border-slate-600 ${canPlay ? 'hover:border-white/60' : ''}`}
+          ? `bg-slate-900 ${rarityStyles.borderClass} scale-105 z-20 ${rarityStyles.glowClass}` 
+          : `bg-gradient-to-b from-slate-800 to-slate-900 ${rarityStyles.borderClass} ${canPlay ? 'hover:border-white/60' : ''}`}
       `}
     >
       {/* 卡牌发光边框（悬停时） */}
@@ -115,6 +159,28 @@ export const SpellCard: React.FC<SpellCardProps> = ({
           `}
           style={{ background: spell.shadowColor }}
         />
+      )}
+
+      {/* Rarity-based background gradient */}
+      <div className={`absolute inset-0 ${rarityStyles.backgroundGradient} opacity-20`} />
+
+      {/* Floating particles for rare+ cards */}
+      {rarityStyles.particles && (
+        <div className="absolute inset-0 overflow-hidden rounded-xl pointer-events-none">
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={i}
+              className={`absolute w-1 h-1 rounded-full animate-pulse`}
+              style={{
+                backgroundColor: rarityStyles.particleColor,
+                left: `${20 + i * 15}%`,
+                top: `${10 + (i % 3) * 30}%`,
+                animationDelay: `${i * 0.3}s`,
+                animationDuration: '2s',
+              }}
+            />
+          ))}
+        </div>
       )}
 
       {/* Mana Cost - 左上角（增大） */}
@@ -214,7 +280,10 @@ export const SpellCard: React.FC<SpellCardProps> = ({
         <h3 className={`
           font-wizard font-bold uppercase tracking-wider truncate leading-tight
           ${isSmall ? 'text-[9px]' : 'text-[11px] sm:text-xs'}
-          ${spell.color}
+          ${spell.rarity === 'mythic' ? 'text-yellow-300' : 
+            spell.rarity === 'rare' ? 'text-blue-300' : 
+            spell.rarity === 'uncommon' ? 'text-green-300' : 
+            'text-gray-300'}
           ${isHovered && canPlay ? 'text-white' : ''}
           transition-colors duration-300
         `}>
@@ -227,7 +296,10 @@ export const SpellCard: React.FC<SpellCardProps> = ({
             flex items-center justify-center gap-1.5 
             text-[9px] font-bold uppercase tracking-wide
             px-2.5 py-1 rounded-full bg-black/50 border border-white/15
-            ${spell.color}
+            ${spell.rarity === 'mythic' ? 'text-yellow-300 border-yellow-400/30' : 
+              spell.rarity === 'rare' ? 'text-blue-300 border-blue-400/30' : 
+              spell.rarity === 'uncommon' ? 'text-green-300 border-green-400/30' : 
+              'text-gray-300 border-gray-400/30'}
             ${isHovered && canPlay ? 'bg-black/70 border-white/30' : ''}
             transition-all duration-300
           `}>

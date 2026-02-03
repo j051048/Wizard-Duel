@@ -6,11 +6,11 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { 
-  SpellType, DuelPhase, DuelState, RoundResult 
+  SpellType, DuelPhase, DuelState, RoundResult, GameMode
 } from '../types';
 import { 
   createInitialDuelState, executeSpell, executeAITurn,
-  prepareNextTurn, generateDraftOptions
+  prepareNextTurn, generateDraftOptions, drawCard
 } from '../services/gameLogic';
 
 // 阶段持续时间 (毫秒)
@@ -29,9 +29,9 @@ export interface GameLoopState {
 }
 
 export interface GameLoopActions {
-  startDuel: () => void;
+  startDuel: (deck?: SpellType[], gameMode?: GameMode) => void;
+  startTavernDuel: (deck: SpellType[], aiProfile: any, gameMode?: GameMode) => void;
   playCard: (spellId: SpellType) => boolean;
-  draftCard: (spellId: SpellType) => void;
   passTurn: () => void;
   reset: () => void;
 }
@@ -63,20 +63,20 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
     // 1. 准备下一回合状态 (Mana等)
     let nextState = prepareNextTurn(currentState);
     
-    // 2. 生成 Draft 选项
-    const drafts = generateDraftOptions(3);
-    nextState = { ...nextState, draftOptions: drafts };
+    // 2. 抽牌
+    const { newDeck, newHand, drawnCard } = drawCard(nextState.playerDeck, nextState.playerHand);
+    nextState = { ...nextState, playerDeck: newDeck, playerHand: newHand };
     
     setDuelState(nextState);
-    setPhase('DRAFT_PHASE');
-    setEffectMessages(['请选择一张卡牌加入手牌']);
+    setPhase('PLAYER_TURN');
+    setEffectMessages(drawnCard ? [`抽到: ${drawnCard}`] : ['牌库已空']);
     setPlayerCard(null);
     setOpponentCard(null);
   }, []);
 
   // 开始对战
-  const startDuel = useCallback(() => {
-    let initialState = createInitialDuelState();
+  const startDuel = useCallback((deck?: SpellType[], gameMode: GameMode = 'standard') => {
+    let initialState = createInitialDuelState(deck || [], gameMode);
     // 初始状态下 roundNumber = 0，我们需要直接进入第一回合 Draft
     startNewRound(initialState);
     
@@ -85,22 +85,17 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
     setResultText('');
   }, [startNewRound]);
 
-  // 玩家选牌 (Draft)
-  const draftCard = useCallback((spellId: SpellType) => {
-    if (phase !== 'DRAFT_PHASE' || !duelState) return;
-    
-    setDuelState(prev => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        playerHand: [...prev.playerHand, spellId],
-        draftOptions: [] // Clear draft options
-      };
-    });
-    
-    setPhase('PLAYER_TURN');
-    setEffectMessages(['你的回合：请出牌或点击右下角跳过']);
-  }, [phase, duelState]);
+  // 开始酒馆模式对战
+  const startTavernDuel = useCallback((deck: SpellType[], aiProfile: any, gameMode: GameMode = 'standard') => {
+    const { createTavernDuelState } = require('../services/gameLogic');
+    let initialState = createTavernDuelState(deck, aiProfile, gameMode);
+    // 初始状态下 roundNumber = 0，我们需要直接进入第一回合 Draft
+    startNewRound(initialState);
+
+    setIsGameOver(false);
+    setGameResult(null);
+    setResultText('');
+  }, [startNewRound]);
 
   // 玩家出牌 (Multi-Play)
   const playCard = useCallback((spellId: SpellType): boolean => {
@@ -208,6 +203,7 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
     },
     {
       startDuel,
+      startTavernDuel,
       playCard,
       draftCard,
       passTurn,

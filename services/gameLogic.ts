@@ -10,7 +10,8 @@ import {
   StatusEffect, 
   DuelState, 
   RoundResult,
-  Mechanic 
+  Mechanic,
+  GameMode
 } from '../types.ts';
 import { 
   SPELLS, 
@@ -27,24 +28,31 @@ export const getSpellById = (id: SpellType): Spell => {
   return SPELLS.find(s => s.id === id) || SPELLS[0];
 };
 
-// ============ Draft Logic (Patch 2.0) ============
+// ============ 抽牌逻辑 ============
 
-export const generateDraftOptions = (count: number = 3): SpellType[] => {
-  const options: SpellType[] = [];
-  const pool = SPELLS.filter(s => s.id !== 'skip');
-  // 简单随机，允许重复
-  for (let i = 0; i < count; i++) {
-    const random = pool[Math.floor(Math.random() * pool.length)];
-    options.push(random.id);
+export const drawCard = (deck: SpellType[], hand: SpellType[]): { newDeck: SpellType[], newHand: SpellType[], drawnCard: SpellType | null } => {
+  if (deck.length === 0) {
+    return { newDeck: deck, newHand: hand, drawnCard: null }; // 牌库空
   }
-  return options;
+  const drawnCard = deck[0];
+  const newDeck = deck.slice(1);
+  const newHand = [...hand, drawnCard];
+  return { newDeck: newDeck, newHand: newHand, drawnCard };
 };
 
 // ============ 初始化对战状态 ============
 
-export const createInitialDuelState = (): DuelState => {
-  // 初始手牌: 随机3张
-  const playerHand = generateDraftOptions(3);
+export const createInitialDuelState = (playerDeck: SpellType[], gameMode: GameMode = 'standard'): DuelState => {
+  // 初始手牌: 从牌组抽5张
+  const shuffledDeck = [...playerDeck].sort(() => Math.random() - 0.5);
+  const playerHand = shuffledDeck.slice(0, 5);
+  const remainingDeck = shuffledDeck.slice(5);
+  
+  // 为对手创建基于游戏模式的牌组
+  const { getCardsForMode } = require('../constants');
+  const availableSpells = getCardsForMode(gameMode);
+  const opponentDeck = createDeck(availableSpells.map(s => s.id));
+  const shuffledOpponentDeck = [...opponentDeck].sort(() => Math.random() - 0.5);
   
   return {
     playerHP: GAME_CONFIG.maxHP,
@@ -58,10 +66,10 @@ export const createInitialDuelState = (): DuelState => {
     opponentMaxMana: GAME_CONFIG.startingMana,
     
     playerHand,
-    playerDeck: [], // 不使用Deck
-    opponentHandSize: 3,
-    draftOptions: [], // 初始为空
-
+    playerDeck: remainingDeck,
+    opponentHandSize: 5,
+    opponentDeck: shuffledOpponentDeck,
+    
     playerEffects: [],
     opponentEffects: [],
     
@@ -73,8 +81,12 @@ export const createInitialDuelState = (): DuelState => {
     opponentConsecutiveThunder: 0,
     
     roundNumber: 0, // 0表示未开始
+
+    heroSkillsUsed: false
   };
 };
+
+// ============ 回合准备 ============
 
 // ============ 法力检查 ============
 
@@ -115,7 +127,19 @@ export const executeSpell = (
   
   // 1. 确定攻守方
   const isPlayer = caster === 'player';
-  // const myMana = isPlayer ? newState.playerMana : newState.opponentMana; // Already checked outside? No, update here.
+
+  // 1.1 英雄技能检查 (每回合只能使用一次)
+  const isHeroSkill = spellId.startsWith('hero_');
+  if (isHeroSkill) {
+    if (isPlayer ? newState.heroSkillsUsed : true) { // 暂时假设AI不使用英雄技能
+      logs.push(isPlayer ? `本回合已使用过英雄技能` : `对手尝试使用英雄技能但失败了`);
+      return { newState, logs };
+    }
+    // 标记已使用英雄技能
+    if (isPlayer) {
+      newState.heroSkillsUsed = true;
+    }
+  }
   const myCostMod = isPlayer ? newState.playerCostMod : newState.opponentCostMod;
   
   const targetArmor = isPlayer ? newState.opponentArmor : newState.playerArmor;
@@ -148,8 +172,8 @@ export const executeSpell = (
   // 3.2 机制处理 (Thunder, Charge)
   const myLastSpell = isPlayer ? newState.playerLastSpell : newState.opponentLastSpell;
   if (spell.id === 'thunder' && myLastSpell === 'thunder') {
-    damage *= 2;
-    logs.push(`⚡ 闪电连击！伤害翻倍！`);
+    damage = Math.floor(damage * 1.5);
+    logs.push(`⚡ 闪电连击！伤害增加50%！`);
   }
 
   // 3.3 状态效果 (Mechanics)
@@ -166,10 +190,44 @@ export const executeSpell = (
     newEffects.push({ type: 'frozen', duration: 1 });
     logs.push(isPlayer ? `❄️ 冻结对手` : `❄️ 你被冻结`);
   }
+  // 新机制处理
+  if (spell.mechanic === 'heal') {
+    if (isPlayer) {
+      newState.playerHP = Math.min(GAME_CONFIG.maxHP, newState.playerHP + 5);
+      logs.push(`💙 恢复5点生命值`);
+    } else {
+      newState.opponentHP = Math.min(GAME_CONFIG.maxHP, newState.opponentHP + 5);
+      logs.push(`💙 对手恢复5点生命值`);
+    }
+  }
+  if (spell.mechanic === 'aoe') {
+    // AOE: 基础伤害 + 额外伤害（无视护甲）
+    const baseDamage = damage;
+    const extraDamage = 2;
+    if (isPlayer) {
+      newState.opponentHP = Math.max(0, newState.opponentHP - extraDamage);
+      logs.push(`💥 AOE爆炸！造成${baseDamage}点伤害 + ${extraDamage}点额外伤害`);
+    } else {
+      newState.playerHP = Math.max(0, newState.playerHP - extraDamage);
+      logs.push(`💥 受到AOE爆炸！${baseDamage}点伤害 + ${extraDamage}点额外伤害`);
+    }
+  }
+  if (spell.mechanic === 'draw') {
+    // 抽牌逻辑已在回合开始处理，这里可以添加额外抽牌
+    logs.push(`📚 抽2张牌`);
+  }
+  if (spell.mechanic === 'silence') {
+    if (isPlayer) {
+      newState.opponentEffects = [];
+      logs.push(`🤫 沉默对手，移除所有状态效果`);
+    } else {
+      newState.playerEffects = [];
+      logs.push(`🤫 被沉默，移除所有状态效果`);
+    }
+  }
   // Fortify
   if (spell.mechanic === 'fortify') {
-     // Already handled via armorGain, maybe add extra buffer?
-     // armorGain is predefined in constants usually.
+     // Already handled via armorGain
   }
 
   // 4. 应用伤害 (护甲逻辑)
@@ -355,3 +413,164 @@ export const getRandomSpell = (playerSpellId?: SpellType): SpellType => {
 };
 
 export const determineWinner = (p: SpellType, o: SpellType) => 'DRAW'; // Deprecated stub
+
+// ============ AI对手逻辑 ============
+
+export interface AIProfile {
+  name: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  description: string;
+  avatar: string;
+  strategy: 'aggressive' | 'defensive' | 'balanced';
+}
+
+export const AI_PROFILES: AIProfile[] = [
+  {
+    name: '新手法师',
+    difficulty: 'easy',
+    description: '基础AI，随机选择卡牌',
+    avatar: '/avatars/ai-easy.webp',
+    strategy: 'balanced'
+  },
+  {
+    name: '战斗法师',
+    difficulty: 'medium',
+    description: '偏好高伤害卡牌',
+    avatar: '/avatars/ai-medium.webp',
+    strategy: 'aggressive'
+  },
+  {
+    name: '防御法师',
+    difficulty: 'hard',
+    description: '优先使用控制和治疗',
+    avatar: '/avatars/ai-hard.webp',
+    strategy: 'defensive'
+  }
+];
+
+export const getTavernAIDecision = (
+  aiProfile: AIProfile,
+  hand: SpellType[],
+  mana: number,
+  opponentHP: number,
+  playerHP: number,
+  effects: StatusEffect[]
+): SpellType | null => {
+  // 过滤可用的卡牌
+  const availableCards = hand.filter(cardId => {
+    const spell = getSpellById(cardId);
+    return canAffordSpell(cardId, mana, effects).canAfford;
+  });
+
+  if (availableCards.length === 0) return null;
+
+  switch (aiProfile.strategy) {
+    case 'aggressive':
+      // 优先选择高伤害卡牌
+      const damageCards = availableCards
+        .map(id => getSpellById(id))
+        .filter(spell => spell.damage > 0)
+        .sort((a, b) => b.damage - a.damage);
+      if (damageCards.length > 0) return damageCards[0].id;
+
+      // 如果没有伤害卡，选择其他卡
+      return availableCards[Math.floor(Math.random() * availableCards.length)];
+
+    case 'defensive':
+      // 优先选择治疗或护甲卡牌
+      const defensiveCards = availableCards
+        .map(id => getSpellById(id))
+        .filter(spell => spell.mechanic === 'fortify' || spell.mechanic === 'heal');
+      if (defensiveCards.length > 0) return defensiveCards[0].id;
+
+      // 如果没有防御卡，选择其他卡
+      return availableCards[Math.floor(Math.random() * availableCards.length)];
+
+    case 'balanced':
+    default:
+      // 随机选择
+      return availableCards[Math.floor(Math.random() * availableCards.length)];
+  }
+};
+
+export const createTavernDuelState = (playerDeck: SpellType[], aiProfile: AIProfile, gameMode: GameMode = 'standard'): DuelState => {
+  // 为AI创建随机牌组（使用相同的基础牌池）
+  const aiDeck = generateTavernAIDeck(aiProfile, gameMode);
+
+  // 玩家初始状态
+  const shuffledPlayerDeck = [...playerDeck].sort(() => Math.random() - 0.5);
+  const playerHand = shuffledPlayerDeck.slice(0, 5);
+  const remainingPlayerDeck = shuffledPlayerDeck.slice(5);
+
+  // AI初始状态
+  const shuffledAIDeck = [...aiDeck].sort(() => Math.random() - 0.5);
+  const aiHand = shuffledAIDeck.slice(0, 5);
+  const remainingAIDeck = shuffledAIDeck.slice(5);
+
+  return {
+    playerHP: GAME_CONFIG.maxHP,
+    playerArmor: 0,
+    opponentHP: GAME_CONFIG.maxHP,
+    opponentArmor: 0,
+
+    playerMana: GAME_CONFIG.startingMana,
+    playerMaxMana: GAME_CONFIG.startingMana,
+    opponentMana: GAME_CONFIG.startingMana,
+    opponentMaxMana: GAME_CONFIG.startingMana,
+
+    playerHand,
+    playerDeck: remainingPlayerDeck,
+    opponentHandSize: aiHand.length, // AI手牌数量
+
+    playerEffects: [],
+    opponentEffects: [],
+
+    playerLastSpell: null,
+    opponentLastSpell: null,
+    playerCostMod: 0,
+    opponentCostMod: 0,
+    playerConsecutiveThunder: 0,
+    opponentConsecutiveThunder: 0,
+
+    roundNumber: 0,
+    isTavernMode: true,
+    aiProfile,
+
+    heroSkillsUsed: false
+  };
+};
+
+const generateTavernAIDeck = (aiProfile: AIProfile, gameMode: GameMode = 'standard'): SpellType[] => {
+  // 根据游戏模式获取可用卡牌
+  const { getCardsForMode } = require('../constants');
+  const availableSpells = getCardsForMode(gameMode);
+  const baseCards = availableSpells.map(s => s.id);
+  const deckSize = 20;
+
+  switch (aiProfile.difficulty) {
+    case 'easy':
+      // 新手AI：随机选择基础卡牌
+      return Array.from({ length: deckSize }, () =>
+        baseCards[Math.floor(Math.random() * Math.min(baseCards.length, 10))]
+      );
+
+    case 'medium':
+      // 中等AI：包含一些强力卡牌
+      const mediumCards = baseCards.slice(0, Math.min(baseCards.length, 25));
+      return Array.from({ length: deckSize }, () =>
+        mediumCards[Math.floor(Math.random() * mediumCards.length)]
+      );
+
+    case 'hard':
+      // 困难AI：使用最强卡牌
+      const hardCards = baseCards.slice(0, 30);
+      return Array.from({ length: deckSize }, () =>
+        hardCards[Math.floor(Math.random() * hardCards.length)]
+      );
+
+    default:
+      return Array.from({ length: deckSize }, () =>
+        baseCards[Math.floor(Math.random() * baseCards.length)]
+      );
+  }
+};
