@@ -87,7 +87,7 @@ export type DuelPhase =
 // ============ 状态效果 ============
 
 export interface StatusEffect {
-  type: "burn" | "tangle" | "frozen";
+  type: "burn" | "tangle" | "frozen" | "thawed";
   duration: number; // 剩余回合数
   value?: number; // 效果数值（如burn伤害）
 }
@@ -124,6 +124,10 @@ export interface DuelState {
   opponentCostMod: number; // 新增：费用修正
   playerConsecutiveThunder: number;
   opponentConsecutiveThunder: number;
+
+  // 疲劳系统
+  playerFatigue: number;
+  opponentFatigue: number;
 
   // 当前回合信息
   roundNumber: number;

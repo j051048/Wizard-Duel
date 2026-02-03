@@ -9,7 +9,7 @@ import {
 } from '../types';
 import { 
   SPELLS, GAME_CONFIG, createDeck, getCardsForMode,
-  CRIT_CHANCE, WIN_MULTIPLIER, CRIT_MULTIPLIER
+  CRIT_CHANCE, WIN_MULTIPLIER, CRIT_MULTIPLIER, shuffleArray
 } from '../constants';
 
 // ============ 卡牌查询 ============
@@ -20,28 +20,47 @@ export const getSpellById = (id: SpellType): Spell => {
 
 // ============ 抽牌逻辑 ============
 
-export const drawCard = (deck: SpellType[], hand: SpellType[]): { newDeck: SpellType[], newHand: SpellType[], drawnCard: SpellType | null } => {
+export const drawCard = (deck: SpellType[], hand: SpellType[], fatigue: number = 0): { 
+  newDeck: SpellType[], 
+  newHand: SpellType[], 
+  drawnCard: SpellType | null,
+  fatigueDamage: number,
+  newFatigue: number
+} => {
   if (deck.length === 0) {
-    return { newDeck: deck, newHand: hand, drawnCard: null }; // 牌库空
+    const nextFatigue = fatigue + 1;
+    return { 
+      newDeck: deck, 
+      newHand: hand, 
+      drawnCard: null, 
+      fatigueDamage: nextFatigue, 
+      newFatigue: nextFatigue 
+    };
   }
   const drawnCard = deck[0];
   const newDeck = deck.slice(1);
-  const newHand = [...hand, drawnCard];
-  return { newDeck: newDeck, newHand: newHand, drawnCard };
+  const newHand = [...hand, drawnCard].slice(0, 10); // 手牌上限10
+  return { 
+    newDeck, 
+    newHand, 
+    drawnCard, 
+    fatigueDamage: 0, 
+    newFatigue: fatigue 
+  };
 };
 
 // ============ 初始化对战状态 ============
 
 export const createInitialDuelState = (playerDeck: SpellType[], gameMode: GameMode = 'standard'): DuelState => {
   // 初始手牌: 从牌组抽5张
-  const shuffledDeck = [...playerDeck].sort(() => Math.random() - 0.5);
+  const shuffledDeck = shuffleArray(playerDeck);
   const playerHand = shuffledDeck.slice(0, 5);
   const remainingDeck = shuffledDeck.slice(5);
   
   // 为对手创建基于游戏模式的牌组
   const availableSpells = getCardsForMode(gameMode);
   const opponentDeck = createDeck(availableSpells.map(s => s.id));
-  const shuffledOpponentDeck = [...opponentDeck].sort(() => Math.random() - 0.5);
+  const shuffledOpponentDeck = shuffleArray(opponentDeck);
   
   return {
     playerHP: GAME_CONFIG.maxHP,
@@ -69,8 +88,9 @@ export const createInitialDuelState = (playerDeck: SpellType[], gameMode: GameMo
     playerConsecutiveThunder: 0,
     opponentConsecutiveThunder: 0,
     
-    roundNumber: 0, // 0表示未开始
-
+    roundNumber: 0, 
+    playerFatigue: 0,
+    opponentFatigue: 0,
     heroSkillsUsed: false
   };
 };
@@ -134,17 +154,30 @@ export const executeSpell = (
   const targetArmor = isPlayer ? newState.opponentArmor : newState.playerArmor;
   const targetLastSpell = isPlayer ? newState.opponentLastSpell : newState.playerLastSpell;
 
-  // 2. 扣除费用 (Skip不扣费)
-  if (spellId !== 'skip') {
-    const cost = Math.max(0, spell.manaCost + myCostMod);
-    if (isPlayer) newState.playerMana = Math.max(0, newState.playerMana - cost);
-    else newState.opponentMana = Math.max(0, newState.opponentMana - cost);
-  } else {
-    // Skip 牌逻辑：不做任何事，或者回蓝？通过“Pass”按钮实现回蓝/Hoard。
-    // 如果用户打出 'skip' 卡（如果有的话），只是空过。
+  // 1. 特殊校验：跳过牌不做消耗检查
+  if (spell.id === 'skip') {
     logs.push(isPlayer ? `你跳过了出牌` : `对手跳过了出牌`);
+    // Skip 也要清除连击计数，避免逻辑死循环
+    if (isPlayer) {
+      newState.playerConsecutiveThunder = 0;
+      newState.playerLastSpell = 'skip';
+    } else {
+      newState.opponentConsecutiveThunder = 0;
+      newState.opponentLastSpell = 'skip';
+    }
     return { newState, logs };
   }
+
+  // 2. 法力检查 (Double Check for safety)
+  const affordable = canAffordSpell(spellId, isPlayer ? newState.playerMana : newState.opponentMana, [], isPlayer ? newState.playerCostMod : newState.opponentCostMod);
+  if (!affordable.canAfford) {
+    logs.push(isPlayer ? `❌ 你的能量不足！` : `对手试图非法施放${spell.name}`);
+    return { newState, logs };
+  }
+  
+  const cost = Math.max(0, spell.manaCost + myCostMod);
+  if (isPlayer) newState.playerMana = Math.max(0, newState.playerMana - cost);
+  else newState.opponentMana = Math.max(0, newState.opponentMana - cost);
 
   // 3. 计算伤害与效果
   let damage = spell.damage;
@@ -168,16 +201,28 @@ export const executeSpell = (
   // 3.3 状态效果 (Mechanics)
   const newEffects: StatusEffect[] = [];
   if (spell.mechanic === 'burn') {
-    newEffects.push({ type: 'burn', duration: 2, value: 2 });
-    logs.push(isPlayer ? `🔥 对手被灼烧了` : `🔥 你被灼烧了`);
+    // 限制：最多叠加3层燃烧
+    const currentBurnCount = (isPlayer ? newState.opponentEffects : newState.playerEffects).filter(e => e.type === 'burn').length;
+    if (currentBurnCount < 3) {
+      newEffects.push({ type: 'burn', duration: 2, value: 2 });
+      logs.push(isPlayer ? `🔥 对手被灼烧了` : `🔥 你被灼烧了`);
+    } else {
+      logs.push(`🔥 灼烧层数已满`);
+    }
   }
   if (spell.mechanic === 'tangle') {
     newEffects.push({ type: 'tangle', duration: 1, value: 2 });
     logs.push(isPlayer ? `🌿 缠绕对手` : `🌿 你被缠绕`);
   }
   if (spell.mechanic === 'freeze') {
-    newEffects.push({ type: 'frozen', duration: 1 });
-    logs.push(isPlayer ? `❄️ 冻结对手` : `❄️ 你被冻结`);
+    // 检查是否有冷冻免疫 (thawed)
+    const hasImmunity = (isPlayer ? newState.opponentEffects : newState.playerEffects).some(e => e.type === 'thawed');
+    if (!hasImmunity) {
+      newEffects.push({ type: 'frozen', duration: 1 });
+      logs.push(isPlayer ? `❄️ 冻结对手` : `❄️ 你被冻结`);
+    } else {
+      logs.push(`🛡️ 免疫冻结！`);
+    }
   }
   // 新机制处理
   if (spell.mechanic === 'heal') {
@@ -332,7 +377,8 @@ export const getAISpell = (state: DuelState): SpellType => {
 
 export const prepareNextTurn = (state: DuelState): DuelState => {
   const newState = { ...state };
-  
+  const logs: string[] = [];
+
   // 1. 法力成长与恢复
   newState.playerMaxMana = Math.min(GAME_CONFIG.maxMana, state.playerMaxMana + 1);
   newState.opponentMaxMana = Math.min(GAME_CONFIG.maxMana, state.opponentMaxMana + 1);
@@ -341,19 +387,29 @@ export const prepareNextTurn = (state: DuelState): DuelState => {
   
   // 2. 状态效果结算 (DoT, Duration--)
   let burnDmg = 0;
-  newState.playerEffects = newState.playerEffects.filter(e => {
+  const newPlayerEffects: StatusEffect[] = [];
+  state.playerEffects.forEach(e => {
     if (e.type === 'burn') burnDmg += (e.value || 0);
-    e.duration -= 1;
-    return e.duration > 0; 
+    const nextDur = e.duration - 1;
+    if (nextDur > 0) newPlayerEffects.push({ ...e, duration: nextDur });
+    else if (e.type === 'frozen') {
+      newPlayerEffects.push({ type: 'thawed', duration: 1 });
+    }
   });
+  newState.playerEffects = newPlayerEffects;
   if (burnDmg > 0) newState.playerHP = Math.max(0, newState.playerHP - burnDmg);
 
   let oppBurnDmg = 0;
-  newState.opponentEffects = newState.opponentEffects.filter(e => {
+  const newOpponentEffects: StatusEffect[] = [];
+  state.opponentEffects.forEach(e => {
     if (e.type === 'burn') oppBurnDmg += (e.value || 0);
-    e.duration -= 1;
-    return e.duration > 0;
+    const nextDur = e.duration - 1;
+    if (nextDur > 0) newOpponentEffects.push({ ...e, duration: nextDur });
+    else if (e.type === 'frozen') {
+      newOpponentEffects.push({ type: 'thawed', duration: 1 });
+    }
   });
+  newState.opponentEffects = newOpponentEffects;
   if (oppBurnDmg > 0) newState.opponentHP = Math.max(0, newState.opponentHP - oppBurnDmg);
 
   // 3. 计算费用修正 (Tangle)
@@ -363,10 +419,7 @@ export const prepareNextTurn = (state: DuelState): DuelState => {
   const oppTangle = newState.opponentEffects.find(e => e.type === 'tangle');
   newState.opponentCostMod = oppTangle ? (oppTangle.value || 0) : 0;
 
-  // 4. 对手补牌 (模拟 Draft 1张)
-  newState.opponentHandSize = Math.min(10, newState.opponentHandSize + 1);
-
-  // 5. 回合数++
+  // 4. 回合数++
   newState.roundNumber += 1;
 
   return newState;
@@ -482,12 +535,12 @@ export const createTavernDuelState = (playerDeck: SpellType[], aiProfile: AIProf
   const aiDeck = generateTavernAIDeck(aiProfile, gameMode);
 
   // 玩家初始状态
-  const shuffledPlayerDeck = [...playerDeck].sort(() => Math.random() - 0.5);
+  const shuffledPlayerDeck = shuffleArray(playerDeck);
   const playerHand = shuffledPlayerDeck.slice(0, 5);
   const remainingPlayerDeck = shuffledPlayerDeck.slice(5);
-
+ 
   // AI初始状态
-  const shuffledAIDeck = [...aiDeck].sort(() => Math.random() - 0.5);
+  const shuffledAIDeck = shuffleArray(aiDeck);
   const aiHand = shuffledAIDeck.slice(0, 5);
   const remainingAIDeck = shuffledAIDeck.slice(5);
 
@@ -521,6 +574,8 @@ export const createTavernDuelState = (playerDeck: SpellType[], aiProfile: AIProf
     aiProfile,
     opponentDeck: shuffledAIDeck,
 
+    playerFatigue: 0,
+    opponentFatigue: 0,
     heroSkillsUsed: false
   };
 };

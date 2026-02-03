@@ -10,7 +10,8 @@ import {
 } from '../types';
 import { 
   createInitialDuelState, executeSpell, executeAITurn,
-  prepareNextTurn, drawCard, createTavernDuelState
+  prepareNextTurn, drawCard, createTavernDuelState,
+  canAffordSpell
 } from '../services/gameLogic';
 
 // 阶段持续时间 (毫秒)
@@ -60,16 +61,45 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
 
   // 启动新回合
   const startNewRound = useCallback((currentState: DuelState) => {
-    // 1. 准备下一回合状态 (Mana等)
     let nextState = prepareNextTurn(currentState);
+    const messages: string[] = [];
     
-    // 2. 抽牌
-    const { newDeck, newHand, drawnCard } = drawCard(nextState.playerDeck, nextState.playerHand);
-    nextState = { ...nextState, playerDeck: newDeck, playerHand: newHand };
+    // 2.1 玩家抽牌
+    const pResult = drawCard(nextState.playerDeck, nextState.playerHand, nextState.playerFatigue);
+    nextState.playerDeck = pResult.newDeck;
+    nextState.playerHand = pResult.newHand;
+    nextState.playerFatigue = pResult.newFatigue;
+    
+    if (pResult.fatigueDamage > 0) {
+      nextState.playerHP = Math.max(0, nextState.playerHP - pResult.fatigueDamage);
+      messages.push(`玩家由于疲劳受到 ${pResult.fatigueDamage} 点伤害`);
+    } else if (pResult.drawnCard) {
+      messages.push(`抽到: ${pResult.drawnCard}`);
+    }
+
+    // 2.2 对手抽牌 (模拟 Draft 1张)
+    const oResult = drawCard(nextState.opponentDeck, [], nextState.opponentFatigue);
+    nextState.opponentDeck = oResult.newDeck;
+    nextState.opponentHandSize = Math.min(10, nextState.opponentHandSize + (oResult.drawnCard ? 1 : 0));
+    nextState.opponentFatigue = oResult.newFatigue;
+    
+    if (oResult.fatigueDamage > 0) {
+      nextState.opponentHP = Math.max(0, nextState.opponentHP - oResult.fatigueDamage);
+      messages.push(`对手由于疲劳受到 ${oResult.fatigueDamage} 点伤害`);
+    }
+
+    // 3. 检查疲劳死
+    if (nextState.playerHP <= 0 || nextState.opponentHP <= 0) {
+        setDuelState(nextState);
+        setIsGameOver(true);
+        setGameResult(nextState.playerHP <= 0 ? 'LOSS' : 'WIN');
+        setPhase('ROUND_RESET');
+        return;
+    }
     
     setDuelState(nextState);
     setPhase('PLAYER_TURN');
-    setEffectMessages(drawnCard ? [`抽到: ${drawnCard}`] : ['牌库已空']);
+    setEffectMessages(messages.length > 0 ? messages : ['回合开始']);
     setPlayerCard(null);
     setOpponentCard(null);
   }, []);
@@ -100,7 +130,9 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
   const playCard = useCallback((spellId: SpellType): boolean => {
     if (phase !== 'PLAYER_TURN' || !duelState) return false;
 
-    // 执行法术
+    // 强制能量检查（杜绝脚本漏洞）
+    const affordable = canAffordSpell(spellId, duelState.playerMana, duelState.playerEffects, duelState.playerCostMod);
+    if (!affordable.canAfford) return false;
     // executeSpell 内部已经检查了费用(在UI层也应该检查)，这里假设UI层调用前checked
     // 或者我们直接调用，executeSpell 如果扣减成功则成功。
     // 但 executeSpell 是纯逻辑，不会报错。

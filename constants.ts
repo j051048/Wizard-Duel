@@ -640,11 +640,20 @@ export const CRIT_MULTIPLIER = 1.0;   // 失效
 
 // ============ 辅助函数 ============
 
+export const shuffleArray = <T>(array: T[]): T[] => {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+};
+
 /**
  * 创建初始牌组：每种元素各4张，共20张
  */
 export const createDeck = (baseCards?: SpellType[]): SpellType[] => {
-  const deck: SpellType[] = [];
+  let deck: SpellType[] = [];
   const elements: SpellType[] = baseCards || ['fire', 'vine', 'ice', 'thunder', 'rock'];
   
   if (baseCards) {
@@ -661,13 +670,7 @@ export const createDeck = (baseCards?: SpellType[]): SpellType[] => {
     }
   }
   
-  // Fisher-Yates 洗牌算法
-  for (let i = deck.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [deck[i], deck[j]] = [deck[j], deck[i]];
-  }
-  
-  return deck;
+  return shuffleArray(deck);
 };
 
 /**
