@@ -50,7 +50,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   const playableCards = getPlayableCards(
     duelState.playerHand, 
     duelState.playerMana, 
-    duelState.playerEffects
+    duelState.playerEffects,
+    duelState.playerCostMod
   );
 
   const isRevealPhase = phase === 'REVEAL' || phase === 'DAMAGE_PHASE' || phase === 'EFFECTS_PHASE' || phase === 'ROUND_RESET';

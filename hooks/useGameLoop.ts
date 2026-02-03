@@ -104,7 +104,12 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
   const playCard = useCallback((spellId: SpellType): boolean => {
     if (phase !== 'PLAYER_TURN' || !duelState) return false;
 
-    const affordCheck = canAffordSpell(spellId, duelState.playerMana, duelState.playerEffects);
+    const affordCheck = canAffordSpell(
+      spellId, 
+      duelState.playerMana, 
+      duelState.playerEffects,
+      duelState.playerCostMod
+    );
     if (!affordCheck.canAfford) {
       setEffectMessages([affordCheck.reason || '无法使用此法术']);
       return false;
