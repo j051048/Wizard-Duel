@@ -227,10 +227,13 @@ export interface UserProfile {
 
 // ============ Game Configuration
 export interface GameConfig {
-  initialHandSize: number;
-  maxHandSize: number;
+  maxHP: number;
+  startingMana: number;
   maxMana: number;
-  turnTimeLimit: number;
+  handSize: number;
+  deckSize: number;
+  cardsDrawnPerTurn: number;
+  manaPerTurn: number;
 }
 
 export type Language = 'zh' | 'en';

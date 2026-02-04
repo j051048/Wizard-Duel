@@ -139,9 +139,8 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
 
     // 强制能量检查（杜绝脚本漏洞）
     const affordable = canAffordSpell(spellId, duelState.playerMana, duelState.playerEffects, duelState.playerCostMod);
-    // 如果是 debug 模式或者特殊情况可能允许? 不，H5PVP必须严格。
     if (!affordable.canAfford) {
-        console.warn('Cheating attempt detected: Insufficient mana for spell', spellId);
+        setEffectMessages([affordable.reason || '无法出牌']);
         return false;
     }
     

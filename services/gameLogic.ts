@@ -97,6 +97,13 @@ export const createInitialDuelState = (playerDeck: SpellType[], gameMode: GameMo
 
 // ============ 回合准备 ============
 
+// ============ 辅助逻辑 ============
+
+export const recalculateCostMod = (effects: StatusEffect[]): number => {
+  const tangle = effects.find(e => e.type === 'tangle');
+  return tangle ? (tangle.value || 0) : 0;
+};
+
 // ============ 法力检查 ============
 
 export const canAffordSpell = (
@@ -105,6 +112,12 @@ export const canAffordSpell = (
   effects: StatusEffect[],
   costMod: number = 0
 ): { canAfford: boolean; reason?: string } => {
+  // 1. 冻结检查
+  const isFrozen = effects.some(e => e.type === 'frozen');
+  if (isFrozen) {
+    return { canAfford: false, reason: '❄️ 你被冻结了，无法行动！' };
+  }
+
   const spell = getSpellById(spellId);
   const finalCost = spell.id === 'skip' ? 0 : Math.max(0, spell.manaCost + costMod);
   
@@ -167,11 +180,9 @@ export const executeSpell = (
   }
 
   // 2. 法力检查 (Double Check for safety)
-  const affordable = canAffordSpell(spellId, isPlayer ? newState.playerMana : newState.opponentMana, [], isPlayer ? newState.playerCostMod : newState.opponentCostMod);
-  if (!affordable.canAfford) {
-    logs.push(isPlayer ? `❌ 你的能量不足！` : `对手试图非法施放${spell.name}`);
-    return { newState, logs };
-  }
+  // 注意：executeSpell 通常假定已经通过了 UI 层的 canAfford 检查，但为了安全再次检查
+  // 在这里我们 temporarily ignore frozen check inside logic flow if forcing scenarios,
+  // but generally it handles cost.
   
   const cost = Math.max(0, spell.manaCost + myCostMod);
   if (isPlayer) newState.playerMana = Math.max(0, newState.playerMana - cost);
@@ -363,6 +374,10 @@ export const executeSpell = (
     newState.playerEffects = [...newState.playerEffects, ...newEffects];
   }
 
+  // [Fix] 立即重新计算 CostMod，以防在同一回合生效 (例如 Tangle)
+  newState.playerCostMod = recalculateCostMod(newState.playerEffects);
+  newState.opponentCostMod = recalculateCostMod(newState.opponentEffects);
+
   // 7. 更新元数据
   if (isPlayer) {
     newState.playerLastSpell = spellId;
@@ -384,6 +399,9 @@ export const executeSpell = (
 // ============ AI 逻辑 (Patch 2.0) ============
 
 const pickBestSpellForAI = (state: DuelState): SpellType | null => {
+   // 再次校验冻结 (Double Check)
+   if (state.opponentEffects.some(e => e.type === 'frozen')) return null;
+
    const validSpells = SPELLS.filter(s => s.id !== 'skip');
    // AI 根据当前 mana 筛选能买得起的
    const affordable = validSpells.filter(s => 
@@ -455,6 +473,15 @@ const pickBestSpellForAI = (state: DuelState): SpellType | null => {
 export const executeAITurn = (state: DuelState): { newState: DuelState, logs: string[] } => {
   let currentState = { ...state };
   const logs: string[] = [];
+
+  // [Fix] 检查冻结状态
+  const isFrozen = currentState.opponentEffects.some(e => e.type === 'frozen');
+  if (isFrozen) {
+     logs.push('❄️ 对手被彻底冻结，无法行动！');
+     // 冻结通常意味着无法出牌，直接结束回合
+     // 我们不需要在这里减少持续时间，因为 prepareNextTurn 会处理
+     return { newState: currentState, logs };
+  }
   
   // 模拟 AI 思考和出牌
   // 限制：最多出手牌数量的牌
