@@ -54,290 +54,252 @@ export const Lobby: React.FC<LobbyProps> = ({
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const canStart = balance >= selectedBet;
 
+  // Deck cycling logic
+  const currentDeckIndex = decks.findIndex(d => d.id === selectedDeck?.id);
+  const nextDeck = () => {
+    if (decks.length === 0) return;
+    const nextIndex = (currentDeckIndex + 1) % decks.length;
+    onSelectDeck(decks[nextIndex]);
+  };
+  const prevDeck = () => {
+    if (decks.length === 0) return;
+    const prevIndex = (currentDeckIndex - 1 + decks.length) % decks.length;
+    onSelectDeck(decks[prevIndex]);
+  };
+
   return (
-    <div className="min-h-full relative no-select">
-      {/* 背景 */}
+    <div className="min-h-full relative no-select overflow-hidden flex flex-col">
+      {/* Immersive Background */}
       <div 
-        className="absolute inset-0 bg-cover bg-center pointer-events-none"
+        className="absolute inset-0 bg-cover bg-center pointer-events-none transform scale-105"
         style={{ backgroundImage: "url('/lobby-bg.webp')", willChange: 'opacity' }}
       >
-        <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/80 via-purple-950/60 to-slate-950/90" />
+        <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/90 via-purple-900/40 to-black" />
+        {/* Floating Particles/Dust would go here */}
       </div>
 
-      <div className="relative z-10 max-w-md mx-auto p-4 space-y-6 pt-8">
-        {/* Logo Image */}
-        <div className="flex justify-center mb-2">
-          <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-purple-500/30 shadow-lg shadow-purple-500/20">
-            <img 
-              src="/pwa-192x192.png" 
-              alt="Logo" 
-              className="w-full h-full object-cover"
-            />
-          </div>
-        </div>
-
-        {/* Logo */}
-        <div className="text-center space-y-3 mb-4">
-          <h1 className="text-5xl md:text-6xl font-wizard font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-300 to-cyan-400 drop-shadow-[0_4px_20px_rgba(168,85,247,0.5)]">
-            WIZARD DUEL
-          </h1>
-          <p className="text-gray-400 text-sm font-tech tracking-[0.3em] uppercase">元素策略对战</p>
-        </div>
-
-        {/* Rank Badge */}
-        <div className="flex justify-center mb-6">
-          <div className="bg-gradient-to-r from-slate-900/90 to-slate-800/90 border border-purple-500/30 rounded-full px-6 py-2 flex items-center gap-3 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
-            <span className={`text-2xl ${
-              userRank === 'Legend' ? 'text-yellow-400 drop-shadow-[0_0_5px_rgba(250,204,21,0.8)]' :
-              userRank === 'Diamond' ? 'text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]' :
-              userRank === 'Gold' ? 'text-amber-400' :
-              userRank === 'Silver' ? 'text-gray-300' :
-              'text-orange-700'
-            }`}>
-              <Shield size={24} fill="currentColor" className="opacity-20 absolute" />
-              <Crown size={24} />
-            </span>
-            <div className="flex flex-col text-left">
-               <span className="text-xs text-purple-300 uppercase tracking-wider font-bold">{userRank} League</span>
-               <span className="text-sm font-mono text-white leading-none">{rankScore} PTS</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 音量控制 & 教程 & 模式选择 */}
-        <div className="absolute top-4 right-4 flex gap-2">
-          {onOpenModeSelect && (
-            <button
-              onClick={onOpenModeSelect}
-              className="p-2 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 hover:border-purple-500/50 transition-colors"
-              title={`当前模式: ${gameMode === 'standard' ? '标准' : '狂野'}`}
-            >
-              {gameMode === 'standard' ? (
-                <Crown size={20} className="text-blue-400" />
-              ) : (
-                <Zap size={20} className="text-orange-400" />
-              )}
-            </button>
-          )}
-          <button
-            onClick={() => setIsTutorialOpen(true)}
-            className="p-2 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 hover:border-purple-500/50 transition-colors"
-            title="游戏教程"
-          >
-            <BookOpen size={20} className="text-purple-400" />
-          </button>
-          <button
-            onClick={onToggleMute}
-            className="p-2 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 hover:border-purple-500/50 transition-colors"
-          >
-            {isMuted ? (
-              <VolumeX size={20} className="text-gray-400" />
-            ) : (
-              <Volume2 size={20} className="text-purple-400" />
-            )}
-          </button>
-        </div>
-
-        {/* 法术预览 */}
-        <section className="bg-black/40 backdrop-blur-md p-4 rounded-2xl border border-purple-500/20">
-          <h3 className="text-center text-gray-300 mb-3 text-xs font-bold uppercase tracking-widest">五元素法术</h3>
-          <div className="grid grid-cols-5 gap-2">
-            {SPELLS.map(spell => (
-              <div 
-                key={spell.id} 
-                className="text-center p-3 bg-black/40 rounded-xl border border-white/5 hover:border-purple-500/50 transition-all group cursor-pointer touch-manipulation"
-              >
-                <div className="text-3xl mb-2 group-hover:scale-125 transition-transform">{spell.emoji}</div>
-                <div className={`text-[9px] font-bold uppercase ${spell.color}`}>
-                  {spell.name.split(' ')[0]}
-                </div>
-                <div className="flex justify-center gap-1 mt-1 text-[8px] text-gray-500">
-                  <span className="text-blue-400">{spell.manaCost}💎</span>
-                  <span className="text-red-400">{spell.damage}❤️</span>
-                </div>
+      {/* --- TOP BAR: HUD --- */}
+      <div className="relative z-10 flex justify-between items-start p-4 md:p-6">
+        {/* Player Profile */}
+        <div className="flex items-center gap-3 animate-slide-in-left">
+           <div className="relative group">
+              <div className="w-14 h-14 rounded-full border-2 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.3)] overflow-hidden bg-black">
+                 <img src="/pwa-192x192.png" alt="Avatar" className="w-full h-full object-cover" />
               </div>
-            ))}
-          </div>
-          <div className="flex justify-between items-center mt-3 px-1">
-            <p className="text-[10px] text-gray-500">
-              🔥→🌿→❄️→⚡→🪨→🔥 克制循环
-            </p>
-            <button 
-              onClick={() => setIsRulesOpen(true)}
-              className="text-[10px] text-purple-400 hover:text-purple-300 border border-purple-500/30 px-2 py-1 rounded hover:bg-purple-500/10 transition-colors flex items-center gap-1"
-            >
-              <BookOpen size={10} /> 玩法说明
-            </button>
-          </div>
-          {/* RulesModal 移出此区域 */}
-        </section>
+              <div className="absolute -bottom-2 -right-2 bg-slate-900 text-[10px] text-amber-500 border border-amber-500/30 px-1.5 py-0.5 rounded-full font-bold">
+                 LV.{Math.floor(rankScore / 100) + 1}
+              </div>
+           </div>
+           
+           <div className="flex flex-col">
+             <div className="flex items-center gap-2">
+                <span className={`text-xl font-wizard font-black drop-shadow-md ${
+                  userRank === 'Legend' ? 'text-yellow-400' :
+                  userRank === 'Diamond' ? 'text-cyan-400' :
+                  'text-gray-200'
+                }`}>{userRank}</span>
+             </div>
+             <div className="flex items-center gap-2 text-xs font-tech text-gray-400 bg-black/40 px-2 py-0.5 rounded-full border border-white/5">
+                <Crown size={12} className="text-amber-500" />
+                <span>{rankScore} PTS</span>
+             </div>
+           </div>
+        </div>
 
-        {/* 下注选择 */}
-        <section className="bg-black/40 backdrop-blur-md p-5 rounded-2xl border border-purple-500/20">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-gray-200 text-sm uppercase tracking-wider font-bold">下注金额</span>
-            <span className="text-purple-400 font-mono text-sm">
-              余额: {isLoading ? '...' : balance} PTS
-            </span>
-          </div>
-          
-          <div className="grid grid-cols-3 gap-3">
-            {BET_OPTIONS.map((amt) => (
+        {/* System & Mode Controls */}
+        <div className="flex gap-3 animate-slide-in-right">
+           <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-purple-500/20 mr-2 shadow-lg">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+              <span className="text-xs font-bold text-gray-300">ONLINE</span>
+           </div>
+           
+           {onOpenModeSelect && (
+             <button onClick={onOpenModeSelect} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur border border-white/10 hover:border-white/30 hover:bg-white/10 flex items-center justify-center transition-all">
+                {gameMode === 'standard' ? <Crown size={18} className="text-blue-400"/> : <Zap size={18} className="text-orange-400"/>}
+             </button>
+           )}
+           <button onClick={() => setIsTutorialOpen(true)} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur border border-white/10 hover:border-white/30 hover:bg-white/10 flex items-center justify-center transition-all">
+              <BookOpen size={18} className="text-gray-300"/>
+           </button>
+           <button onClick={onToggleMute} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur border border-white/10 hover:border-white/30 hover:bg-white/10 flex items-center justify-center transition-all">
+              {isMuted ? <VolumeX size={18} className="text-gray-500"/> : <Volume2 size={18} className="text-gray-300"/>}
+           </button>
+        </div>
+      </div>
+
+
+      {/* --- CENTER STAGE: DECK CAROUSEL --- */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center -mt-10">
+         
+         {/* Introduction / Season Text */}
+         <div className="text-center mb-8 animate-fade-in-up">
+            <h1 className="text-4xl md:text-6xl font-wizard text-transparent bg-clip-text bg-gradient-to-b from-white to-purple-300 drop-shadow-[0_5px_15px_rgba(168,85,247,0.4)]">
+               WIZARD DUEL
+            </h1>
+            <p className="text-purple-200/60 text-xs tracking-[0.5em] font-tech uppercase mt-2">Season 1: Elemental Rising</p>
+         </div>
+
+         {/* The Deck Display */}
+         <div className="relative w-full max-w-sm h-64 md:h-80 perspective-1000 flex items-center justify-center mb-8">
+            {decks.length === 0 ? (
+               <div className="text-center p-8 bg-black/40 backdrop-blur-md rounded-2xl border border-dashed border-white/20 hover:border-purple-500/50 transition-colors cursor-pointer" onClick={onOpenDeckBuilder}>
+                  <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                     <Settings size={32} className="text-purple-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">No Decks Found</h3>
+                  <p className="text-gray-400 text-sm mb-4">You need a deck to enter the arena.</p>
+                  <button className="px-6 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-white font-bold transition-colors">
+                     Create Deck
+                  </button>
+               </div>
+            ) : (
+               <>
+                  {/* Prev Button */}
+                  <button onClick={prevDeck} className="absolute left-4 z-20 p-3 rounded-full bg-black/20 hover:bg-black/60 text-white/50 hover:text-white transition-all">
+                     ◀
+                  </button>
+                  
+                  {/* Active Deck Card - Simulated 3D */}
+                  <div className="relative w-48 h-72 md:w-56 md:h-80 bg-slate-900 rounded-xl border-2 border-amber-500/40 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transform hover:scale-105 transition-transform duration-500 group">
+                      {/* Cover Art */}
+                      <div className="absolute inset-1 rounded-lg overflow-hidden bg-slate-800">
+                         {selectedDeck?.cards[0] && SPELLS.find(s => s.id === selectedDeck.cards[0])?.artSrc ? (
+                            <img src={SPELLS.find(s => s.id === selectedDeck.cards[0])?.artSrc} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
+                         ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-purple-900 to-slate-900"></div>
+                         )}
+                      </div>
+                      
+                      {/* Deck Info Overlay */}
+                      <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black via-black/80 to-transparent pt-12">
+                         <div className="text-amber-400 text-xs font-bold uppercase tracking-widest mb-1">Current Deck</div>
+                         <h3 className="text-xl font-bold text-white truncate">{selectedDeck?.name}</h3>
+                         <div className="flex items-center justify-between mt-2">
+                            <span className="text-xs text-gray-400">{selectedDeck?.cards.length}/30 Cards</span>
+                            <button 
+                               onClick={onOpenDeckBuilder}
+                               className="p-2 bg-white/10 hover:bg-purple-600 rounded-lg transition-colors text-white"
+                               title="Edit Deck"
+                            >
+                               <Settings size={14} />
+                            </button>
+                         </div>
+                      </div>
+                  </div>
+
+                  {/* Next Button */}
+                  <button onClick={nextDeck} className="absolute right-4 z-20 p-3 rounded-full bg-black/20 hover:bg-black/60 text-white/50 hover:text-white transition-all">
+                     ▶
+                  </button>
+               </>
+            )}
+         </div>
+
+         {/* Bottom Controls Container */}
+         <div className="w-full max-w-lg px-6 flex flex-col items-center gap-6">
+            
+            {/* Wager Selection - Chips */}
+            <div className="flex flex-col items-center gap-2 w-full">
+               <span className="text-[10px] text-gray-500 uppercase tracking-[0.2em]">Select Wager</span>
+               <div className="flex gap-4 md:gap-8 justify-center w-full">
+                  {BET_OPTIONS.map((amt) => {
+                     const isSelected = selectedBet === amt;
+                     const isDisabled = balance < amt;
+                     return (
+                        <button
+                           key={amt}
+                           onClick={() => onSelectBet(amt)}
+                           disabled={isDisabled}
+                           className={`
+                              relative w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center transition-all duration-300 group
+                              ${isSelected 
+                                 ? 'scale-110 shadow-[0_0_20px_rgba(168,85,247,0.5)] z-10' 
+                                 : 'scale-95 grayscale-[0.5] hover:grayscale-0 hover:scale-100'
+                              }
+                              ${isDisabled ? 'opacity-30 grayscale cursor-not-allowed' : 'cursor-pointer'}
+                           `}
+                        >
+                           {/* Chip Visual */}
+                           <div className={`absolute inset-0 rounded-full border-4 ${isSelected ? 'border-amber-400 bg-purple-900' : 'border-slate-600 bg-slate-900'}`}></div>
+                           <div className="absolute inset-1 rounded-full border border-dashed border-white/20"></div>
+                           
+                           <span className={`relative z-10 font-black text-lg md:text-xl font-mono ${isSelected ? 'text-white' : 'text-gray-400'}`}>
+                              {amt}
+                           </span>
+                           {isSelected && <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 bg-amber-400 rounded-full shadow-[0_0_10px_orange]"></div>}
+                        </button>
+                     );
+                  })}
+               </div>
+            </div>
+
+            {/* MAIN PLAY BUTTON */}
+            <div className="w-full mt-4">
               <button
-                key={amt}
-                onClick={() => onSelectBet(amt)}
-                disabled={balance < amt}
+                onClick={onStartDuel}
+                disabled={!canStart || !selectedDeck}
                 className={`
-                  py-4 md:py-4 rounded-xl font-bold border-2 transition-all touch-manipulation
-                  ${selectedBet === amt 
-                    ? 'bg-gradient-to-br from-purple-600 to-indigo-600 border-purple-400 text-white shadow-lg shadow-purple-500/30 scale-105' 
-                    : balance < amt
-                      ? 'bg-gray-900/50 border-gray-800 text-gray-600 cursor-not-allowed'
-                      : 'bg-black/40 border-gray-700 text-gray-400 hover:border-purple-500/50 hover:text-white'
+                  w-full relative group h-16 md:h-20 rounded-full flex items-center justify-center overflow-hidden transition-all duration-500
+                  ${canStart && selectedDeck
+                    ? 'shadow-[0_0_40px_rgba(147,51,234,0.4)] hover:shadow-[0_0_60px_rgba(147,51,234,0.7)] hover:scale-[1.02]' 
+                    : 'bg-gray-900 border border-white/5 cursor-not-allowed opacity-50'
                   }
                 `}
               >
-                <span className="text-xl md:text-2xl">{amt}</span>
+                  {canStart && selectedDeck ? (
+                     <>
+                        {/* Animated Gradient Background */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 animate-gradient-xy"></div>
+                        <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay"></div>
+                        
+                        {/* Shimmer Effect */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-full group-hover:animate-shimmer"></div>
+
+                        {/* Text Content */}
+                        <div className="relative z-10 flex items-center gap-3">
+                           <Sparkles size={24} className="text-yellow-300 animate-pulse" />
+                           <span className="text-2xl md:text-3xl font-wizard font-bold text-white tracking-[0.1em] drop-shadow-md">
+                              ENTER ARENA
+                           </span>
+                           <Sparkles size={24} className="text-yellow-300 animate-pulse" />
+                        </div>
+                     </>
+                  ) : (
+                     <span className="font-mono text-gray-500 tracking-widest uppercase text-xs">
+                        {!selectedDeck ? 'Select a Deck' : 'Insufficient Funds'}
+                     </span>
+                  )}
               </button>
-            ))}
-          </div>
-          
-          <div className="mt-4 flex justify-between items-center text-sm text-gray-400 border-t border-white/10 pt-3">
-            <span>预期收益</span>
-            <span className="text-green-400 text-lg font-bold">+{Math.floor(selectedBet * 0.92)} PTS</span>
-          </div>
-        </section>
-
-        {/* 牌组选择 */}
-        <section className="bg-black/40 backdrop-blur-md p-5 rounded-2xl border border-purple-500/20">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-gray-200 text-sm uppercase tracking-wider font-bold">选择牌组</span>
-            <button
-              onClick={onOpenDeckBuilder}
-              className="text-purple-400 hover:text-purple-300 text-sm flex items-center gap-1"
-            >
-              <Settings size={14} /> 构筑
-            </button>
-          </div>
-          
-          {decks.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-400 mb-4">暂无牌组</p>
-              <button
-                onClick={onOpenDeckBuilder}
-                className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-3 rounded-lg font-bold text-white hover:shadow-lg transition-all"
-              >
-                创建第一个牌组
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {decks.map((deck) => (
-                <button
-                  key={deck.id}
-                  onClick={() => onSelectDeck(deck)}
-                  className={`w-full p-4 md:p-3 rounded-lg border-2 transition-all text-left touch-manipulation ${
-                    selectedDeck?.id === deck.id
-                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 border-purple-400 text-white'
-                      : 'bg-black/40 border-gray-700 text-gray-400 hover:border-purple-500/50 hover:text-white'
-                  }`}
-                >
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold">{deck.name}</span>
-                    <span className="text-sm">{deck.cards.length} 张卡牌</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* 酒馆模式按钮 */}
-        {onOpenTavernMode && (
-          <button
-            onClick={onOpenTavernMode}
-            className="
-              w-full py-5 md:py-4 rounded-2xl font-wizard font-bold text-lg md:text-lg tracking-[0.15em] uppercase transition-all touch-manipulation
-              flex items-center justify-center gap-3 relative overflow-hidden group mb-4
-              bg-gradient-to-r from-amber-700 via-yellow-600 to-amber-700 text-white
-              hover:shadow-2xl hover:shadow-amber-500/40 hover:scale-[1.02] active:scale-[0.98]
-              border-2 border-amber-400/50
-            "
-          >
-            🏰
-            <span className="relative z-10">酒馆模式</span>
-            🏰
-          </button>
-        )}
-
-        {/* 开始按钮 */}
-        <button
-          onClick={onStartDuel}
-          disabled={!canStart || !selectedDeck}
-          className={`
-            w-full py-6 md:py-5 rounded-2xl font-wizard font-black text-xl md:text-xl tracking-[0.2em] uppercase transition-all touch-manipulation
-            flex items-center justify-center gap-3 relative overflow-hidden group
-            ${canStart && selectedDeck
-              ? 'bg-gradient-to-r from-purple-700 via-indigo-600 to-purple-700 text-white hover:shadow-2xl hover:shadow-purple-500/40 hover:scale-[1.02] active:scale-[0.98] border-2 border-purple-400/50'
-              : 'bg-gray-800 text-gray-500 cursor-not-allowed border-2 border-gray-700'
-            }
-          `}
-        >
-          <Sparkles size={24} className={canStart && selectedDeck ? 'animate-pulse' : ''} />
-          <span className="relative z-10">
-            {!selectedDeck ? '请选择牌组' : canStart ? '开始决斗' : '法力不足'}
-          </span>
-          <Sparkles size={24} className={canStart && selectedDeck ? 'animate-pulse' : ''} />
-          
-          {/* 光效扫过动画 */}
-          {canStart && selectedDeck && (
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-          )}
-        </button>
-
-        {/* 对战记录 */}
-        <section className="pt-4">
-          <h3 className="text-gray-400 mb-3 text-xs font-bold uppercase tracking-widest text-center">对战记录</h3>
-          <div className="space-y-2 max-h-32 overflow-y-auto">
-            {history.length === 0 ? (
-              <div className="text-center py-4 text-gray-600 text-xs italic">暂无对战记录</div>
-            ) : (
-              history.slice(0, 5).map((record) => (
-                <div 
-                  key={record.id} 
-                  className="flex justify-between items-center p-3 bg-black/40 rounded-xl border border-white/5 text-xs"
-                >
-                  <div className="flex gap-3 items-center">
-                    <span className={`
-                      w-2 h-2 rounded-full 
-                      ${record.result === 'WIN' ? 'bg-green-500' : record.result === 'DRAW' ? 'bg-yellow-500' : 'bg-red-500'}
-                    `} />
-                    <span className={
-                      record.result === 'WIN' ? 'text-green-400' : 
-                      record.result === 'DRAW' ? 'text-yellow-400' : 
-                      'text-red-400'
-                    }>
-                      {record.result === 'WIN' ? '胜利' : record.result === 'DRAW' ? '平局' : '失败'}
+              <div className="text-center mt-3 h-4">
+                 {canStart && selectedDeck && (
+                    <span className="text-[10px] text-green-400 font-mono animate-pulse">
+                       ESTIMATED REWARD: +{Math.floor(selectedBet * 0.92)} PTS
                     </span>
-                  </div>
-                  <span className={`
-                    font-mono font-bold 
-                    ${record.amount > 0 ? 'text-green-400' : record.amount < 0 ? 'text-red-400' : 'text-gray-400'}
-                  `}>
-                    {record.amount > 0 ? '+' : ''}{record.amount}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </section>
+                 )}
+              </div>
+            </div>
+         
+         </div>
+
       </div>
 
-      {/* 规则弹窗 (移至最外层) */}
+      {/* FOOTER: EXTRA MODES */}
+      <div className="relative z-10 p-4 flex justify-center pb-8 opacity-50 hover:opacity-100 transition-opacity">
+         {onOpenTavernMode && (
+            <button 
+               onClick={onOpenTavernMode}
+               className="flex items-center gap-2 text-xs text-amber-500/80 hover:text-amber-400 font-bold uppercase tracking-widest border border-amber-500/20 px-4 py-2 rounded-full hover:bg-amber-900/20 transition-all"
+            >
+               <span>🍺</span>
+               <span>Visit Tavern</span>
+            </button>
+         )}
+      </div>
+
+      {/* Global Modals */}
       <RulesModal isOpen={isRulesOpen} onClose={() => setIsRulesOpen(false)} />
       <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
     </div>
   );
 };
-
 export default Lobby;
