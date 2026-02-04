@@ -237,3 +237,32 @@ export interface GameConfig {
 }
 
 export type Language = 'zh' | 'en';
+
+// ============ 规则引擎：动作与命令 (New 3.0) ============
+
+export type ActionType = 
+  | 'MANA_CHANGE' 
+  | 'HP_CHANGE' 
+  | 'ARMOR_CHANGE' 
+  | 'ADD_EFFECT' 
+  | 'REMOVE_EFFECT' 
+  | 'DRAW_CARD' 
+  | 'MESSAGE'
+  | 'GAME_OVER'
+  | 'ANIMATION_TRIGGER';
+
+export interface GameAction {
+  type: ActionType;
+  target: 'player' | 'opponent' | 'both' | 'system';
+  value?: any;
+  subType?: string; // 细分类型，如 burn, freeze
+  description?: string;
+}
+
+export interface GameCommand {
+  id: string;
+  sourceSpell?: SpellType;
+  caster: 'player' | 'opponent';
+  actions: GameAction[];
+}
+

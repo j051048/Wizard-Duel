@@ -63,8 +63,12 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   const prevPlayerHP = useRef(duelState?.playerHP || GAME_CONFIG.maxHP);
   const prevOpponentHP = useRef(duelState?.opponentHP || GAME_CONFIG.maxHP);
   
-  // [Patch 3.0] Projection Preview State
+  // [Patch 3.0] Selected/Preview State
+  const [selectedSpellId, setSelectedSpellId] = useState<SpellType | null>(null);
   const [hoveredSpellId, setHoveredSpellId] = useState<SpellType | null>(null);
+
+  // 优先级：选中标识符优先于悬停标识符（用于预览显示）
+  const activePreviewId = selectedSpellId || hoveredSpellId;
 
   const playerSpellDetails = playerCard ? getSpellById(playerCard) : null;
   const oppSpellDetails = opponentCard ? getSpellById(opponentCard) : null;
@@ -73,11 +77,10 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   const [showBloodFlash, setShowBloodFlash] = useState(false);
   const [projectiles, setProjectiles] = useState<{id: number, type: string, x: number, y: number}[]>([]);
 
-  // Calculate Projection
   const projection = useMemo(() => {
-    if (!hoveredSpellId || phase !== 'PLAYER_TURN' || duelState.isProcessing) return null;
-    return calculateSpellProjection(duelState, 'player', hoveredSpellId);
-  }, [hoveredSpellId, phase, duelState]);
+    if (!activePreviewId || phase !== 'PLAYER_TURN' || duelState.isProcessing) return null;
+    return calculateSpellProjection(duelState, 'player', activePreviewId);
+  }, [activePreviewId, phase, duelState]);
 
   const addDamageNumber = (damage: number, isPlayer: boolean, isCrit: boolean = false) => {
     HapticService.medium();
@@ -138,8 +141,16 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     return () => { isMounted.current = false; };
   }, []);
 
-  const handlePlayCard = (spellId: SpellType) => {
-    // Clear hover projection immediately on click
+  const handlePlayCard = (spellId: SpellType, isConfirmed: boolean = false) => {
+    // 移动端逻辑：第一次点击选中预览，第二次点击才执行
+    if (isMobile && !isConfirmed && selectedSpellId !== spellId) {
+      setSelectedSpellId(spellId);
+      HapticService.light();
+      return;
+    }
+
+    // 执行出牌
+    setSelectedSpellId(null);
     setHoveredSpellId(null);
     
     const id = Date.now();
@@ -152,6 +163,13 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         setProjectiles(prev => prev.filter(p => p.id !== id));
       }
     }, 600);
+  };
+
+  const clearSelection = (e: React.MouseEvent) => {
+    // 只有点击到背景（非卡牌元素）时才清除选中
+    if ((e.target as HTMLElement).classList.contains('arena-bg-overlay')) {
+      setSelectedSpellId(null);
+    }
   };
 
   const prevOppCard = useRef<SpellType | null>(null);
@@ -178,9 +196,13 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   ), [duelState.playerHand, duelState.playerMana, duelState.playerEffects, duelState.playerCostMod]);
 
   return (
-    <div className="fixed inset-0 w-full h-full bg-slate-950 no-select flex flex-col z-40 overflow-hidden">
+    <div 
+      onClick={clearSelection}
+      className="fixed inset-0 w-full h-full bg-slate-950 no-select flex flex-col z-40 overflow-hidden"
+    >
       {/* === 背景层 === */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
+      <div className="absolute inset-0 z-0 pointer-events-none arena-bg-overlay">
+        <div className="absolute inset-0 arena-bg-overlay pointer-events-auto opacity-0" />
         <img 
           src="/ui/bg_arena.webp" 
           alt="Arena Background"
@@ -189,7 +211,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay scale-110 blur-[2px] optimize-gpu"
           style={{ objectPosition: 'center 40%' }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-slate-950/80" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-slate-950/80 arena-bg-overlay" />
         {/* 中心法阵 */}
         {!isLowQuality && (
           <div className="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
@@ -361,32 +383,41 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
              `}>
                 {duelState.playerHand.map((id, index) => {
                   const isAffordable = playableCards.includes(id);
+                  const isSelected = selectedSpellId === id;
                   const total = duelState.playerHand.length;
                   const middleIndex = (total - 1) / 2;
-                  const rotation = (index - middleIndex) * 4; // Fanning angle
-                  const yOffset = Math.abs(index - middleIndex) * 8 + (isAffordable && phase === 'PLAYER_TURN' ? 0 : 20); // Arc effect
+                  const rotation = (index - middleIndex) * 4; 
+                  
+                  // 选中时升起更明显
+                  let yOffset = Math.abs(index - middleIndex) * 8;
+                  if (isSelected) {
+                    yOffset -= isMobile ? 60 : 100;
+                  } else if (!(isAffordable && phase === 'PLAYER_TURN')) {
+                    yOffset += 20;
+                  }
 
                   return (
                     <div 
                       key={`${id}-${index}`} 
                       className={`
                         relative transition-all duration-300 transform origin-bottom hover:z-50
+                        ${isSelected ? 'z-[100]' : ''}
                         ${phase === 'PLAYER_TURN' && isAffordable ? 'hover:-translate-y-16 hover:scale-125 cursor-pointer' : ''}
                       `}
                       style={{ 
-                        zIndex: index + 10,
+                        zIndex: isSelected ? 100 : index + 10,
                         transform: `rotate(${rotation}deg) translateY(${yOffset}px)`,
                       }}
                     >
                       <SpellCard 
                         spell={getSpellById(id)} 
-                        onClick={() => isAffordable && phase === 'PLAYER_TURN' && handlePlayCard(id)}
-                        onMouseEnter={() => setHoveredSpellId(id)}
+                        onClick={() => isAffordable && phase === 'PLAYER_TURN' && handlePlayCard(id, isSelected)}
+                        onMouseEnter={() => !selectedSpellId && setHoveredSpellId(id)}
                         onMouseLeave={() => setHoveredSpellId(null)}
                         isAffordable={isAffordable}
                         disabled={!isAffordable || phase !== 'PLAYER_TURN'}
-                        isSelected={false}
-                        isSmall={isMobile} // Always use small cards on mobile for hand fitting
+                        isSelected={isSelected}
+                        isSmall={isMobile}
                       />
                     </div>
                   );

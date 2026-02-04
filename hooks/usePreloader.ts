@@ -8,56 +8,31 @@
 import { useState, useEffect, useCallback } from 'react';
 
 // 需要预加载的图片资源列表
-const PRELOAD_IMAGES = [
-  // 背景
+import { SPELLS } from '../constants';
+
+// 需要预加载的静态 UI 资源
+const STATIC_UI = [
   '/battle-bg.webp',
   '/lobby-bg.webp',
-  
-  // 头像
   '/avatars/player-wizard.webp',
   '/avatars/opponent-sorcerer.webp',
-  
-  // 卡牌
-  '/cards/fire-pyroblast.webp',
-  '/cards/vine-entangling.webp',
-  '/cards/ice-frostnova.webp',
-  '/cards/thunder-chainlightning.webp',
-  '/cards/rock-bulwark.webp',
-  '/cards/card-back.webp',
-  
-  // 特效
-  '/effects/effect-burn.webp',
-  '/effects/effect-tangle.webp',
-  '/effects/effect-freeze.webp',
-  '/effects/effect-charge.webp',
-  '/effects/effect-fortify.webp',
-  '/effects/effect-critical.webp',
-  
-  // UI
   '/ui/bg_arena.webp',
   '/ui/card_back.webp',
   '/ui/frame_fire.webp',
   '/ui/frame_water.webp',
   '/ui/frame_wind.webp',
   '/ui/frame_earth.webp',
-  '/ui/mana_full.webp',
-  '/ui/mana_empty.webp',
-  '/ui/rank_iron.webp',
-  '/ui/rank_gold.webp',
-  '/ui/rank_legend.webp',
   '/ui/magic-circle.webp',
-  '/ui/corner-tl.webp',
-  '/ui/corner-tr.webp',
-  '/ui/corner-bl.webp',
-  '/ui/corner-br.webp',
-  '/ui/mana-crystal.webp',
   '/ui/health-bar-frame.webp',
-  
-  // 图标
-  '/icons/icon-mana.webp',
-  '/icons/icon-health.webp',
-  '/icons/icon-coin.webp',
+  '/pwa-512x512.png'
 ];
+
+// 动态生成所有卡牌的图片路径
+const CARD_IMAGES = SPELLS
+  .map(s => s.artSrc)
+  .filter((src): src is string => !!src);
+
+const PRELOAD_IMAGES = [...new Set([...STATIC_UI, ...CARD_IMAGES])];
 
 // 需要预加载的音效资源列表
 const PRELOAD_AUDIO = [

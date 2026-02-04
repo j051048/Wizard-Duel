@@ -5,12 +5,13 @@
  */
 
 import { 
-  DuelState, SpellType, Spell, GameMode, StatusEffect, AIProfile
+  DuelState, SpellType, Spell, GameMode, StatusEffect, AIProfile, GameCommand, GameAction
 } from '../types.ts';
 import { 
   SPELLS, GAME_CONFIG, createDeck, getCardsForMode,
-  CRIT_CHANCE, WIN_MULTIPLIER, CRIT_MULTIPLIER, shuffleArray
+  CRIT_CHANCE, WIN_MULTIPLIER, CRIT_MULTIPLIER, shuffleArray, getMechanicName
 } from '../constants.ts';
+import { GameSequenceExecutor } from './sequence';
 
 // ============ 卡牌查询 ============
 
@@ -136,186 +137,80 @@ export const getPlayableCards = (
   return hand.filter(spellId => canAffordSpell(spellId, mana, effects, costMod).canAfford);
 };
 
-// ============ 单卡执行逻辑 (Patch 2.0 Turn-Based) ============
 
-// ============ 伤害与效果辅助函数 ============
+// ============ 卡牌逻辑配置 (New 3.0 Data-Driven) ============
 
-const applyDamage = (state: DuelState, target: 'player' | 'opponent', amount: number): string[] => {
-  const logs: string[] = [];
-  if (amount <= 0) return logs;
-  
-  const currentArmor = target === 'player' ? state.playerArmor : state.opponentArmor;
-  const absorb = Math.min(currentArmor, amount);
-  const finalDamage = amount - absorb;
-  
-  if (target === 'player') {
-    state.playerArmor = Math.max(0, state.playerArmor - absorb);
-    state.playerHP = Math.max(0, state.playerHP - finalDamage);
-    logs.push(`受到 ${amount} 点伤害` + (absorb > 0 ? ` (${absorb}被格挡)` : ''));
-  } else {
-    state.opponentArmor = Math.max(0, state.opponentArmor - absorb);
-    state.opponentHP = Math.max(0, state.opponentHP - finalDamage);
-    logs.push(`造成 ${amount} 点伤害` + (absorb > 0 ? ` (${absorb}被格挡)` : ''));
-  }
-  return logs;
-};
-
-const applyArmor = (state: DuelState, target: 'player' | 'opponent', amount: number): string[] => {
-  if (amount <= 0) return [];
-  if (target === 'player') {
-    state.playerArmor += amount;
-    return [`获得 ${amount} 护甲`];
-  } else {
-    state.opponentArmor += amount;
-    return [`对手获得 ${amount} 护甲`];
-  }
-};
-
-const applyStatus = (state: DuelState, target: 'player' | 'opponent', effect: StatusEffect): string[] => {
-  const targetEffects = target === 'player' ? state.playerEffects : state.opponentEffects;
-  
-  // 叠加逻辑: Burn 可叠加，其他通常为刷新 Duration
-  if (effect.type === 'burn') {
-    const burnCount = targetEffects.filter(e => e.type === 'burn').length;
-    if (burnCount < 3) {
-      targetEffects.push(effect);
-      return [target === 'player' ? '🔥 你被灼烧了' : '🔥 对手被灼烧了'];
-    } else {
-      return ['🔥 灼烧层数已满'];
-    }
-  } 
-  
-  // 刷新机制
-  const existingIdx = targetEffects.findIndex(e => e.type === effect.type);
-  if (existingIdx >= 0) {
-    targetEffects[existingIdx] = effect; // Reset duration
-  } else {
-    targetEffects.push(effect);
-  }
-  
-  const name = getMechanicName(effect.type);
-  return [target === 'player' ? `${name}效果已施加` : `施加${name}效果`];
-};
-
-// ============ 机制处理器 (Mechanic Handlers) ============
-
-type MechanicContext = {
-  state: DuelState;
-  caster: 'player' | 'opponent';
-  spell: Spell;
-  isCountered: boolean;
-  damage: number; // Final calculated damage
-};
-
-const MECHANIC_HANDLERS: Record<string, (ctx: MechanicContext) => string[]> = {
-  burn: (ctx) => {
-    if (ctx.isCountered) return [];
-    const target = ctx.caster === 'player' ? 'opponent' : 'player';
-    return applyStatus(ctx.state, target, { type: 'burn', duration: 2, value: ctx.spell.cardSet === 'classic' ? 1 : 2 });
+const MECHANIC_DEFINITIONS: Record<string, (state: DuelState, caster: 'player' | 'opponent', spell: Spell, isCountered: boolean, isCrit: boolean) => GameAction[]> = {
+  burn: (state, caster, spell, countered) => {
+    if (countered) return [];
+    const target = caster === 'player' ? 'opponent' : 'player';
+    const val = spell.cardSet === 'classic' ? 1 : 2;
+    return [{ 
+      type: 'ADD_EFFECT', 
+      target, 
+      value: { type: 'burn', duration: 2, value: val },
+      description: `🔥 ${target === 'player' ? '你' : '对手'}被灼烧了 (每回合-${val}HP)`
+    }];
   },
-  tangle: (ctx) => {
-    if (ctx.isCountered) return [];
-    const target = ctx.caster === 'player' ? 'opponent' : 'player';
-    return applyStatus(ctx.state, target, { type: 'tangle', duration: 1, value: 2 });
+  tangle: (state, caster, spell, countered) => {
+    if (countered) return [];
+    const target = caster === 'player' ? 'opponent' : 'player';
+    return [{ 
+      type: 'ADD_EFFECT', 
+      target, 
+      value: { type: 'tangle', duration: 1, value: 2 },
+      description: `🌿 ${target === 'player' ? '你' : '对手'}被缠绕了 (下张牌费用+2)`
+    }];
   },
-  freeze: (ctx) => {
-    if (ctx.isCountered) return [];
-    const target = ctx.caster === 'player' ? 'opponent' : 'player';
-    const targetEffects = target === 'player' ? ctx.state.playerEffects : ctx.state.opponentEffects;
-    if (targetEffects.some(e => e.type === 'thawed')) {
-      return ['🛡️ 免疫冻结！'];
-    }
-    return applyStatus(ctx.state, target, { type: 'frozen', duration: 1 });
-  },
-  charge: (ctx) => {
-    // 伤害逻辑已统一处理，无需额外副作用
-    if (ctx.isCountered) return [];
-    return []; 
-  },
-  fortify: (ctx) => {
-    // 护甲已统一处理，Fortify 可能有额外效果? 目前没有
-    return [];
-  },
-  heal: (ctx) => {
-    const healAmount = 5;
-    if (ctx.caster === 'player') {
-      ctx.state.playerHP = Math.min(GAME_CONFIG.maxHP, ctx.state.playerHP + healAmount);
-      return ['💙 恢复5点生命值'];
-    } else {
-      ctx.state.opponentHP = Math.min(GAME_CONFIG.maxHP, ctx.state.opponentHP + healAmount);
-      return ['💙 对手恢复5点生命值'];
-    }
-  },
-  aoe: (ctx) => {
-    if (ctx.isCountered) return [];
-    const extraDamage = 2;
-    const target = ctx.caster === 'player' ? 'opponent' : 'player';
-    // 直接扣血，不计算护甲 (穿透)
-    if (target === 'player') {
-      ctx.state.playerHP = Math.max(0, ctx.state.playerHP - extraDamage);
-    } else {
-      ctx.state.opponentHP = Math.max(0, ctx.state.opponentHP - extraDamage);
-    }
-    return [`💥 AOE爆炸！造成 ${extraDamage} 点溅射伤害`];
-  },
-  draw: (ctx) => {
-    const logs: string[] = [];
-    const isPlayer = ctx.caster === 'player';
-    const deck = isPlayer ? ctx.state.playerDeck : ctx.state.opponentDeck;
-    const hand = isPlayer ? ctx.state.playerHand : []; // AI手牌只记录大小
+  freeze: (state, caster, spell, countered) => {
+    if (countered) return [];
+    const target = caster === 'player' ? 'opponent' : 'player';
+    const targetEffects = target === 'player' ? state.playerEffects : state.opponentEffects;
+    if (targetEffects.some(e => e.type === 'thawed')) return [{ type: 'MESSAGE', target: 'system', description: '🛡️ 免疫冻结！' }];
     
-    // 抽2张
-    let cardsDrawn = 0;
-    for (let i = 0; i < 2; i++) {
-        if (isPlayer) {
-             if (deck.length > 0 && hand.length < 10) {
-                const res = drawCard(deck, hand, ctx.state.playerFatigue);
-                ctx.state.playerDeck = res.newDeck;
-                ctx.state.playerHand = res.newHand;
-                ctx.state.playerFatigue = res.newFatigue;
-                if (res.fatigueDamage > 0) {
-                    ctx.state.playerHP -= res.fatigueDamage;
-                    logs.push(`疲劳伤害: ${res.fatigueDamage}`);
-                } else cardsDrawn++;
-             }
-        } else {
-             // AI Logic
-             if (deck.length > 0 && ctx.state.opponentHandSize < 10) {
-                 const res = drawCard(deck, [], ctx.state.opponentFatigue);
-                 ctx.state.opponentDeck = res.newDeck;
-                 ctx.state.opponentFatigue = res.newFatigue;
-                 if (res.fatigueDamage > 0) {
-                     ctx.state.opponentHP -= res.fatigueDamage;
-                     logs.push(`对手疲劳: ${res.fatigueDamage}`);
-                 } else {
-                     ctx.state.opponentHandSize++;
-                     cardsDrawn++;
-                 }
-             }
-        }
-    }
-    if (cardsDrawn > 0) logs.push(isPlayer ? `📚 抽了${cardsDrawn}张牌` : `📚 对手抽了${cardsDrawn}张牌`);
-    return logs;
+    return [{ 
+      type: 'ADD_EFFECT', 
+      target, 
+      value: { type: 'frozen', duration: 1 },
+      description: `❄️ ${target === 'player' ? '你' : '对手'}被冻结了`
+    }];
   },
-  silence: (ctx) => {
-    if (ctx.isCountered) return ['🤫 沉默法术失效了！'];
-    if (ctx.caster === 'player') {
-      ctx.state.opponentEffects = [];
-      return ['🤫 沉默对手，移除所有状态效果'];
-    } else {
-      ctx.state.playerEffects = [];
-      return ['🤫 被沉默，移除所有状态效果'];
-    }
+  heal: (state, caster) => {
+    return [{ 
+      type: 'HP_CHANGE', 
+      target: caster, 
+      value: 5, 
+      description: `💙 ${caster === 'player' ? '你' : '对手'}恢复了 5 点生命值`
+    }];
   },
-  skip: (ctx) => {
-    return [ctx.caster === 'player' ? '你跳过了出牌' : '对手跳过了出牌'];
+  aoe: (state, caster, spell, countered) => {
+    if (countered) return [];
+    const target = caster === 'player' ? 'opponent' : 'player';
+    return [{ 
+      type: 'HP_CHANGE', 
+      target, 
+      value: -2, 
+      description: `💥 AOE爆炸！额外造成 2 点穿透伤害`
+    }];
+  },
+  draw: (state, caster) => {
+    return [
+        { type: 'DRAW_CARD', target: caster, value: 2, description: `📚 ${caster === 'player' ? '你' : '对手'}抽了2张牌` }
+    ];
+  },
+  silence: (state, caster, spell, countered) => {
+    if (countered) return [{ type: 'MESSAGE', target: 'system', description: '🤫 沉默失效' }];
+    const target = caster === 'player' ? 'opponent' : 'player';
+    return [{ 
+        type: 'REMOVE_EFFECT', 
+        target, 
+        subType: 'all', 
+        description: `🤫 沉默${target === 'player' ? '你' : '对手'}，移除所有效果` 
+    }];
   }
 };
 
-// 获取机制中文名辅助
-import { getMechanicName } from '../constants.ts'; // Need import here if not already available in closure, but better use helper
-
-// ============ 单卡执行逻辑 (Refactored) ============
+// ============ 单卡执行逻辑 (完全重构) ============
 
 export const executeSpell = (
   state: DuelState,
@@ -323,130 +218,87 @@ export const executeSpell = (
   spellId: SpellType
 ): { newState: DuelState, logs: string[] } => {
   const spell = getSpellById(spellId);
-  const logs: string[] = [];
-  const newState = { ...state };
-  
   const isPlayer = caster === 'player';
+  const target = isPlayer ? 'opponent' : 'player';
   
-  // 1. 英雄技能检查
+  const actions: GameAction[] = [];
+  
+  // 1. 英雄技能占用逻辑
   if (spellId.startsWith('hero_')) {
-      if (newState.heroSkillsUsed) {
-        logs.push(isPlayer ? `本回合已使用过英雄技能` : `对手尝试再次使用英雄技能`);
-        return { newState, logs };
-      }
-      newState.heroSkillsUsed = true;
+    if (state.heroSkillsUsed) return { newState: state, logs: ['本回合已使用过英雄技能'] };
+    state.heroSkillsUsed = true; 
   }
-  
-  // 2. 费用扣除
-  const myCostMod = isPlayer ? newState.playerCostMod : newState.opponentCostMod;
-  
-  // Skip 特殊处理
-  if (spell.id === 'skip') {
-      logs.push(isPlayer ? `你跳过了出牌` : `对手跳过了出牌`);
-      if (isPlayer) {
-          newState.playerConsecutiveThunder = 0;
-          newState.playerLastSpell = 'skip';
-      } else {
-          newState.opponentConsecutiveThunder = 0;
-          newState.opponentLastSpell = 'skip';
-      }
-      return { newState, logs };
-  }
-  
-  // 扣费 (假设此时已经 verified canAfford)
-  const cost = Math.max(0, spell.manaCost + myCostMod);
-  if (isPlayer) newState.playerMana = Math.max(0, newState.playerMana - cost);
-  else newState.opponentMana = Math.max(0, newState.opponentMana - cost);
 
+  // 2. 费用计算与扣除
+  const costMod = isPlayer ? state.playerCostMod : state.opponentCostMod;
+  const finalCost = spell.id === 'skip' ? 0 : Math.max(0, spell.manaCost + costMod);
+  actions.push({ type: 'MANA_CHANGE', target: caster, value: -finalCost });
+
+  if (spell.id === 'skip') {
+      const skipCmd: GameCommand = { id: 'skip', caster, actions: [{ type: 'MESSAGE', target: 'system', description: isPlayer ? '你跳过了出牌' : '对手跳过了出牌' }] };
+      const res = GameSequenceExecutor.executeCommand(state, skipCmd);
+      return { newState: res.state, logs: res.logs };
+  }
+
+  // 3. 克制判定 (Counter/Crit)
+  const targetLastId = isPlayer ? state.opponentLastSpell : state.playerLastSpell;
+  const targetLast = targetLastId ? getSpellById(targetLastId) : null;
   
-  // 3. 战斗计算准备 (Counter & Crit)
-  const targetLastSpellId = isPlayer ? newState.opponentLastSpell : newState.playerLastSpell;
-  const targetLastSpell = targetLastSpellId ? getSpellById(targetLastSpellId) : null;
+  let countered = false;
+  let crit = false;
   
-  let isCountered = false;
-  let isCrit = false;
-  
-  if (targetLastSpell) {
-    if (targetLastSpell.beats === spell.id) {
-        isCountered = true;
-        logs.push(isPlayer 
-            ? `🚫 你的 [${spell.name}] 被 [${targetLastSpell.name}] 抵消了！` 
-            : `🚫 对手的 [${spell.name}] 被你的 [${targetLastSpell.name}] 阻挡！`);
-    } else if (!isCountered && spell.beats === targetLastSpellId) {
-        // 只有没被 Counter 时才能克制别人
-        isCrit = true;
-        logs.push(isPlayer ? `🌊 属性克制！造成暴击！` : `🔥 对手识破了你的法术！造成暴击！`);
+  if (targetLast) {
+    if (targetLast.beats === spell.id) {
+       countered = true;
+       actions.push({ type: 'MESSAGE', target: 'system', description: `🚫 [${spell.name}] 被 [${targetLast.name}] 抵消！` });
+    } else if (spell.beats === targetLastId) {
+       crit = true;
+       actions.push({ type: 'MESSAGE', target: 'system', description: `🌊 属性克制！造成暴击！` });
     }
   }
 
-  // 4. 伤害计算
-  let damage = spell.damage;
-  if (isCrit) damage = Math.floor(damage * 1.5);
-  if (isCountered) damage = 0;
-  
-  // 连击处理 (Charge)
-  const myLastSpell = isPlayer ? newState.playerLastSpell : newState.opponentLastSpell;
+  // 4. 基础伤害与护甲
+  let dmg = spell.damage;
+  if (crit) dmg = Math.floor(dmg * 1.5);
+  if (countered) dmg = 0;
+
+  // 连击 (Charge)
+  const myLastId = isPlayer ? state.playerLastSpell : state.opponentLastSpell;
   const isThunder = (id: string | null) => id && (id.startsWith('thunder') || id === 'hero_thunder');
-  
-  if (!isCountered && spell.mechanic === 'charge' && isThunder(spell.id) && isThunder(myLastSpell)) {
-      damage = Math.floor(damage * 1.5);
-      logs.push(`⚡ 闪电连击！伤害增加50%！`);
+  if (!countered && spell.mechanic === 'charge' && isThunder(spell.id) && isThunder(myLastId)) {
+      dmg = Math.floor(dmg * 1.5);
+      actions.push({ type: 'MESSAGE', target: 'system', description: `⚡ 闪电连击！伤害增加50%！` });
   }
-  
-  // 5. 应用基础效果 (伤害/护甲)
-  const target = isPlayer ? 'opponent' : 'player';
-  const self = isPlayer ? 'player' : 'opponent';
-  
-  logs.push(...applyDamage(newState, target, damage));
-  logs.push(...applyArmor(newState, self, spell.armorGain || 0));
-  
-  // 6. 应用机制特效 (使用 Map 处理)
-  // 如果被 Counter，部分特效可能失效 (由 Handler 内部决定)
-  const handler = MECHANIC_HANDLERS[spell.mechanic];
-  if (handler) {
-      logs.push(...handler({
-          state: newState,
-          caster,
-          spell,
-          isCountered,
-          damage
-      }));
+
+  // 5. 组合 Actions
+  if (dmg > 0) {
+      actions.push({ type: 'HP_CHANGE', target, value: -dmg, description: `${isPlayer ? '造成' : '受到'} ${dmg} 点伤害` });
   }
-  
-  // 7. 更新元数据
-  // 重新计算 Tangle 等即时光环
-  newState.playerCostMod = recalculateCostMod(newState.playerEffects);
-  newState.opponentCostMod = recalculateCostMod(newState.opponentEffects);
+  if ((spell.armorGain || 0) > 0) {
+      actions.push({ type: 'ARMOR_CHANGE', target: caster, value: spell.armorGain, description: `${isPlayer ? '获得' : '对手获得'} ${spell.armorGain} 护甲` });
+  }
+
+  // 6. 机制特效 Actions
+  const mechanicGenerator = MECHANIC_DEFINITIONS[spell.mechanic];
+  if (mechanicGenerator) {
+      actions.push(...mechanicGenerator(state, caster, spell, countered, crit));
+  }
+
+  // 7. 特殊操作: 手牌移除 & LastSpell 更新
+  const cmd: GameCommand = { id: `cast_${spellId}`, sourceSpell: spellId, caster, actions };
+  let { state: newState, logs } = GameSequenceExecutor.executeCommand(state, cmd);
   
   if (isPlayer) {
-    // ⚡ 连击状态更新
-    if (isThunder(spellId)) {
-        newState.playerConsecutiveThunder++;
-    } else {
-        newState.playerConsecutiveThunder = 0;
-    }
-    
-    newState.playerLastSpell = spellId;
-    const idx = newState.playerHand.indexOf(spellId);
-    if (idx > -1) {
-       const newHand = [...newState.playerHand];
-       newHand.splice(idx, 1);
-       newState.playerHand = newHand;
-    }
+      newState.playerLastSpell = spellId;
+      newState.playerHand = newState.playerHand.filter((id, i) => i !== newState.playerHand.indexOf(spellId));
   } else {
-    // ⚡ AI 连击状态更新
-    if (isThunder(spellId)) {
-        newState.opponentConsecutiveThunder++;
-    } else {
-        newState.opponentConsecutiveThunder = 0;
-    }
-    
-    newState.opponentLastSpell = spellId;
-    newState.opponentHandSize = Math.max(0, newState.opponentHandSize - 1);
+      newState.opponentLastSpell = spellId;
+      newState.opponentHandSize = Math.max(0, newState.opponentHandSize - 1);
   }
 
   return { newState, logs };
 };
+
 
 // ============ AI 逻辑 (Patch 2.0) ============
 
