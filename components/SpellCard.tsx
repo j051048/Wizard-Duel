@@ -75,6 +75,7 @@ export const SpellCard: React.FC<SpellCardProps> = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [rotate, setRotate] = useState({ x: 0, y: 0 });
+  const [imgError, setImgError] = useState(false);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (disabled || isFaceDown) return;
@@ -197,26 +198,15 @@ export const SpellCard: React.FC<SpellCardProps> = ({
               className="absolute inset-0 opacity-40 mix-blend-screen"
               style={{ background: `radial-gradient(circle at center, ${spell.shadowColor}, transparent 80%)` }}
             />
-            {/* Main Art / Emoji */}
+             {/* Main Art / Emoji */}
              <div className="absolute inset-0 z-0 transform transition-transform duration-500 group-hover:scale-110">
-                {spell.artSrc ? (
+                {!imgError && spell.artSrc ? (
                    <img 
                     src={spell.artSrc} 
                     alt={spell.name} 
-                    loading="lazy"
-                    decoding="async"
+                    loading="eager"
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      // 如果图片挂了，回退到显示 Emoji 容器
-                      const parent = e.currentTarget.parentElement;
-                      if (parent) {
-                        const fallback = document.createElement('div');
-                        fallback.className = 'flex items-center justify-center h-full text-6xl drop-shadow-2xl grayscale-[0.2] transition-all';
-                        fallback.innerHTML = spell.emoji;
-                        parent.appendChild(fallback);
-                      }
-                    }} 
+                    onError={() => setImgError(true)}
                    />
                 ) : (
                    <div className="flex items-center justify-center h-full text-6xl drop-shadow-2xl grayscale-[0.2] group-hover:grayscale-0 transition-all">{spell.emoji}</div>
