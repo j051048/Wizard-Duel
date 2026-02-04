@@ -3,9 +3,9 @@
  */
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { Volume2, VolumeX, ScrollText } from 'lucide-react';
+import { Volume2, VolumeX, ScrollText, Flag } from 'lucide-react';
 import { SpellType, DuelState, GameLoopState } from '../types';
-import { GAME_CONFIG } from '../constants';
+import { GAME_CONFIG, SPELLS } from '../constants';
 import { getSpellById, getPlayableCards } from '../services/gameLogic';
 import { HapticService } from '../services/haptic';
 import { PlayerFrame } from './PlayerFrame';
@@ -25,6 +25,7 @@ import BattleHand from './battle/BattleHand';
 import BattleEffects from './battle/BattleEffects';
 import CombatFeed from './battle/CombatFeed';
 import { TurnIndicator } from './battle/TurnIndicator';
+import { HeroSkillButton } from './battle/HeroSkillButton';
 
 // Hooks
 import { useDragToPlay } from '../hooks/useDragToPlay';
@@ -102,6 +103,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     if (!activeId || !duelState || phase !== 'PLAYER_TURN' || gameLoopState.isProcessing) return null;
     return calculateSpellProjection(duelState, 'player', activeId);
   }, [dragState?.spellId, hoveredSpellId, phase, duelState, gameLoopState.isProcessing]);
+
+  // Hero Skills Logic
+  const heroSkills = useMemo(() => {
+    return SPELLS.filter(s => s.id.startsWith('hero_'));
+  }, []);
 
   // Effects Monitoring
   useEffect(() => {
@@ -241,8 +247,21 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                maxMana={duelState.playerMaxMana}
                effects={duelState.playerEffects}
                isShaking={isPlayerShaking}
-               projection={projection?.target === 'player' ? { hpChange: projection.netHpChange, armorChange: projection.netArmorChange } : null}
-             />
+                projection={projection?.target === 'player' ? { hpChange: projection.netHpChange, armorChange: projection.netArmorChange } : null}
+              />
+              
+             {/* 英雄技能栏 - 位于头像上方 */}
+             <div className="absolute left-0 bottom-full mb-2 ml-2 md:ml-0 flex gap-2 w-max px-2 py-1.5 bg-black/40 backdrop-blur-md rounded-xl border border-white/5 shadow-2xl animate-in slide-in-from-left-4 fade-in duration-700 pointer-events-auto z-50">
+                {heroSkills.map(skill => (
+                    <HeroSkillButton
+                        key={skill.id}
+                        skill={skill}
+                        canUse={phase === 'PLAYER_TURN' && !duelState.heroSkillsUsed && !gameLoopState.isProcessing}
+                        currentMana={duelState.playerMana}
+                        onClick={() => handlePlayCard(skill.id)}
+                    />
+                ))}
+            </div>
           </div>
 
           <div className="flex-1 flex flex-col items-center justify-end h-full absolute inset-x-0 bottom-0 pointer-events-none">
@@ -285,6 +304,13 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
       {/* Controls */}
       <div className="fixed top-4 right-4 z-40 safe-area-top flex gap-2">
+        <button 
+          onClick={onSurrender} 
+          className="p-2 bg-red-900/40 backdrop-blur-md rounded-lg border border-red-500/30 text-red-400 hover:text-red-200 hover:bg-red-900/60 transition-colors"
+          title="投降"
+        >
+          <Flag size={20} />
+        </button>
         <button 
           onClick={() => setIsLogOpen(!isLogOpen)} 
           className="p-2 bg-black/40 backdrop-blur-md rounded-lg border border-white/10 text-white/60 hover:text-white transition-colors"
