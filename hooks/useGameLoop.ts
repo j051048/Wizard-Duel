@@ -11,7 +11,7 @@ import {
 import { 
   createInitialDuelState, executeSpell, executeAITurn,
   prepareNextTurn, drawCard, createTavernDuelState,
-  canAffordSpell
+  canAffordSpell, checkGameOver
 } from '../services/gameLogic';
 
 // 阶段持续时间 (毫秒)
@@ -94,12 +94,14 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
       messages.push(`对手由于疲劳受到 ${oResult.fatigueDamage} 点伤害`);
     }
 
-    // 3. 检查疲劳死
-    if (nextState.playerHP <= 0 || nextState.opponentHP <= 0) {
+        // 3. 🔧 使用统一死亡检查（疲劳死）
+    const gameOverResult = checkGameOver(nextState);
+    if (gameOverResult) {
         setDuelState(nextState);
         setIsGameOver(true);
-        setGameResult(nextState.playerHP <= 0 ? 'LOSS' : 'WIN');
-        setResultText(nextState.playerHP <= 0 ? 'LOSS' : 'WIN');
+        const finalResult = gameOverResult === 'DRAW' ? 'LOSS' : gameOverResult;
+        setGameResult(finalResult);
+        setResultText(gameOverResult);
         setPhase('ROUND_RESET');
         return;
     }
@@ -133,9 +135,16 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
     setResultText('');
   }, [startNewRound]);
 
-  // 玩家出牌 (Multi-Play)
+    // 玩家出牌 (Multi-Play)
   const playCard = useCallback((spellId: SpellType): boolean => {
     if (phase !== 'PLAYER_TURN' || !duelState) return false;
+
+    // 🔧 检查玩家是否被冻结
+    const isFrozen = duelState.playerEffects.some(e => e.type === 'frozen');
+    if (isFrozen) {
+      setEffectMessages(['❄️ 你被冻结了，本回合无法出牌！']);
+      return false;
+    }
 
     // 强制能量检查（杜绝脚本漏洞）
     const affordable = canAffordSpell(spellId, duelState.playerMana, duelState.playerEffects, duelState.playerCostMod);
@@ -149,16 +158,19 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
     
     const { newState, logs } = executeSpell(duelState, 'player', spellId);
     
-    setDuelState(newState);
+        setDuelState(newState);
     setEffectMessages(logs);
     setPlayerCard(spellId); // Show animation
     
-    // 检查胜利
-    if (newState.opponentHP <= 0) {
+    // 🔧 使用统一死亡检查（支持同归于尽 = 平局）
+    const gameOverResult = checkGameOver(newState);
+    if (gameOverResult) {
         setIsGameOver(true);
-        setGameResult('WIN');
-        setResultText('WIN');
-        setPhase('ROUND_RESET'); // Stop interaction
+        // DRAW 情况下暂时判定为 LOSS（后续可优化为真正的平局处理）
+        const finalResult = gameOverResult === 'DRAW' ? 'LOSS' : gameOverResult;
+        setGameResult(finalResult);
+        setResultText(gameOverResult);
+        setPhase('ROUND_RESET');
         return true;
     }
     
@@ -189,10 +201,13 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
             setOpponentCard(newState.opponentLastSpell);
         }
 
-        if (newState.playerHP <= 0) {
+                // 🔧 使用统一死亡检查
+        const gameOverResult = checkGameOver(newState);
+        if (gameOverResult) {
             setIsGameOver(true);
-            setGameResult('LOSS');
-            setResultText('LOSS');
+            const finalResult = gameOverResult === 'DRAW' ? 'LOSS' : gameOverResult;
+            setGameResult(finalResult);
+            setResultText(gameOverResult);
             setPhase('ROUND_RESET');
         } else {
             // 回合结束，准备下一轮

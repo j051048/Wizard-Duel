@@ -455,7 +455,7 @@ export const SPELLS: Spell[] = [
     color: 'text-blue-500', 
     borderColor: 'border-blue-500',
     shadowColor: 'rgba(59,130,246,0.5)',
-    beats: 'healing',         // 自指
+    beats: 'fire',            // 🔧 修复：治疗克制火焰（水系）
     manaCost: 2,
     damage: 0,
     armorGain: 0,
@@ -473,7 +473,7 @@ export const SPELLS: Spell[] = [
     color: 'text-purple-500', 
     borderColor: 'border-purple-500',
     shadowColor: 'rgba(147,51,234,0.5)',
-    beats: 'aoe',             // 自指
+    beats: 'vine',            // 🔧 修复：AOE克制藤蔓（范围伤害克制纠缠）
     manaCost: 4,
     damage: 3,
     armorGain: 0,
@@ -491,7 +491,7 @@ export const SPELLS: Spell[] = [
     color: 'text-indigo-500', 
     borderColor: 'border-indigo-500',
     shadowColor: 'rgba(99,102,241,0.5)',
-    beats: 'draw',            // 自指
+    beats: 'silence',         // 🔧 修复：智慧克制沉默（知识对抗封印）
     manaCost: 3,
     damage: 0,
     armorGain: 0,
@@ -509,7 +509,7 @@ export const SPELLS: Spell[] = [
     color: 'text-gray-500', 
     borderColor: 'border-gray-500',
     shadowColor: 'rgba(107,114,128,0.5)',
-    beats: 'silence',         // 自指
+    beats: 'healing',         // 🔧 修复：沉默克制治疗（封印克制恢复）
     manaCost: 1,
     damage: 0,
     armorGain: 0,
@@ -528,8 +528,8 @@ export const SPELLS: Spell[] = [
     color: 'text-red-400', 
     borderColor: 'border-red-400',
     shadowColor: 'rgba(248,113,113,0.6)',
-    beats: 'hero_fire',       // 自指
-    manaCost: 0,              // 免费技能
+        beats: 'vine',            // 🔧 修复：火克藤
+    manaCost: 2,              // 🔧 平衡：英雄技能需要2费
     damage: 2,
     armorGain: 0,
     rarity: 'mythic',
@@ -546,10 +546,10 @@ export const SPELLS: Spell[] = [
     color: 'text-green-400', 
     borderColor: 'border-green-400',
     shadowColor: 'rgba(74,222,128,0.6)',
-    beats: 'hero_vine',       // 自指
-    manaCost: 0,              // 免费技能
+        beats: 'ice',             // 🔧 修复：藤克冰
+    manaCost: 2,              // 🔧 平衡：英雄技能需要2费
     damage: 0,
-    armorGain: 3,
+    armorGain: 2,             // 🔧 平衡：3甲降为2甲
     rarity: 'mythic',
     mechanic: 'heal',
     cardSet: 'legacy',        // 遗产扩展包
@@ -564,10 +564,10 @@ export const SPELLS: Spell[] = [
     color: 'text-cyan-400', 
     borderColor: 'border-cyan-400',
     shadowColor: 'rgba(34,211,238,0.6)',
-    beats: 'hero_ice',        // 自指
-    manaCost: 0,              // 免费技能
+        beats: 'thunder',         // 🔧 修复：冰克雷
+    manaCost: 2,              // 🔧 平衡：英雄技能需要2费
     damage: 0,
-    armorGain: 5,
+    armorGain: 2,             // 🔧 平衡：5甲降为2甲
     rarity: 'mythic',
     mechanic: 'freeze',
     cardSet: 'legacy',        // 遗产扩展包
@@ -582,8 +582,8 @@ export const SPELLS: Spell[] = [
     color: 'text-yellow-400', 
     borderColor: 'border-yellow-400',
     shadowColor: 'rgba(250,204,21,0.6)',
-    beats: 'hero_thunder',    // 自指
-    manaCost: 0,              // 免费技能
+        beats: 'rock',            // 🔧 修复：雷克石
+    manaCost: 2,              // 🔧 平衡：英雄技能需要2费
     damage: 1,
     armorGain: 0,
     rarity: 'mythic',
@@ -594,16 +594,16 @@ export const SPELLS: Spell[] = [
   },
   { 
     id: 'hero_rock', 
-    name: '大地之力',       // Earthquake -> Earth Power (to avoid duplicate name logic if any)
+    name: '大地之力',       // Earthquake -> Earth Power
     emoji: '🪨💥', 
     artSrc: '/cards/hero-rock-earthquake.webp',
     color: 'text-stone-400', 
     borderColor: 'border-stone-400',
     shadowColor: 'rgba(168,162,158,0.6)',
-    beats: 'hero_rock',       // 自指
-    manaCost: 0,              // 免费技能
+        beats: 'fire',            // 🔧 修复：石克火
+    manaCost: 2,              // 🔧 平衡：英雄技能需要2费
     damage: 0,
-    armorGain: 8,
+    armorGain: 2,             // 🔧 平衡：8甲降为2甲（与炉石战士一致）
     rarity: 'mythic',
     mechanic: 'fortify',
     cardSet: 'legacy',        // 遗产扩展包
@@ -618,7 +618,7 @@ export const SPELLS: Spell[] = [
     color: 'text-gray-400', 
     borderColor: 'border-gray-400',
     shadowColor: 'rgba(156,163,175,0.5)',
-    beats: 'skip',            // 自指占位
+    beats: 'skip' as SpellType, // 🔧 skip 不参与克制系统
     manaCost: 0, 
     damage: 0, 
     rarity: 'common',

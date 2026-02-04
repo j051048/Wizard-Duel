@@ -224,9 +224,17 @@ export const executeSpell = (
     }
   }
 
-  // 3.2 机制处理 (Thunder, Charge) - 被抵消时不触发连击增伤
+    // 3.2 机制处理 (Thunder, Charge) - 被抵消时不触发连击增伤
   const myLastSpell = isPlayer ? newState.playerLastSpell : newState.opponentLastSpell;
-  if (!isCountered && spell.id === 'thunder' && myLastSpell === 'thunder') {
+  
+  // 🔧 修复：支持所有雷电系卡牌的连击判定
+  const isThunderSpell = (id: SpellType | null): boolean => {
+    if (!id) return false;
+    return id.startsWith('thunder') || id === 'hero_thunder';
+  };
+  
+  if (!isCountered && spell.mechanic === 'charge' && isThunderSpell(spell.id) && isThunderSpell(myLastSpell)) {
+    // 连击加成最多1.5倍，防止无限叠加
     damage = Math.floor(damage * 1.5);
     logs.push(`⚡ 闪电连击！伤害增加50%！`);
   }
@@ -350,17 +358,17 @@ export const executeSpell = (
      // Already handled via armorGain
   }
 
-  // 4. 应用伤害 (护甲逻辑)
+    // 4. 应用伤害 (护甲逻辑) - 🔧 不再在此处判定死亡，统一到回合结束
   if (damage > 0) {
     const absorb = Math.min(targetArmor, damage);
     const finalDamage = damage - absorb;
     
     if (isPlayer) {
-      newState.opponentArmor -= absorb;
+      newState.opponentArmor = Math.max(0, newState.opponentArmor - absorb);
       newState.opponentHP = Math.max(0, newState.opponentHP - finalDamage);
       logs.push(`造成 ${damage} 点伤害` + (absorb > 0 ? ` (${absorb}被格挡)` : ''));
     } else {
-      newState.playerArmor -= absorb;
+      newState.playerArmor = Math.max(0, newState.playerArmor - absorb);
       newState.playerHP = Math.max(0, newState.playerHP - finalDamage);
       logs.push(`受到 ${damage} 点伤害` + (absorb > 0 ? ` (${absorb}被格挡)` : ''));
     }
@@ -481,34 +489,46 @@ const pickBestSpellForAI = (state: DuelState): SpellType | null => {
 };
 
 export const executeAITurn = (state: DuelState): { newState: DuelState, logs: string[] } => {
-  let currentState = { ...state };
+  // 🔧 深拷贝避免状态污染
+  let currentState = { 
+    ...state,
+    playerEffects: [...state.playerEffects],
+    opponentEffects: [...state.opponentEffects],
+    opponentDeck: [...state.opponentDeck],
+    playerHand: [...state.playerHand],
+  };
   const logs: string[] = [];
 
   // [Fix] 检查冻结状态
   const isFrozen = currentState.opponentEffects.some(e => e.type === 'frozen');
   if (isFrozen) {
      logs.push('❄️ 对手被彻底冻结，无法行动！');
-     // 冻结通常意味着无法出牌，直接结束回合
-     // 我们不需要在这里减少持续时间，因为 prepareNextTurn 会处理
      return { newState: currentState, logs };
   }
   
   // 模拟 AI 思考和出牌
-  // 限制：最多出手牌数量的牌
   let cardsPlayed = 0;
   const maxCards = currentState.opponentHandSize;
   
-  // 简单模拟 Draft：回合开始时 AI 应该也获得了手牌 (+1 HandSize)
-  // 我们在 prepareNextTurn 里处理了 opponentHandSize + 1
+  // 🔧 添加硬性循环上限，防止无限循环（例如全0费卡场景）
+  const MAX_ACTIONS = 20;
+  let actionCount = 0;
+  let lastMana = currentState.opponentMana;
   
-  while (cardsPlayed < maxCards && currentState.opponentMana >= 0) {
+  while (cardsPlayed < maxCards && currentState.opponentMana >= 0 && actionCount < MAX_ACTIONS) {
+      actionCount++;
+      
       const spellId = pickBestSpellForAI(currentState);
       if (!spellId) break; 
       
       const result = executeSpell(currentState, 'opponent', spellId);
       
-      // 如果状态没变（例如因为某种检查失败了），我们主动中断，防止死循环或无效浪费
-      if (result.newState === currentState && result.logs.length === currentState.playerHP) { // 这是一个极端检查，通常不会发生
+      // 🔧 检测是否真的执行了（法力或手牌变化）
+      const manaChanged = result.newState.opponentMana !== currentState.opponentMana;
+      const handChanged = result.newState.opponentHandSize !== currentState.opponentHandSize;
+      
+      if (!manaChanged && !handChanged && result.logs.length === 0) {
+         // 没有任何变化，中断防止死循环
          break;
       }
 
@@ -516,7 +536,13 @@ export const executeAITurn = (state: DuelState): { newState: DuelState, logs: st
       logs.push(...result.logs);
       cardsPlayed++;
       
-      if (currentState.playerHP <= 0) break;
+      // 🔧 使用统一死亡检查
+      const gameOver = checkGameOver(currentState);
+      if (gameOver) break;
+  }
+  
+  if (actionCount >= MAX_ACTIONS) {
+    logs.push('⚠️ AI 行动次数达到上限');
   }
   
   return { newState: currentState, logs };
@@ -527,10 +553,44 @@ export const getAISpell = (state: DuelState): SpellType => {
     return pickBestSpellForAI(state) || 'rock';
 };
 
+// ============ 死亡检查 (统一判定) ============
+
+/**
+ * 统一死亡检查 - 在所有效果结算后调用
+ * 返回游戏结果：'WIN' | 'LOSS' | 'DRAW' | null (游戏继续)
+ */
+export const checkGameOver = (state: DuelState): 'WIN' | 'LOSS' | 'DRAW' | null => {
+  const playerDead = state.playerHP <= 0;
+  const opponentDead = state.opponentHP <= 0;
+  
+  if (playerDead && opponentDead) {
+    return 'DRAW'; // 同归于尽 = 平局
+  }
+  if (playerDead) {
+    return 'LOSS';
+  }
+  if (opponentDead) {
+    return 'WIN';
+  }
+  return null; // 游戏继续
+};
+
 // ============ 回合准备 (Patch 2.0) ============
 
 export const prepareNextTurn = (state: DuelState): DuelState => {
-  const newState = { ...state };
+  const newState = { 
+    ...state,
+    // 深拷贝数组，避免状态污染
+    playerEffects: [...state.playerEffects],
+    opponentEffects: [...state.opponentEffects],
+    playerHand: [...state.playerHand],
+    playerDeck: [...state.playerDeck],
+    opponentDeck: [...state.opponentDeck],
+  };
+  
+  // 🔧 重置英雄技能使用状态（每回合可用1次）
+  newState.heroSkillsUsed = false;
+  
   const logs: string[] = [];
 
   // 1. 法力成长与恢复
