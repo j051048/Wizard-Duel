@@ -32,14 +32,12 @@ export const HealthBar: React.FC<HealthBarProps> = ({ current, max, isPlayer }) 
   const prevPercentage = useRef(percentage);
   
   useEffect(() => {
-    // 检测血量减少
     if (percentage < prevPercentage.current) {
       setIsHurt(true);
       setTimeout(() => setIsHurt(false), 300);
     }
     prevPercentage.current = percentage;
     
-    // 平滑过渡到目标值
     if (Math.abs(percentage - displayPercentage) < 0.5) {
       setDisplayPercentage(percentage);
       return;
@@ -49,92 +47,54 @@ export const HealthBar: React.FC<HealthBarProps> = ({ current, max, isPlayer }) 
     const startTime = performance.now();
     const startValue = displayPercentage;
     const endValue = percentage;
-    const duration = 400; // 400ms 动画时长
+    const duration = 400;
 
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      
       const eased = 1 - Math.pow(1 - progress, 3);
       const nextValue = startValue + (endValue - startValue) * eased;
-      
       setDisplayPercentage(nextValue);
-
-      if (progress < 1) {
-        rafId = requestAnimationFrame(animate);
-      }
+      if (progress < 1) rafId = requestAnimationFrame(animate);
     };
 
     rafId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(rafId);
   }, [percentage]);
 
-  
   return (
-    <div className="relative">
-      <div className={`
-        relative w-full h-7 md:h-9 bg-gray-900 rounded-lg overflow-hidden 
-        border-2 ${isHurt ? 'border-red-400' : 'border-gray-700'} 
-        shadow-inner transition-colors duration-200
-      `}>
-        {/* 伤害层（延迟消失的红色背景） */}
-        <div 
-          className="absolute inset-0 bg-red-600/50 transition-all duration-700 ease-out"
-          style={{ width: `${prevPercentage.current}%` }}
-        />
+    <div className="relative w-full h-full flex items-center">
+      {/* 纯粹的血条容器 (无边框，只负责填充) */}
+      <div className="w-full h-2.5 md:h-3.5 bg-black/60 rounded-full overflow-hidden shadow-inner backdrop-blur-sm">
         
-        {/* 血量填充 */}
+        {/* 伤害残留层 (白/红闪烁) */}
+        <div 
+          className="absolute inset-y-0 left-0 bg-white/50 transition-all duration-300 ease-out"
+          style={{ width: `${Math.max(percentage, displayPercentage)}%` }}
+        />
+
+        {/* 主血量条 */}
         <div 
           className={`
-            h-full relative z-10 transition-colors duration-300
+            h-full relative z-10 transition-all duration-300 rounded-r-sm
             ${isCritical 
-              ? 'bg-gradient-to-r from-red-900 to-red-600 animate-pulse' 
-              : isLow 
-                ? 'bg-gradient-to-r from-red-800 to-red-500' 
-                : 'bg-gradient-to-r from-red-700 via-red-600 to-red-500'
+               ? 'bg-gradient-to-r from-red-900 via-red-600 to-red-900 animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.8)]' 
+               : 'bg-gradient-to-b from-red-500 via-red-600 to-red-800'
             }
           `}
-          style={{ width: `${displayPercentage}%`, transition: 'width 0.3s ease-out' }}
+          style={{ width: `${displayPercentage}%` }}
         >
-          {/* 流动光效 */}
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
-          </div>
+          {/* 高光反射 - 增加玻璃感 */}
+          <div className="absolute top-0 left-0 right-0 h-[40%] bg-gradient-to-b from-white/40 to-transparent" />
         </div>
-        
-        {/* 顶部高光 */}
-        <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white/25 to-transparent z-10" />
-        
-        {/* 底部阴影 */}
-        <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t from-black/30 to-transparent z-10" />
       </div>
 
-      {/* 血条边框素材 (UI Asset) */}
-      <img 
-        src="/ui/health-bar-frame.webp" 
-        alt="frame" 
-        className="absolute -inset-1 w-[calc(100%+8px)] h-[calc(100%+8px)] pointer-events-none z-20 opacity-80 mix-blend-overlay"
-        onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
-      />
-
-      {/* 数值显示与图标 - 移出Bar体，更清晰 */}
-      <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
-        <span className={`
-          text-white text-sm font-bold drop-shadow-md tracking-wider flex items-center gap-1.5
-          ${isCritical ? 'animate-pulse text-red-100' : ''}
-          ${isHurt ? 'scale-110' : ''}
-          transition-transform duration-200
-        `}>
-          <img 
-            src="/icons/icon-health.webp" 
-            alt="HP" 
-            className="w-4 h-4 object-contain drop-shadow-sm" 
-            onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
-          />
-          <span className="drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-            {current}/{max}
-          </span>
-        </span>
+      {/* 数值浮动在血条上方 (不盖住血条，而是位于其上方或正中) */}
+      <div className="absolute -top-5 right-0 text-xs font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,1)] flex items-center gap-1 opacity-90">
+         <span className={isHurt ? 'text-red-300 scale-110 duration-100' : 'text-gray-200'}>
+           {current}/{max}
+         </span>
+         {isCritical && <span className="animate-ping w-1.5 h-1.5 bg-red-500 rounded-full" />}
       </div>
     </div>
   );
@@ -272,86 +232,88 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
 }) => {
   // 确定资源路径
   const bgFrame = isPlayer ? "/ui/frames/player_hud_v4.png" : "/ui/frames/opponent_hud_v4.png";
-  const defaultAvatar = isPlayer ? '🧙‍♂️' : '💀';
   const actualAvatarSrc = avatarSrc || (isPlayer ? '/avatars/player-wizard.webp' : '/avatars/opponent-sorcerer.webp');
 
   return (
-    <div className={`relative group w-[380px] h-[120px] sm:w-[480px] sm:h-[140px] md:w-[580px] md:h-[170px] transition-all duration-300 ${isShaking ? 'animate-shake-strong' : ''}`}>
+    <div className={`relative group w-[380px] h-[120px] sm:w-[480px] sm:h-[140px] md:w-[600px] md:h-[160px] transition-all duration-300 ${isShaking ? 'animate-shake-strong' : ''}`}>
       
-      {/* === Layer 0: Content Underlay (Avatar needs to be behind the frame) === */}
-      {/* 调整：生成图的镂空可能不是透明的（通常是白底或黑底），所以策略改为：
-          让元素浮在图片"之上"，手动对齐到视觉槽位中。 
-          如果用户后续能提供透明底图更好，但现在我们假设需要覆盖。
+      {/* 
+         HUD 层级结构重构 (Blizzard Style):
+         Layer 1 (Bottom): 阴影/装饰
+         Layer 2: HUD Frame (v4 Image) - 作为定锚
+         Layer 3: Avatar (需要盖住左侧可能存在的任何瑕疵)
+         Layer 4: Health Bar (嵌入右侧卡槽)
       */}
 
-      {/* --- HUD FRAME BACKGROUND --- */}
+      {/* === Layer 2: HUD Frame === */}
+      {/* 暂时移除 blending，因为在暗色背景下会让金属框体消失。我们让它作为实体遮挡。 */}
       <img 
         src={bgFrame}
         alt="HUD Frame"
-        className="absolute inset-0 w-full h-full object-contain z-20 drop-shadow-xl select-none pointer-events-none mix-blend-screen brightness-110 contrast-125"
+        className="absolute inset-0 w-full h-full object-contain z-10 drop-shadow-2xl select-none pointer-events-none"
       />
 
-      {/* === Layer 1: Avatar Slot === */}
+      {/* === Layer 3: Avatar === */}
       {/* 
-         根据生成的图片结构 (左圆右长条)，大概位置：
-         Left: ~2-5%, Top: ~10%, Height: ~80% (Circle)
+         位于左侧，圆形。增加一个厚重的边框来掩盖图层交界处。
+         位置：根据 v4 图片结构微调。通常左侧 5%-25% 区域。
       */}
       <div 
-        className="absolute z-10 rounded-full overflow-hidden bg-slate-900 border-2 border-black/50 shadow-inner"
+        className="absolute z-20 rounded-full overflow-hidden bg-slate-900 shadow-2xl"
         style={{
-            left: '3.5%', 
-            top: '12%',
-            height: '76%',
+            left: '2%', 
+            top: '8%',
+            height: '84%',
             aspectRatio: '1/1',
+            boxShadow: '0 0 20px rgba(0,0,0,0.8), inset 0 0 10px rgba(0,0,0,0.8)',
+            border: '3px solid #1a1a1a' // 深色内衬圈
         }}
       >
          <img 
            src={actualAvatarSrc} 
            alt={name}
            className="w-full h-full object-cover"
-           onError={(e) => {
-               (e.target as HTMLImageElement).style.display = 'none';
-               // Fallback logic could be added here
-           }} 
          />
-         {/* Inner Shadow to make it look recessed */}
-         <div className="absolute inset-0 shadow-[inset_0_4px_8px_rgba(0,0,0,0.5)] pointer-events-none" />
+         {/* 精致的金属外环 (CSS 模拟) */}
+         <div className="absolute inset-0 rounded-full border-[3px] border-[#c5a059] opacity-80 mix-blend-overlay" />
+         <div className="absolute inset-0 rounded-full border border-white/20" />
+         <div className="absolute inset-0 shadow-[inset_0_4px_15px_rgba(0,0,0,0.6)] pointer-events-none" />
       </div>
 
-      {/* === Layer 2: Info Content === */}
-      <div className="absolute z-30 flex flex-col justify-center"
+      {/* === Layer 4: Info Content === */}
+      <div className="absolute z-30 flex flex-col justify-center pl-2"
            style={{
-               left: '26%', // Avatar takes up ~25% width
-               right: '4%',
-               top: '14%',
-               bottom: '12%'
+               left: '28%', // 头像右侧开始
+               right: '5%',
+               top: '18%',
+               bottom: '15%'
            }}
       >
-         {/* Top Row: Name & HP */}
-         <div className="flex items-center justify-between mb-1 px-2">
+         {/* Top Row: Name */}
+         <div className="flex items-end justify-between mb-1 px-1 h-[25%]">
             <span className={`
-                text-sm sm:text-base font-wizard font-bold tracking-widest uppercase truncate
-                ${isPlayer ? 'text-amber-100 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-red-100 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]'}
+                text-base sm:text-lg font-wizard font-bold tracking-widest uppercase truncate
+                ${isPlayer ? 'text-[#f0e6d2] drop-shadow-[0_2px_2px_rgba(0,0,0,1)]' : 'text-[#e2b8b8] drop-shadow-[0_2px_2px_rgba(0,0,0,1)]'}
             `}>
                 {name}
             </span>
          </div>
 
          {/* Middle: Health Bar Slot */}
-         <div className="relative w-full h-[30%] sm:h-[35%] rounded-md overflow-hidden shadow-inner bg-black/40 mb-1">
+         <div className="relative w-full h-[20%] flex items-center pr-4">
              <HealthBar current={hp} max={maxHp} isPlayer={isPlayer} />
          </div>
 
-         {/* Bottom: Mana & Buffs */}
-         <div className="flex items-center justify-between px-1 h-[30%] text-xs sm:text-sm">
-             <div className="transform scale-90 sm:scale-100 origin-left">
+         {/* Bottom: Mana & Buffs (Resources) */}
+         <div className="flex items-center gap-4 mt-2 h-[35%] px-1">
+             <div className="transform scale-90 origin-left">
                  <ManaCrystals current={mana} max={maxMana} />
              </div>
              
              {/* Status Badge Row */}
-             <div className="flex gap-1 overflow-visible">
-                 {effects.slice(0, 3).map((effect, i) => (
-                    <div key={i} className="transform scale-75 origin-right">
+             <div className="flex gap-1 overflow-visible ml-auto">
+                 {effects.slice(0, 4).map((effect, i) => (
+                    <div key={i} className="transform scale-75 origin-right transition-all hover:scale-100">
                         <StatusEffectBadge effect={effect} />
                     </div>
                  ))}
@@ -359,12 +321,12 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
          </div>
       </div>
 
-      {/* Armor Bubble - Float Outside */}
+      {/* Armor Bubble - 独立悬浮，不再被框体限制 */}
       {armor > 0 && (
-        <div className="absolute top-0 left-[20%] z-40 animate-bounce-slight">
-           <div className="relative w-8 h-8 flex items-center justify-center bg-slate-200 rounded-full border-2 border-slate-500 shadow-lg">
-             <Shield className="w-5 h-5 text-slate-700" />
-             <span className="absolute -bottom-1 -right-1 bg-black text-white text-[10px] px-1 rounded-full">{armor}</span>
+        <div className="absolute -top-2 left-[20%] z-40 animate-bounce-slight">
+           <div className="relative w-8 h-8 flex items-center justify-center bg-slate-800 rounded-full border-2 border-slate-500 shadow-[0_0_10px_rgba(0,0,0,0.8)] ring-1 ring-white/20">
+             <Shield className="w-4 h-4 text-slate-300" />
+             <span className="absolute -bottom-1 -right-1 bg-black text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-slate-700 shadow-sm">{armor}</span>
            </div>
         </div>
       )}
