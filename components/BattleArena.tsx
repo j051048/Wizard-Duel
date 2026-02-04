@@ -4,7 +4,7 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { LogOut, Volume2, VolumeX } from 'lucide-react';
-import { SpellType, DuelPhase, DuelState } from '../types';
+import { SpellType, DuelPhase, DuelState, GameLoopState, AIStatus, AIEmoteType } from '../types';
 import { GAME_CONFIG } from '../constants';
 import { getSpellById, getPlayableCards } from '../services/gameLogic';
 import { HapticService } from '../services/haptic';
@@ -15,14 +15,9 @@ import { calculateSpellProjection, SpellProjection } from '../services/projectio
 import { useSettings } from '../context/SettingsContext';
 
 interface BattleArenaProps {
-  duelState: DuelState;
-  phase: DuelPhase;
-  playerCard: SpellType | null;
-  opponentCard: SpellType | null;
-  resultText: string;
-  effectMessages: string[];
+  gameLoopState: GameLoopState;
   selectedBet: number;
-  onPlayCard: (spellId: SpellType) => void;
+  onPlayCard: (spellId: SpellType, isConfirmed?: boolean) => void;
   onPass?: () => void;
   onSurrender: () => void;
   isMuted: boolean;
@@ -30,7 +25,68 @@ interface BattleArenaProps {
   isPlayerShaking?: boolean;
   isOpponentShaking?: boolean;
   isTavernMode?: boolean;
+  setTargeting: (data: GameLoopState['targetingData']) => void;
 }
+
+// === 子组件：AI 气泡组件 ===
+const AIEmoteBubble: React.FC<{ status: AIStatus }> = ({ status }) => {
+  if (!status.emote && !status.message) return null;
+  
+  const getEmoteIcon = (emote: AIEmoteType | null) => {
+    switch (emote) {
+      case 'thinking': return '🤔';
+      case 'thinking_fast': return '💡';
+      case 'laugh': return '😂';
+      case 'angry': return '💢';
+      case 'surprised': return '😲';
+      case 'taunt': return '😏';
+      default: return '💬';
+    }
+  };
+
+  return (
+    <div className="absolute -right-32 top-8 z-50 animate-bounce-slight pointer-events-none">
+       <div className="relative bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl border-2 border-slate-300 shadow-xl max-w-[150px]">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">{getEmoteIcon(status.emote)}</span>
+            <p className="text-xs font-bold text-slate-800 line-clamp-2 leading-tight">
+              {status.message}
+            </p>
+          </div>
+          {/* 下标 */}
+          <div className="absolute -left-2 top-4 w-4 h-4 bg-white/90 border-l-2 border-b-2 border-slate-300 rotate-45" />
+       </div>
+    </div>
+  );
+};
+
+// === 子组件：瞄准指示线 ===
+const TargetingArrow: React.FC<{ data: GameLoopState['targetingData'] }> = ({ data }) => {
+  if (!data?.isTargeting) return null;
+  
+  return (
+    <svg className="fixed inset-0 w-full h-full pointer-events-none z-[60]">
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24" opacity="0.8" />
+        </marker>
+        <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+           <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.3" />
+           <stop offset="100%" stopColor="#fbbf24" stopOpacity="0.8" />
+        </linearGradient>
+      </defs>
+      <path 
+        d={`M ${data.startX} ${data.startY} Q ${(data.startX + data.endX)/2 - 50} ${(data.startY + data.endY)/2}, ${data.endX} ${data.endY}`}
+        stroke="url(#lineGrad)" 
+        strokeWidth="4" 
+        fill="none" 
+        strokeDasharray="8 8"
+        markerEnd="url(#arrowhead)"
+        className="animate-dash-move"
+      />
+    </svg>
+  );
+};
 
 interface DamageNumber {
   id: number;
@@ -42,12 +98,7 @@ interface DamageNumber {
 }
 
 export const BattleArena: React.FC<BattleArenaProps> = ({
-  duelState,
-  phase,
-  playerCard,
-  opponentCard,
-  resultText,
-  effectMessages,
+  gameLoopState,
   onPlayCard,
   onPass,
   onSurrender,
@@ -55,11 +106,18 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   onToggleMute,
   isPlayerShaking = false,
   isOpponentShaking = false,
+  setTargeting
 }) => {
+  const { 
+    duelState, phase, playerCard, opponentCard, resultText, effectMessages, aiStatus, targetingData 
+  } = gameLoopState;
+
   const isMobile = useIsMobile();
   const { isLowQuality } = useSettings();
-  const [damageNumbers, setDamageNumbers] = useState<DamageNumber[]>([]);
-  const damageIdRef = useRef(0);
+  
+  // Canvas 渲染相关
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const damageNumbersRef = useRef<DamageNumber[]>([]);
   const prevPlayerHP = useRef(duelState?.playerHP || GAME_CONFIG.maxHP);
   const prevOpponentHP = useRef(duelState?.opponentHP || GAME_CONFIG.maxHP);
   
@@ -67,7 +125,6 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   const [selectedSpellId, setSelectedSpellId] = useState<SpellType | null>(null);
   const [hoveredSpellId, setHoveredSpellId] = useState<SpellType | null>(null);
 
-  // 优先级：选中标识符优先于悬停标识符（用于预览显示）
   const activePreviewId = selectedSpellId || hoveredSpellId;
 
   const playerSpellDetails = playerCard ? getSpellById(playerCard) : null;
@@ -78,9 +135,51 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   const [projectiles, setProjectiles] = useState<{id: number, type: string, x: number, y: number}[]>([]);
 
   const projection = useMemo(() => {
-    if (!activePreviewId || phase !== 'PLAYER_TURN' || duelState.isProcessing) return null;
+    if (!activePreviewId || !duelState || phase !== 'PLAYER_TURN' || gameLoopState.isProcessing) return null;
     return calculateSpellProjection(duelState, 'player', activePreviewId);
-  }, [activePreviewId, phase, duelState]);
+  }, [activePreviewId, phase, duelState, gameLoopState.isProcessing]);
+
+  // Canvas 动画逻辑
+  useEffect(() => {
+    if (isLowQuality) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animationId: number;
+    const render = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const now = Date.now();
+        
+        damageNumbersRef.current = damageNumbersRef.current.filter(d => {
+            const age = now - d.id;
+            if (age > 1200) return false;
+            
+            const opacity = 1 - age / 1200;
+            const yOffset = (age / 1200) * 100;
+            
+            ctx.save();
+            ctx.globalAlpha = opacity;
+            ctx.fillStyle = d.isPlayer ? '#ef4444' : '#60a5fa';
+            ctx.font = `italic black ${d.isCrit ? '48px' : '36px'} WizardFont, sans-serif`;
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 4;
+            
+            const drawX = (d.x / 100) * canvas.width;
+            const drawY = (d.y / 100) * canvas.height - yOffset;
+            
+            ctx.strokeText(`-${d.value}`, drawX, drawY);
+            ctx.fillText(`-${d.value}`, drawX, drawY);
+            ctx.restore();
+            return true;
+        });
+        
+        animationId = requestAnimationFrame(render);
+    };
+    render();
+    return () => cancelAnimationFrame(animationId);
+  }, [isLowQuality]);
 
   const addDamageNumber = (damage: number, isPlayer: boolean, isCrit: boolean = false) => {
     HapticService.medium();
@@ -91,27 +190,19 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
        setTimeout(() => setShowBloodFlash(false), 400);
     }
 
-    const id = damageIdRef.current++;
     const x = 50 + (Math.random() - 0.5) * 20; 
     const y = isPlayer ? 65 : 25;
-    setDamageNumbers(prev => [...prev, { id, value: damage, x, y, isPlayer, isCrit }]);
-    
-    setTimeout(() => {
-      setDamageNumbers(prev => prev.filter(d => d.id !== id));
-    }, 1200);
+    damageNumbersRef.current.push({ id: Date.now(), value: damage, x, y, isPlayer, isCrit });
   };
 
   useEffect(() => {
+    if (!duelState) return;
     if (duelState.playerHP < prevPlayerHP.current) {
-        HapticService.heavy(); 
+        // 触发掉血逻辑
     }
     prevPlayerHP.current = duelState.playerHP;
-
-    if (duelState.opponentHP < prevOpponentHP.current) {
-        HapticService.heavy(); 
-    }
     prevOpponentHP.current = duelState.opponentHP;
-  }, [duelState.playerHP, duelState.opponentHP]);
+  }, [duelState?.playerHP, duelState?.opponentHP]);
 
   useEffect(() => {
     if (effectMessages.length > 0) {
@@ -123,13 +214,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         setTimeout(() => setShowCritEffect(false), 800);
       }
 
-      if (lastMsg.includes('造成') || lastMsg.includes('受到')) {
-        const match = lastMsg.match(/(\d+)\s*点伤害/);
-        if (match) {
+      const match = lastMsg.match(/(\d+)\s*点伤害/);
+      if (match) {
           const damage = parseInt(match[1]);
           const isPlayerTarget = lastMsg.includes('受到'); 
           addDamageNumber(damage, isPlayerTarget, isCrit); 
-        }
       }
     }
   }, [effectMessages]);
@@ -142,22 +231,31 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   }, []);
 
   const handlePlayCard = (spellId: SpellType, isConfirmed: boolean = false) => {
-    // 移动端逻辑：第一次点击选中预览，第二次点击才执行
+    if (!duelState) return;
     if (isMobile && !isConfirmed && selectedSpellId !== spellId) {
       setSelectedSpellId(spellId);
       HapticService.light();
+      
+      // 更新瞄准线位置 (初步位置，后面在渲染手牌处可以更精确获取中心点)
+      setTargeting({
+          isTargeting: true,
+          startX: window.innerWidth / 2,
+          startY: window.innerHeight - 100,
+          endX: window.innerWidth / 2,
+          endY: 150
+      });
       return;
     }
 
-    // 执行出牌
     setSelectedSpellId(null);
     setHoveredSpellId(null);
+    setTargeting(null);
     
     const id = Date.now();
     if (!isLowQuality) {
       setProjectiles(prev => [...prev, { id, type: 'player', x: 50, y: 80 }]);
     }
-    onPlayCard(spellId);
+    onPlayCard(spellId, isConfirmed);
     setTimeout(() => {
       if (isMounted.current) {
         setProjectiles(prev => prev.filter(p => p.id !== id));
@@ -166,9 +264,9 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   };
 
   const clearSelection = (e: React.MouseEvent) => {
-    // 只有点击到背景（非卡牌元素）时才清除选中
     if ((e.target as HTMLElement).classList.contains('arena-bg-overlay')) {
       setSelectedSpellId(null);
+      setTargeting(null);
     }
   };
 
@@ -230,33 +328,49 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
       {/* === 顶部：对手区 (15% Height / Fixed) === */}
       <div className="w-full h-[15%] min-h-[120px] flex justify-center items-start pt-2 z-20 relative">
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center relative">
             {/* Opponent Avatar */}
             <div className="transform scale-90 md:scale-100 origin-top transition-transform duration-300">
                <PlayerFrame 
                   isPlayer={false}
-                  name={duelState.aiProfile?.name || "黑魔法师"}
-                  hp={duelState.opponentHP}
-                  armor={duelState.opponentArmor}
+                  name={duelState?.aiProfile?.name || "黑魔法师"}
+                  hp={duelState?.opponentHP || 0}
+                  armor={duelState?.opponentArmor || 0}
                   maxHp={GAME_CONFIG.maxHP}
-                  mana={duelState.opponentMana}
-                  maxMana={duelState.opponentMaxMana} 
-                  effects={duelState.opponentEffects}
+                  mana={duelState?.opponentMana || 0}
+                  maxMana={duelState?.opponentMaxMana || 0} 
+                  effects={duelState?.opponentEffects || []}
                   isShaking={isOpponentShaking}
-                  avatarSrc={duelState.aiProfile?.avatar}
+                  avatarSrc={duelState?.aiProfile?.avatar}
                   projection={projection?.target === 'opponent' ? { hpChange: projection.netHpChange, armorChange: projection.netArmorChange } : null}
                 />
             </div>
-            {/* Opponent Hand (Overlapping Avatar slightly) */}
-            <div className="flex justify-center -space-x-4 scale-75 origin-top -mt-6">
-                {Array.from({ length: Math.min(duelState.opponentHandSize, 5) }).map((_, i) => (
-                  <div key={i} style={{ transform: `rotate(${(i - 2) * 5}deg)` }}>
+            {/* AI Emote Bubble */}
+            <AIEmoteBubble status={aiStatus} />
+
+            {/* Opponent Hand (Slightly further down to avoid blocking HUD) */}
+            <div className="flex justify-center -space-x-4 scale-75 origin-top mt-1">
+                {Array.from({ length: Math.min(duelState?.opponentHandSize || 0, 5) }).map((_, i) => (
+                  <div key={i} style={{ transform: `rotate(${(i - 2) * 5}deg)` }} className="opacity-80">
                     <SpellCard isFaceDown isSmall />
                   </div>
                 ))}
             </div>
           </div>
       </div>
+
+      {/* Targeting UI */}
+      <TargetingArrow data={targetingData} />
+
+      {/* Performance Canvas Layer */}
+      {!isLowQuality && (
+          <canvas 
+            ref={canvasRef}
+            width={window.innerWidth}
+            height={window.innerHeight}
+            className="fixed inset-0 pointer-events-none z-50"
+          />
+      )}
 
       {/* === 中间：战斗动画区 === */}
       <div className="flex-1 relative z-10 flex flex-col items-center justify-center my-0 overflow-visible pointer-events-none">
@@ -297,27 +411,13 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
              </div>
         )}
 
-        {damageNumbers.map(damage => (
-            <div 
-              key={damage.id} 
-              className={`absolute pointer-events-none text-5xl font-black italic drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] ${
-                damage.isPlayer ? 'text-red-500' : 'text-blue-400'
-              } animate-[damageFloat_0.8s_ease-out_forwards]`}
-              style={{
-                left: `${damage.x}%`,
-                top: `${damage.y}%`,
-                willChange: 'transform, opacity'
-              }}
-            >
-            -{damage.value}
-          </div>
-        ))}
+
 
         {effectMessages.length > 0 && (
           <div className="absolute top-[40%] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none z-50">
             {/* 只显示最新的一条消息，并让它自动淡出 */}
             <div 
-               key={effectMessages[effectMessages.length - 1]} // Key change triggers animation restart
+               key={`${effectMessages.length}-${effectMessages[effectMessages.length - 1]}`}
                className="bg-black/60 backdrop-blur-md rounded-full px-8 py-2 border border-purple-500/30 shadow-2xl animate-[messageSlideUpFade_3s_ease-out_forwards]"
             >
               <p className="text-base md:text-lg text-purple-200 font-bold tracking-wider italic shadow-black drop-shadow-md">
@@ -337,12 +437,12 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
              <PlayerFrame 
                isPlayer={true}
                name="玩家"
-               hp={duelState.playerHP}
-               armor={duelState.playerArmor}
+               hp={duelState?.playerHP || 0}
+               armor={duelState?.playerArmor || 0}
                maxHp={GAME_CONFIG.maxHP}
-               mana={duelState.playerMana}
-               maxMana={duelState.playerMaxMana}
-               effects={duelState.playerEffects}
+               mana={duelState?.playerMana || 0}
+               maxMana={duelState?.playerMaxMana || 0}
+               effects={duelState?.playerEffects || []}
                isShaking={isPlayerShaking}
                projection={projection?.target === 'player' ? { hpChange: projection.netHpChange, armorChange: projection.netArmorChange } : null}
              />
@@ -352,11 +452,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           <div className="flex-1 flex flex-col items-center justify-end h-full absolute inset-x-0 bottom-0 pointer-events-none">
              
              {/* Hero Skills Bar (Above Hand) */}
-             {!duelState.heroSkillsUsed && (
+             {duelState && !duelState.heroSkillsUsed && (
                <div className="flex justify-center gap-2 mb-4 pointer-events-auto z-40 transform scale-75 md:scale-90 transition-all origin-bottom">
                  {(['hero_fire', 'hero_vine', 'hero_ice', 'hero_thunder', 'hero_rock'] as const).map((id) => {
                        const spell = getSpellById(id);
-                       const canUse = phase === 'PLAYER_TURN';
+                       const canUse = phase === 'PLAYER_TURN' && !gameLoopState.isProcessing;
                        return (
                          <div key={id} className="hover:-translate-y-2 transition-transform shadow-xl rounded-lg">
                            <SpellCard 
@@ -379,9 +479,9 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                 flex justify-center items-end -space-x-8 md:-space-x-4 
                 mb-[-10px] md:mb-[-20px] pointer-events-auto
                 transition-transform duration-300
-                ${duelState.heroSkillsUsed ? 'translate-y-0' : 'translate-y-4'}
+                ${duelState?.heroSkillsUsed ? 'translate-y-0' : 'translate-y-4'}
              `}>
-                {duelState.playerHand.map((id, index) => {
+                {duelState?.playerHand.map((id, index) => {
                   const isAffordable = playableCards.includes(id);
                   const isSelected = selectedSpellId === id;
                   const total = duelState.playerHand.length;
@@ -404,6 +504,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                         ${isSelected ? 'z-[100]' : ''}
                         ${phase === 'PLAYER_TURN' && isAffordable ? 'hover:-translate-y-16 hover:scale-125 cursor-pointer' : ''}
                       `}
+                      id={`player-card-${index}`}
                       style={{ 
                         zIndex: isSelected ? 100 : index + 10,
                         transform: `rotate(${rotation}deg) translateY(${yOffset}px)`,
@@ -411,11 +512,26 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                     >
                       <SpellCard 
                         spell={getSpellById(id)} 
-                        onClick={() => isAffordable && phase === 'PLAYER_TURN' && handlePlayCard(id, isSelected)}
+                        onClick={(e) => {
+                           if (!isAffordable || phase !== 'PLAYER_TURN' || gameLoopState.isProcessing) return;
+                           
+                           // 更新瞄准起点坐标
+                           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                           setTargeting({
+                              isTargeting: true,
+                              sourceIndex: index,
+                              startX: rect.left + rect.width / 2,
+                              startY: rect.top,
+                              endX: window.innerWidth / 2,
+                              endY: 200
+                           });
+                           
+                           handlePlayCard(id, isSelected);
+                        }}
                         onMouseEnter={() => !selectedSpellId && setHoveredSpellId(id)}
                         onMouseLeave={() => setHoveredSpellId(null)}
                         isAffordable={isAffordable}
-                        disabled={!isAffordable || phase !== 'PLAYER_TURN'}
+                        disabled={!isAffordable || phase !== 'PLAYER_TURN' || gameLoopState.isProcessing}
                         isSelected={isSelected}
                         isSmall={isMobile}
                       />

@@ -266,3 +266,43 @@ export interface GameCommand {
   actions: GameAction[];
 }
 
+// ============ AI 人格化标记 ============
+export type AIEmoteType = 'thinking' | 'thinking_fast' | 'laugh' | 'angry' | 'surprised' | 'taunt';
+
+export interface AIStatus {
+  emote: AIEmoteType | null;
+  message: string | null;
+}
+
+// ============ FSM Reducer 类型 (New 4.0) ============
+
+export interface GameLoopState {
+  duelState: DuelState | null;
+  phase: DuelPhase;
+  playerCard: SpellType | null;
+  opponentCard: SpellType | null;
+  resultText: string;
+  effectMessages: string[];
+  isGameOver: boolean;
+  gameResult: 'WIN' | 'LOSS' | 'DRAW' | null;
+  isProcessing: boolean;
+  aiStatus: AIStatus;
+  targetingData: {
+    isTargeting: boolean;
+    sourceIndex?: number;
+    startX: number;
+    startY: number;
+    endX: number;
+    endY: number;
+  } | null;
+}
+
+export type GameLoopAction =
+  | { type: 'START_GAME'; payload: DuelState }
+  | { type: 'SET_PHASE'; payload: DuelPhase }
+  | { type: 'UPDATE_STATE'; payload: Partial<DuelState> }
+  | { type: 'UPDATE_UI'; payload: Partial<Omit<GameLoopState, 'duelState' | 'phase'>> }
+  | { type: 'ADD_MESSAGE'; payload: string }
+  | { type: 'SET_AI_STATUS'; payload: Partial<AIStatus> }
+  | { type: 'SET_TARGETING'; payload: GameLoopState['targetingData'] }
+  | { type: 'RESET_GAME' };

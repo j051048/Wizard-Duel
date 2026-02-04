@@ -96,7 +96,20 @@ export class GameSequenceExecutor {
       // 其他 Action 类型在此扩展...
     }
 
+    // 触发检查: 如果产生伤害，检查是否有 ON_DAMAGE 触发器
+    if (action.type === 'HP_CHANGE' && action.value < 0) {
+        this.resolveTriggers(newState, 'ON_DAMAGE', action);
+    }
+
     return { state: newState, log };
+  }
+
+  /**
+   * 触发器解析逻辑 (初步实现，为奥秘/被动技打底)
+   */
+  static resolveTriggers(state: DuelState, timing: 'ON_CAST' | 'ON_DAMAGE', context?: any) {
+      // 示例：未来可以在此处检查 state.playerEffects/opponentEffects 中具有触发性质的标记
+      // 目前主要作为可扩展性预留，减少未来逻辑冲突
   }
 
   /**
@@ -105,6 +118,9 @@ export class GameSequenceExecutor {
   static executeCommand(state: DuelState, command: GameCommand): { state: DuelState; logs: string[] } {
     let currentState = state;
     const logs: string[] = [];
+
+    // ON_CAST 触发点
+    this.resolveTriggers(currentState, 'ON_CAST', command);
 
     for (const action of command.actions) {
       const result = this.applyAction(currentState, action);

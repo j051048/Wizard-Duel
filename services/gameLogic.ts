@@ -216,7 +216,7 @@ export const executeSpell = (
   state: DuelState,
   caster: 'player' | 'opponent',
   spellId: SpellType
-): { newState: DuelState, logs: string[] } => {
+): { newState: DuelState, logs: string[], command: GameCommand } => {
   const spell = getSpellById(spellId);
   const isPlayer = caster === 'player';
   const target = isPlayer ? 'opponent' : 'player';
@@ -225,7 +225,11 @@ export const executeSpell = (
   
   // 1. 英雄技能占用逻辑
   if (spellId.startsWith('hero_')) {
-    if (state.heroSkillsUsed) return { newState: state, logs: ['本回合已使用过英雄技能'] };
+    if (state.heroSkillsUsed) return { 
+        newState: state, 
+        logs: ['本回合已使用过英雄技能'], 
+        command: { id: 'fail', caster, actions: [] } 
+    };
     state.heroSkillsUsed = true; 
   }
 
@@ -237,7 +241,7 @@ export const executeSpell = (
   if (spell.id === 'skip') {
       const skipCmd: GameCommand = { id: 'skip', caster, actions: [{ type: 'MESSAGE', target: 'system', description: isPlayer ? '你跳过了出牌' : '对手跳过了出牌' }] };
       const res = GameSequenceExecutor.executeCommand(state, skipCmd);
-      return { newState: res.state, logs: res.logs };
+      return { newState: res.state, logs: res.logs, command: skipCmd };
   }
 
   // 3. 克制判定 (Counter/Crit)
@@ -296,7 +300,7 @@ export const executeSpell = (
       newState.opponentHandSize = Math.max(0, newState.opponentHandSize - 1);
   }
 
-  return { newState, logs };
+  return { newState, logs, command: cmd };
 };
 
 
@@ -374,7 +378,7 @@ const pickBestSpellForAI = (state: DuelState): SpellType | null => {
    return affordable[Math.floor(Math.random() * affordable.length)].id;
 };
 
-export const executeAITurn = (state: DuelState): { newState: DuelState, logs: string[] } => {
+export const executeAITurn = (state: DuelState): { newState: DuelState, logs: string[], commands: GameCommand[] } => {
   // 🔧 深拷贝避免状态污染
   let currentState = { 
     ...state,
@@ -384,12 +388,14 @@ export const executeAITurn = (state: DuelState): { newState: DuelState, logs: st
     playerHand: [...state.playerHand],
   };
   const logs: string[] = [];
+  const commands: GameCommand[] = [];
 
   // [Fix] 检查冻结状态
   const isFrozen = currentState.opponentEffects.some(e => e.type === 'frozen');
   if (isFrozen) {
+     const freezeCmd: GameCommand = { id: 'ai_freeze', caster: 'opponent', actions: [{ type: 'MESSAGE', target: 'system', description: '❄️ 对手被彻底冻结，无法行动！' }] };
      logs.push('❄️ 对手被彻底冻结，无法行动！');
-     return { newState: currentState, logs };
+     return { newState: currentState, logs, commands: [freezeCmd] };
   }
   
   // 模拟 AI 思考和出牌
@@ -420,6 +426,7 @@ export const executeAITurn = (state: DuelState): { newState: DuelState, logs: st
 
       currentState = result.newState;
       logs.push(...result.logs);
+      commands.push(result.command);
       cardsPlayed++;
       
       // 🔧 使用统一死亡检查
@@ -431,7 +438,7 @@ export const executeAITurn = (state: DuelState): { newState: DuelState, logs: st
     logs.push('⚠️ AI 行动次数达到上限');
   }
   
-  return { newState: currentState, logs };
+  return { newState: currentState, logs, commands };
 };
 
 // 兼容旧接口

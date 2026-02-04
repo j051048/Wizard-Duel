@@ -140,7 +140,8 @@ function App() {
 
   useEffect(() => {
     if (gameLoopState.isGameOver && gameLoopState.gameResult) {
-      handleGameEnd(gameLoopState.gameResult);
+      const finalRes = gameLoopState.gameResult === 'DRAW' ? 'LOSS' : gameLoopState.gameResult;
+      handleGameEnd(finalRes as 'WIN' | 'LOSS');
     }
   }, [gameLoopState.isGameOver, gameLoopState.gameResult]);
 
@@ -488,12 +489,7 @@ function App() {
           {gameState === 'DUEL' && (
             gameLoopState.duelState ? (
               <BattleArena
-                duelState={gameLoopState.duelState}
-                phase={gameLoopState.phase}
-                playerCard={gameLoopState.playerCard}
-                opponentCard={gameLoopState.opponentCard}
-                resultText={gameLoopState.resultText}
-                effectMessages={gameLoopState.effectMessages}
+                gameLoopState={gameLoopState}
                 selectedBet={selectedBet}
                 onPlayCard={handlePlayCard}
                 onPass={() => {
@@ -505,6 +501,7 @@ function App() {
                 onToggleMute={audioActions.toggleMute}
                 isPlayerShaking={isPlayerShaking}
                 isOpponentShaking={isOpponentShaking}
+                setTargeting={gameLoopActions.setTargeting}
               />
             ) : (
               <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-50">

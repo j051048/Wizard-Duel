@@ -63,38 +63,41 @@ export const HealthBar: React.FC<HealthBarProps> = ({ current, max, isPlayer }) 
   }, [percentage]);
 
   return (
-    <div className="relative w-full h-full flex items-center">
-      {/* 纯粹的血条容器 (无边框，只负责填充) */}
-      <div className="w-full h-2.5 md:h-3.5 bg-black/60 rounded-full overflow-hidden shadow-inner backdrop-blur-sm">
+    <div className="relative w-full h-full flex items-center pr-2">
+      {/* 纯粹的血条容器 - 增加一点高度和更加明显的凹陷感 */}
+      <div className="w-full h-3 md:h-5 bg-black/80 rounded-full overflow-hidden shadow-[inset_0_2px_10px_rgba(0,0,0,0.8)] border border-white/5 backdrop-blur-md">
         
         {/* 伤害残留层 (白/红闪烁) */}
         <div 
-          className="absolute inset-y-0 left-0 bg-white/50 transition-all duration-300 ease-out"
+          className="absolute inset-y-0 left-0 bg-white/40 transition-all duration-300 ease-out z-0"
           style={{ width: `${Math.max(percentage, displayPercentage)}%` }}
         />
 
         {/* 主血量条 */}
         <div 
           className={`
-            h-full relative z-10 transition-all duration-300 rounded-r-sm
+            h-full relative z-10 transition-all duration-500 rounded-r-md
             ${isCritical 
-               ? 'bg-gradient-to-r from-red-900 via-red-600 to-red-900 animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.8)]' 
-               : 'bg-gradient-to-b from-red-500 via-red-600 to-red-800'
+               ? 'bg-gradient-to-r from-red-900 via-red-500 to-red-900 animate-pulse' 
+               : 'bg-gradient-to-r from-red-600 via-red-500 to-red-600'
             }
           `}
           style={{ width: `${displayPercentage}%` }}
         >
-          {/* 高光反射 - 增加玻璃感 */}
-          <div className="absolute top-0 left-0 right-0 h-[40%] bg-gradient-to-b from-white/40 to-transparent" />
+          {/* 魔法纹理或高光 */}
+          <div className="absolute inset-0 bg-[url('/ui/textures/magic_noise.png')] opacity-20 mix-blend-overlay" />
+          <div className="absolute top-0 left-0 right-0 h-[45%] bg-gradient-to-b from-white/30 to-transparent" />
         </div>
       </div>
 
-      {/* 数值浮动在血条上方 (不盖住血条，而是位于其上方或正中) */}
-      <div className="absolute -top-5 right-0 text-xs font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,1)] flex items-center gap-1 opacity-90">
-         <span className={isHurt ? 'text-red-300 scale-110 duration-100' : 'text-gray-200'}>
-           {current}/{max}
-         </span>
-         {isCritical && <span className="animate-ping w-1.5 h-1.5 bg-red-500 rounded-full" />}
+      {/* 数值直接放在血条中心，提升可读性 */}
+      <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+        <div className="bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-sm border border-white/10 flex items-center gap-1">
+           <span className="text-[red] text-[10px] drop-shadow-sm">❤️</span>
+           <span className={`text-[10px] md:text-xs font-black drop-shadow-md ${isHurt ? 'text-white scale-110' : 'text-gray-100'}`}>
+             {current} <span className="text-gray-400 font-normal">/ {max}</span>
+           </span>
+        </div>
       </div>
     </div>
   );
@@ -272,7 +275,7 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
   const showArmorLoss = projection && projection.armorChange < 0;
 
   return (
-    <div className={`relative group w-[380px] h-[120px] sm:w-[480px] sm:h-[140px] md:w-[600px] md:h-[160px] transition-all duration-300 ${isShaking ? 'animate-shake-strong' : ''}`}>
+    <div className={`relative group w-[400px] h-[140px] sm:w-[520px] sm:h-[160px] md:w-[640px] md:h-[180px] transition-all duration-300 ${isShaking ? 'animate-shake-strong' : ''}`}>
       
       {/* HUD Frame */}
       <img 
@@ -281,51 +284,50 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
         className="absolute inset-0 w-full h-full object-contain z-10 drop-shadow-2xl select-none pointer-events-none"
       />
 
-      {/* Avatar Layer */}
+      {/* Avatar Layer - 大幅增加尺寸并提升 Z-index */}
       <div 
-        className="absolute z-20 rounded-full overflow-hidden bg-slate-900 shadow-2xl transition-all duration-300"
+        className="absolute z-40 rounded-full overflow-hidden bg-slate-900 shadow-[0_0_30px_rgba(0,0,0,0.9)] transition-all duration-300"
         style={{
-            left: '5.5%', 
-            top: '16%',
-            height: '68%',
+            left: '3.5%', 
+            top: '8%',
+            height: '84%',
             aspectRatio: '1/1',
-            boxShadow: '0 0 20px rgba(0,0,0,0.8), inset 0 0 10px rgba(0,0,0,0.8)',
-            border: '2px solid #1a1a1a',
-            filter: showDamage ? 'saturate(1.5) contrast(1.2)' : 'none' // Subtle effect on damage
+            boxShadow: '0 0 30px rgba(0,0,0,1), inset 0 0 15px rgba(0,0,0,0.8)',
+            border: '3px solid #c5a059',
+            filter: showDamage ? 'saturate(1.5) contrast(1.2) brightness(1.2)' : 'none'
         }}
       >
          <img 
            src={actualAvatarSrc} 
            alt={name}
-           className="w-full h-full object-cover"
+           className="w-full h-full object-cover scale-110"
          />
-         {/* Projection Overlay (Red Flash / Green Glow) */}
-         {showDamage && <div className="absolute inset-0 bg-red-500/30 animate-pulse mix-blend-overlay" />}
-         {showHeal && <div className="absolute inset-0 bg-green-500/20 animate-pulse mix-blend-overlay" />}
+         {/* Projection Overlay */}
+         {showDamage && <div className="absolute inset-0 bg-red-500/40 animate-pulse mix-blend-overlay" />}
+         {showHeal && <div className="absolute inset-0 bg-green-500/30 animate-pulse mix-blend-screen" />}
 
-         <div className="absolute inset-0 rounded-full border-[2px] border-[#c5a059] opacity-90 mix-blend-overlay" />
-         <div className="absolute inset-0 shadow-[inset_0_4px_15px_rgba(0,0,0,0.8)] pointer-events-none" />
+         <div className="absolute inset-0 rounded-full shadow-[inset_0_4px_15px_rgba(0,0,0,0.8)] pointer-events-none" />
          
-         {/* Projection Text (Centred on Avatar) */}
+         {/* Projection Text */}
          {projection && (projection.hpChange !== 0) && (
-            <div className={`absolute inset-0 flex items-center justify-center font-black text-4xl drop-shadow-[0_2px_4px_rgba(0,0,0,1)] ${projection.hpChange < 0 ? 'text-red-500' : 'text-green-400'}`}>
+            <div className={`absolute inset-0 flex items-center justify-center font-black text-5xl z-50 drop-shadow-[0_2px_6px_rgba(0,0,0,1)] ${projection.hpChange < 0 ? 'text-red-500 animate-bounce' : 'text-green-400 animate-pulse'}`}>
                 {projection.hpChange > 0 ? '+' : ''}{projection.hpChange}
             </div>
          )}
       </div>
 
-      {/* Info Content */}
+      {/* Info Content - 向右平移以适应巨大的头像 */}
       <div className="absolute z-30 flex flex-col pl-4"
            style={{
-               left: '26%', 
+               left: '30%', 
                right: '6%',
-               top: '28%',
-               bottom: '12%'
+               top: '24%',
+               bottom: '10%'
            }}
       >
-         {/* Name */}
-         <div className="absolute -top-6 left-1 text-sm sm:text-base font-wizard font-bold tracking-widest uppercase truncate flex items-center gap-2"
-              style={{ textShadow: '0 2px 4px rgba(0,0,0,1)' }}
+         {/* Name - 向上移动防遮挡 */}
+         <div className="absolute -top-8 left-1 text-sm sm:text-base md:text-lg font-wizard font-bold tracking-widest uppercase truncate flex items-center gap-2"
+              style={{ textShadow: '0 2px 8px rgba(0,0,0,1), 0 0 4px rgba(0,0,0,0.5)' }}
          >
             <span className={isPlayer ? 'text-[#f0e6d2]' : 'text-[#e2b8b8]'}>{name}</span>
          </div>
@@ -375,9 +377,9 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
          </div>
       </div>
 
-      {/* Armor Bubble */}
+      {/* Armor Bubble - 向右偏移防头像遮挡 */}
       {(armor > 0 || (projection && projection.armorChange !== 0)) && (
-        <div className="absolute -top-2 left-[20%] z-40 animate-bounce-slight">
+        <div className="absolute -top-4 left-[24%] z-50 animate-bounce-slight">
            <div className={`relative w-8 h-8 flex items-center justify-center rounded-full border-2 shadow-[0_0_10px_rgba(0,0,0,0.8)] ring-1 ring-white/20 transition-colors duration-300
                ${(showArmorGain || showArmorLoss) ? 'bg-slate-700 border-white/50 scale-110' : 'bg-slate-800 border-slate-500'}
            `}>
