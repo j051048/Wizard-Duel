@@ -229,3 +229,38 @@
     80% { opacity: 1; transform: translateY(0); }
     100% { opacity: 0; transform: translateY(-40px); }
 }
+/* --- 低画质降级策略 --- */
+.low-quality * {
+    /* 禁用背景模糊 - 非常消耗 GPU */
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    
+    /* 禁用混合模式 - 消耗渲染层聚合性能 */
+    mix-blend-mode: normal !important;
+    
+    /* 移除所有动画 (保留必要的反馈类动画除外) */
+    animation-duration: 0.1s !important;
+    animation-iteration-count: 1 !important;
+}
+
+/* 特殊例外：保留血条变换和伤害数值漂浮 */
+.low-quality [class*="animate-damageFloat"],
+.low-quality .animate-shake-strong {
+    animation-duration: 0.6s !important;
+}
+
+/* 移除阴影 */
+.low-quality {
+    text-shadow: none !important;
+}
+
+.low-quality div, 
+.low-quality img {
+    box-shadow: none !important;
+}
+
+/* 降低透明度层叠负担 */
+.low-quality .opacity-40,
+.low-quality .opacity-60 {
+    opacity: 1 !important;
+}

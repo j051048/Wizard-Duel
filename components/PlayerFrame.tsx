@@ -138,14 +138,22 @@ interface StatusEffectBadgeProps {
   effect: StatusEffect;
 }
 
+const EFFECT_DESCRIPTIONS: Record<string, string> = {
+  burn: '每回合结束时受到伤害',
+  tangle: '下一张法术的法力消耗增加',
+  frozen: '无法打出任何法术',
+  thawed: '免疫冻结效果（刚解除冻结）',
+  charge: '下一次同属性法术伤害翻倍', // If added later
+  fortify: '获得额外护甲', // If added later
+};
+
 const StatusEffectBadge: React.FC<StatusEffectBadgeProps> = ({ effect }) => {
   const getBadgeStyle = () => {
     switch (effect.type) {
       case 'burn': return 'bg-orange-950/80 border-orange-500/50 text-orange-200';
       case 'tangle': return 'bg-green-950/80 border-green-500/50 text-green-200';
       case 'frozen': return 'bg-cyan-950/80 border-cyan-500/50 text-cyan-200';
-      case 'charge': return 'bg-yellow-950/80 border-yellow-500/50 text-yellow-200';
-      case 'fortify': return 'bg-stone-950/80 border-stone-500/50 text-stone-200';
+      case 'thawed': return 'bg-blue-900/80 border-blue-400/50 text-blue-200';
       default: return 'bg-gray-900/80 border-gray-500/50 text-gray-200';
     }
   };
@@ -155,8 +163,7 @@ const StatusEffectBadge: React.FC<StatusEffectBadgeProps> = ({ effect }) => {
       case 'burn': return '/effects/effect-burn.webp';
       case 'tangle': return '/effects/effect-tangle.webp';
       case 'frozen': return '/effects/effect-freeze.webp';
-      case 'charge': return '/effects/effect-charge.webp';
-      case 'fortify': return '/effects/effect-fortify.webp';
+      case 'thawed': return '/effects/effect-thawed.webp'; // Assuming existence or fallback
       default: return null;
     }
   };
@@ -167,6 +174,7 @@ const StatusEffectBadge: React.FC<StatusEffectBadgeProps> = ({ effect }) => {
       case 'burn': return '🔥';
       case 'tangle': return '🌿';
       case 'frozen': return '❄️';
+      case 'thawed': return '💧';
       default: return '✨';
     }
   };
@@ -176,6 +184,7 @@ const StatusEffectBadge: React.FC<StatusEffectBadgeProps> = ({ effect }) => {
   return (
     <div 
       className={`
+        relative group cursor-help
         px-3 py-1 rounded-full text-[10px] font-bold uppercase
         border shadow-lg flex items-center gap-1.5
         ${getBadgeStyle()}
@@ -187,11 +196,16 @@ const StatusEffectBadge: React.FC<StatusEffectBadgeProps> = ({ effect }) => {
           src={iconSrc} 
           alt={effect.type} 
           className="w-4 h-4 object-contain"
-          onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none';
+            (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+          }}
         />
       ) : (
         <span>{getEmoji()}</span>
       )}
+      
+      {/* Fallback emoji if image fails (requires structure tweak, simplified here) */}
       
       <span>{getMechanicName(effect.type)}</span>
       
@@ -200,22 +214,35 @@ const StatusEffectBadge: React.FC<StatusEffectBadgeProps> = ({ effect }) => {
           {effect.duration}
         </span>
       )}
+
+      {/* Tooltip */}
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-32 bg-black/90 text-white text-[10px] p-2 rounded border border-white/20 z-50 pointer-events-none whitespace-normal text-center shadow-xl backdrop-blur-md">
+        <div className="font-bold mb-0.5 text-yellow-300">{getMechanicName(effect.type)}</div>
+        <div className="text-gray-300 leading-tight">{EFFECT_DESCRIPTIONS[effect.type] || '未知效果'}</div>
+        <div className="mt-1 text-gray-500 text-[9px]">持续 {effect.duration} 回合</div>
+        {/* Arrow */}
+        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-black/90"></div>
+      </div>
     </div>
   );
 };
 
-// ======== 主组件：玩家信息框 ========
+// ======== 主组件：玩家信息框 (Patch 3.0: Projection) ========
 interface PlayerFrameProps {
   isPlayer: boolean;
   name: string;
   hp: number;
-  armor?: number; // [P0] 新增护甲属性
+  armor?: number; 
   maxHp: number;
   mana: number;
   maxMana: number;
   effects: StatusEffect[];
   avatarSrc?: string;
   isShaking?: boolean;
+  projection?: {
+    hpChange: number; // Net HP Change (Negative = Damage)
+    armorChange: number; // Net Armor Change
+  } | null;
 }
 
 export const PlayerFrame: React.FC<PlayerFrameProps> = ({
@@ -229,40 +256,42 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
   effects,
   avatarSrc,
   isShaking = false,
+  projection
 }) => {
   // 确定资源路径
   const bgFrame = isPlayer ? "/ui/frames/player_hud_v4.png" : "/ui/frames/opponent_hud_v4.png";
   const actualAvatarSrc = avatarSrc || (isPlayer ? '/avatars/player-wizard.webp' : '/avatars/opponent-sorcerer.webp');
 
+  const projectedHp = Math.max(0, Math.min(maxHp, hp + (projection?.hpChange || 0)));
+  const projectedArmor = Math.max(0, armor + (projection?.armorChange || 0));
+  
+  // Projection Visuals
+  const showDamage = projection && projection.hpChange < 0;
+  const showHeal = projection && projection.hpChange > 0;
+  const showArmorGain = projection && projection.armorChange > 0;
+  const showArmorLoss = projection && projection.armorChange < 0;
+
   return (
     <div className={`relative group w-[380px] h-[120px] sm:w-[480px] sm:h-[140px] md:w-[600px] md:h-[160px] transition-all duration-300 ${isShaking ? 'animate-shake-strong' : ''}`}>
       
-      {/* 
-         HUD 层级结构重构 (Blizzard Style):
-         Layer 1 (Bottom): 阴影/装饰
-         Layer 2: HUD Frame (v4 Image) - 作为定锚
-         Layer 3: Avatar (需要盖住左侧可能存在的任何瑕疵)
-         Layer 4: Health Bar (嵌入右侧卡槽)
-      */}
-
-      {/* === Layer 2: HUD Frame === */}
-      {/* 暂时移除 blending，因为在暗色背景下会让金属框体消失。我们让它作为实体遮挡。 */}
+      {/* HUD Frame */}
       <img 
         src={bgFrame}
         alt="HUD Frame"
         className="absolute inset-0 w-full h-full object-contain z-10 drop-shadow-2xl select-none pointer-events-none"
       />
 
-      {/* === Layer 3: Avatar === */}
+      {/* Avatar Layer */}
       <div 
-        className="absolute z-20 rounded-full overflow-hidden bg-slate-900 shadow-2xl"
+        className="absolute z-20 rounded-full overflow-hidden bg-slate-900 shadow-2xl transition-all duration-300"
         style={{
             left: '5.5%', 
             top: '16%',
             height: '68%',
             aspectRatio: '1/1',
             boxShadow: '0 0 20px rgba(0,0,0,0.8), inset 0 0 10px rgba(0,0,0,0.8)',
-            border: '2px solid #1a1a1a'
+            border: '2px solid #1a1a1a',
+            filter: showDamage ? 'saturate(1.5) contrast(1.2)' : 'none' // Subtle effect on damage
         }}
       >
          <img 
@@ -270,32 +299,64 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
            alt={name}
            className="w-full h-full object-cover"
          />
+         {/* Projection Overlay (Red Flash / Green Glow) */}
+         {showDamage && <div className="absolute inset-0 bg-red-500/30 animate-pulse mix-blend-overlay" />}
+         {showHeal && <div className="absolute inset-0 bg-green-500/20 animate-pulse mix-blend-overlay" />}
+
          <div className="absolute inset-0 rounded-full border-[2px] border-[#c5a059] opacity-90 mix-blend-overlay" />
          <div className="absolute inset-0 shadow-[inset_0_4px_15px_rgba(0,0,0,0.8)] pointer-events-none" />
+         
+         {/* Projection Text (Centred on Avatar) */}
+         {projection && (projection.hpChange !== 0) && (
+            <div className={`absolute inset-0 flex items-center justify-center font-black text-4xl drop-shadow-[0_2px_4px_rgba(0,0,0,1)] ${projection.hpChange < 0 ? 'text-red-500' : 'text-green-400'}`}>
+                {projection.hpChange > 0 ? '+' : ''}{projection.hpChange}
+            </div>
+         )}
       </div>
 
-      {/* === Layer 4: Info Content === */}
+      {/* Info Content */}
       <div className="absolute z-30 flex flex-col pl-4"
            style={{
                left: '26%', 
                right: '6%',
-               top: '28%', // 下移，避开 HUD 顶部装饰
+               top: '28%',
                bottom: '12%'
            }}
       >
-         {/* Top Row: Name */}
+         {/* Name */}
          <div className="absolute -top-6 left-1 text-sm sm:text-base font-wizard font-bold tracking-widest uppercase truncate flex items-center gap-2"
-              style={{
-                 textShadow: '0 2px 4px rgba(0,0,0,1)'
-              }}
+              style={{ textShadow: '0 2px 4px rgba(0,0,0,1)' }}
          >
             <span className={isPlayer ? 'text-[#f0e6d2]' : 'text-[#e2b8b8]'}>{name}</span>
-            {/* Rank/Level could go here */}
          </div>
 
-         {/* Middle: Health Bar Slot (坐进槽位) */}
+         {/* Health Bar Slot */}
          <div className="relative w-[96%] h-[28%] flex items-center pr-1 mt-1">
-             <HealthBar current={hp} max={maxHp} isPlayer={isPlayer} />
+             <div className="relative w-full h-full">
+                <HealthBar current={hp} max={maxHp} isPlayer={isPlayer} />
+                
+                {/* Projection Ghost Bar */}
+                {/* Using a simple overlay absolute positioned */}
+                 {showDamage && (
+                    <div 
+                        className="absolute top-0 bottom-0 bg-white/50 animate-pulse"
+                        style={{
+                            left: `${(projectedHp / maxHp) * 100}%`,
+                            width: `${(Math.abs(projection!.hpChange) / maxHp) * 100}%`,
+                            background: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,0,0,0.5) 4px, rgba(255,0,0,0.5) 8px)'
+                        }}
+                    />
+                 )}
+                 {showHeal && (
+                    <div 
+                        className="absolute top-0 bottom-0 bg-green-400/50 animate-pulse shadow-[0_0_10px_rgba(74,222,128,0.5)]"
+                        style={{
+                            left: `${(hp / maxHp) * 100}%`,
+                            width: `${(Math.abs(projection!.hpChange) / maxHp) * 100}%`,
+                        }}
+                    />
+                 )}
+             </div>
          </div>
 
          {/* Bottom: Mana & Buffs */}
@@ -314,12 +375,25 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
          </div>
       </div>
 
-      {/* Armor Bubble - 独立悬浮，不再被框体限制 */}
-      {armor > 0 && (
+      {/* Armor Bubble */}
+      {(armor > 0 || (projection && projection.armorChange !== 0)) && (
         <div className="absolute -top-2 left-[20%] z-40 animate-bounce-slight">
-           <div className="relative w-8 h-8 flex items-center justify-center bg-slate-800 rounded-full border-2 border-slate-500 shadow-[0_0_10px_rgba(0,0,0,0.8)] ring-1 ring-white/20">
-             <Shield className="w-4 h-4 text-slate-300" />
-             <span className="absolute -bottom-1 -right-1 bg-black text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-slate-700 shadow-sm">{armor}</span>
+           <div className={`relative w-8 h-8 flex items-center justify-center rounded-full border-2 shadow-[0_0_10px_rgba(0,0,0,0.8)] ring-1 ring-white/20 transition-colors duration-300
+               ${(showArmorGain || showArmorLoss) ? 'bg-slate-700 border-white/50 scale-110' : 'bg-slate-800 border-slate-500'}
+           `}>
+             <Shield className={`w-4 h-4 ${showArmorLoss ? 'text-red-400' : showArmorGain ? 'text-green-300' : 'text-slate-300'}`} />
+             
+             {/* Base Value */}
+             <span className="absolute -bottom-1 -right-1 bg-black text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-slate-700 shadow-sm">
+                {armor}
+             </span>
+
+             {/* Change Value */}
+             {projection && projection.armorChange !== 0 && (
+                <span className={`absolute -top-3 left-1/2 -translate-x-1/2 font-bold text-xs drop-shadow-md whitespace-nowrap ${projection.armorChange > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {projection.armorChange > 0 ? '+' : ''}{projection.armorChange}
+                </span>
+             )}
            </div>
         </div>
       )}

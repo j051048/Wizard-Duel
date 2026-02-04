@@ -67,6 +67,8 @@ export const SpellCard: React.FC<SpellCardProps> = ({
   spell, 
   isSelected, 
   onClick, 
+  onMouseEnter,
+  onMouseLeave,
   disabled, 
   isSmall, 
   isFaceDown,
@@ -88,9 +90,17 @@ export const SpellCard: React.FC<SpellCardProps> = ({
     setRotate({ x: rotateX, y: rotateY });
   };
 
-  const handleMouseLeave = () => {
+  const handleMouseLeaveInternal = () => {
     setIsHovered(false);
     setRotate({ x: 0, y: 0 });
+    onMouseLeave?.();
+  };
+
+  const handleMouseEnterInternal = () => {
+    if (!isFaceDown) {
+        setIsHovered(true);
+        onMouseEnter?.();
+    }
   };
 
   // FACE DOWN CARD (Card Back)
@@ -167,9 +177,9 @@ export const SpellCard: React.FC<SpellCardProps> = ({
     <div 
       className={`relative group ${isSmall ? 'w-20 h-28' : 'w-32 h-48 sm:w-36 sm:h-52'} transition-all duration-300 ${!canPlay ? 'opacity-80 grayscale-[0.3]' : ''} touch-pan-y text-start`}
       style={{ perspective: '1000px', willChange: (isHovered) || isSelected ? 'transform' : 'auto' }}
-      onMouseEnter={() => !isFaceDown && setIsHovered(true)}
+      onMouseEnter={handleMouseEnterInternal}
       onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
+      onMouseLeave={handleMouseLeaveInternal}
       onClick={canPlay ? onClick : undefined}
     >
       <div 

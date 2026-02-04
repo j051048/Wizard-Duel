@@ -6,12 +6,13 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { LogOut, Volume2, VolumeX } from 'lucide-react';
 import { SpellType, DuelPhase, DuelState } from '../types';
 import { GAME_CONFIG } from '../constants';
-import { getSpellById } from '../services/gameLogic';
-import { getPlayableCards } from '../services/gameLogic';
+import { getSpellById, getPlayableCards } from '../services/gameLogic';
 import { HapticService } from '../services/haptic';
 import { PlayerFrame } from './PlayerFrame';
 import { SpellCard } from './SpellCard';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { calculateSpellProjection, SpellProjection } from '../services/projection';
+import { useSettings } from '../context/SettingsContext';
 
 interface BattleArenaProps {
   duelState: DuelState;
@@ -56,10 +57,14 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   isOpponentShaking = false,
 }) => {
   const isMobile = useIsMobile();
+  const { isLowQuality } = useSettings();
   const [damageNumbers, setDamageNumbers] = useState<DamageNumber[]>([]);
   const damageIdRef = useRef(0);
   const prevPlayerHP = useRef(duelState?.playerHP || GAME_CONFIG.maxHP);
   const prevOpponentHP = useRef(duelState?.opponentHP || GAME_CONFIG.maxHP);
+  
+  // [Patch 3.0] Projection Preview State
+  const [hoveredSpellId, setHoveredSpellId] = useState<SpellType | null>(null);
 
   const playerSpellDetails = playerCard ? getSpellById(playerCard) : null;
   const oppSpellDetails = opponentCard ? getSpellById(opponentCard) : null;
@@ -67,6 +72,12 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   const [showCritEffect, setShowCritEffect] = useState(false);
   const [showBloodFlash, setShowBloodFlash] = useState(false);
   const [projectiles, setProjectiles] = useState<{id: number, type: string, x: number, y: number}[]>([]);
+
+  // Calculate Projection
+  const projection = useMemo(() => {
+    if (!hoveredSpellId || phase !== 'PLAYER_TURN' || duelState.isProcessing) return null;
+    return calculateSpellProjection(duelState, 'player', hoveredSpellId);
+  }, [hoveredSpellId, phase, duelState]);
 
   const addDamageNumber = (damage: number, isPlayer: boolean, isCrit: boolean = false) => {
     HapticService.medium();
@@ -128,8 +139,13 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   }, []);
 
   const handlePlayCard = (spellId: SpellType) => {
+    // Clear hover projection immediately on click
+    setHoveredSpellId(null);
+    
     const id = Date.now();
-    setProjectiles(prev => [...prev, { id, type: 'player', x: 50, y: 80 }]);
+    if (!isLowQuality) {
+      setProjectiles(prev => [...prev, { id, type: 'player', x: 50, y: 80 }]);
+    }
     onPlayCard(spellId);
     setTimeout(() => {
       if (isMounted.current) {
@@ -142,7 +158,9 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   useEffect(() => {
     if (opponentCard && opponentCard !== prevOppCard.current) {
        const id = Date.now();
-       setProjectiles(prev => [...prev, { id, type: 'opp', x: 50, y: 15 }]);
+       if (!isLowQuality) {
+         setProjectiles(prev => [...prev, { id, type: 'opp', x: 50, y: 15 }]);
+       }
        setTimeout(() => {
          if (isMounted.current) {
            setProjectiles(prev => prev.filter(p => p.id !== id));
@@ -173,20 +191,21 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-slate-950/80" />
         {/* 中心法阵 */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
-          <img 
-            src="/ui/magic-portal.webp" 
-            alt="" 
-            decoding="async"
-            loading="lazy"
-            className="w-[80vmin] h-[80vmin] animate-spin opacity-50"
-            style={{ animationDuration: '60s' }}
-            onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
-          />
-        </div>
+        {!isLowQuality && (
+          <div className="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
+            <img 
+              src="/ui/magic-portal.webp" 
+              alt="" 
+              decoding="async"
+              loading="lazy"
+              className="w-[80vmin] h-[80vmin] animate-spin opacity-50"
+              style={{ animationDuration: '60s' }}
+              onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+            />
+          </div>
+        )}
       </div>
 
-      {/* === 顶部：对手区 === */}
       {/* === 顶部：对手区 (15% Height / Fixed) === */}
       <div className="w-full h-[15%] min-h-[120px] flex justify-center items-start pt-2 z-20 relative">
           <div className="flex flex-col items-center">
@@ -203,6 +222,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                   effects={duelState.opponentEffects}
                   isShaking={isOpponentShaking}
                   avatarSrc={duelState.aiProfile?.avatar}
+                  projection={projection?.target === 'opponent' ? { hpChange: projection.netHpChange, armorChange: projection.netArmorChange } : null}
                 />
             </div>
             {/* Opponent Hand (Overlapping Avatar slightly) */}
@@ -302,6 +322,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                maxMana={duelState.playerMaxMana}
                effects={duelState.playerEffects}
                isShaking={isPlayerShaking}
+               projection={projection?.target === 'player' ? { hpChange: projection.netHpChange, armorChange: projection.netArmorChange } : null}
              />
           </div>
 
@@ -319,6 +340,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                            <SpellCard 
                              spell={spell} 
                              onClick={() => canUse && handlePlayCard(id)}
+                             onMouseEnter={() => setHoveredSpellId(id)}
+                             onMouseLeave={() => setHoveredSpellId(null)}
                              isAffordable={canUse}
                              disabled={!canUse}
                              isSmall
@@ -358,6 +381,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                       <SpellCard 
                         spell={getSpellById(id)} 
                         onClick={() => isAffordable && phase === 'PLAYER_TURN' && handlePlayCard(id)}
+                        onMouseEnter={() => setHoveredSpellId(id)}
+                        onMouseLeave={() => setHoveredSpellId(null)}
                         isAffordable={isAffordable}
                         disabled={!isAffordable || phase !== 'PLAYER_TURN'}
                         isSelected={false}

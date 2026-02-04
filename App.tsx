@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAccount } from 'wagmi';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Settings, CheckCircle } from 'lucide-react';
 
 // Hooks
 import { usePreloader } from './hooks/usePreloader';
 import { useGameLoop } from './hooks/useGameLoop';
 import { useAudioManager } from './hooks/useAudioManager';
+import { useSettings, QualityLevel } from './context/SettingsContext';
 
 // Components
 const BattleArena = React.lazy(() => import('./components/BattleArena'));
@@ -31,6 +32,7 @@ import { DungeonService } from './services/dungeon_v2';
 
 function App() {
   const { address, isConnected } = useAccount();
+  const { quality, setQuality, isLowQuality } = useSettings();
 
   // ============ 应用状态 ============
   const [isResourcesLoaded, setIsResourcesLoaded] = useState(false);
@@ -55,6 +57,7 @@ function App() {
 
   const [isPlayerShaking, setIsPlayerShaking] = useState(false);
   const [isOpponentShaking, setIsOpponentShaking] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const [finalResult, setFinalResult] = useState<{
     result: 'WIN' | 'LOSS' | 'DRAW';
@@ -142,18 +145,18 @@ function App() {
   }, [gameLoopState.isGameOver, gameLoopState.gameResult]);
 
   useEffect(() => {
-     if (gameLoopState.effectMessages.length > 0) {
-        const lastMsg = gameLoopState.effectMessages[gameLoopState.effectMessages.length - 1];
-        if (lastMsg.includes('受到')) {
-            setIsPlayerShaking(true);
-            audioActions.playSfx('hit');
-            setTimeout(() => setIsPlayerShaking(false), 500);
-        } else if (lastMsg.includes('造成')) {
-            setIsOpponentShaking(true);
-            audioActions.playSfx('hit');
-            setTimeout(() => setIsOpponentShaking(false), 500);
-        }
-     }
+    if (gameLoopState.effectMessages.length > 0) {
+      const lastMsg = gameLoopState.effectMessages[gameLoopState.effectMessages.length - 1];
+      if (lastMsg.includes('受到')) {
+        setIsPlayerShaking(true);
+        audioActions.playSfx('hit');
+        setTimeout(() => setIsPlayerShaking(false), 500);
+      } else if (lastMsg.includes('造成')) {
+        setIsOpponentShaking(true);
+        audioActions.playSfx('hit');
+        setTimeout(() => setIsOpponentShaking(false), 500);
+      }
+    }
   }, [gameLoopState.effectMessages, audioActions]);
 
   // ============ 游戏逻辑 ============
@@ -241,12 +244,12 @@ function App() {
       setGameState('DUEL');
       audioActions.playBgm('battle');
     } else if (node.type === 'REST') {
-       const updated = DungeonService.updateHP(dungeonRun, Math.floor(dungeonRun.maxHP * 0.3));
-       setDungeonRun(updated);
-       alert('你在营火旁休息，恢复了 30% 生命值！');
-       setDungeonRun(DungeonService.advanceNode(updated));
+      const updated = DungeonService.updateHP(dungeonRun, Math.floor(dungeonRun.maxHP * 0.3));
+      setDungeonRun(updated);
+      alert('你在营火旁休息，恢复了 30% 生命值！');
+      setDungeonRun(DungeonService.advanceNode(updated));
     } else {
-       setDungeonRun(DungeonService.advanceNode(dungeonRun));
+      setDungeonRun(DungeonService.advanceNode(dungeonRun));
     }
   }, [dungeonRun, gameLoopActions, audioActions]);
 
@@ -256,7 +259,7 @@ function App() {
 
   const handleSaveDeck = useCallback(async (deck: Deck) => {
     if (activeAddress) {
-       await ApiService.saveDeck(activeAddress, deck);
+      await ApiService.saveDeck(activeAddress, deck);
     }
 
     const existingIndex = decks.findIndex(d => d.id === deck.id);
@@ -317,7 +320,6 @@ function App() {
         );
         setBalance(newBalance);
         loadUserData(activeAddress);
-        // 更新排行榜可以等一会儿或者通过新数据更新
       }
 
       setFinalResult({
@@ -367,23 +369,60 @@ function App() {
   }
 
   return (
-    <div className="h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-slate-950 text-white font-tech selection:bg-purple-500/30 touch-pan-y">
+    <div className={`h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-slate-950 text-white font-tech selection:bg-purple-500/30 touch-pan-y ${isLowQuality ? 'low-quality' : ''}`}>
       {gameState === 'LOBBY' && (
         <header className="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-md border-b border-white/10 px-4 py-3 flex justify-between items-center safe-area-top">
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg">
               <Sparkles size={20} className="text-white" />
             </div>
+            
+            {/* Setting Button */}
+            <button 
+              onClick={() => setShowSettings(!showSettings)}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/70"
+            >
+              <Settings size={20} />
+            </button>
           </div>
 
           <div className="flex items-center gap-3">
+             {/* Quality Badge (Simple feedback) */}
+             {isLowQuality && (
+               <span className="text-[10px] bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded border border-amber-500/30 font-bold uppercase">省电模式</span>
+             )}
+
             <div className="bg-black/60 border border-purple-500/30 rounded-xl px-4 py-2 flex items-center gap-2">
               <span className="text-purple-400 text-xs uppercase font-bold text-nowrap">法力</span>
               <span className="font-mono font-bold text-white">{isLoading ? '...' : balance}</span>
             </div>
           </div>
+
+          {/* Settings Dropdown */}
+          {showSettings && (
+            <div className="absolute top-full left-4 mt-2 w-48 bg-slate-900 border border-white/10 rounded-xl shadow-2xl p-2 z-[60] animate-in fade-in slide-in-from-top-2">
+               <div className="text-[10px] text-gray-400 font-bold uppercase px-2 mb-1 tracking-wider">画面设置</div>
+               <button 
+                 onClick={() => { setQuality('high'); setShowSettings(false); }}
+                 className={`w-full flex items-center justify-between p-2 rounded-lg text-sm transition-colors ${quality === 'high' ? 'bg-purple-600/20 text-purple-300' : 'hover:bg-white/5'}`}
+               >
+                 <span>高画质 (全特效)</span>
+                 {quality === 'high' && <CheckCircle size={14} />}
+               </button>
+               <button 
+                 onClick={() => { setQuality('low'); setShowSettings(false); }}
+                 className={`w-full flex items-center justify-between p-2 rounded-lg text-sm transition-colors ${quality === 'low' ? 'bg-purple-600/20 text-purple-300' : 'hover:bg-white/5'}`}
+               >
+                 <span>低画质 (更流畅)</span>
+                 {quality === 'low' && <CheckCircle size={14} />}
+               </button>
+            </div>
+          )}
         </header>
       )}
+
+      {/* Global Overlay for setting close */}
+      {showSettings && <div className="fixed inset-0 z-[55]" onClick={() => setShowSettings(false)} />}
 
       <main className={gameState === 'LOBBY' ? 'pt-16' : ''}>
         {gameState === 'LOBBY' && (

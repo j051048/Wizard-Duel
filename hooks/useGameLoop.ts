@@ -27,12 +27,13 @@ export interface GameLoopState {
   effectMessages: string[];
   isGameOver: boolean;
   gameResult: 'WIN' | 'LOSS' | null;
+  isProcessing: boolean; // 🔒 动画锁/动作队列锁
 }
 
 export interface GameLoopActions {
   startDuel: (deck?: SpellType[], gameMode?: GameMode) => void;
   startTavernDuel: (deck: SpellType[], aiProfile: any, gameMode?: GameMode) => void;
-  playCard: (spellId: SpellType) => boolean;
+  playCard: (spellId: SpellType) => Promise<boolean>;
   passTurn: () => void;
   reset: () => void;
 }
@@ -49,6 +50,7 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
   const [effectMessages, setEffectMessages] = useState<string[]>([]);
   const [isGameOver, setIsGameOver] = useState(false);
   const [gameResult, setGameResult] = useState<'WIN' | 'LOSS' | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -111,6 +113,7 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
     setEffectMessages(messages.length > 0 ? messages : ['回合开始']);
     setPlayerCard(null);
     setOpponentCard(null);
+    setIsProcessing(false); // Unlock at start of round
   }, []);
 
   // 开始对战
@@ -122,6 +125,7 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
     setIsGameOver(false);
     setGameResult(null);
     setResultText('');
+    setIsProcessing(false);
   }, [startNewRound]);
 
   // 开始酒馆模式对战
@@ -133,11 +137,12 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
     setIsGameOver(false);
     setGameResult(null);
     setResultText('');
+    setIsProcessing(false);
   }, [startNewRound]);
 
-    // 玩家出牌 (Multi-Play)
-  const playCard = useCallback((spellId: SpellType): boolean => {
-    if (phase !== 'PLAYER_TURN' || !duelState) return false;
+    // 玩家出牌 (Multi-Play) - Async Animation Lock
+  const playCard = useCallback(async (spellId: SpellType): Promise<boolean> => {
+    if (phase !== 'PLAYER_TURN' || !duelState || isProcessing) return false;
 
     // 🔧 检查玩家是否被冻结
     const isFrozen = duelState.playerEffects.some(e => e.type === 'frozen');
@@ -153,20 +158,27 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
         return false;
     }
     
-    // 执行扣费与效果（executeSpell 内部只负责扣减，不负责检查，防止 logic 重复）
-    // 但为了状态原子性，我们在这里已经 check 了 affordable。
+    // 🔒 Set Lock & Visuals
+    setIsProcessing(true);
+    setPlayerCard(spellId); 
     
+    // Wait for animation (e.g. card flying up)
+    await new Promise(resolve => setTimeout(resolve, 600));
+    
+    // Execute Logic
     const { newState, logs } = executeSpell(duelState, 'player', spellId);
     
-        setDuelState(newState);
+    setDuelState(newState);
     setEffectMessages(logs);
-    setPlayerCard(spellId); // Show animation
     
-    // 🔧 使用统一死亡检查（支持同归于尽 = 平局）
+    // Slight delay for impact readability
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // 🔧 使用统一死亡检查
     const gameOverResult = checkGameOver(newState);
     if (gameOverResult) {
         setIsGameOver(true);
-        // DRAW 情况下暂时判定为 LOSS（后续可优化为真正的平局处理）
+        // DRAW 情况下暂时判定为 LOSS
         const finalResult = gameOverResult === 'DRAW' ? 'LOSS' : gameOverResult;
         setGameResult(finalResult);
         setResultText(gameOverResult);
@@ -174,14 +186,16 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
         return true;
     }
     
+    setIsProcessing(false);
     return true;
-  }, [phase, duelState]);
+  }, [phase, duelState, isProcessing]);
 
     // 玩家结束回合
   const passTurn = useCallback(() => {
-    if (phase !== 'PLAYER_TURN' || !duelState) return;
+    if (phase !== 'PLAYER_TURN' || !duelState || isProcessing) return;
     
     setPhase('OPPONENT_TURN');
+    setIsProcessing(true); // Lock during opponent turn
     setEffectMessages(['对手回合...']);
     setPlayerCard(null);
     
@@ -217,12 +231,13 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
         }
     }, AI_DELAY);
     
-  }, [phase, duelState, startNewRound, clearTimer]);
+  }, [phase, duelState, startNewRound, clearTimer, isProcessing]);
 
   const reset = useCallback(() => {
     clearTimer();
     setDuelState(null);
     setPhase('DRAFT_PHASE');
+    setIsProcessing(false);
     setIsGameOver(false);
   }, [clearTimer]);
 
@@ -242,6 +257,7 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
       effectMessages,
       isGameOver,
       gameResult,
+      isProcessing,
     },
     {
       startDuel,
