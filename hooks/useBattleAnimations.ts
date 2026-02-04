@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { HapticService } from '../services/haptic';
 
 interface DamageNumber {
@@ -17,7 +17,7 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
   const [showBloodFlash, setShowBloodFlash] = useState(false);
   const [projectiles, setProjectiles] = useState<{id: number, type: string, x: number, y: number}[]>([]);
 
-  const addDamageNumber = (damage: number, isPlayer: boolean, isCrit: boolean = false) => {
+  const addDamageNumber = useCallback((damage: number, isPlayer: boolean, isCrit: boolean = false) => {
     HapticService.medium();
     if (isCrit) HapticService.heavy();
 
@@ -29,21 +29,21 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
     const x = 50 + (Math.random() - 0.5) * 20; 
     const y = isPlayer ? 65 : 25;
     damageNumbersRef.current.push({ id: Date.now(), value: damage, x, y, isPlayer, isCrit });
-  };
+  }, []);
 
-  const triggerCrit = () => {
+  const triggerCrit = useCallback(() => {
     setShowCritEffect(true);
     setTimeout(() => setShowCritEffect(false), 800);
-  };
+  }, []);
 
-  const spawnProjectile = (type: 'player' | 'opp') => {
+  const spawnProjectile = useCallback((type: 'player' | 'opp') => {
     if (isLowQuality) return;
     const id = Date.now();
     setProjectiles(prev => [...prev, { id, type, x: 50, y: type === 'player' ? 80 : 15 }]);
     setTimeout(() => {
       setProjectiles(prev => prev.filter(p => p.id !== id));
     }, 600);
-  };
+  }, [isLowQuality]);
 
   useEffect(() => {
     if (isLowQuality) return;

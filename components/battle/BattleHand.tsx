@@ -3,6 +3,7 @@ import { SpellType, DuelPhase } from '../../types';
 import { SpellCard } from '../SpellCard';
 import { getSpellById } from '../../services/gameLogic';
 import { HapticService } from '../../services/haptic';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface BattleHandProps {
   hand: string[];
@@ -47,48 +48,63 @@ const BattleHand: React.FC<BattleHandProps> = ({
 
   return (
     <div className="flex justify-center items-end relative h-32 md:h-40 pointer-events-auto" style={{ width: '100%', maxWidth: '800px' }}>
-      {hand.map((id, index) => {
-        const isAffordable = playableCards.includes(id);
-        const isBeingDragged = dragState?.index === index;
-        const totalCards = hand.length;
-        const centerIndex = (totalCards - 1) / 2;
-        
-        const { angleStep, xSpacing } = calculateHandLayout(totalCards, isMobile, window.innerWidth);
-        
-        const offsetIndex = index - centerIndex;
-        const rotate = offsetIndex * angleStep;
-        const translateY = Math.abs(offsetIndex) * (isMobile ? 5 : 8) + (isBeingDragged ? -50 : 0);
-        const translateX = offsetIndex * xSpacing;
+      <AnimatePresence>
+        {hand.map((id, index) => {
+          const isAffordable = playableCards.includes(id);
+          const isBeingDragged = dragState?.index === index;
+          const totalCards = hand.length;
+          const centerIndex = (totalCards - 1) / 2;
+          
+          const { angleStep, xSpacing } = calculateHandLayout(totalCards, isMobile, window.innerWidth);
+          
+          const offsetIndex = index - centerIndex;
+          const rotate = offsetIndex * angleStep;
+          const translateY = Math.abs(offsetIndex) * (isMobile ? 5 : 8) + (isBeingDragged ? -50 : 0);
+          const translateX = offsetIndex * xSpacing;
 
-        return (
-          <div 
-            key={`${id}-${index}`} 
-            className={`absolute transition-all duration-300 transform origin-bottom hover:z-50 hover:scale-110 ${isBeingDragged ? 'opacity-0' : ''}`}
-            style={{ 
-              transform: `translateX(${translateX}px) rotate(${rotate}deg) translateY(${translateY}px)`,
-              zIndex: index + 1,
-              bottom: '10px'
-            }}
-          >
-            <SpellCard 
-              spell={getSpellById(id as SpellType)} 
-              onPointerDown={(e) => {
-                onPointerDownCard(id as SpellType);
-                if (isAffordable && phase === 'PLAYER_TURN' && !isProcessing) {
-                  startDrag(id as SpellType, index, e.clientX, e.clientY);
-                }
+          return (
+            <motion.div 
+              key={`${id}-${index}`} 
+              layoutId={`${id}-${index}`}
+              initial={{ opacity: 0, y: 100, scale: 0.5, rotate: 0 }}
+              animate={{ 
+                opacity: isBeingDragged ? 0 : 1, 
+                x: translateX,
+                y: translateY,
+                rotate: rotate,
+                scale: 1,
+                zIndex: index + 1
               }}
-              onPointerUp={onPointerUpCard}
-              onPointerLeave={onPointerUpCard}
-              onMouseEnter={() => onMouseEnterCard(id as SpellType)}
-              onMouseLeave={onMouseLeaveCard}
-              isAffordable={isAffordable}
-              disabled={!isAffordable || phase !== 'PLAYER_TURN' || isProcessing}
-              isSmall={isMobile}
-            />
-          </div>
-        );
-      })}
+              exit={{ 
+                opacity: 0, 
+                y: -150, 
+                scale: 0.2,
+                transition: { duration: 0.4, ease: "easeOut" }
+              }}
+              transition={{ duration: 0.3 }}
+              className={`absolute origin-bottom hover:z-50 hover:scale-110`}
+              style={{ bottom: '10px' }}
+            >
+              <SpellCard 
+                spell={getSpellById(id as SpellType)} 
+                onPointerDown={(e) => {
+                  onPointerDownCard(id as SpellType);
+                  if (isAffordable && phase === 'PLAYER_TURN' && !isProcessing) {
+                    startDrag(id as SpellType, index, e.clientX, e.clientY);
+                  }
+                }}
+                onPointerUp={onPointerUpCard}
+                onPointerLeave={onPointerUpCard}
+                onMouseEnter={() => onMouseEnterCard(id as SpellType)}
+                onMouseLeave={onMouseLeaveCard}
+                isAffordable={isAffordable}
+                disabled={!isAffordable || phase !== 'PLAYER_TURN' || isProcessing}
+                isSmall={isMobile}
+              />
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
     </div>
   );
 };

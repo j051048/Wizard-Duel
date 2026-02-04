@@ -23,6 +23,7 @@ import CombatLog from './battle/CombatLog';
 import BattleBoard from './battle/BattleBoard';
 import BattleHand from './battle/BattleHand';
 import BattleEffects from './battle/BattleEffects';
+import { TurnIndicator } from './battle/TurnIndicator';
 
 // Hooks
 import { useDragToPlay } from '../hooks/useDragToPlay';
@@ -206,6 +207,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       </div>
 
       <TargetingArrow data={targetingData} />
+      
+      <TurnIndicator isPlayerTurn={phase === 'PLAYER_TURN'} roundNumber={duelState.roundNumber} />
 
       {!isLowQuality && (
           <canvas 
