@@ -24,6 +24,7 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { Lobby } from './components/Lobby';
 import { ModeSelect } from './components/ModeSelect';
 import { MatchmakingAnimation } from './components/MatchmakingAnimation';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Services & Constants
 import { ApiService } from './services/api';
