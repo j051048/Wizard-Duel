@@ -179,10 +179,20 @@ export const executeSpell = (
     return { newState, logs };
   }
 
-  // 2. 法力检查 (Double Check for safety)
-  // 注意：executeSpell 通常假定已经通过了 UI 层的 canAfford 检查，但为了安全再次检查
-  // 在这里我们 temporarily ignore frozen check inside logic flow if forcing scenarios,
-  // but generally it handles cost.
+  // 2. 法力 & 状态检查 (Double Check for safety)
+  // 必须传入当前生效的所有 StatusEffect 以便检查 Frozen 等状态
+  const activeEffects = isPlayer ? newState.playerEffects : newState.opponentEffects;
+  const affordable = canAffordSpell(
+    spellId, 
+    isPlayer ? newState.playerMana : newState.opponentMana, 
+    activeEffects, 
+    myCostMod
+  );
+  
+  if (!affordable.canAfford) {
+    logs.push(isPlayer ? `❌ 操作无效: ${affordable.reason}` : `对手操作无效: ${affordable.reason}`);
+    return { newState, logs };
+  }
   
   const cost = Math.max(0, spell.manaCost + myCostMod);
   if (isPlayer) newState.playerMana = Math.max(0, newState.playerMana - cost);
