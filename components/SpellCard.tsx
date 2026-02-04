@@ -165,8 +165,9 @@ export const SpellCard: React.FC<SpellCardProps> = ({
 
   return (
     <div 
-      className={`relative group ${isSmall ? 'w-20 h-28' : 'w-32 h-48 sm:w-36 sm:h-52'} transition-all duration-300 ${!canPlay ? 'opacity-60 grayscale-[0.5]' : ''} touch-pan-y`}
-      style={{ perspective: '1000px', willChange: (isHovered && canPlay) || isSelected ? 'transform' : 'auto' }}
+      className={`relative group ${isSmall ? 'w-20 h-28' : 'w-32 h-48 sm:w-36 sm:h-52'} transition-all duration-300 ${!canPlay ? 'opacity-80 grayscale-[0.3]' : ''} touch-pan-y text-start`}
+      style={{ perspective: '1000px', willChange: (isHovered) || isSelected ? 'transform' : 'auto' }}
+      onMouseEnter={() => !isFaceDown && setIsHovered(true)}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       onClick={canPlay ? onClick : undefined}
@@ -265,6 +266,26 @@ export const SpellCard: React.FC<SpellCardProps> = ({
              <span className="text-red-400 text-sm font-bold block text-center">⚡</span>
              <span className="text-red-400 text-xs font-bold mt-1">法力不足</span>
           </div>
+        </div>
+      )}
+
+      {/* Description Tooltip */}
+      {isHovered && !isFaceDown && (
+        <div className={`
+          absolute left-1/2 -translate-x-1/2 w-48 z-50 pointer-events-none transform transition-all duration-200
+          ${isSmall ? 'bottom-[110%] mb-1' : 'bottom-[105%] mb-2'}
+        `}>
+          <div className="bg-slate-900/95 backdrop-blur-md text-white text-xs p-3 rounded-lg border border-white/20 shadow-[0_0_20px_rgba(0,0,0,0.8)]">
+             <div className={`font-bold mb-1 text-sm ${spell.color || 'text-amber-400'}`}>{spell.name}</div>
+             <p className="leading-relaxed text-gray-200 font-sans">{spell.description}</p>
+             {spell.mechanic && (
+               <div className="mt-2 text-[10px] text-gray-400 uppercase tracking-wider font-bold">
+                 {getMechanicName(spell.mechanic)}
+               </div>
+             )}
+          </div>
+          {/* Arrow */}
+          <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-slate-900 border-r border-b border-white/20 transform rotate-45"></div>
         </div>
       )}
 
