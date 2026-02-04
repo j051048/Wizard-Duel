@@ -17,6 +17,7 @@ interface BattleHandProps {
   onPointerUpCard: () => void;
   onMouseEnterCard: (spellId: SpellType) => void;
   onMouseLeaveCard: () => void;
+  onDoubleClickCard?: (spellId: SpellType) => void; // 新增：双击出牌
 }
 
 const calculateHandLayout = (count: number, isMobile: boolean, screenWidth: number) => {
@@ -43,10 +44,34 @@ const BattleHand: React.FC<BattleHandProps> = ({
   onPointerDownCard,
   onPointerUpCard,
   onMouseEnterCard,
-  onMouseLeaveCard
+  onMouseLeaveCard,
+  onDoubleClickCard
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const lastClickTimeRef = useRef<{ [key: string]: number }>({}); // 记录每张卡牌的上次点击时间
+  const DOUBLE_CLICK_THRESHOLD = 300; // 双击判定时间阈值（毫秒）
+
+  // 处理双击出牌
+  const handleCardClick = (spellId: SpellType, isAffordable: boolean) => {
+    if (!isAffordable || phase !== 'PLAYER_TURN' || isProcessing) return;
+    
+    const now = Date.now();
+    const lastClickTime = lastClickTimeRef.current[spellId] || 0;
+    
+    if (now - lastClickTime < DOUBLE_CLICK_THRESHOLD) {
+      // 双击触发出牌
+      if (onDoubleClickCard) {
+        HapticService.medium();
+        onDoubleClickCard(spellId);
+      }
+      // 重置点击时间，防止三击触发
+      lastClickTimeRef.current[spellId] = 0;
+    } else {
+      // 记录本次点击时间
+      lastClickTimeRef.current[spellId] = now;
+    }
+  };
 
     return (
     <div className="flex justify-center items-end relative h-40 md:h-48 pointer-events-auto" style={{ width: '100%', maxWidth: '900px' }}>
@@ -95,7 +120,8 @@ const BattleHand: React.FC<BattleHandProps> = ({
               }}
               className="absolute origin-bottom cursor-pointer"
               style={{ bottom: '10px' }}
-              onMouseEnter={() => {
+              id={`player-card-${index}`}
+                            onMouseEnter={() => {
                 setHoveredIndex(index);
                 onMouseEnterCard(id as SpellType);
                 HapticService.light();
@@ -104,6 +130,7 @@ const BattleHand: React.FC<BattleHandProps> = ({
                 setHoveredIndex(null);
                 onMouseLeaveCard();
               }}
+              onClick={() => handleCardClick(id as SpellType, isAffordable)}
             >
               {/* 悬停时的光晕效果 */}
               {isHovered && (

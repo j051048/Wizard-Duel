@@ -432,7 +432,7 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
           </div>
           
           {/* 法力水晶行 */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1" id={isPlayer ? "player-mana-bar" : undefined}>
             {Array.from({ length: maxMana }).map((_, i) => {
               const isActive = i < mana;
               return (

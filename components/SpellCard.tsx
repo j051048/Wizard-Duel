@@ -208,6 +208,7 @@ export const SpellCard: React.FC<SpellCardProps> = ({
         <div className={`
              absolute inset-0 bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center 
              border-2 md:border-4 ${rarityStyles.borderClass} ${rarityStyles.glowClass}
+             ${canPlay ? 'ring-2 ring-green-500/30 animate-pulse-gentle' : ''}
         `}>
             {/* Background Gradient */}
             <div className={`absolute inset-0 bg-gradient-to-b from-slate-800 to-black ${canPlay ? '' : 'opacity-50'}`} />

@@ -262,7 +262,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         
         {/* 手牌区域 - 居中底部 */}
         <div className="w-full flex justify-center pb-4 md:pb-6 pointer-events-none">
-          <BattleHand 
+                    <BattleHand 
             hand={duelState.playerHand}
             playableCards={playableCards}
             phase={phase}
@@ -274,11 +274,25 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
             onPointerUpCard={handleCardPressEnd}
             onMouseEnterCard={setHoveredSpellId}
             onMouseLeaveCard={() => setHoveredSpellId(null)}
+            onDoubleClickCard={(spellId) => handlePlayCard(spellId, true)}
           />
         </div>
         
-        {/* 玩家信息框 - 左下角 */}
+                {/* 玩家信息框 - 左下角 */}
         <div className="absolute left-2 md:left-6 bottom-4 md:bottom-6 z-40">
+          {/* 英雄技能栏 - 头像上方横排显示 */}
+          <div id="hero-skills-container" className="flex flex-row gap-2 mb-2 pointer-events-auto justify-start">
+            {heroSkills.slice(0, 3).map(skill => (
+              <HeroSkillButton
+                key={skill.id}
+                skill={skill}
+                canUse={phase === 'PLAYER_TURN' && !duelState.heroSkillsUsed && !gameLoopState.isProcessing}
+                currentMana={duelState.playerMana}
+                onClick={() => handlePlayCard(skill.id)}
+              />
+            ))}
+          </div>
+          
           <PlayerFrame 
             isPlayer={true}
             hp={duelState.playerHP}
@@ -290,19 +304,6 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
             isShaking={isPlayerShaking}
             projection={projection?.target === 'player' ? { hpChange: projection.netHpChange, armorChange: projection.netArmorChange } : null}
           />
-          
-          {/* 英雄技能栏 - 信息框右侧 */}
-          <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 flex flex-col gap-2 pointer-events-auto">
-            {heroSkills.slice(0, 3).map(skill => (
-              <HeroSkillButton
-                key={skill.id}
-                skill={skill}
-                canUse={phase === 'PLAYER_TURN' && !duelState.heroSkillsUsed && !gameLoopState.isProcessing}
-                currentMana={duelState.playerMana}
-                onClick={() => handlePlayCard(skill.id)}
-              />
-            ))}
-          </div>
         </div>
         
         {/* 结束回合按钮 - 右下角 */}
@@ -403,6 +404,12 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                title: '💧 消耗法力',
                content: '每张牌都需要消耗法力。注意管理你的资源！',
                position: 'top'
+            },
+            {
+               targetId: 'hero-skills-container',
+               title: '👑 英雄技能',
+               content: '你还有强大的英雄技能！每回合可以使用一次，它们不会消耗手牌。',
+               position: 'left'
             }
           ]}
           onComplete={() => {
