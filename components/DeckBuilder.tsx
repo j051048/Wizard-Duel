@@ -55,10 +55,21 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 }) => {
 
   const [deckName, setDeckName] = useState(selectedDeck?.name || '新牌组');
-
   const [selectedCards, setSelectedCards] = useState<SpellType[]>(selectedDeck?.cards || []);
+  // Filters
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeCostFilter, setActiveCostFilter] = useState<number | null>(null);
+  const [lastAddedId, setLastAddedId] = useState<string | null>(null);
 
-  const [cardPool, setCardPool] = useState<Spell[]>(getCardsForMode(gameMode).filter(s => s.id !== 'skip'));
+  const rawCardPool = getCardsForMode(gameMode).filter(s => s.id !== 'skip');
+
+  const filteredCardPool = rawCardPool.filter(card => {
+    const matchesSearch = card.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          card.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCost = activeCostFilter === null || 
+                        (activeCostFilter === 7 ? card.manaCost >= 7 : card.manaCost === activeCostFilter);
+    return matchesSearch && matchesCost;
+  });
 
 
 
@@ -80,14 +91,14 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
 
 
-  const addCard = (spellId: SpellType) => {
-
+  const addCard = (spellId: SpellType, e?: React.MouseEvent) => {
+    // Play sound or haptic here if available
     if (totalCards < 30) {
-
-      setSelectedCards([...selectedCards, spellId]);
-
+      setSelectedCards(prev => [...prev, spellId]);
+      setLastAddedId(spellId);
+      // Reset highlight after animation
+      setTimeout(() => setLastAddedId(null), 500);
     }
-
   };
 
 
@@ -220,17 +231,53 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
              {/* Decorative Corner */}
              <div className="absolute top-0 left-0 w-16 h-16 border-t-2 border-l-2 border-amber-600/30 rounded-tl-xl pointer-events-none"></div>
              
-             <div className="p-4 border-b border-white/5 flex justify-between items-center bg-black/20">
-                <h3 className="text-xl font-wizard text-amber-100 flex items-center gap-2">
-                   <span className="text-2xl">📖</span> Card Collection
-                </h3>
-                <span className="text-xs text-gray-500 font-tech uppercase tracking-widest">Standard Mode</span>
+             {/* Filters Header */}
+             <div className="p-4 border-b border-white/5 bg-black/20 space-y-3">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-xl font-wizard text-amber-100 flex items-center gap-2">
+                     <span className="text-2xl">📖</span> Card Collection
+                  </h3>
+                  {/* Search Input */}
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Search spells..." 
+                      className="bg-black/40 border border-white/10 rounded-full px-4 py-1 text-sm text-white focus:outline-none focus:border-amber-500 w-48 transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Mana Filter Gems */}
+                <div className="flex gap-2">
+                   <button 
+                      onClick={() => setActiveCostFilter(null)}
+                      className={`px-3 py-0.5 rounded-full text-xs font-bold transition-all border ${activeCostFilter === null ? 'bg-amber-600 border-amber-400 text-white' : 'bg-transparent border-white/10 text-gray-500 hover:border-white/30'}`}
+                   >
+                     ALL
+                   </button>
+                   {[0, 1, 2, 3, 4, 5, 6, 7].map(cost => (
+                     <button
+                        key={cost}
+                        onClick={() => setActiveCostFilter(activeCostFilter === cost ? null : cost)}
+                        className={`
+                          w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all border shadow-sm
+                          ${activeCostFilter === cost 
+                            ? 'bg-blue-600 border-blue-400 text-white scale-110 shadow-blue-500/50' 
+                            : 'bg-[#1a233b] border-blue-900/50 text-blue-300 hover:bg-blue-900'}
+                        `}
+                     >
+                        {cost === 7 ? '7+' : cost}
+                     </button>
+                   ))}
+                </div>
              </div>
 
              <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                   {cardPool.map((spell) => (
-                      <div key={spell.id} className="relative group cursor-pointer" onClick={() => addCard(spell.id)}>
+                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 gap-4 pb-12">
+                   {filteredCardPool.map((spell) => (
+                      <div key={spell.id} className="relative group cursor-pointer" onClick={(e) => addCard(spell.id, e)}>
                         <div className="transform transition-transform duration-200 group-hover:scale-105 group-hover:-translate-y-2">
                            <SpellCard spell={spell} isSmall />
                         </div>
@@ -278,10 +325,15 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                    return spellA.manaCost - spellB.manaCost;
                 }).map(([spellId, count]) => {
                   const spell = getSpellById(spellId as SpellType);
+                  const isJustAdded = lastAddedId === spellId;
+                  
                   return (
                     <div 
                        key={spellId} 
-                       className="group flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 transition-all cursor-pointer relative overflow-hidden"
+                       className={`
+                          group flex items-center gap-3 p-2 rounded-lg border transition-all cursor-pointer relative overflow-hidden select-none
+                          ${isJustAdded ? 'bg-amber-500/20 border-amber-500/50 scale-[1.02]' : 'bg-white/5 hover:bg-white/10 border-transparent hover:border-white/10'}
+                       `}
                        onClick={() => removeCard(spellId as SpellType)}
                     >  
                        {/* Mana Cost Gem */}
