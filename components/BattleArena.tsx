@@ -281,13 +281,34 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
       {/* === 底部：玩家操作区 === */}
       <div className="w-full bg-gradient-to-t from-black via-black/80 to-transparent pt-2 pb-1 px-2 z-30 flex-shrink-0 relative safe-area-bottom">
-        <div className="max-w-6xl mx-auto flex flex-col gap-2">
+        <div className="max-w-6xl mx-auto flex flex-col justify-end h-full">
           
-          {/* Top Row: Hero Skills & Hand */}
-          <div className="flex justify-between items-end relative h-28 md:h-40">
+          {/* Hero Skills Bar (Hidden when used) */}
+          {!duelState.heroSkillsUsed && (
+            <div className="flex justify-center gap-2 mb-2 z-20">
+              {(['hero_fire', 'hero_vine', 'hero_ice', 'hero_thunder', 'hero_rock'] as const).map((id) => {
+                    const spell = getSpellById(id);
+                    const canUse = phase === 'PLAYER_TURN';
+                    return (
+                      <div key={id} className="transform scale-75 md:scale-90 hover:-translate-y-1 transition-transform">
+                        <SpellCard 
+                          spell={spell} 
+                          onClick={() => canUse && handlePlayCard(id)}
+                          isAffordable={canUse}
+                          disabled={!canUse}
+                          isSmall
+                        />
+                      </div>
+                    );
+              })}
+            </div>
+          )}
+
+          {/* Main Control Row: Player Stats, Hand, Buttons */}
+          <div className="flex justify-between items-end relative h-32 md:h-40 w-full">
              
-             {/* Left: Player Stats (Mobile Compact) */}
-             <div className="absolute left-0 bottom-0 z-40 w-48 md:w-64 transform scale-90 md:scale-100 origin-bottom-left">
+             {/* Left: Player Stats (Absolute Bottom Left) */}
+             <div className="absolute left-0 bottom-0 z-40 w-44 md:w-64 transform scale-90 md:scale-100 origin-bottom-left">
                 <PlayerFrame 
                   isPlayer={true}
                   name="玩家"
@@ -302,8 +323,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
              </div>
 
              {/* Center: Hand Cards */}
-             <div className="flex-1 flex justify-center items-end pl-44 md:pl-64 pr-16 md:pr-32 pb-2">
-                <div className="flex justify-center items-end -space-x-8 md:-space-x-4 min-h-[100px]">
+             <div className="flex-1 flex justify-center items-end pl-40 md:pl-64 pr-16 md:pr-32 pb-1">
+                <div className="flex justify-center items-end -space-x-7 md:-space-x-4 min-h-[110px]">
                     {duelState.playerHand.map((id, index) => {
                       const isAffordable = playableCards.includes(id);
                       const total = duelState.playerHand.length;
@@ -359,26 +380,6 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                  </button>
              </div>
           </div>
-          
-          {/* Hero Skills Bar (Optional / Above) */}
-          <div className="flex justify-center gap-2 pb-1">
-             {(['hero_fire', 'hero_vine', 'hero_ice', 'hero_thunder', 'hero_rock'] as const).map((id) => {
-                  const spell = getSpellById(id);
-                  const canUse = phase === 'PLAYER_TURN' && !duelState.heroSkillsUsed;
-                  return (
-                    <div key={id} className="transform scale-75 md:scale-90 origin-bottom hover:-translate-y-1 transition-transform">
-                      <SpellCard 
-                        spell={spell} 
-                        onClick={() => canUse && handlePlayCard(id)}
-                        isAffordable={canUse}
-                        disabled={!canUse}
-                        isSmall
-                      />
-                    </div>
-                  );
-             })}
-          </div>
-
         </div>
       </div>
 
