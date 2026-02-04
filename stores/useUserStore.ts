@@ -13,6 +13,7 @@ interface UserState {
   history: BattleRecord[];
   leaderboard: PlayerStats[];
   isLoading: boolean;
+  hasCompletedTutorial: boolean;
 
   // Actions
   setActiveAddress: (address: string | null) => void;
@@ -25,6 +26,7 @@ interface UserState {
   setHistory: (history: BattleRecord[]) => void;
   setLeaderboard: (leaderboard: PlayerStats[]) => void;
   setIsLoading: (loading: boolean) => void;
+  setHasCompletedTutorial: (completed: boolean) => void;
 
   // Complex Actions
   loadUserData: (address: string) => Promise<void>;
@@ -44,6 +46,7 @@ export const useUserStore = create<UserState>((set, get) => ({
   history: [],
   leaderboard: [],
   isLoading: false,
+  hasCompletedTutorial: false,
 
   setActiveAddress: (activeAddress) => set({ activeAddress }),
   setBalance: (balance) => set({ balance }),
@@ -55,6 +58,7 @@ export const useUserStore = create<UserState>((set, get) => ({
   setHistory: (history) => set({ history }),
   setLeaderboard: (leaderboard) => set({ leaderboard }),
   setIsLoading: (isLoading) => set({ isLoading }),
+  setHasCompletedTutorial: (hasCompletedTutorial) => set({ hasCompletedTutorial }),
 
   loadUserData: async (address: string) => {
     set({ isLoading: true });

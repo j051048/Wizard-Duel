@@ -226,7 +226,7 @@ function App() {
              {isLowQuality && (
                <span className="text-[10px] bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded border border-amber-500/30 font-bold uppercase">省电模式</span>
              )}
-            <div className="bg-black/60 border border-purple-500/30 rounded-xl px-4 py-2 flex items-center gap-2">
+            <div id="header-mana-display" className="bg-black/60 border border-purple-500/30 rounded-xl px-4 py-2 flex items-center gap-2">
               <span className="text-purple-400 text-xs uppercase font-bold text-nowrap">法力</span>
               <span className="font-mono font-bold text-white">{user.isLoading ? '...' : user.balance}</span>
             </div>

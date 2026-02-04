@@ -10,6 +10,9 @@ import { TRANSLATIONS } from '../translations';
 import { RulesModal } from './RulesModal';
 import { TutorialModal } from './TutorialModal';
 
+import { TutorialOverlay } from './tutorial/TutorialOverlay';
+import { useUserStore } from '../stores/useUserStore';
+
 // Extracted Components
 import TopBar from './lobby/TopBar';
 import DeckCarousel from './lobby/DeckCarousel';
@@ -143,8 +146,53 @@ export const Lobby: React.FC<LobbyProps> = ({
       </div>
 
       {/* Global Modals */}
+      {/* Global Modals */}
       <RulesModal isOpen={isRulesOpen} onClose={() => setIsRulesOpen(false)} />
       <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
+      
+      {!useUserStore(s => s.hasCompletedTutorial) && !isLoading && (
+        <TutorialOverlay 
+          steps={[
+            {
+               title: t('Welcome, Wizard'),
+               content: t('Welcome to the Elemental Arena. Let me guide you through the basics of the duel.'),
+               position: 'center'
+            },
+            {
+               targetId: 'lobby-profile-section',
+               title: t('Wizard Profile'),
+               content: t('Your rank and score are shown here. Win duels to climb the leaderboard!'),
+               position: 'bottom'
+            },
+            {
+               targetId: 'header-mana-display',
+               title: t('Mana Pool'),
+               content: t('This is your balance. You need Mana to place bets on duels.'),
+               position: 'bottom'
+            },
+            {
+               targetId: 'lobby-deck-selector',
+               title: t('Battle Deck'),
+               content: t('Select or edit your deck here. Each deck consists of 3 powerful spells.'),
+               position: 'top'
+            },
+            {
+               targetId: 'lobby-wager-selector',
+               title: t('Wager Selection'),
+               content: t('Choose how much Mana to bet. Higher risk, higher reward!'),
+               position: 'top'
+            },
+            {
+               targetId: 'lobby-play-btn',
+               title: t('Enter Arena'),
+               content: t('When you are ready, click here to find an opponent!'),
+               position: 'top'
+            }
+          ]}
+          onComplete={() => useUserStore.getState().setHasCompletedTutorial(true)}
+          onSkip={() => useUserStore.getState().setHasCompletedTutorial(true)}
+        />
+      )}
     </div>
   );
 };

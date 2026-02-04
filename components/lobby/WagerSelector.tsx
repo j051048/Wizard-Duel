@@ -15,7 +15,7 @@ const WagerSelector: React.FC<WagerSelectorProps> = ({
   t
 }) => {
   return (
-    <div className="flex flex-col items-center gap-2 w-full">
+    <div id="lobby-wager-selector" className="flex flex-col items-center gap-2 w-full">
        <span className="text-[10px] text-gray-500 uppercase tracking-[0.2em]">{t('Select Wager')}</span>
        <div className="flex gap-4 md:gap-8 justify-center w-full">
           {BET_OPTIONS.map((amt) => {

@@ -33,7 +33,7 @@ const DeckCarousel: React.FC<DeckCarouselProps> = ({
   };
 
   return (
-    <div className="relative w-full max-w-sm h-64 md:h-80 perspective-1000 flex items-center justify-center mb-8">
+    <div id="lobby-deck-selector" className="relative w-full max-w-sm h-64 md:h-80 perspective-1000 flex items-center justify-center mb-8">
        {decks.length === 0 ? (
           <div className="text-center p-8 bg-black/40 backdrop-blur-md rounded-2xl border border-dashed border-white/20 hover:border-purple-500/50 transition-colors cursor-pointer" onClick={onOpenDeckBuilder}>
              <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">

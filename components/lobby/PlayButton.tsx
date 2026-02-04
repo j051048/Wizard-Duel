@@ -18,7 +18,7 @@ const PlayButton: React.FC<PlayButtonProps> = ({
   t
 }) => {
   return (
-    <div className="w-full mt-4">
+    <div id="lobby-play-btn" className="w-full mt-4">
       <button
         onClick={onStartDuel}
         disabled={!canStart || !selectedDeck}
