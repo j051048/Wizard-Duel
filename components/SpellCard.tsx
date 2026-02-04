@@ -189,7 +189,10 @@ export const SpellCard: React.FC<SpellCardProps> = ({
         />
 
         {/* Layer 1: Base Card Background & Art (Middle) */}
-        <div className="absolute inset-2 bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center">
+        <div className={`
+             absolute inset-0 bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center 
+             border-2 md:border-4 ${rarityStyles.borderClass} ${rarityStyles.glowClass}
+        `}>
             {/* Background Gradient */}
             <div className={`absolute inset-0 bg-gradient-to-b from-slate-800 to-black ${canPlay ? '' : 'opacity-50'}`} />
             
@@ -214,16 +217,6 @@ export const SpellCard: React.FC<SpellCardProps> = ({
              </div>
         </div>
 
-        {/* Layer 2: Frame (Front) */}
-        <div className="absolute inset-0 pointer-events-none z-10 drop-shadow-lg">
-           <img 
-              src={frameImage} 
-              alt="frame" 
-              loading="lazy"
-              decoding="async"
-              className="w-full h-full object-fill scale-[1.12]" 
-            />
-        </div>
 
         {/* Layer 3: Stats & Text (Overlay) */}
         <div className="absolute inset-0 z-20 pointer-events-none flex flex-col justify-between p-3" style={{ transform: 'translateZ(20px)' }}>
