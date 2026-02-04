@@ -13,7 +13,7 @@ import { SpellCard } from './SpellCard';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { calculateSpellProjection } from '../services/projection';
 import { useSettings } from '../context/SettingsContext';
-import { TutorialOverlay } from './TutorialOverlay';
+import { TutorialOverlay, TutorialStep } from './tutorial/TutorialOverlay';
 import CardDetailModal from './CardDetailModal';
 
 // Components
@@ -186,9 +186,10 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-slate-950/80" />
       </div>
 
-      {/* Opponent Area */}
-      <div className="w-full h-[15%] min-h-[120px] flex justify-center items-start pt-2 z-20 relative">
+            {/* Opponent Area - 优化布局 */}
+      <div className="w-full flex justify-center items-start pt-4 md:pt-6 z-20 relative safe-area-top">
           <div className="flex flex-col items-center relative">
+             {/* 对手信息框 */}
              <PlayerFrame 
                 isPlayer={false}
                 name={duelState.aiProfile?.name || "黑魔法师"}
@@ -202,13 +203,35 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                 avatarSrc={duelState.aiProfile?.avatar}
                 projection={projection?.target === 'opponent' ? { hpChange: projection.netHpChange, armorChange: projection.netArmorChange } : null}
               />
-            <AIEmoteBubble status={aiStatus} />
-            <div className="flex justify-center -space-x-4 scale-75 origin-top mt-1">
-                {Array.from({ length: Math.min(duelState.opponentHandSize, 5) }).map((_, i) => (
-                  <div key={i} style={{ transform: `rotate(${(i - 2) * 5}deg)` }} className="opacity-80">
-                    <SpellCard isFaceDown isSmall />
-                  </div>
-                ))}
+              
+            {/* AI 表情气泡 */}
+            <div className="absolute -right-4 top-0">
+              <AIEmoteBubble status={aiStatus} />
+            </div>
+            
+            {/* 对手手牌展示 - 扇形排列 */}
+            <div className="flex justify-center mt-3 relative h-12">
+                {Array.from({ length: Math.min(duelState.opponentHandSize, 7) }).map((_, i) => {
+                  const totalCards = Math.min(duelState.opponentHandSize, 7);
+                  const centerIndex = (totalCards - 1) / 2;
+                  const offsetIndex = i - centerIndex;
+                  const rotation = offsetIndex * 4;
+                  const translateX = offsetIndex * 18;
+                  const translateY = Math.abs(offsetIndex) * 2;
+                  
+                  return (
+                    <div 
+                      key={i} 
+                      className="absolute opacity-70 hover:opacity-100 transition-opacity"
+                      style={{ 
+                        transform: `translateX(${translateX}px) translateY(${translateY}px) rotate(${rotation}deg)`,
+                        zIndex: i
+                      }}
+                    >
+                      <SpellCard isFaceDown isSmall />
+                    </div>
+                  );
+                })}
             </div>
           </div>
       </div>
@@ -234,61 +257,80 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         isMobile={isMobile}
       />
 
-      {/* Player Area */}
-      <div className="w-full h-[35%] min-h-[220px] max-h-[350px] z-30 relative safe-area-bottom">
-        <div className="w-full h-full relative flex items-end justify-between px-2 pb-2 md:px-8 md:pb-6">
-          <div className="z-40 mb-6 scale-90 md:scale-100">
-             <PlayerFrame 
-               isPlayer={true}
-               hp={duelState.playerHP}
-               armor={duelState.playerArmor}
-               maxHp={GAME_CONFIG.maxHP}
-               mana={duelState.playerMana}
-               maxMana={duelState.playerMaxMana}
-               effects={duelState.playerEffects}
-               isShaking={isPlayerShaking}
-                projection={projection?.target === 'player' ? { hpChange: projection.netHpChange, armorChange: projection.netArmorChange } : null}
+            {/* Player Area - 重新设计布局 */}
+      <div className="absolute bottom-0 left-0 right-0 z-30 safe-area-bottom">
+        
+        {/* 手牌区域 - 居中底部 */}
+        <div className="w-full flex justify-center pb-4 md:pb-6 pointer-events-none">
+          <BattleHand 
+            hand={duelState.playerHand}
+            playableCards={playableCards}
+            phase={phase}
+            isProcessing={gameLoopState.isProcessing}
+            isMobile={isMobile}
+            dragState={dragState}
+            startDrag={startDrag}
+            onPointerDownCard={handleCardPressStart}
+            onPointerUpCard={handleCardPressEnd}
+            onMouseEnterCard={setHoveredSpellId}
+            onMouseLeaveCard={() => setHoveredSpellId(null)}
+          />
+        </div>
+        
+        {/* 玩家信息框 - 左下角 */}
+        <div className="absolute left-2 md:left-6 bottom-4 md:bottom-6 z-40">
+          <PlayerFrame 
+            isPlayer={true}
+            hp={duelState.playerHP}
+            armor={duelState.playerArmor}
+            maxHp={GAME_CONFIG.maxHP}
+            mana={duelState.playerMana}
+            maxMana={duelState.playerMaxMana}
+            effects={duelState.playerEffects}
+            isShaking={isPlayerShaking}
+            projection={projection?.target === 'player' ? { hpChange: projection.netHpChange, armorChange: projection.netArmorChange } : null}
+          />
+          
+          {/* 英雄技能栏 - 信息框右侧 */}
+          <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 flex flex-col gap-2 pointer-events-auto">
+            {heroSkills.slice(0, 3).map(skill => (
+              <HeroSkillButton
+                key={skill.id}
+                skill={skill}
+                canUse={phase === 'PLAYER_TURN' && !duelState.heroSkillsUsed && !gameLoopState.isProcessing}
+                currentMana={duelState.playerMana}
+                onClick={() => handlePlayCard(skill.id)}
               />
-              
-             {/* 英雄技能栏 - 位于头像上方 */}
-             <div className="absolute left-0 bottom-full mb-2 ml-2 md:ml-0 flex gap-2 w-max px-2 py-1.5 bg-black/40 backdrop-blur-md rounded-xl border border-white/5 shadow-2xl animate-in slide-in-from-left-4 fade-in duration-700 pointer-events-auto z-50">
-                {heroSkills.map(skill => (
-                    <HeroSkillButton
-                        key={skill.id}
-                        skill={skill}
-                        canUse={phase === 'PLAYER_TURN' && !duelState.heroSkillsUsed && !gameLoopState.isProcessing}
-                        currentMana={duelState.playerMana}
-                        onClick={() => handlePlayCard(skill.id)}
-                    />
-                ))}
-            </div>
+            ))}
           </div>
-
-          <div className="flex-1 flex flex-col items-center justify-end h-full absolute inset-x-0 bottom-0 pointer-events-none">
-             <BattleHand 
-                hand={duelState.playerHand}
-                playableCards={playableCards}
-                phase={phase}
-                isProcessing={gameLoopState.isProcessing}
-                isMobile={isMobile}
-                dragState={dragState}
-                startDrag={startDrag}
-                onPointerDownCard={handleCardPressStart}
-                onPointerUpCard={handleCardPressEnd}
-                onMouseEnterCard={setHoveredSpellId}
-                onMouseLeaveCard={() => setHoveredSpellId(null)}
-             />
-          </div>
-
-          <div className="z-40 w-16 md:w-32 flex flex-col gap-2 mb-2 ml-auto">
-             <button 
-                onClick={onPass} 
-                disabled={phase !== 'PLAYER_TURN'} 
-                className={`relative w-full aspect-square md:aspect-video flex flex-col items-center justify-center rounded-xl shadow-2xl transition-all ${phase === 'PLAYER_TURN' ? 'bg-amber-600 border-2 border-amber-300' : 'bg-slate-800'}`}
-             >
-                <div className="text-xl">{phase === 'PLAYER_TURN' ? '👉' : '⏳'}</div>
-             </button>
-          </div>
+        </div>
+        
+        {/* 结束回合按钮 - 右下角 */}
+        <div className="absolute right-2 md:right-6 bottom-4 md:bottom-6 z-40">
+          <button 
+            onClick={onPass} 
+            disabled={phase !== 'PLAYER_TURN'} 
+            className={`
+              relative px-6 py-3 md:px-8 md:py-4 rounded-xl font-bold text-sm md:text-base uppercase tracking-wider
+              transition-all duration-300 shadow-2xl
+              ${phase === 'PLAYER_TURN' 
+                ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-black border-2 border-amber-300 hover:scale-105 hover:shadow-amber-500/50 active:scale-95' 
+                : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+              }
+            `}
+          >
+            {phase === 'PLAYER_TURN' ? (
+              <span className="flex items-center gap-2">
+                <span>结束回合</span>
+                <span className="text-lg">👉</span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-2">
+                <span>等待中</span>
+                <span className="animate-spin">⏳</span>
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
@@ -342,13 +384,35 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
          />
       )}
 
-      {isTutorialOpen && (
+            {isTutorialOpen && (
         <TutorialOverlay 
+          steps={[
+            {
+               title: '⚔️ 战斗开始',
+               content: '欢迎来到竞技场！这里的规则很简单：相克则胜，平局则各扣血量。',
+               position: 'center'
+            },
+            {
+               targetId: 'player-card-0',
+               title: '🎴 出牌指引',
+               content: '点击卡牌查看详情，拖拽卡牌到中间区域即可释放魔法。',
+               position: 'top'
+            },
+            {
+               targetId: 'player-mana-bar',
+               title: '💧 消耗法力',
+               content: '每张牌都需要消耗法力。注意管理你的资源！',
+               position: 'top'
+            }
+          ]}
           onComplete={() => {
             setIsTutorialOpen(false);
             setTutorialAction(undefined);
-          }} 
-          lastAction={tutorialAction}
+          }}
+          onSkip={() => {
+            setIsTutorialOpen(false);
+            setTutorialAction(undefined);
+          }}
         />
       )}
     </div>

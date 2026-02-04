@@ -284,18 +284,38 @@ export const SpellCard: React.FC<SpellCardProps> = ({
         </div>
       )}
 
-      {/* Description Tooltip */}
-      {isHovered && !isFaceDown && (
-        <div className={`
-          absolute left-1/2 -translate-x-1/2 w-48 z-50 pointer-events-none transform transition-all duration-200
-          ${isSmall ? 'bottom-[110%] mb-1' : 'bottom-[105%] mb-2'}
-        `}>
+            {/* Description Tooltip - 智能定位 */}
+      {isHovered && !isFaceDown && !isSmall && (
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-[105%] mb-2 w-52 z-50 pointer-events-none">
           <div className="bg-slate-900/95 backdrop-blur-md text-white text-xs p-3 rounded-lg border border-white/20 shadow-[0_0_20px_rgba(0,0,0,0.8)]">
-             <div className={`font-bold mb-1 text-sm ${spell.color || 'text-amber-400'}`}>{spell.name}</div>
+             <div className={`font-bold mb-1.5 text-sm ${spell.color || 'text-amber-400'}`}>{spell.name}</div>
+             
+             {/* 数值信息 */}
+             <div className="flex items-center gap-2 mb-2 text-[10px]">
+               <span className="flex items-center gap-1">
+                 <span className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">{spell.manaCost}</span>
+                 <span className="text-blue-300">费</span>
+               </span>
+               {spell.damage > 0 && (
+                 <span className="flex items-center gap-1">
+                   <span className="w-4 h-4 rounded-full bg-red-600 flex items-center justify-center text-white font-bold">{spell.damage}</span>
+                   <span className="text-red-300">伤害</span>
+                 </span>
+               )}
+               {(spell.armorGain || 0) > 0 && (
+                 <span className="flex items-center gap-1">
+                   <span className="w-4 h-4 rounded-full bg-slate-600 flex items-center justify-center text-white font-bold">{spell.armorGain}</span>
+                   <span className="text-slate-300">护甲</span>
+                 </span>
+               )}
+             </div>
+             
              <p className="leading-relaxed text-gray-200 font-sans">{spell.description}</p>
-             {spell.mechanic && (
-               <div className="mt-2 text-[10px] text-gray-400 uppercase tracking-wider font-bold">
-                 {getMechanicName(spell.mechanic)}
+             
+             {spell.mechanic && spell.mechanic !== 'skip' && (
+               <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 bg-purple-900/50 rounded-full text-[10px] text-purple-300">
+                 <span>🔮</span>
+                 <span>{getMechanicName(spell.mechanic)}</span>
                </div>
              )}
           </div>

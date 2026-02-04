@@ -80,17 +80,17 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
         <div className="bg-slate-900/80 backdrop-blur-md rounded-xl border border-white/10 p-6 mb-6 shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
           
-          <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
+                    <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
             {/* Left: Deck Info & Input */}
             <div className="flex-1 space-y-4">
                <div>
-                  <label className="text-xs font-serif text-amber-500 uppercase tracking-widest mb-1 block">Deck Name</label>
+                  <label className="text-xs font-serif text-amber-500 uppercase tracking-widest mb-1 block">卡组名称</label>
                   <input
                     type="text"
                     value={deckName}
                     onChange={(e) => setDeckName(e.target.value)}
                     className="w-full bg-transparent border-b-2 border-white/20 text-3xl font-wizard text-white focus:outline-none focus:border-amber-500 transition-colors placeholder-white/20 pb-1"
-                    placeholder="Warlock's Grimoire"
+                    placeholder="输入卡组名称..."
                   />
                </div>
                <div className="flex items-center gap-4 text-sm font-tech text-gray-400">
@@ -99,12 +99,12 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       {isValidDeck ? '✅' : '⚠️'}
                     </span>
                     <span>
-                      {totalCards} / 30 Cards
+                      {totalCards} / 30 张卡牌
                     </span>
                   </div>
                   <div className="w-px h-4 bg-white/10"></div>
                   <div>
-                    {isValidDeck ? 'Deck Ready' : 'Must have 20-30 cards'}
+                    {isValidDeck ? '卡组已完成' : '需要20-30张卡牌'}
                   </div>
                </div>
             </div>
