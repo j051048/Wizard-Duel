@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useAccount } from 'wagmi';
-import { Sparkles, Settings, CheckCircle } from 'lucide-react';
+import { Sparkles, Settings, CheckCircle, ShoppingBag } from 'lucide-react';
 
 // Hooks
 import { usePreloader } from './hooks/usePreloader';
@@ -24,7 +24,18 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { Lobby } from './components/Lobby';
 import { ModeSelect } from './components/ModeSelect';
 import { MatchmakingAnimation } from './components/MatchmakingAnimation';
-import { ErrorBoundary } from './components/ErrorBoundary';
+import { LoginScreen } from './components/LoginScreen';
+import { MulliganScreen } from './components/MulliganScreen';
+import { ToastContainer } from './components/ui/Toast';
+import { ConfirmDialog } from './components/ui/ConfirmDialog';
+import { TurnBanner } from './components/battle/TurnBanner';
+import { TurnTimer } from './components/battle/TurnTimer';
+
+// Stores
+import { useToastStore } from './stores/useToastStore';
+
+// Lazy loaded components
+const ShopScreen = React.lazy(() => import('./components/ShopScreen'));
 
 // Services & Constants
 import { ApiService } from './services/api';
@@ -38,9 +49,10 @@ function App() {
   const { address, isConnected } = useAccount();
   const { quality, setQuality, isLowQuality } = useSettings();
 
-  // ============ Zustand Stores ============
+    // ============ Zustand Stores ============
   const user = useUserStore();
   const ui = useUIStore();
+  const toast = useToastStore();
 
   // ============ Hooks ============
   const { progress, startPreloading } = usePreloader();
@@ -53,22 +65,14 @@ function App() {
     startPreloading();
   }, [startPreloading]);
 
-  // 地址同步
-  useEffect(() => {
-    if (isConnected && address) {
-      user.setActiveAddress(address);
-    } else {
-      let guestId = localStorage.getItem('wizard_guest_id');
-      if (!guestId) {
-        guestId = `Guest-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-        localStorage.setItem('wizard_guest_id', guestId);
-      }
-      if (user.activeAddress !== guestId) {
-        user.setActiveAddress(guestId);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConnected, address, user.activeAddress]);
+    // 登录完成处理
+  const handleLoginComplete = useCallback((address: string, isGuest: boolean) => {
+    user.setActiveAddress(address);
+    ui.setIsLoggedIn(true);
+    ui.setIsGuest(isGuest);
+    ui.setGameState('LOBBY');
+    toast.success('欢迎回来', isGuest ? '游客模式已开启' : `钱包已连接: ${address.slice(0, 6)}...`);
+  }, [user, ui, toast]);
 
   // 数据加载
   useEffect(() => {
@@ -111,10 +115,10 @@ function App() {
     audioActions.playBgm('lobby');
   };
 
-  const handleSelectMode = (mode: any) => {
+    const handleSelectMode = (mode: any) => {
     if (mode === 'dungeon') {
       if (!user.selectedDeck) {
-        alert('地牢模式需要先在牌组编辑器中选择一个起始牌组！');
+        toast.warning('需要牌组', '地牢模式需要先在牌组编辑器中选择一个起始牌组！');
         ui.setGameState('LOBBY');
         return;
       }
@@ -200,10 +204,21 @@ function App() {
     audioActions.playBgm('lobby');
   };
 
-  // ============ 渲染逻辑 ============
+    // ============ 渲染逻辑 ============
 
+  // 资源加载中
   if (!ui.isResourcesLoaded) {
     return <LoadingScreen progress={progress} onComplete={handleResourcesLoaded} />;
+  }
+
+  // 登录页面
+  if (ui.gameState === 'LOGIN') {
+    return (
+      <>
+        <LoginScreen onLoginComplete={handleLoginComplete} />
+        <ToastContainer toasts={toast.toasts} onDismiss={toast.removeToast} />
+      </>
+    );
   }
 
   return (
@@ -258,11 +273,18 @@ function App() {
             rankScore={user.rankScore}
             selectedBet={ui.selectedBet}
             onSelectBet={ui.setSelectedBet}
-            onStartDuel={() => {
-              if (!user.selectedDeck) return alert('请先选择牌组！');
-              if (user.balance < ui.selectedBet) return alert('法力不足！');
+                        onStartDuel={() => {
+              if (!user.selectedDeck) {
+                toast.warning('需要牌组', '请先选择或创建一个牌组！');
+                return;
+              }
+              if (user.balance < ui.selectedBet) {
+                toast.error('法力不足', `需要 ${ui.selectedBet} 法力，当前只有 ${user.balance}`);
+                return;
+              }
               ui.setGameState('MATCHMAKING');
             }}
+            onOpenShop={() => ui.setGameState('SHOP')}
             history={user.history}
             isMuted={audioState.isMuted}
             onToggleMute={audioActions.toggleMute}
@@ -283,13 +305,13 @@ function App() {
           <ModeSelect onSelectMode={handleSelectMode} onBackToLobby={() => ui.setGameState('LOBBY')} tags={[]} />
         )}
 
-        {ui.gameState === 'MATCHMAKING' && (
+                {ui.gameState === 'MATCHMAKING' && (
           <MatchmakingAnimation 
             onComplete={() => {
               const opp = ui.pendingTavernDuel || AI_PROFILES[Math.floor(Math.random() * (AI_PROFILES.length - 1)) + 1];
               gameLoopActions.startTavernDuel(user.selectedDeck!.cards, opp, ui.gameMode);
               ui.setPendingTavernDuel(null);
-              ui.setGameState('DUEL');
+              ui.setGameState('MULLIGAN');
               audioActions.playBgm('battle');
             }}
             opponentName={ui.pendingTavernDuel?.name}
@@ -299,10 +321,13 @@ function App() {
         )}
 
         <React.Suspense fallback={<LoadingScreen progress={{ percentage: 100, isComplete: false, loaded: 1, total: 1, currentItem: '加载中...', errors: [] }} />}>
-          {ui.gameState === 'TAVERN' && (
+                    {ui.gameState === 'TAVERN' && (
             <TavernMode
               onStartTavernDuel={(ai: any) => {
-                if (!user.selectedDeck) return alert('请先选择牌组！');
+                if (!user.selectedDeck) {
+                  toast.warning('需要牌组', '请先选择牌组！');
+                  return;
+                }
                 ui.setPendingTavernDuel(ai);
                 ui.setGameState('MATCHMAKING');
               }}
@@ -321,10 +346,10 @@ function App() {
                   gameLoopActions.startTavernDuel(ui.dungeonRun!.deck.cards, opp, 'wild');
                   ui.setGameState('DUEL');
                   audioActions.playBgm('battle');
-                } else if (node.type === 'REST') {
+                                } else if (node.type === 'REST') {
                   const updated = DungeonService.updateHP(ui.dungeonRun!, Math.floor(ui.dungeonRun!.maxHP * 0.3));
                   ui.setDungeonRun(DungeonService.advanceNode(updated));
-                  alert('休息恢复了 30% 生命值！');
+                  toast.success('休息完成', '恢复了 30% 生命值！');
                 } else {
                   ui.setDungeonRun(DungeonService.advanceNode(ui.dungeonRun!));
                 }
@@ -342,9 +367,35 @@ function App() {
             />
           )}
 
+                    {ui.gameState === 'SHOP' && (
+            <ShopScreen
+              balance={user.balance}
+              onBack={() => ui.setGameState('LOBBY')}
+              onUpdateBalance={user.setBalance}
+              onAddCards={(cards) => {
+                // 这里可以添加卡牌到用户收藏
+                toast.success('卡牌已添加', `${cards.length} 张卡牌已加入收藏`);
+              }}
+            />
+          )}
+
+          {ui.gameState === 'MULLIGAN' && gameLoopState.duelState && (
+            <MulliganScreen
+              initialHand={gameLoopState.duelState.playerHand}
+              opponentName={gameLoopState.duelState.aiProfile?.name}
+              opponentAvatar={gameLoopState.duelState.aiProfile?.avatar}
+              onConfirm={(indices) => {
+                gameLoopActions.handleMulligan(indices);
+                ui.setGameState('DUEL');
+              }}
+              timeLimit={30}
+            />
+          )}
+
           {ui.gameState === 'DUEL' && (
             gameLoopState.duelState ? (
-              <BattleArena
+              <>
+                <BattleArena
                 gameLoopState={gameLoopState}
                 selectedBet={ui.selectedBet}
                 onPlayCard={(spellId) => {
@@ -358,17 +409,46 @@ function App() {
                   gameLoopActions.passTurn();
                   audioActions.playSfx('button');
                 }}
-                onSurrender={() => {
-                  gameLoopActions.reset();
-                  ui.setGameState('LOBBY');
-                  audioActions.playBgm('lobby');
+                                onSurrender={() => {
+                  ui.showConfirmDialog({
+                    title: '确认投降',
+                    message: '投降将判定为失败，确定要放弃这场对战吗？',
+                    confirmText: '投降',
+                    cancelText: '继续战斗',
+                    type: 'danger',
+                    onConfirm: () => {
+                      gameLoopActions.reset();
+                      ui.setGameState('LOBBY');
+                      audioActions.playBgm('lobby');
+                      ui.hideConfirmDialog();
+                      toast.info('对战结束', '你选择了投降');
+                    }
+                  });
                 }}
                 isMuted={audioState.isMuted}
                 onToggleMute={audioActions.toggleMute}
                 isPlayerShaking={ui.isPlayerShaking}
                 isOpponentShaking={ui.isOpponentShaking}
-                setTargeting={gameLoopActions.setTargeting}
-              />
+                                setTargeting={gameLoopActions.setTargeting}
+                />
+                
+                {/* 回合计时器 */}
+                <TurnTimer
+                  isActive={gameLoopState.phase === 'PLAYER_TURN' && !gameLoopState.isProcessing}
+                  duration={60}
+                  warningTime={15}
+                  onTimeUp={() => {
+                    toast.warning('时间耗尽', '回合自动结束');
+                    gameLoopActions.passTurn();
+                  }}
+                />
+                
+                {/* 回合开始横幅 */}
+                <TurnBanner
+                  type={gameLoopState.turnBanner}
+                  onAnimationComplete={() => {}}
+                />
+              </>
             ) : (
               <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-50">
                 <div className="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mb-4" />
@@ -390,8 +470,23 @@ function App() {
               rankUpdates={ui.finalResult.rankUpdates}
             />
           )}
-        </React.Suspense>
+                </React.Suspense>
       </main>
+
+      {/* 全局Toast消息 */}
+      <ToastContainer toasts={toast.toasts} onDismiss={toast.removeToast} />
+
+      {/* 全局确认弹窗 */}
+      <ConfirmDialog
+        isOpen={ui.confirmDialog.isOpen}
+        title={ui.confirmDialog.title}
+        message={ui.confirmDialog.message}
+        confirmText={ui.confirmDialog.confirmText}
+        cancelText={ui.confirmDialog.cancelText}
+        type={ui.confirmDialog.type}
+        onConfirm={() => ui.confirmDialog.onConfirm?.()}
+        onCancel={ui.hideConfirmDialog}
+      />
     </div>
   );
 }

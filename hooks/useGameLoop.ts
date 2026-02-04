@@ -26,7 +26,13 @@ export interface GameLoopActions {
   passTurn: () => void;
   reset: () => void;
   setTargeting: (data: GameLoopState['targetingData']) => void;
+  handleMulligan: (indicesToReplace: number[]) => void;
+  startFirstTurn: (currentState: DuelState) => void;
 }
+
+// 回合时长配置
+const TURN_DURATION = 60; // 秒
+const MULLIGAN_DURATION = 30; // 起手换牌时长
 
 const initialGameLoopState: GameLoopState = {
   duelState: null,
@@ -40,7 +46,9 @@ const initialGameLoopState: GameLoopState = {
   isProcessing: false,
   aiStatus: initialAIStatus,
   targetingData: null,
-  actionQueue: []
+  actionQueue: [],
+  turnTimeLeft: TURN_DURATION,
+  turnBanner: null
 };
 
 function gameReducer(state: GameLoopState, action: GameLoopAction): GameLoopState {
@@ -49,10 +57,15 @@ function gameReducer(state: GameLoopState, action: GameLoopAction): GameLoopStat
       return { 
         ...initialGameLoopState, 
         duelState: action.payload,
-        phase: 'PLAYER_TURN' 
+        phase: 'MULLIGAN_PHASE',
+        turnTimeLeft: MULLIGAN_DURATION
       };
-    case 'SET_PHASE':
-      return { ...state, phase: action.payload };
+        case 'SET_PHASE':
+      return { 
+        ...state, 
+        phase: action.payload,
+        turnTimeLeft: action.payload === 'PLAYER_TURN' ? TURN_DURATION : state.turnTimeLeft
+      };
     case 'UPDATE_STATE':
       return { 
         ...state, 
@@ -83,6 +96,7 @@ function gameReducer(state: GameLoopState, action: GameLoopAction): GameLoopStat
 export function useGameLoop(): [GameLoopState, GameLoopActions] {
   const [state, dispatch] = useReducer(gameReducer, initialGameLoopState);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const turnTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // [New 6.1] 状态持久化：断线重连基础
   useEffect(() => {
@@ -159,11 +173,86 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
     stateRef.current = state;
   }, [state]);
 
-  const clearTimer = useCallback(() => {
+    const clearTimer = useCallback(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
+    if (turnTimerRef.current) {
+      clearInterval(turnTimerRef.current);
+      turnTimerRef.current = null;
+    }
+  }, []);
+
+  // 回合计时器
+  useEffect(() => {
+    const { phase, isGameOver, isProcessing } = stateRef.current;
+    
+    // 只在玩家回合且非处理中时运行计时器
+    if (phase !== 'PLAYER_TURN' || isGameOver || isProcessing) {
+      if (turnTimerRef.current) {
+        clearInterval(turnTimerRef.current);
+        turnTimerRef.current = null;
+      }
+      return;
+    }
+
+    turnTimerRef.current = setInterval(() => {
+      dispatch({ type: 'UPDATE_UI', payload: { 
+        turnTimeLeft: Math.max(0, stateRef.current.turnTimeLeft - 1) 
+      }});
+      
+      // 时间耗尽自动结束回合
+      if (stateRef.current.turnTimeLeft <= 1) {
+        passTurn();
+      }
+    }, 1000);
+
+    return () => {
+      if (turnTimerRef.current) {
+        clearInterval(turnTimerRef.current);
+        turnTimerRef.current = null;
+      }
+    };
+  }, [state.phase, state.isGameOver, state.isProcessing]);
+
+    // 起手换牌逻辑
+  const handleMulligan = useCallback((indicesToReplace: number[]) => {
+    const { duelState } = stateRef.current;
+    if (!duelState) return;
+
+    let newHand = [...duelState.playerHand];
+    let newDeck = [...duelState.playerDeck];
+
+    // 将选中的牌放回牌库并重新抽取
+    indicesToReplace.forEach(index => {
+      if (index < newHand.length) {
+        const cardToReplace = newHand[index];
+        // 从牌库抽一张新牌
+        if (newDeck.length > 0) {
+          const newCard = newDeck[0];
+          newDeck = newDeck.slice(1);
+          newHand[index] = newCard;
+          // 将旧牌放回牌库底部
+          newDeck.push(cardToReplace);
+        }
+      }
+    });
+
+    // 洗牌
+    newDeck = newDeck.sort(() => Math.random() - 0.5);
+
+    const commands: GameActionCommand[] = [
+      { type: 'UPDATE_STATE', payload: { playerHand: newHand, playerDeck: newDeck } },
+      { type: 'UPDATE_UI', payload: { turnBanner: 'player' }, delay: 500 },
+      { type: 'WAIT', payload: null, delay: 1500 },
+      { type: 'UPDATE_UI', payload: { turnBanner: null } },
+      { type: 'SET_PHASE', payload: 'PLAYER_TURN' },
+      { type: 'UPDATE_UI', payload: { turnTimeLeft: TURN_DURATION } },
+      { type: 'ADD_MESSAGE', payload: '对战开始！你的回合。' }
+    ];
+
+    dispatch({ type: 'ENQUEUE_ACTIONS', payload: commands });
   }, []);
 
   // 启动新回合
@@ -205,13 +294,18 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
         }});
         commands.push({ type: 'SET_PHASE', payload: 'ROUND_RESET' });
     } else {
+        // 显示回合开始横幅
+        commands.push({ type: 'UPDATE_UI', payload: { turnBanner: 'player' }, delay: 200 });
+        commands.push({ type: 'WAIT', payload: null, delay: 1500 });
+        commands.push({ type: 'UPDATE_UI', payload: { turnBanner: null } });
         commands.push({ type: 'SET_PHASE', payload: 'PLAYER_TURN' });
         commands.push({ type: 'UPDATE_UI', payload: {
             playerCard: null,
             opponentCard: null,
-            effectMessages: commands.length > 0 ? [] : ['回合开始'],
+            turnTimeLeft: TURN_DURATION,
             aiStatus: initialAIStatus
         }});
+        commands.push({ type: 'ADD_MESSAGE', payload: `第 ${nextState.roundNumber} 回合开始` });
     }
     
     dispatch({ type: 'ENQUEUE_ACTIONS', payload: commands });
@@ -224,11 +318,11 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
     startNewRound(initialState);
   }, [startNewRound]);
 
-  const startTavernDuel = useCallback((deck: SpellType[], aiProfile: AIProfile, gameMode: GameMode = 'standard') => {
+    const startTavernDuel = useCallback((deck: SpellType[], aiProfile: AIProfile, gameMode: GameMode = 'standard') => {
     const initialState = createTavernDuelState(deck, aiProfile, gameMode);
     dispatch({ type: 'START_GAME', payload: initialState });
-    startNewRound(initialState);
-  }, [startNewRound]);
+    // 不再自动开始，等待起手换牌完成
+  }, []);
 
   // 玩家出牌
   const playCard = useCallback((spellId: SpellType): boolean => {
@@ -277,12 +371,18 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
     return true;
   }, []);
 
-  // 玩家结束回合
+    // 玩家结束回合
   const passTurn = useCallback(() => {
     const { phase, duelState, isProcessing } = stateRef.current;
     if (phase !== 'PLAYER_TURN' || !duelState || isProcessing) return;
     
     const commands: GameActionCommand[] = [];
+    
+    // 显示对手回合横幅
+    commands.push({ type: 'UPDATE_UI', payload: { turnBanner: 'opponent' }, delay: 200 });
+    commands.push({ type: 'WAIT', payload: null, delay: 1500 });
+    commands.push({ type: 'UPDATE_UI', payload: { turnBanner: null } });
+    
     commands.push({ type: 'SET_PHASE', payload: 'OPPONENT_TURN' });
     commands.push({ type: 'UPDATE_UI', payload: { playerCard: null } });
     commands.push({ type: 'ADD_MESSAGE', payload: '对手回合...' });
@@ -375,8 +475,10 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
       startTavernDuel,
       playCard,
       passTurn,
-      reset,
-      setTargeting: (data: GameLoopState['targetingData']) => dispatch({ type: 'SET_TARGETING', payload: data })
+            reset,
+      setTargeting: (data: GameLoopState['targetingData']) => dispatch({ type: 'SET_TARGETING', payload: data }),
+      handleMulligan,
+      startFirstTurn: (currentState: DuelState) => startNewRound(currentState)
     }
   ];
 }

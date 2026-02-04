@@ -1,33 +1,43 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 
-interface Props {
+interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
   onReset?: () => void;
 }
 
-interface State {
+interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
-  public state: State = {
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = {
     hasError: false,
     error: null
   };
 
-  public static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Uncaught error:', error, errorInfo);
   }
 
-  public render() {
-    if (this.state.hasError) {
-      return this.props.fallback || (
+  handleReset = () => {
+    localStorage.removeItem('wizard_duel_save');
+    const { onReset } = this.props;
+    if (onReset) onReset();
+    window.location.reload();
+  };
+
+  render() {
+    const { hasError, error } = this.state;
+    const { children, fallback } = this.props;
+
+    if (hasError) {
+      return fallback || (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950 text-white p-6 text-center">
           <div className="w-16 h-16 mb-4 text-red-500">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -46,26 +56,22 @@ export class ErrorBoundary extends Component<Props, State> {
                刷新页面
              </button>
              <button 
-               onClick={() => {
-                   localStorage.removeItem('wizard_duel_save');
-                   if (this.props.onReset) this.props.onReset();
-                   window.location.reload();
-               }}
+               onClick={this.handleReset}
                className="px-6 py-2 bg-red-600 rounded-lg hover:bg-red-700 transition-colors font-bold shadow-lg shadow-red-900/20"
              >
                重置状态
              </button>
           </div>
-          {this.state.error && (
+          {error && (
              <pre className="mt-8 p-4 bg-black/50 rounded text-xs text-left text-red-400 overflow-auto max-w-full max-h-32 opacity-50">
-                {this.state.error.toString()}
+                {error.toString()}
              </pre>
           )}
         </div>
       );
     }
 
-    return this.props.children;
+    return children;
   }
 }
 

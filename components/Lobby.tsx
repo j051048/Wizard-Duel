@@ -9,9 +9,7 @@ import { BattleRecord, Deck, GameMode, Rank, Language } from '../types';
 import { TRANSLATIONS } from '../translations';
 import { RulesModal } from './RulesModal';
 import { TutorialModal } from './TutorialModal';
-
-import { TutorialOverlay } from './tutorial/TutorialOverlay';
-import { useUserStore } from '../stores/useUserStore';
+import { ShoppingBag } from 'lucide-react';
 
 // Extracted Components
 import TopBar from './lobby/TopBar';
@@ -35,6 +33,7 @@ interface LobbyProps {
   onOpenDeckBuilder: () => void;
   onSelectDeck: (deck: Deck) => void;
   onOpenTavernMode?: () => void;
+  onOpenShop?: () => void;
   gameMode?: GameMode;
   onOpenModeSelect?: () => void;
   language: Language;
@@ -57,6 +56,7 @@ export const Lobby: React.FC<LobbyProps> = ({
   onOpenDeckBuilder,
   onSelectDeck,
   onOpenTavernMode,
+  onOpenShop,
   gameMode = 'standard',
   onOpenModeSelect,
   language,
@@ -132,12 +132,24 @@ export const Lobby: React.FC<LobbyProps> = ({
 
       </div>
 
-      {/* FOOTER: EXTRA MODES */}
-      <div className="relative z-10 p-4 flex justify-center pb-8 opacity-50 hover:opacity-100 transition-opacity">
+            {/* FOOTER: EXTRA MODES */}
+      <div className="relative z-10 p-4 flex justify-center gap-4 pb-8">
+         {/* 商店入口 */}
+         {onOpenShop && (
+            <button 
+               onClick={onOpenShop}
+               className="flex items-center gap-2 text-xs text-purple-400 hover:text-purple-300 font-bold uppercase tracking-widest border border-purple-500/30 px-4 py-2 rounded-full hover:bg-purple-900/20 transition-all bg-purple-500/10"
+            >
+               <ShoppingBag size={14} />
+               <span>商店</span>
+            </button>
+         )}
+         
+         {/* 酒馆入口 */}
          {onOpenTavernMode && (
             <button 
                onClick={onOpenTavernMode}
-               className="flex items-center gap-2 text-xs text-amber-500/80 hover:text-amber-400 font-bold uppercase tracking-widest border border-amber-500/20 px-4 py-2 rounded-full hover:bg-amber-900/20 transition-all"
+               className="flex items-center gap-2 text-xs text-amber-500/80 hover:text-amber-400 font-bold uppercase tracking-widest border border-amber-500/20 px-4 py-2 rounded-full hover:bg-amber-900/20 transition-all opacity-70 hover:opacity-100"
             >
                <span>🍺</span>
                <span>{t('Visit Tavern')}</span>
@@ -145,54 +157,9 @@ export const Lobby: React.FC<LobbyProps> = ({
          )}
       </div>
 
-      {/* Global Modals */}
-      {/* Global Modals */}
+            {/* Global Modals */}
       <RulesModal isOpen={isRulesOpen} onClose={() => setIsRulesOpen(false)} />
       <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
-      
-      {!useUserStore(s => s.hasCompletedTutorial) && !isLoading && (
-        <TutorialOverlay 
-          steps={[
-            {
-               title: t('Welcome, Wizard'),
-               content: t('Welcome to the Elemental Arena. Let me guide you through the basics of the duel.'),
-               position: 'center'
-            },
-            {
-               targetId: 'lobby-profile-section',
-               title: t('Wizard Profile'),
-               content: t('Your rank and score are shown here. Win duels to climb the leaderboard!'),
-               position: 'bottom'
-            },
-            {
-               targetId: 'header-mana-display',
-               title: t('Mana Pool'),
-               content: t('This is your balance. You need Mana to place bets on duels.'),
-               position: 'bottom'
-            },
-            {
-               targetId: 'lobby-deck-selector',
-               title: t('Battle Deck'),
-               content: t('Select or edit your deck here. Each deck consists of 3 powerful spells.'),
-               position: 'top'
-            },
-            {
-               targetId: 'lobby-wager-selector',
-               title: t('Wager Selection'),
-               content: t('Choose how much Mana to bet. Higher risk, higher reward!'),
-               position: 'top'
-            },
-            {
-               targetId: 'lobby-play-btn',
-               title: t('Enter Arena'),
-               content: t('When you are ready, click here to find an opponent!'),
-               position: 'top'
-            }
-          ]}
-          onComplete={() => useUserStore.getState().setHasCompletedTutorial(true)}
-          onSkip={() => useUserStore.getState().setHasCompletedTutorial(true)}
-        />
-      )}
     </div>
   );
 };

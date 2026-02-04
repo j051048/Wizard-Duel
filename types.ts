@@ -88,13 +88,15 @@ export interface Spell {
 
 // ============ 游戏状态 ============
 
-export type GameState = "LOBBY" | "MODE_SELECT" | "DECK_BUILDER" | "DUEL" | "RESULT" | "TAVERN" | "MATCHMAKING" | "DUNGEON_MAP";
+export type GameState = "LOGIN" | "LOBBY" | "MODE_SELECT" | "DECK_BUILDER" | "DUEL" | "RESULT" | "TAVERN" | "MATCHMAKING" | "DUNGEON_MAP" | "MULLIGAN" | "SHOP";
 
 export type DuelPhase =
   | "DRAFT_PHASE" // 选牌阶段
+  | "MULLIGAN_PHASE" // 起手换牌阶段
   | "PLAYER_TURN" // 玩家出牌阶段
   | "OPPONENT_TURN" // 对手出牌阶段
-  | "ROUND_RESET"; // 回合结束/重置
+  | "ROUND_RESET" // 回合结束/重置
+  | "TURN_TRANSITION"; // 回合过渡动画
 
 // ============ 状态效果 ============
 
@@ -339,6 +341,8 @@ export interface GameLoopState {
     endY: number;
   } | null;
   actionQueue: GameActionCommand[]; // 动作队列
+  turnTimeLeft: number; // 回合剩余时间（秒）
+  turnBanner: 'player' | 'opponent' | null; // 回合开始横幅
 }
 
 export type GameLoopAction =
