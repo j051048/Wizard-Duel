@@ -23,6 +23,7 @@ import CombatLog from './battle/CombatLog';
 import BattleBoard from './battle/BattleBoard';
 import BattleHand from './battle/BattleHand';
 import BattleEffects from './battle/BattleEffects';
+import CombatFeed from './battle/CombatFeed';
 import { TurnIndicator } from './battle/TurnIndicator';
 
 // Hooks
@@ -306,18 +307,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         showBloodFlash={showBloodFlash} 
       />
 
-      {/* Projectiles */}
-      <div className="fixed inset-0 z-40 pointer-events-none overflow-hidden">
-        {projectiles.map(p => (
-           <div 
-            key={p.id}
-            className={`absolute w-12 h-12 rounded-full blur-md z-50 ${p.type === 'player' ? 'bg-gradient-to-t from-purple-500 to-white animate-projectile' : 'bg-gradient-to-b from-red-500 to-white animate-projectile-opp'}`}
-            style={{ left: `${p.x}%`, top: `${p.y}%`, marginLeft: '-24px' }}
-           >
-              <div className="absolute inset-0 bg-white rounded-full scale-50 blend-screen" />
-           </div>
-        ))}
-      </div>
+      <CombatFeed messages={effectMessages} />
 
       {detailSpell && (
          <CardDetailModal 
