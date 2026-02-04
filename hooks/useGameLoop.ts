@@ -98,9 +98,10 @@ export function useGameLoop(): [GameLoopState, any] {
     }
 
     // 对手抽牌
-    const oResult = drawCard(nextState.opponentDeck, [], nextState.opponentFatigue);
+    const oResult = drawCard(nextState.opponentDeck, nextState.opponentHand, nextState.opponentFatigue);
     nextState.opponentDeck = oResult.newDeck;
-    nextState.opponentHandSize = Math.min(10, nextState.opponentHandSize + (oResult.drawnCard ? 1 : 0));
+    nextState.opponentHand = oResult.newHand; // 关键修复：更新实际手牌
+    nextState.opponentHandSize = nextState.opponentHand.length;
     nextState.opponentFatigue = oResult.newFatigue;
     
     if (oResult.fatigueDamage > 0) {

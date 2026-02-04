@@ -108,12 +108,12 @@ export const SPELLS: Spell[] = [
     beats: 'fire',
     manaCost: 1,              // 低费灵活
     damage: 0,                // 无攻击力
-    armorGain: 5,             // 纯防御
+    armorGain: 3,             // 从 5 降至 3 (平衡性调整)
     rarity: 'common',
     mechanic: 'fortify',
     cardSet: 'core',
-    description: '造成0点伤害，但获得5点护甲。',
-    shortDesc: '坚韧: +5 护甲'
+    description: '造成0点伤害，但获得3点护甲。',
+    shortDesc: '坚韧: +3 护甲'
   },
   // 新增卡牌扩展池
   { 
@@ -423,10 +423,10 @@ export const SPELLS: Spell[] = [
     shadowColor: 'rgba(250,204,21,0.5)',
     beats: 'rock',
     manaCost: 5,
-    damage: 7,
+    damage: 5,                // 从 7 降至 5 (平衡性调整)
     rarity: 'mythic',
     mechanic: 'charge',
-    description: '造成7点伤害。如果你上回合使用了雷系法术，伤害翻倍(14)。',
+    description: '造成5点伤害。如果你上回合使用了雷系法术或技能，伤害翻倍(10)。',
     shortDesc: '充能: 连击伤害x2'
   },
   { 

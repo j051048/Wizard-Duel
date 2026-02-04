@@ -1,4 +1,4 @@
-import { DuelState, GameAction, GameCommand, ActionType } from '../types';
+import { DuelState, GameAction, GameCommand, ActionType, TriggerTiming } from '../types';
 import { GAME_CONFIG } from '../constants';
 
 /**
@@ -93,23 +93,74 @@ export class GameSequenceExecutor {
           }
           break;
       }
-      // 其他 Action 类型在此扩展...
+      case 'DRAW_CARD': {
+        const target = action.target;
+        const count = action.value || 1;
+        
+        for (let i = 0; i < count; i++) {
+            const isPlayer = target === 'player';
+            const deck = isPlayer ? newState.playerDeck : newState.opponentDeck;
+            const hand = isPlayer ? newState.playerHand : newState.opponentHand;
+            const fatigue = isPlayer ? newState.playerFatigue : newState.opponentFatigue;
+
+            if (deck.length === 0) {
+                // 疲劳逻辑
+                const damage = fatigue + 1;
+                if (isPlayer) {
+                    newState.playerFatigue = damage;
+                    newState.playerHP = Math.max(0, newState.playerHP - damage);
+                } else {
+                    newState.opponentFatigue = damage;
+                    newState.opponentHP = Math.max(0, newState.opponentHP - damage);
+                }
+            } else {
+                const drawn = deck[0];
+                const remDeck = deck.slice(1);
+                
+                if (isPlayer) {
+                    newState.playerDeck = remDeck;
+                    if (newState.playerHand.length < 10) {
+                        newState.playerHand = [...newState.playerHand, drawn];
+                    }
+                } else {
+                    newState.opponentDeck = remDeck;
+                    if (newState.opponentHand.length < 10) {
+                        newState.opponentHand = [...newState.opponentHand, drawn];
+                    }
+                    newState.opponentHandSize = newState.opponentHand.length;
+                }
+            }
+        }
+        break;
+      }
     }
 
-    // 触发检查: 如果产生伤害，检查是否有 ON_DAMAGE 触发器
-    if (action.type === 'HP_CHANGE' && action.value < 0) {
-        this.resolveTriggers(newState, 'ON_DAMAGE', action);
-    }
+    // 触发检查
+    this.resolveTriggers(newState, action.type === 'HP_CHANGE' && action.value < 0 ? 'ON_DAMAGE' : 'ON_CAST', action);
 
     return { state: newState, log };
   }
 
   /**
-   * 触发器解析逻辑 (初步实现，为奥秘/被动技打底)
+   * 触发器解析逻辑 (增强实现)
    */
-  static resolveTriggers(state: DuelState, timing: 'ON_CAST' | 'ON_DAMAGE', context?: any) {
-      // 示例：未来可以在此处检查 state.playerEffects/opponentEffects 中具有触发性质的标记
-      // 目前主要作为可扩展性预留，减少未来逻辑冲突
+  static resolveTriggers(state: DuelState, timing: TriggerTiming, context?: any) {
+      const allTriggers = [...state.playerTriggers, ...state.opponentTriggers];
+      const matchingTriggers = allTriggers.filter(t => t.timing === timing);
+
+      for (const trigger of matchingTriggers) {
+          if (!trigger.condition || trigger.condition(state, context)) {
+              const actions = trigger.action(state, context);
+              for (const act of actions) {
+                  // 递归执行触发产生的动作 (小心无限循环)
+                  this.applyAction(state, act);
+              }
+              if (trigger.isOnce) {
+                  state.playerTriggers = state.playerTriggers.filter(t => t.id !== trigger.id);
+                  state.opponentTriggers = state.opponentTriggers.filter(t => t.id !== trigger.id);
+              }
+          }
+      }
   }
 
   /**

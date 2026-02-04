@@ -13,6 +13,7 @@ import { SpellCard } from './SpellCard';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { calculateSpellProjection, SpellProjection } from '../services/projection';
 import { useSettings } from '../context/SettingsContext';
+import { TutorialOverlay } from './TutorialOverlay';
 
 interface BattleArenaProps {
   gameLoopState: GameLoopState;
@@ -133,6 +134,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   const [showCritEffect, setShowCritEffect] = useState(false);
   const [showBloodFlash, setShowBloodFlash] = useState(false);
   const [projectiles, setProjectiles] = useState<{id: number, type: string, x: number, y: number}[]>([]);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(duelState?.isTutorial || false);
+
+  useEffect(() => {
+    if (duelState?.isTutorial) setIsTutorialOpen(true);
+  }, [duelState?.isTutorial]);
 
   const projection = useMemo(() => {
     if (!activePreviewId || !duelState || phase !== 'PLAYER_TURN' || gameLoopState.isProcessing) return null;
@@ -602,6 +608,10 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
            </div>
         ))}
       </div>
+
+      {isTutorialOpen && (
+        <TutorialOverlay onComplete={() => setIsTutorialOpen(false)} />
+      )}
     </div>
   );
 };

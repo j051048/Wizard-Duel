@@ -74,14 +74,6 @@ export const createInitialDuelState = (playerDeck: SpellType[], gameMode: GameMo
     opponentMana: GAME_CONFIG.startingMana,
     opponentMaxMana: GAME_CONFIG.startingMana,
     
-    playerHand,
-    playerDeck: remainingDeck,
-    opponentHandSize: 5,
-    opponentDeck: shuffledOpponentDeck,
-    
-    playerEffects: [],
-    opponentEffects: [],
-    
     playerLastSpell: null,
     opponentLastSpell: null,
     playerCostMod: 0,
@@ -92,7 +84,20 @@ export const createInitialDuelState = (playerDeck: SpellType[], gameMode: GameMo
     roundNumber: 0, 
     playerFatigue: 0,
     opponentFatigue: 0,
-    heroSkillsUsed: false
+    playerHand,
+    playerDeck: remainingDeck,
+    opponentHand: shuffledOpponentDeck.slice(0, 5), // 初始化对手真实手牌
+    opponentHandSize: 5,
+    opponentDeck: shuffledOpponentDeck.slice(5),
+    
+    playerEffects: [],
+    opponentEffects: [],
+
+    heroSkillsUsed: false,
+    opponentHeroSkillUsed: false,
+    playerTriggers: [],
+    opponentTriggers: [],
+    isTutorial: false
   };
 };
 
@@ -225,12 +230,14 @@ export const executeSpell = (
   
   // 1. 英雄技能占用逻辑
   if (spellId.startsWith('hero_')) {
-    if (state.heroSkillsUsed) return { 
+    const alreadyUsed = isPlayer ? state.heroSkillsUsed : state.opponentHeroSkillUsed;
+    if (alreadyUsed) return { 
         newState: state, 
-        logs: ['本回合已使用过英雄技能'], 
+        logs: [`${isPlayer ? '玩家' : '对手'}本回合已使用过英雄技能`], 
         command: { id: 'fail', caster, actions: [] } 
     };
-    state.heroSkillsUsed = true; 
+    if (isPlayer) state.heroSkillsUsed = true;
+    else state.opponentHeroSkillUsed = true;
   }
 
   // 2. 费用计算与扣除
@@ -294,10 +301,21 @@ export const executeSpell = (
   
   if (isPlayer) {
       newState.playerLastSpell = spellId;
-      newState.playerHand = newState.playerHand.filter((id, i) => i !== newState.playerHand.indexOf(spellId));
+      newState.playerHand = newState.playerHand.filter((id, i) => {
+          const firstIdx = newState.playerHand.indexOf(spellId);
+          return i !== firstIdx;
+      });
   } else {
       newState.opponentLastSpell = spellId;
-      newState.opponentHandSize = Math.max(0, newState.opponentHandSize - 1);
+      if (spellId.startsWith('hero_')) {
+          // 英雄技能不消耗手牌
+      } else {
+          newState.opponentHand = newState.opponentHand.filter((id, i) => {
+              const firstIdx = newState.opponentHand.indexOf(spellId);
+              return i !== firstIdx;
+          });
+          newState.opponentHandSize = newState.opponentHand.length;
+      }
   }
 
   return { newState, logs, command: cmd };
@@ -310,16 +328,14 @@ const pickBestSpellForAI = (state: DuelState): SpellType | null => {
    // 再次校验冻结 (Double Check)
    if (state.opponentEffects.some(e => e.type === 'frozen')) return null;
 
-   const validSpells = SPELLS.filter(s => s.id !== 'skip');
-   // AI 根据当前 mana 筛选能买得起的
-   const affordable = validSpells.filter(s => 
-     canAffordSpell(s.id, state.opponentMana, state.opponentEffects, state.opponentCostMod).canAfford
+   // AI 从其真实手牌中选择
+   const availableInHand = state.opponentHand;
+   const affordable = availableInHand.filter(s => 
+     canAffordSpell(s, state.opponentMana, state.opponentEffects, state.opponentCostMod).canAfford
    );
    
-   if (affordable.length === 0) return null;
-   
    // 1. 优先英雄技能 (如果还没用过)
-   if (!state.heroSkillsUsed) {
+   if (!state.opponentHeroSkillUsed) {
       // 对手根据难度或随机选择一个英雄技能调用（逻辑上AI目前没有手牌中的技能卡，所以直接模拟ID）
       const heroSkillId: SpellType = 'hero_fire'; 
       if (canAffordSpell(heroSkillId, state.opponentMana, state.opponentEffects, state.opponentCostMod).canAfford) {
@@ -328,54 +344,64 @@ const pickBestSpellForAI = (state: DuelState): SpellType | null => {
    }
 
    // 2. 优先斩杀：如果能一击击杀玩家
-   const killShot = affordable.find(s => s.damage >= state.playerHP + state.playerArmor);
-   if (killShot) return killShot.id;
+   // 2. 优先斩杀：如果能一击击杀玩家
+   const killShot = affordable.find(s => {
+       const spell = getSpellById(s);
+       return spell.damage >= state.playerHP + state.playerArmor;
+   });
+   if (killShot) return killShot;
    
    // 3. 低血量时优先防御或治疗
    if (state.opponentHP <= 10) {
      // 优先治疗
-     const healSpell = affordable.find(s => s.mechanic === 'heal');
-     if (healSpell) return healSpell.id;
+     const healSpell = affordable.find(s => getSpellById(s).mechanic === 'heal');
+     if (healSpell) return healSpell;
      
      // 其次叠甲
-     const armorSpell = affordable.find(s => (s.armorGain || 0) >= 5);
-     if (armorSpell) return armorSpell.id;
+     const armorSpell = affordable.find(s => (getSpellById(s).armorGain || 0) >= 3);
+     if (armorSpell) return armorSpell;
    }
    
    // 4. 雷电连击优化
    if (state.opponentLastSpell && (state.opponentLastSpell.startsWith('thunder') || state.opponentLastSpell === 'hero_thunder')) {
-     const thunderSpells = affordable.filter(s => s.id.startsWith('thunder'));
+     const thunderSpells = affordable.filter(s => s.startsWith('thunder'));
      if (thunderSpells.length > 0) {
        // 选择伤害最高的雷电
-       thunderSpells.sort((a, b) => b.damage - a.damage);
-       return thunderSpells[0].id;
+       thunderSpells.sort((a, b) => getSpellById(b).damage - getSpellById(a).damage);
+       return thunderSpells[0];
      }
    }
    
    // 5. 元素克制：如果知道玩家上次用了什么，尝试克制
    if (state.playerLastSpell) {
-     const counterSpell = affordable.find(s => s.beats === state.playerLastSpell);
-     if (counterSpell && counterSpell.damage > 0) {
-       return counterSpell.id;
+     const counterSpell = affordable.find(s => getSpellById(s).beats === state.playerLastSpell);
+     if (counterSpell && getSpellById(counterSpell).damage > 0) {
+       return counterSpell;
      }
    }
    
    // 6. 优先高伤害卡牌（性价比考虑）
-   const damageSpells = affordable.filter(s => s.damage > 0);
+   const damageSpells = affordable.filter(s => getSpellById(s).damage > 0);
    if (damageSpells.length > 0) {
      // 按伤害/费用比排序
      damageSpells.sort((a, b) => {
-       const ratioA = a.damage / Math.max(1, a.manaCost);
-       const ratioB = b.damage / Math.max(1, b.manaCost);
+       const spellA = getSpellById(a);
+       const spellB = getSpellById(b);
+       const ratioA = spellA.damage / Math.max(1, spellA.manaCost);
+       const ratioB = spellB.damage / Math.max(1, spellB.manaCost);
        return ratioB - ratioA;
      });
      // 有一定随机性，不总是选最优
      const topChoices = damageSpells.slice(0, Math.min(3, damageSpells.length));
-     return topChoices[Math.floor(Math.random() * topChoices.length)].id;
+     return topChoices[Math.floor(Math.random() * topChoices.length)];
    }
    
    // 7. 随机选择
-   return affordable[Math.floor(Math.random() * affordable.length)].id;
+   if (affordable.length > 0) {
+     return affordable[Math.floor(Math.random() * affordable.length)];
+   }
+   
+   return null;
 };
 
 export const executeAITurn = (state: DuelState): { newState: DuelState, logs: string[], commands: GameCommand[] } => {
@@ -483,6 +509,7 @@ export const prepareNextTurn = (state: DuelState): DuelState => {
   
   // 🔧 重置英雄技能使用状态（每回合可用1次）
   newState.heroSkillsUsed = false;
+  newState.opponentHeroSkillUsed = false;
   
   const logs: string[] = [];
 
@@ -686,7 +713,8 @@ export const createTavernDuelState = (playerDeck: SpellType[], aiProfile: AIProf
 
     playerHand,
     playerDeck: remainingPlayerDeck,
-    opponentHandSize: aiHand.length, // AI手牌数量
+    opponentHand: aiHand, 
+    opponentHandSize: aiHand.length, 
 
     playerEffects: [],
     opponentEffects: [],
@@ -701,11 +729,15 @@ export const createTavernDuelState = (playerDeck: SpellType[], aiProfile: AIProf
     roundNumber: 0,
     isTavernMode: true,
     aiProfile,
-    opponentDeck: shuffledAIDeck,
+    opponentDeck: remainingAIDeck,
 
     playerFatigue: 0,
     opponentFatigue: 0,
-    heroSkillsUsed: false
+    heroSkillsUsed: false,
+    opponentHeroSkillUsed: false,
+    playerTriggers: [],
+    opponentTriggers: [],
+    isTutorial: false
   };
 };
 

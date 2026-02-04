@@ -92,6 +92,17 @@ export interface StatusEffect {
   value?: number; // 效果数值（如burn伤害）
 }
 
+// ============ 触发器系统 (New 5.0) ============
+export type TriggerTiming = 'ON_CAST' | 'ON_DAMAGE' | 'ON_TURN_START' | 'ON_TURN_END';
+
+export interface GameTrigger {
+  id: string;
+  timing: TriggerTiming;
+  condition?: (state: DuelState, context?: any) => boolean;
+  action: (state: DuelState, context?: any) => GameAction[];
+  isOnce?: boolean; // 是否是一次性触发（如奥秘）
+}
+
 // ============ 玩家状态 ============
 
 export interface DuelState {
@@ -110,6 +121,7 @@ export interface DuelState {
   // 手牌系统
   playerHand: SpellType[];
   playerDeck: SpellType[];
+  opponentHand: SpellType[]; // 新增：实际手牌
   opponentHandSize: number;
   opponentDeck: SpellType[];
 
@@ -138,6 +150,14 @@ export interface DuelState {
 
   // 英雄技能系统
   heroSkillsUsed?: boolean; // 本回合是否已使用英雄技能
+  opponentHeroSkillUsed?: boolean; // 新增：对手本回合是否已使用英雄技能
+
+  // 触发器实例 (不建议放入持久化状态，但在对局内存中有效)
+  playerTriggers: GameTrigger[];
+  opponentTriggers: GameTrigger[];
+
+  // 模式标志
+  isTutorial?: boolean;
 }
 
 // ============ 回合结果 ============
