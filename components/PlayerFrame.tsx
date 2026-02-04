@@ -270,105 +270,105 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
   avatarSrc,
   isShaking = false,
 }) => {
+  // 确定资源路径
+  const bgFrame = isPlayer ? "/ui/frames/player_hud_v3.png" : "/ui/frames/opponent_hud_v3.png";
   const defaultAvatar = isPlayer ? '🧙‍♂️' : '💀';
   const actualAvatarSrc = avatarSrc || (isPlayer ? '/avatars/player-wizard.webp' : '/avatars/opponent-sorcerer.webp');
 
   return (
-    <div className={`relative group transition-all duration-300 ${isShaking ? 'animate-shake-strong' : ''}`}>
+    <div className={`relative group w-[320px] h-[100px] sm:w-[380px] sm:h-[110px] md:w-[440px] md:h-[130px] transition-all duration-300 ${isShaking ? 'animate-shake-strong' : ''}`}>
       
-      {/* === FANTASY FRAME BACKGROUND (IMAGE ASSET) === */}
-      <div className="absolute inset-0 z-0">
-        <img 
-          src={isPlayer ? "/ui/frames/player_frame.png" : "/ui/frames/opponent_frame.png"}
-          alt="Frame"
-          className="w-full h-full object-fill drop-shadow-2xl opacity-90"
-        />
-        {/* Inner Glare/Highlight for depth */}
-        <div className="absolute inset-4 bg-gradient-to-b from-white/10 to-transparent opacity-30 rounded-lg pointer-events-none" />
+      {/* === Layer 0: Content Underlay (Avatar needs to be behind the frame) === */}
+      {/* 调整：生成图的镂空可能不是透明的（通常是白底或黑底），所以策略改为：
+          让元素浮在图片"之上"，手动对齐到视觉槽位中。 
+          如果用户后续能提供透明底图更好，但现在我们假设需要覆盖。
+      */}
+
+      {/* --- HUD FRAME BACKGROUND --- */}
+      <img 
+        src={bgFrame}
+        alt="HUD Frame"
+        className="absolute inset-0 w-full h-full object-contain z-20 drop-shadow-xl select-none pointer-events-none"
+      />
+
+      {/* === Layer 1: Avatar Slot === */}
+      {/* 
+         根据生成的图片结构 (左圆右长条)，大概位置：
+         Left: ~2-5%, Top: ~10%, Height: ~80% (Circle)
+      */}
+      <div 
+        className="absolute z-10 rounded-full overflow-hidden bg-slate-900 border-2 border-black/50 shadow-inner"
+        style={{
+            left: '3.5%', 
+            top: '12%',
+            height: '76%',
+            aspectRatio: '1/1',
+        }}
+      >
+         <img 
+           src={actualAvatarSrc} 
+           alt={name}
+           className="w-full h-full object-cover"
+           onError={(e) => {
+               (e.target as HTMLImageElement).style.display = 'none';
+               // Fallback logic could be added here
+           }} 
+         />
+         {/* Inner Shadow to make it look recessed */}
+         <div className="absolute inset-0 shadow-[inset_0_4px_8px_rgba(0,0,0,0.5)] pointer-events-none" />
       </div>
 
-     {/* No CSS Borders needed anymore, handled by image */}
-
-      {/* === CONTENT CONTAINER === */}
-      <div className="relative z-30 flex items-center p-6 gap-5">
-        
-        {/* AVATAR FRAME */}
-        <div className="relative flex-shrink-0">
-           {/* Level/Rank Badge (Optional) */}
-           <div className="absolute -top-2 -left-2 z-50 w-6 h-6 bg-gradient-to-br from-amber-300 to-amber-600 rounded-lg flex items-center justify-center shadow-lg border border-white/20 rotate-45 transform">
-              <span className="-rotate-45 text-xs font-bold text-amber-900">1</span>
-           </div>
-
-           {/* Avatar Circle with Ring */}
-           <div className={`
-              relative w-16 h-16 md:w-20 md:h-20 rounded-full p-[2px] 
-              bg-gradient-to-b ${isPlayer ? 'from-amber-300 via-amber-500 to-amber-800' : 'from-gray-400 via-gray-500 to-gray-800'}
-              shadow-xl
-           `}>
-              <div className="w-full h-full rounded-full border-[3px] border-black overflow-hidden bg-slate-800 relative">
-                 <img 
-                   src={actualAvatarSrc}
-                   alt={name}
-                   className="w-full h-full object-cover transform hover:scale-110 transition-transform duration-500"
-                   onError={(e) => {
-                     const target = e.target as HTMLImageElement;
-                     target.style.display = 'none';
-                     if (target.parentElement && !target.parentElement.querySelector('.fallback-avatar')) {
-                       const div = document.createElement('div');
-                       div.className = `fallback-avatar w-full h-full flex items-center justify-center text-3xl ${isPlayer ? 'bg-purple-900' : 'bg-red-900'}`;
-                       div.innerHTML = defaultAvatar;
-                       target.parentElement.appendChild(div);
-                     }
-                   }}
-                 />
-                 {/* Shine effect on avatar */}
-                 <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent pointer-events-none" />
-              </div>
-           </div>
-
-           {/* Armor Bubble */}
-           {armor > 0 && (
-            <div className="absolute -bottom-1 -right-1 z-50 w-8 h-8 flex items-center justify-center">
-              <div className="absolute inset-0 bg-slate-200 rounded-full border-2 border-slate-400 shadow-md" />
-              <Shield className="w-5 h-5 text-slate-600 relative z-10" />
-              <span className="absolute text-xs font-black text-slate-800 z-20">{armor}</span>
-            </div>
-           )}
-        </div>
-
-        {/* STATS SECTION */}
-        <div className="flex-1 min-w-[140px] md:min-w-[180px] flex flex-col justify-center">
-           {/* Name & Title */}
-           <div className="flex items-center justify-between mb-1.5 px-1">
-              <span className={`
-                 text-sm md:text-base font-wizard font-bold tracking-widest uppercase
-                 ${isPlayer ? 'text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500' : 'text-red-200'}
-                 drop-shadow-sm
-              `}>
+      {/* === Layer 2: Info Content === */}
+      <div className="absolute z-30 flex flex-col justify-center"
+           style={{
+               left: '26%', // Avatar takes up ~25% width
+               right: '4%',
+               top: '14%',
+               bottom: '12%'
+           }}
+      >
+         {/* Top Row: Name & HP */}
+         <div className="flex items-center justify-between mb-1 px-2">
+            <span className={`
+                text-sm sm:text-base font-wizard font-bold tracking-widest uppercase truncate
+                ${isPlayer ? 'text-amber-100 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-red-100 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]'}
+            `}>
                 {name}
-              </span>
-           </div>
+            </span>
+         </div>
 
-           {/* HP Bar Container */}
-           <div className="relative mb-2">
-              <HealthBar current={hp} max={maxHp} isPlayer={isPlayer} />
-           </div>
+         {/* Middle: Health Bar Slot */}
+         <div className="relative w-full h-[30%] sm:h-[35%] rounded-md overflow-hidden shadow-inner bg-black/40 mb-1">
+             <HealthBar current={hp} max={maxHp} isPlayer={isPlayer} />
+         </div>
 
-           {/* Mana & Effects Row */}
-           <div className="flex items-center justify-between">
-              <ManaCrystals current={mana} max={maxMana} />
-              
-              {/* Status Effects Row */}
-              <div className="flex gap-1">
-                {effects.slice(0, 3).map((effect, i) => (
-                  <div key={i} className="transform scale-90 origin-right">
-                    <StatusEffectBadge effect={effect} />
-                  </div>
-                ))}
-              </div>
+         {/* Bottom: Mana & Buffs */}
+         <div className="flex items-center justify-between px-1 h-[30%] text-xs sm:text-sm">
+             <div className="transform scale-90 sm:scale-100 origin-left">
+                 <ManaCrystals current={mana} max={maxMana} />
+             </div>
+             
+             {/* Status Badge Row */}
+             <div className="flex gap-1 overflow-visible">
+                 {effects.slice(0, 3).map((effect, i) => (
+                    <div key={i} className="transform scale-75 origin-right">
+                        <StatusEffectBadge effect={effect} />
+                    </div>
+                 ))}
+             </div>
+         </div>
+      </div>
+
+      {/* Armor Bubble - Float Outside */}
+      {armor > 0 && (
+        <div className="absolute top-0 left-[20%] z-40 animate-bounce-slight">
+           <div className="relative w-8 h-8 flex items-center justify-center bg-slate-200 rounded-full border-2 border-slate-500 shadow-lg">
+             <Shield className="w-5 h-5 text-slate-700" />
+             <span className="absolute -bottom-1 -right-1 bg-black text-white text-[10px] px-1 rounded-full">{armor}</span>
            </div>
         </div>
-      </div>
+      )}
+
     </div>
   );
 };
