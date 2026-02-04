@@ -119,6 +119,17 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
      );
   };
 
+  // Add Escape key listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onSkip();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onSkip]);
+
   // Tooltip positioning
   const getTooltipStyle = () => {
      if (isCenter) return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
@@ -127,7 +138,8 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
 
      const padding = 20;
      let top = 0;
-     let left = 0;
+     let left: number | string = 0;
+     let right: number | string | undefined = undefined;
      let transform = '';
 
      const preferPos = currentStep.position || 'bottom';
@@ -142,10 +154,25 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
         transform = 'translateX(-50%) translateY(-100%)';
      }
      
-     // Boundary checks (basic)
-     if (left < 20) left = 20;
+     // Boundary checks
+     const windowWidth = window.innerWidth;
+     const tooltipHalfWidth = 160; // Approximate half width of max-w-xs (320px / 2)
 
-     return { top, left, transform };
+     if (typeof left === 'number') {
+        // Left Edge Check
+        if (left < tooltipHalfWidth + 20) {
+           left = 20;
+           transform = transform.replace('translateX(-50%)', '');
+        }
+        // Right Edge Check
+        else if (left > windowWidth - tooltipHalfWidth - 20) {
+           left = 'auto';
+           right = 20;
+           transform = transform.replace('translateX(-50%)', '');
+        }
+     }
+
+     return { top, left, right, transform };
   };
 
   return createPortal(
