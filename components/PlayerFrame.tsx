@@ -271,7 +271,7 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
   isShaking = false,
 }) => {
   // 确定资源路径
-  const bgFrame = isPlayer ? "/ui/frames/player_hud_v3.png" : "/ui/frames/opponent_hud_v3.png";
+  const bgFrame = isPlayer ? "/ui/frames/player_hud_v4.png" : "/ui/frames/opponent_hud_v4.png";
   const defaultAvatar = isPlayer ? '🧙‍♂️' : '💀';
   const actualAvatarSrc = avatarSrc || (isPlayer ? '/avatars/player-wizard.webp' : '/avatars/opponent-sorcerer.webp');
 
@@ -288,7 +288,7 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
       <img 
         src={bgFrame}
         alt="HUD Frame"
-        className="absolute inset-0 w-full h-full object-contain z-20 drop-shadow-xl select-none pointer-events-none"
+        className="absolute inset-0 w-full h-full object-contain z-20 drop-shadow-xl select-none pointer-events-none mix-blend-screen brightness-110 contrast-125"
       />
 
       {/* === Layer 1: Avatar Slot === */}
