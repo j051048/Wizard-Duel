@@ -97,7 +97,8 @@ function App() {
         setTimeout(() => ui.setIsOpponentShaking(false), 500);
       }
     }
-  }, [gameLoopState.effectMessages, audioActions, ui]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameLoopState.effectMessages]); 
 
   // ============ 逻辑处理器 ============
 
