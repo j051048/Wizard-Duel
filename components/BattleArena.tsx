@@ -160,7 +160,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   ), [duelState.playerHand, duelState.playerMana, duelState.playerEffects, duelState.playerCostMod]);
 
   return (
-    <div className="relative min-h-full w-full bg-slate-950 no-select flex flex-col z-40">
+    <div className="fixed inset-0 w-full h-full bg-slate-950 no-select flex flex-col z-40 overflow-hidden">
       {/* === 背景层 === */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <img 
@@ -171,15 +171,15 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay scale-110 blur-[2px] optimize-gpu"
           style={{ objectPosition: 'center 40%' }}
         />
-        <div className="absolute inset-0 bg-slate-950/20" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-slate-950/80" />
         {/* 中心法阵 */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-30">
+        <div className="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
           <img 
             src="/ui/magic-portal.webp" 
             alt="" 
             decoding="async"
             loading="lazy"
-            className="w-[90vh] h-[90vh] animate-spin opacity-50"
+            className="w-[80vmin] h-[80vmin] animate-spin opacity-50"
             style={{ animationDuration: '60s' }}
             onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
           />
@@ -187,27 +187,32 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       </div>
 
       {/* === 顶部：对手区 === */}
-      <div className="w-full pt-2 px-2 z-20 flex-shrink-0 flex flex-col items-center">
-          <div className="w-full max-w-sm transform transition-all duration-300 origin-top scale-90 md:scale-100">
-            <PlayerFrame 
-              isPlayer={false}
-              name={duelState.aiProfile?.name || "黑魔法师"}
-              hp={duelState.opponentHP}
-              armor={duelState.opponentArmor}
-              maxHp={GAME_CONFIG.maxHP}
-              mana={duelState.opponentMana}
-              maxMana={duelState.opponentMaxMana} 
-              effects={duelState.opponentEffects}
-              isShaking={isOpponentShaking}
-              avatarSrc={duelState.aiProfile?.avatar}
-            />
-          </div>
-          <div className="flex justify-center -space-x-4 scale-75 origin-top mt-1">
-              {Array.from({ length: Math.min(duelState.opponentHandSize, 5) }).map((_, i) => (
-                <div key={i} style={{ transform: `rotate(${(i - 2) * 4}deg)` }}>
-                  <SpellCard isFaceDown isSmall />
-                </div>
-              ))}
+      {/* === 顶部：对手区 (15% Height / Fixed) === */}
+      <div className="w-full h-[15%] min-h-[120px] flex justify-center items-start pt-2 z-20 relative">
+          <div className="flex flex-col items-center">
+            {/* Opponent Avatar */}
+            <div className="transform scale-75 md:scale-90 origin-top transition-transform duration-300">
+               <PlayerFrame 
+                  isPlayer={false}
+                  name={duelState.aiProfile?.name || "黑魔法师"}
+                  hp={duelState.opponentHP}
+                  armor={duelState.opponentArmor}
+                  maxHp={GAME_CONFIG.maxHP}
+                  mana={duelState.opponentMana}
+                  maxMana={duelState.opponentMaxMana} 
+                  effects={duelState.opponentEffects}
+                  isShaking={isOpponentShaking}
+                  avatarSrc={duelState.aiProfile?.avatar}
+                />
+            </div>
+            {/* Opponent Hand (Overlapping Avatar slightly) */}
+            <div className="flex justify-center -space-x-4 scale-75 origin-top -mt-6">
+                {Array.from({ length: Math.min(duelState.opponentHandSize, 5) }).map((_, i) => (
+                  <div key={i} style={{ transform: `rotate(${(i - 2) * 5}deg)` }}>
+                    <SpellCard isFaceDown isSmall />
+                  </div>
+                ))}
+            </div>
           </div>
       </div>
 
@@ -228,7 +233,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         {/* Player Active Card */}
         <div className={`
              transition-all duration-500 transform mt-4
-             ${playerCard ? 'translate-y-0 opacity-100 scale-110' : 'translate-y-8 opacity-0 scale-90'}
+             ${playerCard ? 'translate-y-0 opacity-100 scale-100 md:scale-110' : 'translate-y-8 opacity-0 scale-90'}
         `}>
           {playerSpellDetails && playerCard && (
             <div className="relative group pointer-events-auto">
@@ -279,107 +284,116 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         )}
       </div>
 
-      {/* === 底部：玩家操作区 === */}
-      <div className="w-full bg-gradient-to-t from-black via-black/80 to-transparent pt-2 pb-1 px-2 z-30 flex-shrink-0 relative safe-area-bottom">
-        <div className="max-w-6xl mx-auto flex flex-col justify-end h-full">
+      {/* === 底部：玩家操作区 (30-35% Height) === */}
+      <div className="w-full h-[35%] min-h-[220px] max-h-[350px] z-30 relative safe-area-bottom">
+        <div className="w-full h-full relative flex items-end justify-between px-2 pb-2 md:px-8 md:pb-6">
           
-          {/* Hero Skills Bar (Hidden when used) */}
-          {!duelState.heroSkillsUsed && (
-            <div className="flex justify-center gap-2 mb-2 z-20">
-              {(['hero_fire', 'hero_vine', 'hero_ice', 'hero_thunder', 'hero_rock'] as const).map((id) => {
-                    const spell = getSpellById(id);
-                    const canUse = phase === 'PLAYER_TURN';
-                    return (
-                      <div key={id} className="transform scale-75 md:scale-90 hover:-translate-y-1 transition-transform">
-                        <SpellCard 
-                          spell={spell} 
-                          onClick={() => canUse && handlePlayCard(id)}
-                          isAffordable={canUse}
-                          disabled={!canUse}
-                          isSmall
-                        />
-                      </div>
-                    );
-              })}
-            </div>
-          )}
+          {/* Left: Player Stats (Bottom Left Corner) */}
+          <div className="z-40 w-48 md:w-72 transform scale-90 md:scale-100 origin-bottom-left mb-1 md:mb-0">
+             <PlayerFrame 
+               isPlayer={true}
+               name="玩家"
+               hp={duelState.playerHP}
+               armor={duelState.playerArmor}
+               maxHp={GAME_CONFIG.maxHP}
+               mana={duelState.playerMana}
+               maxMana={duelState.playerMaxMana}
+               effects={duelState.playerEffects}
+               isShaking={isPlayerShaking}
+             />
+          </div>
 
-          {/* Main Control Row: Player Stats, Hand, Buttons */}
-          <div className="flex justify-between items-end relative h-32 md:h-40 w-full">
+          {/* Center: Hand Cards & Hero Skills */}
+          <div className="flex-1 flex flex-col items-center justify-end h-full absolute inset-x-0 bottom-0 pointer-events-none">
              
-             {/* Left: Player Stats (Absolute Bottom Left) */}
-             <div className="absolute left-0 bottom-0 z-40 w-44 md:w-64 transform scale-90 md:scale-100 origin-bottom-left">
-                <PlayerFrame 
-                  isPlayer={true}
-                  name="玩家"
-                  hp={duelState.playerHP}
-                  armor={duelState.playerArmor}
-                  maxHp={GAME_CONFIG.maxHP}
-                  mana={duelState.playerMana}
-                  maxMana={duelState.playerMaxMana}
-                  effects={duelState.playerEffects}
-                  isShaking={isPlayerShaking}
-                />
-             </div>
+             {/* Hero Skills Bar (Above Hand) */}
+             {!duelState.heroSkillsUsed && (
+               <div className="flex justify-center gap-2 mb-4 pointer-events-auto z-40 transform scale-75 md:scale-90 transition-all origin-bottom">
+                 {(['hero_fire', 'hero_vine', 'hero_ice', 'hero_thunder', 'hero_rock'] as const).map((id) => {
+                       const spell = getSpellById(id);
+                       const canUse = phase === 'PLAYER_TURN';
+                       return (
+                         <div key={id} className="hover:-translate-y-2 transition-transform shadow-xl rounded-lg">
+                           <SpellCard 
+                             spell={spell} 
+                             onClick={() => canUse && handlePlayCard(id)}
+                             isAffordable={canUse}
+                             disabled={!canUse}
+                             isSmall
+                           />
+                         </div>
+                       );
+                 })}
+               </div>
+             )}
 
-             {/* Center: Hand Cards */}
-             <div className="flex-1 flex justify-center items-end pl-40 md:pl-64 pr-16 md:pr-32 pb-1">
-                <div className="flex justify-center items-end -space-x-7 md:-space-x-4 min-h-[110px]">
-                    {duelState.playerHand.map((id, index) => {
-                      const isAffordable = playableCards.includes(id);
-                      const total = duelState.playerHand.length;
-                      const middleIndex = (total - 1) / 2;
-                      const rotation = (index - middleIndex) * 5;
-                      const yOffset = Math.abs(index - middleIndex) * 6;
+             {/* Player Hand */}
+             <div className={`
+                flex justify-center items-end -space-x-8 md:-space-x-4 
+                mb-[-10px] md:mb-[-20px] pointer-events-auto
+                transition-transform duration-300
+                ${duelState.heroSkillsUsed ? 'translate-y-0' : 'translate-y-4'}
+             `}>
+                {duelState.playerHand.map((id, index) => {
+                  const isAffordable = playableCards.includes(id);
+                  const total = duelState.playerHand.length;
+                  const middleIndex = (total - 1) / 2;
+                  const rotation = (index - middleIndex) * 4; // Fanning angle
+                  const yOffset = Math.abs(index - middleIndex) * 8 + (isAffordable && phase === 'PLAYER_TURN' ? 0 : 20); // Arc effect
 
-                      return (
-                        <div 
-                          key={`${id}-${index}`} 
-                          className={`
-                            relative transition-all duration-300 transform origin-bottom
-                            ${phase === 'PLAYER_TURN' && isAffordable ? 'active:-translate-y-8 md:hover:-translate-y-16 hover:scale-110' : ''}
-                          `}
-                          style={{ 
-                            zIndex: index + 10,
-                            transform: `rotate(${rotation}deg) translateY(${yOffset}px)`,
-                          }}
-                        >
-                          <SpellCard 
-                            spell={getSpellById(id)} 
-                            onClick={() => isAffordable && phase === 'PLAYER_TURN' && handlePlayCard(id)}
-                            isAffordable={isAffordable}
-                            disabled={!isAffordable || phase !== 'PLAYER_TURN'}
-                            isSelected={false}
-                            isSmall={isMobile}
-                          />
-                        </div>
-                      );
-                    })}
-                </div>
-             </div>
-
-             {/* Right: End Turn Button */}
-             <div className="absolute right-0 bottom-0 z-40 w-14 md:w-28 flex flex-col gap-2">
-                 <button 
-                    onClick={() => onPass && onPass()}
-                    disabled={phase !== 'PLAYER_TURN'}
-                    className={`
-                      relative w-full aspect-square flex flex-col items-center justify-center rounded-lg shadow-lg
-                      ${phase === 'PLAYER_TURN' 
-                        ? 'bg-amber-600 border-2 border-amber-400 animate-pulse' 
-                        : 'bg-slate-800 border-2 border-slate-700 grayscale opacity-70'}
-                    `}
-                  >
-                    <div className="text-xl md:text-3xl">{phase === 'PLAYER_TURN' ? '⏭️' : '⏳'}</div>
-                 </button>
-                 <button 
-                    onClick={onSurrender}
-                    className="w-full h-8 flex items-center justify-center rounded bg-red-900/50 border border-red-500/20 text-red-300 text-xs"
-                  >
-                    <LogOut size={12} />
-                 </button>
+                  return (
+                    <div 
+                      key={`${id}-${index}`} 
+                      className={`
+                        relative transition-all duration-300 transform origin-bottom hover:z-50
+                        ${phase === 'PLAYER_TURN' && isAffordable ? 'hover:-translate-y-16 hover:scale-125 cursor-pointer' : ''}
+                      `}
+                      style={{ 
+                        zIndex: index + 10,
+                        transform: `rotate(${rotation}deg) translateY(${yOffset}px)`,
+                      }}
+                    >
+                      <SpellCard 
+                        spell={getSpellById(id)} 
+                        onClick={() => isAffordable && phase === 'PLAYER_TURN' && handlePlayCard(id)}
+                        isAffordable={isAffordable}
+                        disabled={!isAffordable || phase !== 'PLAYER_TURN'}
+                        isSelected={false}
+                        isSmall={isMobile} // Always use small cards on mobile for hand fitting
+                      />
+                    </div>
+                  );
+                })}
              </div>
           </div>
+
+          {/* Right: End Turn & Menu (Bottom Right Corner) */}
+          <div className="z-40 w-16 md:w-32 flex flex-col gap-2 md:gap-4 mb-2 md:mb-4 ml-auto">
+             <button 
+                onClick={() => onPass && onPass()}
+                disabled={phase !== 'PLAYER_TURN'}
+                className={`
+                  relative w-full aspect-square md:aspect-video flex flex-col items-center justify-center rounded-xl shadow-2xl transition-all
+                  ${phase === 'PLAYER_TURN' 
+                    ? 'bg-gradient-to-br from-amber-500 to-amber-700 border-2 border-amber-300 animate-pulse hover:scale-105 active:scale-95' 
+                    : 'bg-slate-800 border-2 border-slate-600 grayscale opacity-70 cursor-not-allowed'}
+                `}
+              >
+                <div className="text-2xl md:text-3xl filter drop-shadow-md">{phase === 'PLAYER_TURN' ? '👉' : '⏳'}</div>
+                <div className="text-[10px] md:text-xs font-bold uppercase text-white drop-shadow-md mt-1">
+                  {phase === 'PLAYER_TURN' ? '结束' : '等待'}
+                </div>
+             </button>
+             <button 
+                onClick={onSurrender}
+                className="w-full py-1 md:py-2 flex items-center justify-center rounded bg-red-950/80 border border-red-500/30 text-red-300 text-xs hover:bg-red-900 transition-colors"
+              >
+                <LogOut size={12} className="mr-1" />
+                <span className="hidden md:inline">投降</span>
+                <span className="md:hidden">退</span>
+             </button>
+          </div>
+
         </div>
       </div>
 
