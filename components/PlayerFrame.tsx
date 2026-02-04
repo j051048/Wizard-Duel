@@ -12,6 +12,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StatusEffect } from '../types';
 import { getMechanicName } from '../constants';
+import { Shield } from 'lucide-react';
 
 // ======== 子组件：血条（带动画） ========
 interface HealthBarProps {
@@ -273,77 +274,120 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
   const actualAvatarSrc = avatarSrc || (isPlayer ? '/avatars/player-wizard.webp' : '/avatars/opponent-sorcerer.webp');
 
   return (
-    <div 
-      className={`
-        relative p-2 md:p-4 rounded-xl md:rounded-2xl backdrop-blur-md transition-all duration-300
-        ${isPlayer 
-          ? 'bg-gradient-to-br from-purple-900/80 to-indigo-950/90 border border-purple-400/40' 
-          : 'bg-gradient-to-br from-red-900/80 to-rose-950/90 border border-red-400/40'
-        }
-        shadow-2xl flex flex-col gap-1
-        ${isShaking ? 'animate-shake-strong' : ''}
-      `}
-    >
-      {/* 护甲显示 */}
-      {armor > 0 && (
-        <div className="absolute -top-3 -right-2 z-40 transition-all duration-500 scale-75 md:scale-100">
-          <div className="relative drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]">
-            <div className="w-10 h-12 bg-gradient-to-b from-gray-200 to-gray-400 rounded-b-full border-2 border-gray-100 shadow-inner flex items-center justify-center">
-              <span className="font-black text-gray-800 text-base">{armor}</span>
+    <div className={`relative group transition-all duration-300 ${isShaking ? 'animate-shake-strong' : ''}`}>
+      
+      {/* === FANTASY FRAME BACKGROUND === */}
+      {/* Main polygonal shape background */}
+      <div 
+        className={`
+          absolute inset-0 bg-gradient-to-br 
+          ${isPlayer ? 'from-slate-900/90 via-indigo-950/90 to-slate-900/90' : 'from-slate-900/90 via-red-950/90 to-slate-900/90'}
+          backdrop-blur-md rounded-xl border border-white/10
+          shadow-[0_10px_30px_rgba(0,0,0,0.5)]
+        `}
+        style={{
+          clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)'
+        }}
+      />
+      
+      {/* Decorative Gold/Silver Border Lines */}
+      <div 
+        className={`absolute inset-0 pointer-events-none rounded-xl z-20`}
+        style={{
+          background: `
+            linear-gradient(to right, ${isPlayer ? '#fbbf24' : '#f87171'} 2px, transparent 2px) 0 0 / 100% 100% no-repeat,
+            linear-gradient(to bottom, ${isPlayer ? '#fbbf24' : '#f87171'} 2px, transparent 2px) 0 0 / 100% 100% no-repeat,
+            linear-gradient(to left, ${isPlayer ? '#fbbf24' : '#f87171'} 2px, transparent 2px) 100% 100% / 100% 100% no-repeat,
+            linear-gradient(to top, ${isPlayer ? '#fbbf24' : '#f87171'} 2px, transparent 2px) 100% 100% / 100% 100% no-repeat
+          `,
+          clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
+          opacity: 0.5
+        }}
+      />
+
+      {/* Glowing Accents */}
+      <div className={`absolute -inset-1 rounded-xl blur-md opacity-30 ${isPlayer ? 'bg-blue-500' : 'bg-red-500'}`} />
+
+      {/* === CONTENT CONTAINER === */}
+      <div className="relative z-30 flex items-center p-3 gap-4">
+        
+        {/* AVATAR FRAME */}
+        <div className="relative flex-shrink-0">
+           {/* Level/Rank Badge (Optional) */}
+           <div className="absolute -top-2 -left-2 z-50 w-6 h-6 bg-gradient-to-br from-amber-300 to-amber-600 rounded-lg flex items-center justify-center shadow-lg border border-white/20 rotate-45 transform">
+              <span className="-rotate-45 text-xs font-bold text-amber-900">1</span>
+           </div>
+
+           {/* Avatar Circle with Ring */}
+           <div className={`
+              relative w-16 h-16 md:w-20 md:h-20 rounded-full p-[2px] 
+              bg-gradient-to-b ${isPlayer ? 'from-amber-300 via-amber-500 to-amber-800' : 'from-gray-400 via-gray-500 to-gray-800'}
+              shadow-xl
+           `}>
+              <div className="w-full h-full rounded-full border-[3px] border-black overflow-hidden bg-slate-800 relative">
+                 <img 
+                   src={actualAvatarSrc}
+                   alt={name}
+                   className="w-full h-full object-cover transform hover:scale-110 transition-transform duration-500"
+                   onError={(e) => {
+                     const target = e.target as HTMLImageElement;
+                     target.style.display = 'none';
+                     if (target.parentElement && !target.parentElement.querySelector('.fallback-avatar')) {
+                       const div = document.createElement('div');
+                       div.className = `fallback-avatar w-full h-full flex items-center justify-center text-3xl ${isPlayer ? 'bg-purple-900' : 'bg-red-900'}`;
+                       div.innerHTML = defaultAvatar;
+                       target.parentElement.appendChild(div);
+                     }
+                   }}
+                 />
+                 {/* Shine effect on avatar */}
+                 <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent pointer-events-none" />
+              </div>
+           </div>
+
+           {/* Armor Bubble */}
+           {armor > 0 && (
+            <div className="absolute -bottom-1 -right-1 z-50 w-8 h-8 flex items-center justify-center">
+              <div className="absolute inset-0 bg-slate-200 rounded-full border-2 border-slate-400 shadow-md" />
+              <Shield className="w-5 h-5 text-slate-600 relative z-10" />
+              <span className="absolute text-xs font-black text-slate-800 z-20">{armor}</span>
             </div>
-          </div>
+           )}
         </div>
-      )}
 
-      <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
-        {/* 头像 */}
-        <div 
-          className={`
-            relative w-12 h-12 md:w-20 md:h-20 rounded-full overflow-hidden flex-shrink-0
-            border-2 md:border-4 ${isPlayer ? 'border-purple-400' : 'border-red-400'}
-            shadow-lg
-          `}
-        >
-          <img 
-            src={actualAvatarSrc}
-            alt={name}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-              if (target.parentElement) {
-                target.parentElement.innerHTML = `
-                  <div class="w-full h-full flex items-center justify-center text-xl md:text-3xl ${isPlayer ? 'bg-purple-900' : 'bg-red-900'}">
-                    ${defaultAvatar}
+        {/* STATS SECTION */}
+        <div className="flex-1 min-w-[140px] md:min-w-[180px] flex flex-col justify-center">
+           {/* Name & Title */}
+           <div className="flex items-center justify-between mb-1.5 px-1">
+              <span className={`
+                 text-sm md:text-base font-wizard font-bold tracking-widest uppercase
+                 ${isPlayer ? 'text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500' : 'text-red-200'}
+                 drop-shadow-sm
+              `}>
+                {name}
+              </span>
+           </div>
+
+           {/* HP Bar Container */}
+           <div className="relative mb-2">
+              <HealthBar current={hp} max={maxHp} isPlayer={isPlayer} />
+           </div>
+
+           {/* Mana & Effects Row */}
+           <div className="flex items-center justify-between">
+              <ManaCrystals current={mana} max={maxMana} />
+              
+              {/* Status Effects Row */}
+              <div className="flex gap-1">
+                {effects.slice(0, 3).map((effect, i) => (
+                  <div key={i} className="transform scale-90 origin-right">
+                    <StatusEffectBadge effect={effect} />
                   </div>
-                `;
-              }
-            }}
-          />
-        </div>
-
-        {/* 信息区 */}
-        <div className="flex-1 min-w-0 flex flex-col justify-center">
-          <div className={`
-            text-xs md:text-sm font-wizard font-bold tracking-wider truncate mb-1
-            ${isPlayer ? 'text-purple-100' : 'text-red-100'}
-          `}>
-            {name}
-          </div>
-          <HealthBar current={hp} max={maxHp} isPlayer={isPlayer} />
-          <ManaCrystals current={mana} max={maxMana} />
+                ))}
+              </div>
+           </div>
         </div>
       </div>
-
-      {/* 状态效果 */}
-      {effects.length > 0 && (
-        <div className="flex gap-1 mt-1 justify-start flex-wrap">
-          {effects.map((effect, i) => (
-            <StatusEffectBadge key={`${effect.type}-${i}`} effect={effect} />
-          ))}
-        </div>
-      )}
-
     </div>
   );
 };
