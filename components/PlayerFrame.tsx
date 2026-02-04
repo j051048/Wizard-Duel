@@ -276,7 +276,7 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
   const actualAvatarSrc = avatarSrc || (isPlayer ? '/avatars/player-wizard.webp' : '/avatars/opponent-sorcerer.webp');
 
   return (
-    <div className={`relative group w-[320px] h-[100px] sm:w-[380px] sm:h-[110px] md:w-[440px] md:h-[130px] transition-all duration-300 ${isShaking ? 'animate-shake-strong' : ''}`}>
+    <div className={`relative group w-[380px] h-[120px] sm:w-[480px] sm:h-[140px] md:w-[580px] md:h-[170px] transition-all duration-300 ${isShaking ? 'animate-shake-strong' : ''}`}>
       
       {/* === Layer 0: Content Underlay (Avatar needs to be behind the frame) === */}
       {/* 调整：生成图的镂空可能不是透明的（通常是白底或黑底），所以策略改为：

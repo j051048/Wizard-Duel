@@ -191,7 +191,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       <div className="w-full h-[15%] min-h-[120px] flex justify-center items-start pt-2 z-20 relative">
           <div className="flex flex-col items-center">
             {/* Opponent Avatar */}
-            <div className="transform scale-75 md:scale-90 origin-top transition-transform duration-300">
+            <div className="transform scale-90 md:scale-100 origin-top transition-transform duration-300">
                <PlayerFrame 
                   isPlayer={false}
                   name={duelState.aiProfile?.name || "黑魔法师"}
@@ -289,7 +289,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         <div className="w-full h-full relative flex items-end justify-between px-2 pb-2 md:px-8 md:pb-6">
           
           {/* Left: Player Stats (Bottom Left Corner) */}
-          <div className="z-40 w-48 md:w-72 transform scale-90 md:scale-100 origin-bottom-left mb-1 md:mb-0">
+          <div className="z-40 transform origin-bottom-left mb-6 md:mb-10 scale-90 md:scale-100">
              <PlayerFrame 
                isPlayer={true}
                name="玩家"
