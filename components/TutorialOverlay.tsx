@@ -4,12 +4,15 @@ import { X, ChevronRight, Info } from 'lucide-react';
 interface TutorialStep {
   title: string;
   content: string;
-  targetId?: string; // CSS ID to highlight
+  targetId?: string; 
   position: 'top' | 'bottom' | 'center' | 'left' | 'right';
+  requiredAction?: 'PLAY_FIRE_CARD' | 'USE_SKILL'; // [New 6.4] 需要执行的操作
+  isBlocking?: boolean; // [New 6.4] 是否锁定操作
 }
 
 interface TutorialOverlayProps {
   onComplete: () => void;
+  lastAction?: string; // 最近一次玩家执行的操作 ID
 }
 
 const steps: TutorialStep[] = [
@@ -19,39 +22,38 @@ const steps: TutorialStep[] = [
     position: 'center'
   },
   {
-    title: "五行克制",
-    content: "记住克制关系：火克藤，藤克冰，冰克雷，雷克石，石克火。克制对手可以造成更高伤害并触发额外效果！",
-    position: 'center'
-  },
-  {
-    title: "法力消耗",
-    content: "每张卡牌都有法力消耗（左上角水晶图标）。你的法力值每回合会恢复并增加上限。",
-    targetId: 'player-mana-crystals',
-    position: 'bottom'
-  },
-  {
     title: "你的手牌",
     content: "点击卡牌可以预览效果和预估伤害。再次点击或上划即可释放魔法！",
     targetId: 'player-card-0',
     position: 'bottom'
   },
   {
-    title: "英雄技能",
-    content: "每个流派都有专属英雄技能，每回合可以使用一次。在关键时刻使用它们来反转战局！",
-    position: 'bottom'
+    title: "克制实战！",
+    content: "对手现在使用了 [荆棘缠绕]，属于藤蔓系。请从手牌中拖拽一张 [火系卡牌] 来克制它，造成双倍伤害！",
+    targetId: 'player-card-0',
+    position: 'bottom',
+    requiredAction: 'PLAY_FIRE_CARD',
+    isBlocking: true
   },
   {
-    title: "准备好了吗？",
-    content: "消灭对手的生命值即可获胜。祝你好运，巫师！",
+    title: "做得好！",
+    content: "双倍伤害非常致命。消灭对手的生命值即可获胜。祝你好运，巫师！",
     position: 'center'
   }
 ];
 
-export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ onComplete }) => {
+export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ onComplete, lastAction }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [highlightStyle, setHighlightStyle] = useState<React.CSSProperties>({});
 
   const step = steps[currentStep];
+
+  // [New 6.4] 监听操作执行，实现引导闭环
+  useEffect(() => {
+    if (step.requiredAction && lastAction === step.requiredAction) {
+        setTimeout(handleNext, 1000); // 延迟跳转，让玩家看到操作结果
+    }
+  }, [lastAction, step.requiredAction]);
 
   useEffect(() => {
     if (step.targetId) {
@@ -86,6 +88,9 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ onComplete }) 
   }, [currentStep, step.targetId]);
 
   const handleNext = () => {
+    // [New 6.4] 如果是强制执行步骤，点击背景不跳转
+    if (step.isBlocking) return;
+
     if (currentStep < steps.length - 1) {
       setCurrentStep(prev => prev + 1);
     } else {

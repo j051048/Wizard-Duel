@@ -1,7 +1,7 @@
 import { useReducer, useCallback, useRef, useEffect } from 'react';
 import { 
   SpellType, DuelPhase, DuelState, RoundResult, GameMode, AIProfile,
-  GameLoopState, GameLoopAction, AIStatus
+  GameLoopState, GameLoopAction, AIStatus, GameActionCommand
 } from '../types';
 import { 
   createInitialDuelState, executeSpell, executeAITurn,
@@ -28,7 +28,8 @@ const initialGameLoopState: GameLoopState = {
   gameResult: null,
   isProcessing: false,
   aiStatus: initialAIStatus,
-  targetingData: null
+  targetingData: null,
+  actionQueue: []
 };
 
 function gameReducer(state: GameLoopState, action: GameLoopAction): GameLoopState {
@@ -51,12 +52,16 @@ function gameReducer(state: GameLoopState, action: GameLoopAction): GameLoopStat
     case 'ADD_MESSAGE':
       return { 
         ...state, 
-        effectMessages: [...state.effectMessages.slice(-4), action.payload] 
+        effectMessages: [...state.effectMessages.slice(-50), action.payload] 
       };
     case 'SET_AI_STATUS':
       return { ...state, aiStatus: { ...state.aiStatus, ...action.payload } };
     case 'SET_TARGETING':
       return { ...state, targetingData: action.payload };
+    case 'ENQUEUE_ACTIONS':
+      return { ...state, actionQueue: [...state.actionQueue, ...action.payload], isProcessing: true };
+    case 'DEQUEUE_ACTION':
+      return { ...state, actionQueue: state.actionQueue.slice(1), isProcessing: state.actionQueue.length > 1 };
     case 'RESET_GAME':
       return initialGameLoopState;
     default:
@@ -68,6 +73,75 @@ export function useGameLoop(): [GameLoopState, any] {
   const [state, dispatch] = useReducer(gameReducer, initialGameLoopState);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   
+  // [New 6.1] 状态持久化：断线重连基础
+  useEffect(() => {
+    if (state.duelState && state.phase !== 'DRAFT_PHASE' && !state.isGameOver) {
+      localStorage.setItem('wizard_duel_save', JSON.stringify({
+        duelState: state.duelState,
+        phase: state.phase,
+        effectMessages: state.effectMessages
+      }));
+    } else if (state.isGameOver) {
+      localStorage.removeItem('wizard_duel_save');
+    }
+  }, [state.duelState, state.phase, state.isGameOver]);
+
+  // 恢复状态
+  useEffect(() => {
+    const saved = localStorage.getItem('wizard_duel_save');
+    if (saved && !state.duelState) {
+      try {
+        const parsed = JSON.parse(saved);
+        dispatch({ type: 'UPDATE_UI', payload: parsed });
+      } catch (e) {
+        console.error('Failed to restore game:', e);
+      }
+    }
+  }, []);
+  useEffect(() => {
+    if (state.actionQueue.length === 0 || timerRef.current) return;
+
+    const action = state.actionQueue[0];
+    const delay = action.delay !== undefined ? action.delay : ACTION_DELAY;
+
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      
+      switch (action.type) {
+        case 'UPDATE_STATE':
+          dispatch({ type: 'UPDATE_STATE', payload: action.payload });
+          break;
+        case 'ADD_MESSAGE':
+          dispatch({ type: 'ADD_MESSAGE', payload: action.payload });
+          break;
+        case 'SET_PHASE':
+          dispatch({ type: 'SET_PHASE', payload: action.payload });
+          break;
+        case 'SET_AI_STATUS':
+          dispatch({ type: 'SET_AI_STATUS', payload: action.payload });
+          break;
+        case 'PLAY_ANIMATION':
+          // 暂时透传给 UI 控制
+          dispatch({ type: 'UPDATE_UI', payload: action.payload });
+          break;
+        case 'UPDATE_UI':
+          dispatch({ type: 'UPDATE_UI', payload: action.payload });
+          break;
+        case 'WAIT':
+          break;
+      }
+      
+      dispatch({ type: 'DEQUEUE_ACTION' });
+    }, delay);
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [state.actionQueue]);
+
   // 使用 ref 追踪最新的 state，解决异步逻辑闭包问题
   const stateRef = useRef<GameLoopState>(state);
   useEffect(() => {
@@ -83,10 +157,10 @@ export function useGameLoop(): [GameLoopState, any] {
 
   // 启动新回合
   const startNewRound = useCallback((currentState: DuelState) => {
+    const commands: GameActionCommand[] = [];
     let nextState = prepareNextTurn(currentState);
-    const messages: string[] = [];
     
-    // 玩家抽牌
+    // 抽牌逻辑
     const pResult = drawCard(nextState.playerDeck, nextState.playerHand, nextState.playerFatigue);
     nextState.playerDeck = pResult.newDeck;
     nextState.playerHand = pResult.newHand;
@@ -94,44 +168,42 @@ export function useGameLoop(): [GameLoopState, any] {
     
     if (pResult.fatigueDamage > 0) {
       nextState.playerHP = Math.max(0, nextState.playerHP - pResult.fatigueDamage);
-      messages.push(`玩家由于疲劳受到 ${pResult.fatigueDamage} 点伤害`);
+      commands.push({ type: 'ADD_MESSAGE', payload: `玩家由于疲劳受到 ${pResult.fatigueDamage} 点伤害` });
     }
 
-    // 对手抽牌
     const oResult = drawCard(nextState.opponentDeck, nextState.opponentHand, nextState.opponentFatigue);
     nextState.opponentDeck = oResult.newDeck;
-    nextState.opponentHand = oResult.newHand; // 关键修复：更新实际手牌
+    nextState.opponentHand = oResult.newHand;
     nextState.opponentHandSize = nextState.opponentHand.length;
     nextState.opponentFatigue = oResult.newFatigue;
     
     if (oResult.fatigueDamage > 0) {
       nextState.opponentHP = Math.max(0, nextState.opponentHP - oResult.fatigueDamage);
-      messages.push(`对手由于疲劳受到 ${oResult.fatigueDamage} 点伤害`);
+      commands.push({ type: 'ADD_MESSAGE', payload: `对手由于疲劳受到 ${oResult.fatigueDamage} 点伤害` });
     }
 
-    dispatch({ type: 'UPDATE_STATE', payload: nextState });
+    commands.push({ type: 'UPDATE_STATE', payload: nextState });
 
     // 死亡检查
     const gameOverResult = checkGameOver(nextState);
     if (gameOverResult) {
-        dispatch({ type: 'UPDATE_UI', payload: {
+        commands.push({ type: 'UPDATE_UI', payload: {
             isGameOver: true,
             gameResult: gameOverResult === 'DRAW' ? 'LOSS' : gameOverResult,
             resultText: gameOverResult,
-            isProcessing: false
         }});
-        dispatch({ type: 'SET_PHASE', payload: 'ROUND_RESET' });
-        return;
+        commands.push({ type: 'SET_PHASE', payload: 'ROUND_RESET' });
+    } else {
+        commands.push({ type: 'SET_PHASE', payload: 'PLAYER_TURN' });
+        commands.push({ type: 'UPDATE_UI', payload: {
+            playerCard: null,
+            opponentCard: null,
+            effectMessages: commands.length > 0 ? [] : ['回合开始'],
+            aiStatus: initialAIStatus
+        }});
     }
     
-    dispatch({ type: 'SET_PHASE', payload: 'PLAYER_TURN' });
-    dispatch({ type: 'UPDATE_UI', payload: {
-        playerCard: null,
-        opponentCard: null,
-        isProcessing: false,
-        effectMessages: messages.length > 0 ? messages : ['回合开始'],
-        aiStatus: initialAIStatus
-    }});
+    dispatch({ type: 'ENQUEUE_ACTIONS', payload: commands });
   }, []);
 
   // 开始对战
@@ -147,8 +219,8 @@ export function useGameLoop(): [GameLoopState, any] {
     startNewRound(initialState);
   }, [startNewRound]);
 
-  // 玩家出牌 (Step-by-Step Actions)
-  const playCard = useCallback(async (spellId: SpellType): Promise<boolean> => {
+  // 玩家出牌
+  const playCard = useCallback((spellId: SpellType): boolean => {
     const { phase, duelState, isProcessing } = stateRef.current;
     if (phase !== 'PLAYER_TURN' || !duelState || isProcessing) return false;
 
@@ -163,38 +235,34 @@ export function useGameLoop(): [GameLoopState, any] {
         return false;
     }
     
-    dispatch({ type: 'UPDATE_UI', payload: { isProcessing: true, playerCard: spellId } });
+    const commands: GameActionCommand[] = [];
+    commands.push({ type: 'UPDATE_UI', payload: { playerCard: spellId } });
     
     const { newState, command } = executeSpell(duelState, 'player', spellId);
     
-    // 执行 Actions 队列
+    let tempState = { ...duelState };
     for (const action of command.actions) {
-        const currentDuelState = stateRef.current.duelState!;
-        const result = GameSequenceExecutor.applyAction(currentDuelState, action);
+        const result = GameSequenceExecutor.applyAction(tempState, action);
+        tempState = result.state;
+        commands.push({ type: 'UPDATE_STATE', payload: result.state });
+        if (result.log) commands.push({ type: 'ADD_MESSAGE', payload: result.log });
         
-        dispatch({ type: 'UPDATE_STATE', payload: result.state });
-        if (result.log) dispatch({ type: 'ADD_MESSAGE', payload: result.log });
-        
-        await new Promise(resolve => setTimeout(resolve, ACTION_DELAY));
-        
-        if (result.state.playerHP <= 0 || result.state.opponentHP <= 0) break;
+        if (tempState.playerHP <= 0 || tempState.opponentHP <= 0) break;
     }
 
-    dispatch({ type: 'UPDATE_STATE', payload: newState });
-    
-    const gameOverResult = checkGameOver(newState);
+    const gameOverResult = checkGameOver(tempState);
     if (gameOverResult) {
-        dispatch({ type: 'UPDATE_UI', payload: {
+        commands.push({ type: 'UPDATE_UI', payload: {
             isGameOver: true,
             gameResult: gameOverResult === 'DRAW' ? 'LOSS' : gameOverResult,
             resultText: gameOverResult,
-            isProcessing: false
         }});
-        dispatch({ type: 'SET_PHASE', payload: 'ROUND_RESET' });
-        return true;
+        commands.push({ type: 'SET_PHASE', payload: 'ROUND_RESET' });
+    } else {
+        commands.push({ type: 'UPDATE_STATE', payload: newState });
     }
     
-    dispatch({ type: 'UPDATE_UI', payload: { isProcessing: false } });
+    dispatch({ type: 'ENQUEUE_ACTIONS', payload: commands });
     return true;
   }, []);
 
@@ -203,61 +271,82 @@ export function useGameLoop(): [GameLoopState, any] {
     const { phase, duelState, isProcessing } = stateRef.current;
     if (phase !== 'PLAYER_TURN' || !duelState || isProcessing) return;
     
-    dispatch({ type: 'SET_PHASE', payload: 'OPPONENT_TURN' });
-    dispatch({ type: 'UPDATE_UI', payload: { isProcessing: true, playerCard: null } });
-    dispatch({ type: 'ADD_MESSAGE', payload: '对手回合...' });
-    dispatch({ type: 'SET_AI_STATUS', payload: { emote: 'thinking', message: '让我想想...' } });
+    const commands: GameActionCommand[] = [];
+    commands.push({ type: 'SET_PHASE', payload: 'OPPONENT_TURN' });
+    commands.push({ type: 'UPDATE_UI', payload: { playerCard: null } });
+    commands.push({ type: 'ADD_MESSAGE', payload: '对手回合...' });
+    commands.push({ type: 'SET_AI_STATUS', payload: { emote: 'thinking', message: '让我想想...' }, delay: 1000 });
 
-    clearTimer();
-    timerRef.current = setTimeout(async () => {
-        const currentRefState = stateRef.current.duelState;
-        if (!currentRefState) return;
-        
-        const { newState, commands } = executeAITurn(currentRefState);
-        
-        for (const cmd of commands) {
-            if (cmd.sourceSpell) {
-                dispatch({ type: 'UPDATE_UI', payload: { opponentCard: cmd.sourceSpell } });
-                dispatch({ type: 'SET_AI_STATUS', payload: { emote: 'thinking_fast', message: '就是这张！' } });
-                await new Promise(resolve => setTimeout(resolve, 800));
-            }
-
-            for (const action of cmd.actions) {
-                const innerState = stateRef.current.duelState!;
-                const result = GameSequenceExecutor.applyAction(innerState, action);
-                
-                dispatch({ type: 'UPDATE_STATE', payload: result.state });
-                if (result.log) dispatch({ type: 'ADD_MESSAGE', payload: result.log });
-                
-                await new Promise(resolve => setTimeout(resolve, ACTION_DELAY));
-                if (result.state.playerHP <= 0 || result.state.opponentHP <= 0) break;
-            }
-            
-            const interimState = stateRef.current.duelState!;
-            if (interimState.playerHP <= 0 || interimState.opponentHP <= 0) break;
-        }
-
-        dispatch({ type: 'UPDATE_STATE', payload: newState });
-        dispatch({ type: 'SET_AI_STATUS', payload: initialAIStatus });
-
-        const gameOverResult = checkGameOver(newState);
-        if (gameOverResult) {
-            dispatch({ type: 'UPDATE_UI', payload: {
-                isGameOver: true,
-                gameResult: gameOverResult === 'DRAW' ? 'LOSS' : gameOverResult,
-                resultText: gameOverResult,
-                isProcessing: false
-            }});
-            dispatch({ type: 'SET_PHASE', payload: 'ROUND_RESET' });
-        } else {
-            timerRef.current = setTimeout(() => {
-                const latest = stateRef.current.duelState;
-                if (latest) startNewRound(latest);
-            }, ROUND_TRANSITION_DELAY);
-        }
-    }, AI_DELAY);
+    const { newState, commands: aiCommands } = executeAITurn(duelState);
     
-  }, [startNewRound, clearTimer]);
+    let tempState = { ...duelState };
+    for (const cmd of aiCommands) {
+        if (cmd.sourceSpell) {
+            commands.push({ type: 'UPDATE_UI', payload: { opponentCard: cmd.sourceSpell } });
+            commands.push({ type: 'SET_AI_STATUS', payload: { emote: 'thinking_fast', message: '就是这张！' }, delay: 800 });
+        }
+
+        for (const action of cmd.actions) {
+            const result = GameSequenceExecutor.applyAction(tempState, action);
+            tempState = result.state;
+            commands.push({ type: 'UPDATE_STATE', payload: result.state });
+            if (result.log) commands.push({ type: 'ADD_MESSAGE', payload: result.log });
+            if (tempState.playerHP <= 0 || tempState.opponentHP <= 0) break;
+        }
+        if (tempState.playerHP <= 0 || tempState.opponentHP <= 0) break;
+    }
+
+    // [New 6.3] 随从攻击阶段 (Board Combat Phase)
+    const activeMinions = [...tempState.playerMinions, ...tempState.opponentMinions].filter(m => !m.exhausted);
+    if (activeMinions.length > 0) {
+        commands.push({ type: 'ADD_MESSAGE', payload: '随从进攻阶段！' });
+        commands.push({ type: 'WAIT', payload: null, delay: 500 });
+        
+        // 玩家随从攻击
+        tempState.playerMinions.forEach((m, idx) => {
+            if (!m.exhausted) {
+                const action = { type: 'MINION_ATTACK', target: 'player', value: idx } as any;
+                const result = GameSequenceExecutor.applyAction(tempState, action);
+                tempState = result.state;
+                commands.push({ type: 'UPDATE_STATE', payload: tempState });
+                if (result.log) commands.push({ type: 'ADD_MESSAGE', payload: result.log });
+            }
+        });
+
+        // 对手随从攻击
+        tempState.opponentMinions.forEach((m, idx) => {
+            if (!m.exhausted) {
+                const action = { type: 'MINION_ATTACK', target: 'opponent', value: idx } as any;
+                const result = GameSequenceExecutor.applyAction(tempState, action);
+                tempState = result.state;
+                commands.push({ type: 'UPDATE_STATE', payload: tempState });
+                if (result.log) commands.push({ type: 'ADD_MESSAGE', payload: result.log });
+            }
+        });
+    }
+
+    const gameOverResult = checkGameOver(tempState);
+    if (gameOverResult) {
+        commands.push({ type: 'UPDATE_UI', payload: {
+            isGameOver: true,
+            gameResult: gameOverResult === 'DRAW' ? 'LOSS' : gameOverResult,
+            resultText: gameOverResult,
+        }});
+        commands.push({ type: 'SET_PHASE', payload: 'ROUND_RESET' });
+    } else {
+        commands.push({ type: 'WAIT', payload: null, delay: 1000 });
+        commands.push({ type: 'PLAY_ANIMATION', payload: { _triggerNewRound: Date.now() } }); 
+    }
+
+    dispatch({ type: 'ENQUEUE_ACTIONS', payload: commands });
+  }, []);
+
+  // 特殊效果：触发新回合
+  useEffect(() => {
+    if ((state as any)._triggerNewRound && state.duelState) {
+        startNewRound(state.duelState);
+    }
+  }, [(state as any)._triggerNewRound]);
 
   const reset = useCallback(() => {
     clearTimer();
@@ -280,5 +369,6 @@ export function useGameLoop(): [GameLoopState, any] {
     }
   ];
 }
+
 
 export default useGameLoop;

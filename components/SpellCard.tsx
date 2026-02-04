@@ -17,6 +17,9 @@ interface SpellCardProps {
   spell?: Spell; 
   isSelected?: boolean;
   onClick?: () => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+  onPointerDown?: (e: React.PointerEvent) => void;
   disabled?: boolean;
   isSmall?: boolean;
   isFaceDown?: boolean;
@@ -69,6 +72,7 @@ export const SpellCard: React.FC<SpellCardProps> = ({
   onClick, 
   onMouseEnter,
   onMouseLeave,
+  onPointerDown,
   disabled, 
   isSmall, 
   isFaceDown,
@@ -181,12 +185,13 @@ export const SpellCard: React.FC<SpellCardProps> = ({
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeaveInternal}
       onClick={canPlay ? onClick : undefined}
+      onPointerDown={canPlay ? onPointerDown : undefined}
     >
       <div 
         className={`
           relative w-full h-full transition-transform duration-100 ease-out preserve-3d
-          ${isSelected ? 'scale-110 z-20' : ''}
-          ${isHovered && canPlay ? 'scale-110 z-20' : ''}
+          ${isSelected ? 'scale-110 z-20 aura-glow' : ''}
+          ${isHovered && canPlay ? 'scale-110 z-20 aura-glow' : ''}
         `}
         style={{ 
           transform: `rotateX(${x}deg) rotateY(${y}deg)`,

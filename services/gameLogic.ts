@@ -9,7 +9,8 @@ import {
 } from '../types.ts';
 import { 
   SPELLS, GAME_CONFIG, createDeck, getCardsForMode,
-  CRIT_CHANCE, WIN_MULTIPLIER, CRIT_MULTIPLIER, shuffleArray, getMechanicName
+  CRIT_CHANCE, WIN_MULTIPLIER, CRIT_MULTIPLIER, shuffleArray, getMechanicName,
+  MINION_DATA
 } from '../constants.ts';
 import { GameSequenceExecutor } from './sequence';
 
@@ -92,6 +93,8 @@ export const createInitialDuelState = (playerDeck: SpellType[], gameMode: GameMo
     
     playerEffects: [],
     opponentEffects: [],
+    playerMinions: [],
+    opponentMinions: [],
 
     heroSkillsUsed: false,
     opponentHeroSkillUsed: false,
@@ -198,9 +201,11 @@ const MECHANIC_DEFINITIONS: Record<string, (state: DuelState, caster: 'player' |
       description: `💥 AOE爆炸！额外造成 2 点穿透伤害`
     }];
   },
-  draw: (state, caster) => {
+  draw: (state, caster, spell, countered) => {
+    if (countered) return [{ type: 'MESSAGE', target: 'system', description: `🤫 ${caster === 'player' ? '你' : '对手'}的抽牌效果被抵消了` }];
+    const count = spell.id === 'hero_vine' ? 2 : 2; // 统一为抽2
     return [
-        { type: 'DRAW_CARD', target: caster, value: 2, description: `📚 ${caster === 'player' ? '你' : '对手'}抽了2张牌` }
+        { type: 'DRAW_CARD', target: caster, value: count, description: `📚 ${caster === 'player' ? '你' : '对手'}从卡组抽取了 ${count} 张牌` }
     ];
   },
   silence: (state, caster, spell, countered) => {
@@ -293,6 +298,17 @@ export const executeSpell = (
   const mechanicGenerator = MECHANIC_DEFINITIONS[spell.mechanic];
   if (mechanicGenerator) {
       actions.push(...mechanicGenerator(state, caster, spell, countered, crit));
+  }
+
+  // [New 6.3] 随从召唤逻辑
+  if (!countered && spell.summonId && MINION_DATA[spell.summonId]) {
+      const minionBase = MINION_DATA[spell.summonId];
+      actions.push({
+          type: 'SUMMON_MINION',
+          target: caster,
+          value: { ...minionBase, id: spell.summonId },
+          description: `✨ ${isPlayer ? '你' : '对手'}召唤了 ${minionBase.name}！`
+      });
   }
 
   // 7. 特殊操作: 手牌移除 & LastSpell 更新
@@ -553,6 +569,10 @@ export const prepareNextTurn = (state: DuelState): DuelState => {
   const oppTangle = newState.opponentEffects.find(e => e.type === 'tangle');
   newState.opponentCostMod = oppTangle ? (oppTangle.value || 0) : 0;
 
+  // [New 6.3] 随从状态重置
+  newState.playerMinions = newState.playerMinions.map(m => ({ ...m, exhausted: false }));
+  newState.opponentMinions = newState.opponentMinions.map(m => ({ ...m, exhausted: false }));
+
   // 4. 回合数++
   newState.roundNumber += 1;
 
@@ -718,6 +738,8 @@ export const createTavernDuelState = (playerDeck: SpellType[], aiProfile: AIProf
 
     playerEffects: [],
     opponentEffects: [],
+    playerMinions: [],
+    opponentMinions: [],
 
     playerLastSpell: null,
     opponentLastSpell: null,

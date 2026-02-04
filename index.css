@@ -142,6 +142,20 @@
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-5px); }
   }
+  @keyframes bg-breathing {
+    0% { transform: scale(1); opacity: 0.85; }
+    50% { transform: scale(1.05); opacity: 1; }
+    100% { transform: scale(1); opacity: 0.85; }
+  }
+  @keyframes aura-glow-pulse {
+    0%, 100% { opacity: 0.5; filter: brightness(1) blur(4px); }
+    50% { opacity: 1; filter: brightness(1.3) blur(8px); }
+  }
+  @keyframes shake-gentle {
+    0%, 100% { transform: translate(0, 0) rotate(0); }
+    25% { transform: translate(-1px, 1px) rotate(-0.5deg); }
+    75% { transform: translate(1px, -1px) rotate(0.5deg); }
+  }
 }
 
 @layer base {
@@ -229,6 +243,20 @@
     will-change: transform, opacity;
     backface-visibility: hidden;
     perspective: 1000px;
+  }
+  .animate-bg-breathing {
+    animation: bg-breathing 15s ease-in-out infinite;
+  }
+  .aura-glow {
+    @apply relative z-10;
+  }
+  .aura-glow::after {
+    content: '';
+    @apply absolute -inset-2 bg-purple-500/30 rounded-xl blur-lg -z-10;
+    animation: aura-glow-pulse 2s ease-in-out infinite;
+  }
+  .animate-shake-gentle {
+    animation: shake-gentle 0.4s ease-in-out infinite;
   }
 }
 

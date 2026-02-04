@@ -18,6 +18,17 @@ export type SpellType = "fire" | "vine" | "ice" | "thunder" | "rock" | "fire2" |
 
 export type Rarity = "common" | "uncommon" | "rare" | "mythic";
 
+export interface Minion {
+  id: string;
+  instanceId: string;
+  name: string;
+  hp: number;
+  maxHp: number;
+  atk: number;
+  exhausted: boolean;
+  type: string;
+}
+
 /**
  * 卡牌机制/关键词类型
  * - burn: 烧灼 - 获胜后下回合对手额外受伤
@@ -71,7 +82,8 @@ export interface Spell {
 
   // 描述文本
   description: string;
-  shortDesc: string; // 用于UI简短展示
+  shortDesc: string; 
+  summonId?: string; 
 }
 
 // ============ 游戏状态 ============
@@ -128,6 +140,8 @@ export interface DuelState {
   // 状态效果
   playerEffects: StatusEffect[];
   opponentEffects: StatusEffect[];
+  playerMinions: Minion[]; 
+  opponentMinions: Minion[]; 
 
   // 连击追踪
   playerLastSpell: SpellType | null;
@@ -269,6 +283,8 @@ export type ActionType =
   | 'DRAW_CARD' 
   | 'MESSAGE'
   | 'GAME_OVER'
+  | 'SUMMON_MINION'
+  | 'MINION_ATTACK'
   | 'ANIMATION_TRIGGER';
 
 export interface GameAction {
@@ -296,6 +312,13 @@ export interface AIStatus {
 
 // ============ FSM Reducer 类型 (New 4.0) ============
 
+// [New 6.0] 动作队列指令
+export interface GameActionCommand {
+  type: 'UPDATE_STATE' | 'ADD_MESSAGE' | 'SET_PHASE' | 'SET_AI_STATUS' | 'PLAY_ANIMATION' | 'WAIT' | 'UPDATE_UI';
+  payload: any;
+  delay?: number;
+}
+
 export interface GameLoopState {
   duelState: DuelState | null;
   phase: DuelPhase;
@@ -315,6 +338,7 @@ export interface GameLoopState {
     endX: number;
     endY: number;
   } | null;
+  actionQueue: GameActionCommand[]; // 动作队列
 }
 
 export type GameLoopAction =
@@ -325,4 +349,6 @@ export type GameLoopAction =
   | { type: 'ADD_MESSAGE'; payload: string }
   | { type: 'SET_AI_STATUS'; payload: Partial<AIStatus> }
   | { type: 'SET_TARGETING'; payload: GameLoopState['targetingData'] }
+  | { type: 'ENQUEUE_ACTIONS'; payload: GameActionCommand[] }
+  | { type: 'DEQUEUE_ACTION' }
   | { type: 'RESET_GAME' };

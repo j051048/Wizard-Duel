@@ -133,6 +133,72 @@ export class GameSequenceExecutor {
         }
         break;
       }
+      case 'SUMMON_MINION': {
+          const target = action.target;
+          const minionData = action.value;
+          const minions = target === 'player' ? [...newState.playerMinions] : [...newState.opponentMinions];
+          
+          if (minions.length < 5) {
+              minions.push({
+                  ...minionData,
+                  instanceId: `m-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                  exhausted: true // 刚召唤出来是疲劳的 (没有冲锋的话)
+              });
+              if (target === 'player') newState.playerMinions = minions;
+              else newState.opponentMinions = minions;
+          }
+          break;
+      }
+      case 'MINION_ATTACK': {
+          // 简化逻辑：随从攻击对位随从，若无则攻脸
+          const isPlayer = action.target === 'player';
+          const attackerSide = isPlayer ? newState.playerMinions : newState.opponentMinions;
+          const defenderSide = isPlayer ? newState.opponentMinions : newState.playerMinions;
+          const attackerIdx = action.value;
+
+          if (attackerSide[attackerIdx]) {
+              const attacker = { ...attackerSide[attackerIdx] };
+              const defender = defenderSide[attackerIdx] ? { ...defenderSide[attackerIdx] } : null;
+
+              if (defender) {
+                  // 交换伤害
+                  defender.hp -= attacker.atk;
+                  attacker.hp -= defender.atk;
+                  
+                  // 更新防御方
+                  const newDefenders = [...defenderSide];
+                  if (defender.hp <= 0) newDefenders.splice(attackerIdx, 1);
+                  else newDefenders[attackerIdx] = defender;
+                  
+                  if (isPlayer) newState.opponentMinions = newDefenders;
+                  else newState.playerMinions = newDefenders;
+                  
+                  log = `⚔️ ${attacker.name} 攻击了 ${defender.name}`;
+              } else {
+                  // 直接攻脸
+                  const dmg = attacker.atk;
+                  if (isPlayer) {
+                      newState.opponentHP = Math.max(0, newState.opponentHP - dmg);
+                      log = `⚔️ ${attacker.name} 直接攻击对手，造成${dmg}点伤害`;
+                  } else {
+                      newState.playerHP = Math.max(0, newState.playerHP - dmg);
+                      log = `⚔️ ${attacker.name} 直接攻击你，造成${dmg}点伤害`;
+                  }
+              }
+
+              // 更新攻击方状态
+              const newAttackers = [...attackerSide];
+              if (attacker.hp <= 0) newAttackers.splice(attackerIdx, 1);
+              else {
+                  attacker.exhausted = true;
+                  newAttackers[attackerIdx] = attacker;
+              }
+              
+              if (isPlayer) newState.playerMinions = newAttackers;
+              else newState.opponentMinions = newAttackers;
+          }
+          break;
+      }
     }
 
     // 触发检查
@@ -152,8 +218,10 @@ export class GameSequenceExecutor {
           if (!trigger.condition || trigger.condition(state, context)) {
               const actions = trigger.action(state, context);
               for (const act of actions) {
-                  // 递归执行触发产生的动作 (小心无限循环)
-                  this.applyAction(state, act);
+                  // 递归执行触发产生的动作，并捕获返回值更新状态
+                  const result = this.applyAction(state, act);
+                  // 将新状态的属性同步回当前 state
+                  Object.assign(state, result.state);
               }
               if (trigger.isOnce) {
                   state.playerTriggers = state.playerTriggers.filter(t => t.id !== trigger.id);

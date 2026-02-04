@@ -16,6 +16,12 @@ export const GAME_CONFIG: GameConfig = {
 
 export const MAX_HP = GAME_CONFIG.maxHP;
 
+export const MINION_DATA: Record<string, { name: string, atk: number, hp: number, type: string }> = {
+  'rock_golem': { name: '大地巨像', atk: 5, hp: 10, type: 'rock' },
+  'spirit_wolf': { name: '幽灵狼', atk: 3, hp: 3, type: 'vine' },
+  'fire_spirit': { name: '火元素', atk: 4, hp: 2, type: 'fire' },
+};
+
 // ============ 差异化卡牌设计 (The Grand Tournament Set) ============
 
 /**
@@ -443,8 +449,9 @@ export const SPELLS: Spell[] = [
     armorGain: 15,
     rarity: 'mythic',
     mechanic: 'fortify',
-    description: '造成6点伤害，但获得15点护甲。',
-    shortDesc: '坚韧: +15 护甲'
+    summonId: 'rock_golem',
+    description: '造成6点伤害，获得15点护甲，并召唤一个大地巨像(5/10)。',
+    shortDesc: '由于坚韧而召唤巨像'
   },
   // 新增机制卡牌
   { 
@@ -549,12 +556,12 @@ export const SPELLS: Spell[] = [
         beats: 'ice',             // 🔧 修复：藤克冰
     manaCost: 2,              // 🔧 平衡：英雄技能需要2费
     damage: 0,
-    armorGain: 2,             // 🔧 平衡：3甲降为2甲
-    rarity: 'mythic',
-    mechanic: 'heal',
-    cardSet: 'legacy',        // 遗产扩展包
-    description: '获得3点护甲并抽1张牌。（英雄技能：每回合可用1次）',
-    shortDesc: '英雄: +3甲 +1抽'
+    armorGain: 3, 
+    rarity: 'rare',
+    mechanic: 'draw',
+    cardSet: 'classic',
+    description: '获得3点护甲并抽2张牌。',
+    shortDesc: '英雄: +3甲 +2抽'
   },
   { 
     id: 'hero_ice', 
@@ -603,12 +610,12 @@ export const SPELLS: Spell[] = [
         beats: 'fire',            // 🔧 修复：石克火
     manaCost: 2,              // 🔧 平衡：英雄技能需要2费
     damage: 0,
-    armorGain: 2,             // 🔧 平衡：8甲降为2甲（与炉石战士一致）
+    armorGain: 5,             // 🔧 平衡：提高到5甲
     rarity: 'mythic',
     mechanic: 'fortify',
     cardSet: 'legacy',        // 遗产扩展包
-    description: '获得8点护甲。（英雄技能：每回合可用1次）',
-    shortDesc: '英雄: +8 护甲'
+    description: '获得5点护甲。（英雄技能：每回合可用1次）',
+    shortDesc: '英雄: +5 护甲'
   },
   { 
     id: 'skip', 
