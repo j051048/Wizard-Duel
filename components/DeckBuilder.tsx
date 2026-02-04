@@ -1,156 +1,72 @@
 /**
-
  * DeckBuilder - 牌组构筑组件
-
- * 
-
- * 允许玩家从卡牌池中选择卡牌构筑牌组
-
  */
 
-
-
-import React, { useState } from 'react';
-
-import { ArrowLeft, Save, Trash2, Plus } from 'lucide-react';
-
-import { SpellType, Deck, Spell, GameMode } from '../types';
-
-import { SPELLS, getCardsForMode } from '../constants';
-
+import React from 'react';
+import { SpellType, Deck, GameMode } from '../types';
 import { getSpellById } from '../services/gameLogic';
+import CardDetailModal from './CardDetailModal';
 
-import { SpellCard } from './SpellCard';
+// Extracted Components
+import ManaCurve from './deck/ManaCurve';
+import CardPool from './deck/CardPool';
+import DeckList from './deck/DeckList';
 
-
+// Hook
+import { useDeckBuilder } from '../hooks/useDeckBuilder';
 
 interface DeckBuilderProps {
-
   onBack: () => void;
-
   onSaveDeck: (deck: Deck) => void;
-
   existingDecks: Deck[];
-
   selectedDeck?: Deck | null;
-
-  gameMode?: GameMode; // 新增：游戏模式
-
+  gameMode?: GameMode;
 }
 
-
-
 export const DeckBuilder: React.FC<DeckBuilderProps> = ({
-
   onBack,
-
   onSaveDeck,
-
   existingDecks,
-
   selectedDeck,
-
   gameMode = 'standard' as GameMode
-
 }) => {
-
-  const [deckName, setDeckName] = useState(selectedDeck?.name || '新牌组');
-  const [selectedCards, setSelectedCards] = useState<SpellType[]>(selectedDeck?.cards || []);
-  // Filters
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeCostFilter, setActiveCostFilter] = useState<number | null>(null);
-  const [lastAddedId, setLastAddedId] = useState<string | null>(null);
-
-  const rawCardPool = getCardsForMode(gameMode).filter(s => s.id !== 'skip');
-
-  const filteredCardPool = rawCardPool.filter(card => {
-    const matchesSearch = card.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          card.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCost = activeCostFilter === null || 
-                        (activeCostFilter === 7 ? card.manaCost >= 7 : card.manaCost === activeCostFilter);
-    return matchesSearch && matchesCost;
-  });
-
-
-
-  // 计算卡牌数量
-
-  const cardCounts = selectedCards.reduce((acc, card) => {
-
-    acc[card] = (acc[card] || 0) + 1;
-
-    return acc;
-
-  }, {} as Record<SpellType, number>);
-
-
-
-  const totalCards = selectedCards.length;
-
-  const isValidDeck = totalCards >= 20 && totalCards <= 30;
-
-
-
-  const addCard = (spellId: SpellType, e?: React.MouseEvent) => {
-    // Play sound or haptic here if available
-    if (totalCards < 30) {
-      setSelectedCards(prev => [...prev, spellId]);
-      setLastAddedId(spellId);
-      // Reset highlight after animation
-      setTimeout(() => setLastAddedId(null), 500);
-    }
-  };
-
-
-
-  const removeCard = (spellId: SpellType) => {
-
-    const index = selectedCards.lastIndexOf(spellId);
-
-    if (index > -1) {
-
-      const newCards = [...selectedCards];
-
-      newCards.splice(index, 1);
-
-      setSelectedCards(newCards);
-
-    }
-
-  };
-
-
+  const {
+    deckName,
+    setDeckName,
+    selectedCards,
+    searchTerm,
+    setSearchTerm,
+    activeCostFilter,
+    setActiveCostFilter,
+    lastAddedId,
+    detailSpell,
+    setDetailSpell,
+    handleCardPressStart,
+    handleCardPressEnd,
+    handleRightClick,
+    filteredCardPool,
+    cardCounts,
+    totalCards,
+    isValidDeck,
+    addCard,
+    removeCard
+  } = useDeckBuilder(selectedDeck, gameMode);
 
   const saveDeck = () => {
-
     if (!isValidDeck) return;
-
     
-
     const deck: Deck = {
-
       id: selectedDeck?.id || Date.now().toString(),
-
       name: deckName,
-
       cards: selectedCards,
-
       createdAt: selectedDeck?.createdAt || Date.now(),
-
       lastUsed: Date.now()
-
     };
-
     
-
     onSaveDeck(deck);
-
   };
 
-
-
   return (
-
     <div className="min-h-screen bg-[#0f0518] relative overflow-hidden flex flex-col items-center py-6 px-4">
       {/* Background Ambience */}
       <div className="fixed inset-0 pointer-events-none">
@@ -160,7 +76,6 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       </div>
 
       <div className="w-full max-w-7xl mx-auto z-10 flex flex-col h-[90vh]">
-
         {/* Header & Stats Section */}
         <div className="bg-slate-900/80 backdrop-blur-md rounded-xl border border-white/10 p-6 mb-6 shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
@@ -195,184 +110,43 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             </div>
 
             {/* Right: Mana Curve Visualization */}
-            <div className="flex items-end gap-3 h-24 pt-4 px-4 bg-black/20 rounded-lg border border-white/5">
-                {[1,2,3,4,5,6].map(cost => {
-                  const count = selectedCards.filter(card => getSpellById(card).manaCost === cost).length;
-                  const height = Math.min(100, (count / 10) * 100); // Max height capped at 10 cards
-                  return (
-                    <div key={cost} className="flex flex-col items-center gap-1 group/bar relative w-6">
-                       {/* Count Tooltip */}
-                       <div className="absolute -top-6 text-xs font-bold text-white opacity-0 group-hover/bar:opacity-100 transition-opacity">
-                         {count}
-                       </div>
-                       {/* Bar */}
-                       <div 
-                         className="w-full bg-gradient-to-t from-cyan-600 to-blue-400 rounded-sm relative transition-all duration-500"
-                         style={{ height: `${Math.max(4, height)}%` }}
-                       >
-                         {/* Glow effect */}
-                         <div className="absolute inset-0 bg-blue-400 blur-sm opacity-0 group-hover/bar:opacity-50 transition-opacity"></div>
-                       </div>
-                       {/* Label */}
-                       <div className="text-[10px] font-bold text-gray-500 mt-1">{cost}</div>
-                    </div>
-                  );
-                })}
-            </div>
+            <ManaCurve selectedCards={selectedCards} />
           </div>
         </div>
-
-
 
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-0">
-          
-          {/* LEFT: Card Pool (Grimoire Page) */}
-          <div className="lg:col-span-7 flex flex-col bg-[#1a1425] rounded-xl border border-[#3b304e] shadow-2xl relative overflow-hidden">
-             {/* Decorative Corner */}
-             <div className="absolute top-0 left-0 w-16 h-16 border-t-2 border-l-2 border-amber-600/30 rounded-tl-xl pointer-events-none"></div>
-             
-             {/* Filters Header */}
-             <div className="p-4 border-b border-white/5 bg-black/20 space-y-3">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-xl font-wizard text-amber-100 flex items-center gap-2">
-                     <span className="text-2xl">📖</span> Card Collection
-                  </h3>
-                  {/* Search Input */}
-                  <div className="relative">
-                    <input 
-                      type="text" 
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Search spells..." 
-                      className="bg-black/40 border border-white/10 rounded-full px-4 py-1 text-sm text-white focus:outline-none focus:border-amber-500 w-48 transition-all"
-                    />
-                  </div>
-                </div>
+          <CardPool 
+            filteredCardPool={filteredCardPool}
+            onAddCard={addCard}
+            onRightClick={handleRightClick}
+            onPressStart={handleCardPressStart}
+            onPressEnd={handleCardPressEnd}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            activeCostFilter={activeCostFilter}
+            onCostFilterChange={setActiveCostFilter}
+          />
 
-                {/* Mana Filter Gems */}
-                <div className="flex gap-2">
-                   <button 
-                      onClick={() => setActiveCostFilter(null)}
-                      className={`px-3 py-0.5 rounded-full text-xs font-bold transition-all border ${activeCostFilter === null ? 'bg-amber-600 border-amber-400 text-white' : 'bg-transparent border-white/10 text-gray-500 hover:border-white/30'}`}
-                   >
-                     ALL
-                   </button>
-                   {[0, 1, 2, 3, 4, 5, 6, 7].map(cost => (
-                     <button
-                        key={cost}
-                        onClick={() => setActiveCostFilter(activeCostFilter === cost ? null : cost)}
-                        className={`
-                          w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all border shadow-sm
-                          ${activeCostFilter === cost 
-                            ? 'bg-blue-600 border-blue-400 text-white scale-110 shadow-blue-500/50' 
-                            : 'bg-[#1a233b] border-blue-900/50 text-blue-300 hover:bg-blue-900'}
-                        `}
-                     >
-                        {cost === 7 ? '7+' : cost}
-                     </button>
-                   ))}
-                </div>
-             </div>
-
-             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 gap-4 pb-12">
-                   {filteredCardPool.map((spell) => (
-                      <div key={spell.id} className="relative group cursor-pointer" onClick={(e) => addCard(spell.id, e)}>
-                        <div className="transform transition-transform duration-200 group-hover:scale-105 group-hover:-translate-y-2">
-                           <SpellCard spell={spell} isSmall />
-                        </div>
-                        {/* Hover Overlay */}
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded-lg pointer-events-none">
-                           <div className="bg-green-600 text-white rounded-full p-1 shadow-lg transform scale-0 group-hover:scale-100 transition-transform">
-                              <Plus size={16} />
-                           </div>
-                        </div>
-                      </div>
-                   ))}
-                </div>
-             </div>
-          </div>
-
-          {/* RIGHT: Current Deck (Scroll/List) */}
-          <div className="lg:col-span-5 flex flex-col bg-[#13111a] rounded-xl border border-[#4a4060] shadow-2xl relative relative overflow-hidden">
-             {/* Decorative Top */}
-             <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-l from-amber-500/50 to-transparent"></div>
-
-             <div className="p-4 border-b border-white/5 flex justify-between items-center bg-black/20">
-                <h3 className="text-xl font-wizard text-blue-100 flex items-center gap-2">
-                   <span className="text-2xl">📜</span> Current Deck
-                </h3>
-                <div className="flex gap-2">
-                   <button onClick={onBack} className="p-2 text-gray-400 hover:text-white transition-colors" title="Back">
-                      <ArrowLeft size={20} />
-                   </button>
-                   <button 
-                      onClick={saveDeck} 
-                      disabled={!isValidDeck}
-                      className={`p-2 rounded-lg transition-all ${isValidDeck ? 'text-green-400 hover:text-green-300 hover:bg-green-900/30' : 'text-gray-600 cursor-not-allowed'}`}
-                      title="Save Deck"
-                   >
-                      <Save size={20} />
-                   </button>
-                </div>
-             </div>
-
-             <div className="flex-1 overflow-y-auto p-2 custom-scrollbar space-y-2">
-                {Object.entries(cardCounts).sort((a,b) => {
-                   // Sort by mana cost
-                   const spellA = getSpellById(a[0] as SpellType);
-                   const spellB = getSpellById(b[0] as SpellType);
-                   return spellA.manaCost - spellB.manaCost;
-                }).map(([spellId, count]) => {
-                  const spell = getSpellById(spellId as SpellType);
-                  const isJustAdded = lastAddedId === spellId;
-                  
-                  return (
-                    <div 
-                       key={spellId} 
-                       className={`
-                          group flex items-center gap-3 p-2 rounded-lg border transition-all cursor-pointer relative overflow-hidden select-none
-                          ${isJustAdded ? 'bg-amber-500/20 border-amber-500/50 scale-[1.02]' : 'bg-white/5 hover:bg-white/10 border-transparent hover:border-white/10'}
-                       `}
-                       onClick={() => removeCard(spellId as SpellType)}
-                    >  
-                       {/* Mana Cost Gem */}
-                       <div className="w-8 h-8 rounded-full bg-blue-900 ring-1 ring-blue-500 flex items-center justify-center font-black text-blue-100 text-sm shadow-inner z-10 shrink-0">
-                          {spell.manaCost}
-                       </div>
-
-                       {/* Name & Count */}
-                       <div className="flex-1 min-w-0 z-10">
-                          <div className={`font-bold text-sm truncate ${spell.color}`}>{spell.name}</div>
-                          <div className="text-[10px] text-gray-500 truncate">{spell.shortDesc}</div>
-                       </div>
-                       
-                       {/* Count Badge */}
-                       <div className="text-xl font-wizard text-amber-500 z-10 mr-2">x{count}</div>
-
-                       {/* Background Art Strip (Subtle) */}
-                       <div className="absolute right-0 top-0 bottom-0 w-1/2 opacity-20 mask-linear-fade">
-                          {spell.artSrc && <img src={spell.artSrc} className="w-full h-full object-cover" alt="" />}
-                       </div>
-
-                       {/* Hover Remove Icon */}
-                       <div className="absolute right-2 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity z-20 bg-black/80 p-1 rounded">
-                          <Trash2 size={16} />
-                       </div>
-                    </div>
-                  );
-                })}
-             </div>
-          </div>
-
+          <DeckList 
+            cardCounts={cardCounts}
+            onRemoveCard={removeCard}
+            onBack={onBack}
+            onSave={saveDeck}
+            isValidDeck={isValidDeck}
+            lastAddedId={lastAddedId}
+          />
         </div>
-
       </div>
 
+      {/* Card Detail Modal */}
+      {detailSpell && (
+          <CardDetailModal 
+            spell={getSpellById(detailSpell)} 
+            onClose={() => setDetailSpell(null)} 
+          />
+      )}
     </div>
-
   );
-
 };
 
 export default DeckBuilder;

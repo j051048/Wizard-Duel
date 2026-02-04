@@ -303,3 +303,27 @@
 .low-quality .opacity-60 {
     opacity: 1 !important;
 }
+
+/* --- Mobile Adaptation Fixes --- */
+@media (max-width: 375px) {
+    .spell-card-container {
+        transform: scale(0.85); /* Global scale down for tiny screens */
+    }
+    
+    /* Ensure hand area doesn't get obscured by system bars */
+    .safe-area-bottom {
+        padding-bottom: max(env(safe-area-inset-bottom), 12px);
+    }
+}
+
+/* Landscape Mode Optimization */
+@media (orientation: landscape) and (max-height: 500px) {
+    .arena-hero-avatar {
+        display: none; /* Hide avatars to save vertical space */
+    }
+    
+    .arena-hand-area {
+        height: 80px !important;
+        bottom: 0 !important;
+    }
+}

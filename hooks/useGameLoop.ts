@@ -1,4 +1,4 @@
-import { useReducer, useCallback, useRef, useEffect } from 'react';
+import React, { useReducer, useCallback, useRef, useEffect } from 'react';
 import { 
   SpellType, DuelPhase, DuelState, RoundResult, GameMode, AIProfile,
   GameLoopState, GameLoopAction, AIStatus, GameActionCommand
@@ -16,6 +16,17 @@ const ROUND_TRANSITION_DELAY = 1500;
 const ACTION_DELAY = 450; // 炉石级结算节奏感延迟
 
 const initialAIStatus: AIStatus = { emote: null, message: null };
+
+export type { GameLoopState };
+
+export interface GameLoopActions {
+  startDuel: (playerDeck: SpellType[], opponentDeck: SpellType[], mode: GameMode) => void;
+  startTavernDuel: (playerDeck: SpellType[], opponentProfile: AIProfile, mode: GameMode) => void;
+  playCard: (spellId: SpellType, e?: React.MouseEvent) => boolean;
+  passTurn: () => void;
+  reset: () => void;
+  setTargeting: (data: GameLoopState['targetingData']) => void;
+}
 
 const initialGameLoopState: GameLoopState = {
   duelState: null,
@@ -69,7 +80,7 @@ function gameReducer(state: GameLoopState, action: GameLoopAction): GameLoopStat
   }
 }
 
-export function useGameLoop(): [GameLoopState, any] {
+export function useGameLoop(): [GameLoopState, GameLoopActions] {
   const [state, dispatch] = useReducer(gameReducer, initialGameLoopState);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   
