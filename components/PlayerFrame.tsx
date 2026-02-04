@@ -254,19 +254,15 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
       />
 
       {/* === Layer 3: Avatar === */}
-      {/* 
-         位于左侧，圆形。增加一个厚重的边框来掩盖图层交界处。
-         位置：根据 v4 图片结构微调。通常左侧 5%-25% 区域。
-      */}
       <div 
         className="absolute z-20 rounded-full overflow-hidden bg-slate-900 shadow-2xl"
         style={{
-            left: '2%', 
-            top: '8%',
-            height: '84%',
+            left: '5.5%', 
+            top: '16%',
+            height: '68%',
             aspectRatio: '1/1',
             boxShadow: '0 0 20px rgba(0,0,0,0.8), inset 0 0 10px rgba(0,0,0,0.8)',
-            border: '3px solid #1a1a1a' // 深色内衬圈
+            border: '2px solid #1a1a1a'
         }}
       >
          <img 
@@ -274,46 +270,43 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
            alt={name}
            className="w-full h-full object-cover"
          />
-         {/* 精致的金属外环 (CSS 模拟) */}
-         <div className="absolute inset-0 rounded-full border-[3px] border-[#c5a059] opacity-80 mix-blend-overlay" />
-         <div className="absolute inset-0 rounded-full border border-white/20" />
-         <div className="absolute inset-0 shadow-[inset_0_4px_15px_rgba(0,0,0,0.6)] pointer-events-none" />
+         <div className="absolute inset-0 rounded-full border-[2px] border-[#c5a059] opacity-90 mix-blend-overlay" />
+         <div className="absolute inset-0 shadow-[inset_0_4px_15px_rgba(0,0,0,0.8)] pointer-events-none" />
       </div>
 
       {/* === Layer 4: Info Content === */}
-      <div className="absolute z-30 flex flex-col justify-center pl-2"
+      <div className="absolute z-30 flex flex-col pl-4"
            style={{
-               left: '28%', // 头像右侧开始
-               right: '5%',
-               top: '18%',
-               bottom: '15%'
+               left: '26%', 
+               right: '6%',
+               top: '28%', // 下移，避开 HUD 顶部装饰
+               bottom: '12%'
            }}
       >
          {/* Top Row: Name */}
-         <div className="flex items-end justify-between mb-1 px-1 h-[25%]">
-            <span className={`
-                text-base sm:text-lg font-wizard font-bold tracking-widest uppercase truncate
-                ${isPlayer ? 'text-[#f0e6d2] drop-shadow-[0_2px_2px_rgba(0,0,0,1)]' : 'text-[#e2b8b8] drop-shadow-[0_2px_2px_rgba(0,0,0,1)]'}
-            `}>
-                {name}
-            </span>
+         <div className="absolute -top-6 left-1 text-sm sm:text-base font-wizard font-bold tracking-widest uppercase truncate flex items-center gap-2"
+              style={{
+                 textShadow: '0 2px 4px rgba(0,0,0,1)'
+              }}
+         >
+            <span className={isPlayer ? 'text-[#f0e6d2]' : 'text-[#e2b8b8]'}>{name}</span>
+            {/* Rank/Level could go here */}
          </div>
 
-         {/* Middle: Health Bar Slot */}
-         <div className="relative w-full h-[20%] flex items-center pr-4">
+         {/* Middle: Health Bar Slot (坐进槽位) */}
+         <div className="relative w-[96%] h-[28%] flex items-center pr-1 mt-1">
              <HealthBar current={hp} max={maxHp} isPlayer={isPlayer} />
          </div>
 
-         {/* Bottom: Mana & Buffs (Resources) */}
-         <div className="flex items-center gap-4 mt-2 h-[35%] px-1">
-             <div className="transform scale-90 origin-left">
+         {/* Bottom: Mana & Buffs */}
+         <div className="flex items-center gap-3 mt-auto h-[40%] px-1">
+             <div className="transform scale-90 origin-left flex items-center">
                  <ManaCrystals current={mana} max={maxMana} />
              </div>
              
-             {/* Status Badge Row */}
-             <div className="flex gap-1 overflow-visible ml-auto">
+             <div className="flex gap-1 overflow-visible ml-auto pb-1">
                  {effects.slice(0, 4).map((effect, i) => (
-                    <div key={i} className="transform scale-75 origin-right transition-all hover:scale-100">
+                    <div key={i} className="transform scale-75 origin-right hover:scale-100 transition-transform">
                         <StatusEffectBadge effect={effect} />
                     </div>
                  ))}

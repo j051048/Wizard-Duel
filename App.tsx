@@ -104,6 +104,9 @@ function App() {
 
       const userDecks = await ApiService.getDecks(addr);
       setDecks(userDecks);
+      if (userDecks.length > 0 && !selectedDeck) {
+        setSelectedDeck(userDecks[0]);
+      }
 
       const hist = await ApiService.getHistory(addr);
       setHistory(hist);

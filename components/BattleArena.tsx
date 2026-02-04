@@ -272,14 +272,16 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         ))}
 
         {effectMessages.length > 0 && (
-          <div className="absolute top-1/2 -translate-y-1/2 flex flex-col items-center gap-2 pointer-events-none w-full max-w-sm px-4">
-            {effectMessages.slice(-2).map((msg, i) => (
-              <div key={i} className="bg-black/80 backdrop-blur-xl rounded-2xl px-6 py-2 border border-purple-500/50 shadow-2xl animate-fade-in-up">
-                <p className="text-sm md:text-base text-purple-200 font-bold text-center italic">
-                  {msg}
-                </p>
-              </div>
-            ))}
+          <div className="absolute top-[40%] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none z-50">
+            {/* 只显示最新的一条消息，并让它自动淡出 */}
+            <div 
+               key={effectMessages[effectMessages.length - 1]} // Key change triggers animation restart
+               className="bg-black/60 backdrop-blur-md rounded-full px-8 py-2 border border-purple-500/30 shadow-2xl animate-[messageSlideUpFade_3s_ease-out_forwards]"
+            >
+              <p className="text-base md:text-lg text-purple-200 font-bold tracking-wider italic shadow-black drop-shadow-md">
+                {effectMessages[effectMessages.length - 1]}
+              </p>
+            </div>
           </div>
         )}
       </div>
