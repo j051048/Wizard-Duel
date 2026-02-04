@@ -154,7 +154,7 @@ export const ManaCrystals: React.FC<ManaCrystalsProps> = ({ current, max }) => (
         className="relative w-6 h-6 sm:w-8 sm:h-8 transition-transform duration-300 hover:scale-110"
       >
         <img 
-            src={i < current ? "/ui/mana_full.webp" : "/ui/mana_empty.webp"}
+            src={i < current ? "/ui/mana_crystal_active_v2.png" : "/ui/mana_crystal_inactive_v2.png"}
             alt={i < current ? "Full Mana" : "Empty Mana"} 
             className={`w-full h-full object-contain filter drop-shadow-md transition-all duration-500 ${i < current ? 'brightness-110 hover:brightness-125' : 'grayscale opacity-80'}`} 
         />
@@ -276,40 +276,21 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
   return (
     <div className={`relative group transition-all duration-300 ${isShaking ? 'animate-shake-strong' : ''}`}>
       
-      {/* === FANTASY FRAME BACKGROUND === */}
-      {/* Main polygonal shape background */}
-      <div 
-        className={`
-          absolute inset-0 bg-gradient-to-br 
-          ${isPlayer ? 'from-slate-900/90 via-indigo-950/90 to-slate-900/90' : 'from-slate-900/90 via-red-950/90 to-slate-900/90'}
-          backdrop-blur-md rounded-xl border border-white/10
-          shadow-[0_10px_30px_rgba(0,0,0,0.5)]
-        `}
-        style={{
-          clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)'
-        }}
-      />
-      
-      {/* Decorative Gold/Silver Border Lines */}
-      <div 
-        className={`absolute inset-0 pointer-events-none rounded-xl z-20`}
-        style={{
-          background: `
-            linear-gradient(to right, ${isPlayer ? '#fbbf24' : '#f87171'} 2px, transparent 2px) 0 0 / 100% 100% no-repeat,
-            linear-gradient(to bottom, ${isPlayer ? '#fbbf24' : '#f87171'} 2px, transparent 2px) 0 0 / 100% 100% no-repeat,
-            linear-gradient(to left, ${isPlayer ? '#fbbf24' : '#f87171'} 2px, transparent 2px) 100% 100% / 100% 100% no-repeat,
-            linear-gradient(to top, ${isPlayer ? '#fbbf24' : '#f87171'} 2px, transparent 2px) 100% 100% / 100% 100% no-repeat
-          `,
-          clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
-          opacity: 0.5
-        }}
-      />
+      {/* === FANTASY FRAME BACKGROUND (IMAGE ASSET) === */}
+      <div className="absolute inset-0 z-0">
+        <img 
+          src={isPlayer ? "/ui/frames/player_frame.png" : "/ui/frames/opponent_frame.png"}
+          alt="Frame"
+          className="w-full h-full object-fill drop-shadow-2xl opacity-90"
+        />
+        {/* Inner Glare/Highlight for depth */}
+        <div className="absolute inset-4 bg-gradient-to-b from-white/10 to-transparent opacity-30 rounded-lg pointer-events-none" />
+      </div>
 
-      {/* Glowing Accents */}
-      <div className={`absolute -inset-1 rounded-xl blur-md opacity-30 ${isPlayer ? 'bg-blue-500' : 'bg-red-500'}`} />
+     {/* No CSS Borders needed anymore, handled by image */}
 
       {/* === CONTENT CONTAINER === */}
-      <div className="relative z-30 flex items-center p-3 gap-4">
+      <div className="relative z-30 flex items-center p-6 gap-5">
         
         {/* AVATAR FRAME */}
         <div className="relative flex-shrink-0">
