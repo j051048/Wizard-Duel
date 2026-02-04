@@ -63,9 +63,12 @@ function App() {
         guestId = `Guest-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
         localStorage.setItem('wizard_guest_id', guestId);
       }
-      user.setActiveAddress(guestId);
+      if (user.activeAddress !== guestId) {
+        user.setActiveAddress(guestId);
+      }
     }
-  }, [isConnected, address, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConnected, address, user.activeAddress]);
 
   // 数据加载
   useEffect(() => {
@@ -73,7 +76,8 @@ function App() {
       user.loadUserData(user.activeAddress);
       user.loadLeaderboard();
     }
-  }, [user.activeAddress, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.activeAddress]);
 
   // 游戏结束判定
   useEffect(() => {
