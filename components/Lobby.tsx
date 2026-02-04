@@ -7,7 +7,8 @@
 import React, { useState } from 'react';
 import { Sparkles, Volume2, VolumeX, BookOpen, Settings, Crown, Zap, Shield } from 'lucide-react';
 import { SPELLS, BET_OPTIONS } from '../constants';
-import { BattleRecord, Deck, GameMode, Rank } from '../types';
+import { TRANSLATIONS } from '../translations';
+import { BattleRecord, Deck, GameMode, Rank, Language } from '../types';
 import { RulesModal } from './RulesModal';
 import { TutorialModal } from './TutorialModal';
 
@@ -27,8 +28,10 @@ interface LobbyProps {
   onOpenDeckBuilder: () => void;
   onSelectDeck: (deck: Deck) => void;
   onOpenTavernMode?: () => void;
-  gameMode?: GameMode; // 新增：当前游戏模式
-  onOpenModeSelect?: () => void; // 新增：打开模式选择
+  gameMode?: GameMode;
+  onOpenModeSelect?: () => void;
+  language: Language;
+  onLanguageChange: (lang: Language) => void;
 }
 
 export const Lobby: React.FC<LobbyProps> = ({
@@ -49,10 +52,14 @@ export const Lobby: React.FC<LobbyProps> = ({
   onOpenTavernMode,
   gameMode = 'standard',
   onOpenModeSelect,
+  language,
+  onLanguageChange,
 }) => {
   const [isRulesOpen, setIsRulesOpen] = useState(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const canStart = balance >= selectedBet;
+
+  const t = (key: string) => TRANSLATIONS[language][key] || key;
 
   // Deck cycling logic
   const currentDeckIndex = decks.findIndex(d => d.id === selectedDeck?.id);
@@ -110,9 +117,17 @@ export const Lobby: React.FC<LobbyProps> = ({
         <div className="flex gap-3 animate-slide-in-right">
            <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-purple-500/20 mr-2 shadow-lg">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-              <span className="text-xs font-bold text-gray-300">ONLINE</span>
+              <span className="text-xs font-bold text-gray-300">{t('Online')}</span>
            </div>
            
+           <button 
+             onClick={() => onLanguageChange(language === 'zh' ? 'en' : 'zh')}
+             className="w-10 h-10 rounded-full bg-black/40 backdrop-blur border border-white/10 hover:border-white/30 hover:bg-white/10 flex items-center justify-center transition-all bg-no-repeat bg-center bg-cover overflow-hidden"
+             title={language === 'zh' ? 'Switch to English' : '切换到中文'}
+           >
+              <span className="text-xs font-bold text-gray-300">{language === 'zh' ? 'CN' : 'EN'}</span>
+           </button>
+
            {onOpenModeSelect && (
              <button onClick={onOpenModeSelect} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur border border-white/10 hover:border-white/30 hover:bg-white/10 flex items-center justify-center transition-all">
                 {gameMode === 'standard' ? <Crown size={18} className="text-blue-400"/> : <Zap size={18} className="text-orange-400"/>}
@@ -134,9 +149,9 @@ export const Lobby: React.FC<LobbyProps> = ({
          {/* Introduction / Season Text */}
          <div className="text-center mb-8 animate-fade-in-up">
             <h1 className="text-4xl md:text-6xl font-wizard text-transparent bg-clip-text bg-gradient-to-b from-white to-purple-300 drop-shadow-[0_5px_15px_rgba(168,85,247,0.4)]">
-               WIZARD DUEL
+               {t('Wizard Duel')}
             </h1>
-            <p className="text-purple-200/60 text-xs tracking-[0.5em] font-tech uppercase mt-2">Season 1: Elemental Rising</p>
+            <p className="text-purple-200/60 text-xs tracking-[0.5em] font-tech uppercase mt-2">{t('Season 1: Elemental Rising')}</p>
          </div>
 
          {/* The Deck Display */}
@@ -146,10 +161,10 @@ export const Lobby: React.FC<LobbyProps> = ({
                   <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
                      <Settings size={32} className="text-purple-400" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">No Decks Found</h3>
-                  <p className="text-gray-400 text-sm mb-4">You need a deck to enter the arena.</p>
+                  <h3 className="text-xl font-bold text-white mb-2">{t('No Decks Found')}</h3>
+                  <p className="text-gray-400 text-sm mb-4">{t('You need a deck to enter the arena.')}</p>
                   <button className="px-6 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-white font-bold transition-colors">
-                     Create Deck
+                     {t('Create Deck')}
                   </button>
                </div>
             ) : (
@@ -172,14 +187,14 @@ export const Lobby: React.FC<LobbyProps> = ({
                       
                       {/* Deck Info Overlay */}
                       <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black via-black/80 to-transparent pt-12">
-                         <div className="text-amber-400 text-xs font-bold uppercase tracking-widest mb-1">Current Deck</div>
+                         <div className="text-amber-400 text-xs font-bold uppercase tracking-widest mb-1">{t('Current Deck')}</div>
                          <h3 className="text-xl font-bold text-white truncate">{selectedDeck?.name}</h3>
                          <div className="flex items-center justify-between mt-2">
-                            <span className="text-xs text-gray-400">{selectedDeck?.cards.length}/30 Cards</span>
+                            <span className="text-xs text-gray-400">{selectedDeck?.cards.length}/30 {t('Cards')}</span>
                             <button 
                                onClick={onOpenDeckBuilder}
                                className="p-2 bg-white/10 hover:bg-purple-600 rounded-lg transition-colors text-white"
-                               title="Edit Deck"
+                               title={t('Edit Deck')}
                             >
                                <Settings size={14} />
                             </button>
@@ -200,7 +215,7 @@ export const Lobby: React.FC<LobbyProps> = ({
             
             {/* Wager Selection - Chips */}
             <div className="flex flex-col items-center gap-2 w-full">
-               <span className="text-[10px] text-gray-500 uppercase tracking-[0.2em]">Select Wager</span>
+               <span className="text-[10px] text-gray-500 uppercase tracking-[0.2em]">{t('Select Wager')}</span>
                <div className="flex gap-4 md:gap-8 justify-center w-full">
                   {BET_OPTIONS.map((amt) => {
                      const isSelected = selectedBet === amt;
@@ -255,25 +270,25 @@ export const Lobby: React.FC<LobbyProps> = ({
                         {/* Shimmer Effect */}
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-full group-hover:animate-shimmer"></div>
 
-                        {/* Text Content */}
+                         {/* Text Content */}
                         <div className="relative z-10 flex items-center gap-3">
                            <Sparkles size={24} className="text-yellow-300 animate-pulse" />
                            <span className="text-2xl md:text-3xl font-wizard font-bold text-white tracking-[0.1em] drop-shadow-md">
-                              ENTER ARENA
+                              {t('ENTER ARENA')}
                            </span>
                            <Sparkles size={24} className="text-yellow-300 animate-pulse" />
                         </div>
                      </>
                   ) : (
                      <span className="font-mono text-gray-500 tracking-widest uppercase text-xs">
-                        {!selectedDeck ? 'Select a Deck' : 'Insufficient Funds'}
+                        {!selectedDeck ? t('Select a Deck') : t('Insufficient Funds')}
                      </span>
                   )}
               </button>
               <div className="text-center mt-3 h-4">
                  {canStart && selectedDeck && (
                     <span className="text-[10px] text-green-400 font-mono animate-pulse">
-                       ESTIMATED REWARD: +{Math.floor(selectedBet * 0.92)} PTS
+                       {t('ESTIMATED REWARD')}: +{Math.floor(selectedBet * 0.92)} {t('PTS')}
                     </span>
                  )}
               </div>
@@ -291,7 +306,7 @@ export const Lobby: React.FC<LobbyProps> = ({
                className="flex items-center gap-2 text-xs text-amber-500/80 hover:text-amber-400 font-bold uppercase tracking-widest border border-amber-500/20 px-4 py-2 rounded-full hover:bg-amber-900/20 transition-all"
             >
                <span>🍺</span>
-               <span>Visit Tavern</span>
+               <span>{t('Visit Tavern')}</span>
             </button>
          )}
       </div>

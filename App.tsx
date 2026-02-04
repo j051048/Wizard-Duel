@@ -25,7 +25,7 @@ import { ApiService } from './services/api';
 import { calculatePayout, AI_PROFILES } from './services/gameLogic';
 import { HapticService } from './services/haptic';
 import { calculateRankUpdate } from './services/rankSystem';
-import { GameState, BattleRecord, PlayerStats, SpellType, Deck, GameMode, Rank } from './types';
+import { GameState, BattleRecord, PlayerStats, SpellType, Deck, GameMode, Rank, Language } from './types';
 import { DungeonRunState, DungeonNode } from './types/dungeon';
 import { DungeonService } from './services/dungeon_v2';
 
@@ -46,6 +46,7 @@ function App() {
   const [history, setHistory] = useState<BattleRecord[]>([]);
   const [leaderboard, setLeaderboard] = useState<PlayerStats[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [language, setLanguage] = useState<Language>('zh');
 
   const [decks, setDecks] = useState<Deck[]>([]);
   const [selectedDeck, setSelectedDeck] = useState<Deck | null>(null);
@@ -401,6 +402,8 @@ function App() {
             onOpenTavernMode={handleOpenTavernMode}
             gameMode={gameMode}
             onOpenModeSelect={handleOpenModeSelect}
+            language={language}
+            onLanguageChange={setLanguage}
           />
         )}
 

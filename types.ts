@@ -225,14 +225,12 @@ export interface UserProfile {
   lastActive?: number;
 }
 
-// ============ 游戏配置 ============
-
+// ============ Game Configuration
 export interface GameConfig {
-  maxHP: number;
-  startingMana: number;
+  initialHandSize: number;
+  maxHandSize: number;
   maxMana: number;
-  manaPerTurn: number;
-  handSize: number;
-  deckSize: number;
-  cardsDrawnPerTurn: number;
+  turnTimeLimit: number;
 }
+
+export type Language = 'zh' | 'en';
