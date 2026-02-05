@@ -185,8 +185,8 @@ export const SPELLS: Spell[] = [
     damage: 3,
     rarity: 'rare',
     mechanic: 'charge',
-    description: '造成3点伤害。如果你上回合使用了雷系法术，伤害增加50%(4)。',
-    shortDesc: '充能: 连击+50%'
+    description: '造成3点伤害。如果你上回合使用了雷系法术，伤害增加30%(4)。',
+    shortDesc: '充能: 连击+30%'
   },
   { 
     id: 'rock2', 
@@ -235,8 +235,8 @@ export const SPELLS: Spell[] = [
     damage: 4,
     rarity: 'rare',
     mechanic: 'tangle',
-    description: '造成4点伤害。如果获胜，对手下一张法术费用增加(3)点。',
-    shortDesc: '缠绕: 费用+3'
+    description: '造成4点伤害。如果获胜，对手下一张法术费用增加(1)点。',
+    shortDesc: '缠绕: 费用+1'
   },
   { 
     id: 'ice3', 
@@ -269,8 +269,8 @@ export const SPELLS: Spell[] = [
     rarity: 'mythic',
     mechanic: 'charge',
     // [P0 平衡] 连击从 x2 降为 x1.5，与代码逻辑保持一致
-    description: '造成6点伤害。如果你上回合使用了雷系法术，伤害增加50%(9)。',
-    shortDesc: '充能: 连击+50%'
+    description: '造成6点伤害。如果你上回合使用了雷系法术，伤害增加30%(8)。',
+    shortDesc: '充能: 连击+30%'
   },
   { 
     id: 'rock3', 
@@ -351,8 +351,8 @@ export const SPELLS: Spell[] = [
     damage: 2,
     rarity: 'common',
     mechanic: 'charge',
-    description: '造成2点伤害。如果你上回合使用了雷系法术，伤害增加50%(3)。',
-    shortDesc: '充能: 连击+50%'
+    description: '造成2点伤害。如果你上回合使用了雷系法术，伤害增加30%(3)。',
+    shortDesc: '充能: 连击+30%'
   },
   { 
     id: 'rock4', 
@@ -401,8 +401,8 @@ export const SPELLS: Spell[] = [
     damage: 5,
     rarity: 'rare',
     mechanic: 'tangle',
-    description: '造成5点伤害。如果获胜，对手下一张法术费用增加(4)点。',
-    shortDesc: '缠绕: 费用+4'
+    description: '造成5点伤害。如果获胜，对手下一张法术费用增加(1)点。',
+    shortDesc: '缠绕: 费用+1'
   },
   { 
     id: 'ice5', 
@@ -434,8 +434,8 @@ export const SPELLS: Spell[] = [
     rarity: 'mythic',
     mechanic: 'charge',
     // [P0 平衡] 连击从 x2 降为 x1.5，与代码逻辑保持一致
-    description: '造成5点伤害。如果你上回合使用了雷系法术，伤害增加50%(8)。',
-    shortDesc: '充能: 连击+50%'
+    description: '造成5点伤害。如果你上回合使用了雷系法术，伤害增加30%(7)。',
+    shortDesc: '充能: 连击+30%'
   },
   { 
     id: 'rock5', 
@@ -471,8 +471,8 @@ export const SPELLS: Spell[] = [
     rarity: 'rare',
     mechanic: 'heal',
     cardSet: 'tournament',    // 竞技场扩展包
-    description: '恢复5点生命值。',
-    shortDesc: '治疗: +5 生命'
+    description: '恢复3点生命值。',
+    shortDesc: '治疗: +3 生命'
   },
   { 
     id: 'aoe', 
@@ -489,8 +489,8 @@ export const SPELLS: Spell[] = [
     rarity: 'rare',
     mechanic: 'aoe',
     cardSet: 'tournament',    // 竞技场扩展包
-    description: '造成3点伤害，并对对手造成额外2点伤害（无视护甲）。',
-    shortDesc: 'AOE: 3+2 穿透'
+    description: '造成3点伤害，并对对手造成额外1点伤害（无视护甲）。',
+    shortDesc: 'AOE: 3+1 穿透'
   },
   { 
     id: 'draw', 

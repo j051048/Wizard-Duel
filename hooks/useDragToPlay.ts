@@ -18,7 +18,8 @@ export const useDragToPlay = (
   setTargeting: (data: GameLoopState['targetingData']) => void,
   isProcessing: boolean,
   phase: string,
-  isAffordable: (spellId: SpellType) => boolean
+  isAffordable: (spellId: SpellType) => boolean,
+  onDragMove?: (x: number, y: number) => void
 ) => {
   const [dragState, setDragState] = useState<DragState | null>(null);
 
@@ -29,6 +30,10 @@ export const useDragToPlay = (
       // [P0 新手引导] 计算是否在释放区域内 (屏幕上半部分60%)
       const dropZoneThreshold = window.innerHeight * 0.6;
       const isInDropZone = e.clientY < dropZoneThreshold;
+
+      if (onDragMove) {
+          onDragMove(e.clientX, e.clientY);
+      }
       
       setDragState(prev => prev ? { 
         ...prev, 

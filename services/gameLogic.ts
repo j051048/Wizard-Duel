@@ -226,13 +226,13 @@ export const executeSpell = (
   // [P0 Fix] 修正：hero_thunder 不应该触发法术连击（它是技能，不是法术）
   const isThunderSpell = (id: string | null) => id && id.startsWith('thunder') && !id.startsWith('hero_');
   if (!countered && spell.mechanic === 'charge' && isThunderSpell(spell.id) && isThunderSpell(myLastId)) {
-      dmg = Math.floor(dmg * 1.5);
-      actions.push({ type: 'MESSAGE', target: 'system', description: `⚡ 闪电连击！伤害增加50%！` });
+      dmg = Math.floor(dmg * 1.3); // [Balance] 连击伤害从 1.5 降为 1.3
+      actions.push({ type: 'MESSAGE', target: 'system', description: `⚡ 闪电连击！伤害增加30%！` });
   }
 
   // 5. 组合 Actions
   if (dmg > 0) {
-      actions.push({ type: 'HP_CHANGE', target, value: -dmg, description: `${isPlayer ? '造成' : '受到'} ${dmg} 点伤害` });
+      actions.push({ type: 'HP_CHANGE', target, value: -dmg, description: `${spell.emoji} ${isPlayer ? '造成' : '受到'} ${dmg} 点伤害` });
   }
   if ((spell.armorGain || 0) > 0) {
       actions.push({ type: 'ARMOR_CHANGE', target: caster, value: spell.armorGain, description: `${isPlayer ? '获得' : '对手获得'} ${spell.armorGain} 护甲` });
@@ -323,6 +323,9 @@ export const checkGameOver = (state: DuelState): 'WIN' | 'LOSS' | 'DRAW' | null 
 export const prepareNextTurn = (state: DuelState): DuelState => {
   const newState = { 
     ...state,
+    // [P0 Fix] 重置英雄技能使用状态（确保在法力恢复前重置）
+    heroSkillsUsed: false,
+    opponentHeroSkillUsed: false,
     // 深拷贝数组，避免状态污染
     playerEffects: [...state.playerEffects],
     opponentEffects: [...state.opponentEffects],
@@ -330,32 +333,24 @@ export const prepareNextTurn = (state: DuelState): DuelState => {
     playerDeck: [...state.playerDeck],
     opponentDeck: [...state.opponentDeck],
   };
-  
-  // 🔧 重置英雄技能使用状态（每回合可用1次）
-  newState.heroSkillsUsed = false;
-  newState.opponentHeroSkillUsed = false;
-  
-  const logs: string[] = [];
 
-  // 1. 法力成长与恢复
-  newState.playerMaxMana = Math.min(GAME_CONFIG.maxMana, state.playerMaxMana + 1);
-  newState.opponentMaxMana = Math.min(GAME_CONFIG.maxMana, state.opponentMaxMana + 1);
-  newState.playerMana = newState.playerMaxMana;
-  newState.opponentMana = newState.opponentMaxMana;
-  
-  // 2. 状态效果结算 (DoT, Duration--)
+  // 1. 回合数自增
+  newState.roundNumber += 1;
+
+  // 2. 状态效果结算 (DoT 优先结算)
+  // [P0 Fix] 灼烧伤害优先于法力恢复，因为如果死于灼烧就无需后续逻辑
   let burnDmg = 0;
   const newPlayerEffects: StatusEffect[] = [];
   state.playerEffects.forEach(e => {
     if (e.type === 'burn') burnDmg += (e.value || 0);
     const nextDur = e.duration - 1;
     if (nextDur > 0) newPlayerEffects.push({ ...e, duration: nextDur });
-    else if (e.type === 'frozen') {
-      newPlayerEffects.push({ type: 'thawed', duration: 1 });
-    }
+    // [P0 Fix] 冻结在回合初不会解除，而是在玩家无法行动一回合后解除
+    // 这里的逻辑需要配合 startNewRound 中的跳过逻辑，目前保持冻结状态持续时间自然递减
   });
   newState.playerEffects = newPlayerEffects;
-  if (burnDmg > 0) newState.playerHP = Math.max(0, newState.playerHP - burnDmg);
+  // 直接结算灼烧伤害
+  if (burnDmg > 0) newState.playerHP -= burnDmg;
 
   let oppBurnDmg = 0;
   const newOpponentEffects: StatusEffect[] = [];
@@ -363,26 +358,26 @@ export const prepareNextTurn = (state: DuelState): DuelState => {
     if (e.type === 'burn') oppBurnDmg += (e.value || 0);
     const nextDur = e.duration - 1;
     if (nextDur > 0) newOpponentEffects.push({ ...e, duration: nextDur });
-    else if (e.type === 'frozen') {
-      newOpponentEffects.push({ type: 'thawed', duration: 1 });
-    }
   });
   newState.opponentEffects = newOpponentEffects;
-  if (oppBurnDmg > 0) newState.opponentHP = Math.max(0, newState.opponentHP - oppBurnDmg);
+  if (oppBurnDmg > 0) newState.opponentHP -= oppBurnDmg;
 
-  // 3. 计算费用修正 (Tangle)
+  // 3. 法力成长与恢复 (如果此时双方都存活)
+  newState.playerMaxMana = Math.min(GAME_CONFIG.maxMana, state.playerMaxMana + 1);
+  newState.opponentMaxMana = Math.min(GAME_CONFIG.maxMana, state.opponentMaxMana + 1);
+  newState.playerMana = newState.playerMaxMana;
+  newState.opponentMana = newState.opponentMaxMana;
+
+  // 4. 计算费用修正 (Tangle)
   const playerTangle = newState.playerEffects.find(e => e.type === 'tangle');
   newState.playerCostMod = playerTangle ? (playerTangle.value || 0) : 0;
   
   const oppTangle = newState.opponentEffects.find(e => e.type === 'tangle');
   newState.opponentCostMod = oppTangle ? (oppTangle.value || 0) : 0;
 
-  // [New 6.3] 随从状态重置
+  // 5. 随从状态重置
   newState.playerMinions = newState.playerMinions.map(m => ({ ...m, exhausted: false }));
   newState.opponentMinions = newState.opponentMinions.map(m => ({ ...m, exhausted: false }));
-
-  // 4. 回合数++
-  newState.roundNumber += 1;
 
   return newState;
 };

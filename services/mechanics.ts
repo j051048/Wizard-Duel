@@ -35,8 +35,8 @@ const tangle: MechanicHandler = (state, caster, spell, countered) => {
   return [{ 
     type: 'ADD_EFFECT', 
     target, 
-    value: { type: 'tangle', duration: 1, value: 2 },
-    description: `🌿 ${target === 'player' ? '你' : '对手'}被缠绕了 (下张牌费用+2)`
+    value: { type: 'tangle', duration: 1, value: 1 }, // [Balance] 费用增加从 2 降为 1
+    description: `🌿 ${target === 'player' ? '你' : '对手'}被缠绕了 (下张牌费用+1)`
   }];
 };
 
@@ -60,8 +60,8 @@ const heal: MechanicHandler = (state, caster) => {
   return [{ 
     type: 'HP_CHANGE', 
     target: caster, 
-    value: 5, 
-    description: `💙 ${caster === 'player' ? '你' : '对手'}恢复了 5 点生命值`
+    value: 3, // [Balance] 治疗量从 5 降为 3 (参考2费标准)
+    description: `💙 ${caster === 'player' ? '你' : '对手'}恢复了 3 点生命值`
   }];
 };
 
@@ -71,8 +71,8 @@ const aoe: MechanicHandler = (state, caster, spell, countered) => {
   return [{ 
     type: 'HP_CHANGE', 
     target, 
-    value: -2, 
-    description: `💥 AOE爆炸！额外造成 2 点穿透伤害`
+    value: -1, // [Balance] 穿透伤害从 2 降为 1
+    description: `💥 AOE爆炸！额外造成 1 点穿透伤害`
   }];
 };
 

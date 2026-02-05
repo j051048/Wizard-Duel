@@ -76,7 +76,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   // Hooks
   const { 
     canvasRef, showCritEffect, showBloodFlash, projectiles, 
-    addDamageNumber, triggerCrit, spawnProjectile 
+    addDamageNumber, triggerCrit, triggerShake, spawnProjectile, shakeClass,
+    updateDragTrail
   } = useBattleAnimations(isLowQuality);
 
   const playableCards = useMemo(() => {
@@ -94,7 +95,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     setTargeting,
     gameLoopState.isProcessing,
     phase,
-    (id) => playableCards.includes(id)
+    (id) => playableCards.includes(id),
+    updateDragTrail 
   );
 
   // Projection Logic
@@ -121,10 +123,19 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       if (match) {
           const damage = parseInt(match[1]);
           const isPlayerTarget = lastMsg.includes('受到'); 
-          addDamageNumber(damage, isPlayerTarget, isCrit); 
+          
+          let pType: any = 'default';
+          if (lastMsg.includes('🔥')) pType = 'fire';
+          else if (lastMsg.includes('❄️')) pType = 'ice';
+          else if (lastMsg.includes('⚡')) pType = 'thunder';
+          else if (lastMsg.includes('🌿')) pType = 'poison';
+          else if (lastMsg.includes('🪨')) pType = 'rock';
+          
+          addDamageNumber(damage, isPlayerTarget, isCrit, pType); 
+          triggerShake(pType);
       }
     }
-  }, [effectMessages, triggerCrit, addDamageNumber]);
+  }, [effectMessages, triggerCrit, addDamageNumber, triggerShake]);
 
   useEffect(() => {
     if (duelState?.isTutorial) setIsTutorialOpen(true);
@@ -174,7 +185,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   if (!duelState) return null;
 
   return (
-    <div className="fixed inset-0 w-full h-full bg-slate-950 no-select flex flex-col z-40 overflow-hidden">
+    <div className={`fixed inset-0 w-full h-full bg-slate-950 no-select flex flex-col z-40 overflow-hidden ${shakeClass}`}>
       {/* Background */}
       <div className="absolute inset-0 z-0 pointer-events-none arena-bg-overlay overflow-hidden">
         <img 
@@ -201,6 +212,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                 effects={duelState.opponentEffects}
                 isShaking={isOpponentShaking}
                 avatarSrc={duelState.aiProfile?.avatar}
+                isThinking={aiStatus === 'THINKING'}
                 projection={projection?.target === 'opponent' ? { hpChange: projection.netHpChange, armorChange: projection.netArmorChange } : null}
               />
               
@@ -413,7 +425,9 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
       <BattleEffects 
         showCrit={showCritEffect} 
-        showBloodFlash={showBloodFlash} 
+        showBloodFlash={showBloodFlash}
+        playerHp={duelState.playerHP}
+        maxHp={GAME_CONFIG.maxHP}
       />
 
       <CombatFeed messages={effectMessages} />

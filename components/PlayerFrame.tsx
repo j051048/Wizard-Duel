@@ -243,6 +243,7 @@ interface PlayerFrameProps {
   effects: StatusEffect[];
   avatarSrc?: string;
   isShaking?: boolean;
+  isThinking?: boolean; // [UX] AI 思考状态
   projection?: {
     hpChange: number; // Net HP Change (Negative = Damage)
     armorChange: number; // Net Armor Change
@@ -260,6 +261,7 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
   effects,
   avatarSrc,
   isShaking = false,
+  isThinking = false,
   projection
 }) => {
   const actualAvatarSrc = avatarSrc || (isPlayer ? '/avatars/player-wizard.webp' : '/avatars/opponent-sorcerer.webp');
@@ -313,6 +315,15 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
               className="w-full h-full object-cover scale-110 transition-transform duration-300 group-hover:scale-125"
             />
             
+            {/* [UX] AI 思考动画 */}
+            {isThinking && (
+              <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+                {/* 旋转光环 */}
+                <div className="absolute w-full h-full border-4 border-t-purple-400 border-r-transparent border-b-purple-600 border-l-transparent rounded-full animate-spin" />
+                <div className="absolute w-3/4 h-3/4 border-2 border-t-transparent border-r-cyan-400 border-b-transparent border-l-cyan-600 rounded-full animate-spin-reverse" />
+              </div>
+            )}
+
             {/* 伤害/治疗叠加层 */}
             {showDamage && (
               <div className="absolute inset-0 bg-red-500/50 animate-pulse mix-blend-overlay" />

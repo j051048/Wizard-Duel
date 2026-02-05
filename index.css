@@ -99,6 +99,35 @@
       transform: translateX(-1px) rotate(0);
     }
   }
+  @keyframes shake-heavy {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-8px, 4px) rotate(-2deg); }
+    30% { transform: translate(8px, -6px) rotate(2deg); }
+    50% { transform: translate(-5px, 2px) rotate(-1deg); }
+    70% { transform: translate(3px, -2px) rotate(1deg); }
+    90% { transform: translate(-1px, 1px); }
+  }
+  @keyframes shake-electric {
+    0% { transform: translate(0, 0); }
+    20% { transform: translate(3px, -3px); }
+    40% { transform: translate(-3px, 3px); }
+    60% { transform: translate(3px, 3px); }
+    80% { transform: translate(-3px, -3px); }
+    100% { transform: translate(0, 0); }
+  }
+  @keyframes shake-tremor {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(0.5deg); }
+    75% { transform: rotate(-0.5deg); }
+  }
+  @keyframes heartbeat {
+    0%, 100% { opacity: 0.7; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.02); }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
   @keyframes damageFloat {
     0% {
       transform: translateY(0) scale(0.5);
@@ -318,6 +347,15 @@
   }
   .animate-shake-gentle {
     animation: shake-gentle 0.4s ease-in-out infinite;
+  }
+  .animate-shake-heavy {
+    animation: shake-heavy 0.5s ease-out;
+  }
+  .animate-shake-electric {
+    animation: shake-electric 0.3s steps(4);
+  }
+  .animate-shake-tremor {
+    animation: shake-tremor 0.5s ease-in-out;
   }
   .animate-pulse-gentle {
     animation: pulse-gentle 2s ease-in-out infinite;

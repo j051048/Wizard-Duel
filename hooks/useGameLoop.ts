@@ -260,7 +260,21 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
     const commands: GameActionCommand[] = [];
     let nextState = prepareNextTurn(currentState);
     
-    // 抽牌逻辑
+    // 死亡检查 (提前拦截)
+    const gameOver = checkGameOver(nextState);
+    if (gameOver) {
+      commands.push({ type: 'UPDATE_STATE', payload: nextState });
+      commands.push({ type: 'UPDATE_UI', payload: {
+          isGameOver: true,
+          gameResult: gameOver === 'DRAW' ? 'LOSS' : gameOver, // 平局算输
+          resultText: gameOver,
+      }});
+      commands.push({ type: 'SET_PHASE', payload: 'ROUND_RESET' });
+      dispatch({ type: 'ENQUEUE_ACTIONS', payload: commands });
+      return;
+    }
+
+    // 抽牌逻辑 (仅当双方存活时执行)
     const pResult = drawCard(nextState.playerDeck, nextState.playerHand, nextState.playerFatigue);
     nextState.playerDeck = pResult.newDeck;
     nextState.playerHand = pResult.newHand;
