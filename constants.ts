@@ -525,8 +525,8 @@ export const SPELLS: Spell[] = [
     rarity: 'common',
     mechanic: 'silence',
     cardSet: 'tournament',    // 竞技场扩展包
-    description: '移除对手所有状态效果。',
-    shortDesc: '沉默: 清除状态'
+    description: '净化自身所有负面状态效果，并从卡组抽取 1 张牌。',
+    shortDesc: '净化: 解控+1抽'
   },
   // ============ 英雄技能系统 ============
   { 

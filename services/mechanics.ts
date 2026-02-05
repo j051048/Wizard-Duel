@@ -90,13 +90,22 @@ const silence: MechanicHandler = (state, caster, spell, countered) => {
   if (countered) {
     return [{ type: 'MESSAGE', target: 'system', description: '🤫 沉默失效' }];
   }
-  const target = caster === 'player' ? 'opponent' : 'player';
-  return [{ 
-    type: 'REMOVE_EFFECT', 
-    target, 
-    subType: 'all', 
-    description: `🤫 沉默${target === 'player' ? '你' : '对手'}，移除所有效果` 
-  }];
+  
+  // 现在的逻辑：净化自身负面状态 + 抽 1 张牌作为补偿
+  return [
+    { 
+      type: 'REMOVE_EFFECT', 
+      target: caster, 
+      subType: 'all', 
+      description: `🤫 净化！${caster === 'player' ? '你' : '对手'}移除了所有负面状态` 
+    },
+    {
+      type: 'DRAW_CARD',
+      target: caster,
+      value: 1,
+      description: `📚 净化补偿：抽取 1 张牌`
+    }
+  ];
 };
 
 // ============ 机制注册表 ============
