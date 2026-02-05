@@ -185,8 +185,8 @@ export const SPELLS: Spell[] = [
     damage: 3,
     rarity: 'rare',
     mechanic: 'charge',
-    description: '造成3点伤害。如果你上回合使用了雷系法术，伤害翻倍(6)。',
-    shortDesc: '充能: 连击伤害x2'
+    description: '造成3点伤害。如果你上回合使用了雷系法术，伤害增加50%(4)。',
+    shortDesc: '充能: 连击+50%'
   },
   { 
     id: 'rock2', 
@@ -268,8 +268,9 @@ export const SPELLS: Spell[] = [
     damage: 6,
     rarity: 'mythic',
     mechanic: 'charge',
-    description: '造成6点伤害。如果你上回合使用了雷系法术，伤害翻倍(12)。',
-    shortDesc: '充能: 连击伤害x2'
+    // [P0 平衡] 连击从 x2 降为 x1.5，与代码逻辑保持一致
+    description: '造成6点伤害。如果你上回合使用了雷系法术，伤害增加50%(9)。',
+    shortDesc: '充能: 连击+50%'
   },
   { 
     id: 'rock3', 
@@ -350,8 +351,8 @@ export const SPELLS: Spell[] = [
     damage: 2,
     rarity: 'common',
     mechanic: 'charge',
-    description: '造成2点伤害。如果你上回合使用了雷系法术，伤害翻倍(4)。',
-    shortDesc: '充能: 连击伤害x2'
+    description: '造成2点伤害。如果你上回合使用了雷系法术，伤害增加50%(3)。',
+    shortDesc: '充能: 连击+50%'
   },
   { 
     id: 'rock4', 
@@ -429,11 +430,12 @@ export const SPELLS: Spell[] = [
     shadowColor: 'rgba(250,204,21,0.5)',
     beats: 'rock',
     manaCost: 5,
-    damage: 5,                // 从 7 降至 5 (平衡性调整)
+    damage: 5,                // [P0 平衡] 基础伤害 5
     rarity: 'mythic',
     mechanic: 'charge',
-    description: '造成5点伤害。如果你上回合使用了雷系法术或技能，伤害翻倍(10)。',
-    shortDesc: '充能: 连击伤害x2'
+    // [P0 平衡] 连击从 x2 降为 x1.5，与代码逻辑保持一致
+    description: '造成5点伤害。如果你上回合使用了雷系法术，伤害增加50%(8)。',
+    shortDesc: '充能: 连击+50%'
   },
   { 
     id: 'rock5', 

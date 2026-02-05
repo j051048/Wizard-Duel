@@ -109,6 +109,7 @@ export const Lobby: React.FC<LobbyProps> = ({
            selectedDeck={selectedDeck}
            onOpenDeckBuilder={onOpenDeckBuilder}
            onSelectDeck={onSelectDeck}
+           isLoading={isLoading}
            t={t}
          />
 

@@ -16,8 +16,14 @@ function ErrorFallbackUI(props: { error: Error | null; onReset: () => void }) {
   
   const handleReset = () => {
     localStorage.removeItem('wizard_duel_save');
-    props.onReset();
     window.location.reload();
+  };
+
+  const handleCopyError = () => {
+    if (props.error) {
+      navigator.clipboard.writeText(props.error.toString() + '\\n' + props.error.stack);
+      alert('错误日志已复制到剪贴板');
+    }
   };
 
   return (
@@ -46,17 +52,28 @@ function ErrorFallbackUI(props: { error: Error | null; onReset: () => void }) {
         </button>
       </div>
       {props.error && (
-        <pre className="mt-8 p-4 bg-black/50 rounded text-xs text-left text-red-400 overflow-auto max-w-full max-h-32 opacity-50">
-          {props.error.toString()}
-        </pre>
+        <div className="mt-8 max-w-full w-full max-w-lg">
+           <div className="flex justify-end mb-1">
+              <button onClick={handleCopyError} className="text-xs text-gray-500 hover:text-white transition-colors flex items-center gap-1">
+                 📋 复制日志
+              </button>
+           </div>
+           <pre className="p-4 bg-black/50 rounded text-xs text-left text-red-400 overflow-auto max-h-48 opacity-80 border border-red-900/30 whitespace-pre-wrap break-words">
+             {props.error.toString()}
+           </pre>
+        </div>
       )}
     </div>
   );
 }
 
 export class ErrorBoundary extends React.Component<Props, State> {
+  public state: State;
+  public readonly props: Readonly<Props>; // Fix TS error
+
   constructor(props: Props) {
     super(props);
+    this.props = props;
     this.state = {
       hasError: false,
       error: null

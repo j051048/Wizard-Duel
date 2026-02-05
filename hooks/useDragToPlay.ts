@@ -10,6 +10,7 @@ interface DragState {
   currentX: number;
   currentY: number;
   isDragging: boolean;
+  isInDropZone: boolean; // [P0 新手引导] 是否在释放区域内
 }
 
 export const useDragToPlay = (
@@ -24,7 +25,18 @@ export const useDragToPlay = (
   useEffect(() => {
     const handlePointerMove = (e: PointerEvent) => {
       if (!dragState) return;
-      setDragState(prev => prev ? { ...prev, currentX: e.clientX, currentY: e.clientY, isDragging: true } : null);
+      
+      // [P0 新手引导] 计算是否在释放区域内 (屏幕上半部分60%)
+      const dropZoneThreshold = window.innerHeight * 0.6;
+      const isInDropZone = e.clientY < dropZoneThreshold;
+      
+      setDragState(prev => prev ? { 
+        ...prev, 
+        currentX: e.clientX, 
+        currentY: e.clientY, 
+        isDragging: true,
+        isInDropZone 
+      } : null);
       
       // 更新瞄准线
       if (e.clientY < window.innerHeight * 0.7) {
@@ -73,7 +85,8 @@ export const useDragToPlay = (
       startY: y,
       currentX: x,
       currentY: y,
-      isDragging: false
+      isDragging: false,
+      isInDropZone: false // [P0 新手引导] 初始状态不在释放区域
     });
   };
 

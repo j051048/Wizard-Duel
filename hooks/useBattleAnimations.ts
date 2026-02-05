@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { HapticService } from '../services/haptic';
+import { globalFPSMonitor } from '../services/performance';
 
 interface DamageNumber {
   id: number;
@@ -112,6 +113,7 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
     let lastTime = performance.now();
 
     const render = (time: number) => {
+        globalFPSMonitor.tick();
         const deltaTime = time - lastTime;
         lastTime = time;
         

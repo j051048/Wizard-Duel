@@ -42,7 +42,7 @@ import { ApiService } from './services/api';
 import { calculatePayout, AI_PROFILES } from './services/gameLogic';
 import { HapticService } from './services/haptic';
 import { calculateRankUpdate } from './services/rankSystem';
-import { DungeonService } from './services/dungeon_v2';
+import { DungeonService } from './services/dungeon';
 import { GAME_CONFIG } from './constants';
 
 function App() {

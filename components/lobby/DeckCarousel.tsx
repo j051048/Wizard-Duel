@@ -2,12 +2,14 @@ import React from 'react';
 import { Settings } from 'lucide-react';
 import { Deck, Spell } from '../../types';
 import { SPELLS } from '../../constants';
+import { CardSkeleton } from '../ui/Skeleton';
 
 interface DeckCarouselProps {
   decks: Deck[];
   selectedDeck: Deck | null;
   onOpenDeckBuilder: () => void;
   onSelectDeck: (deck: Deck) => void;
+  isLoading?: boolean;
   t: (key: string) => string;
 }
 
@@ -16,6 +18,7 @@ const DeckCarousel: React.FC<DeckCarouselProps> = ({
   selectedDeck,
   onOpenDeckBuilder,
   onSelectDeck,
+  isLoading = false,
   t
 }) => {
   const currentDeckIndex = decks.findIndex(d => d.id === selectedDeck?.id);
@@ -34,7 +37,9 @@ const DeckCarousel: React.FC<DeckCarouselProps> = ({
 
   return (
     <div id="lobby-deck-selector" className="relative w-full max-w-sm h-64 md:h-80 perspective-1000 flex items-center justify-center mb-8">
-       {decks.length === 0 ? (
+       {isLoading ? (
+         <CardSkeleton />
+       ) : decks.length === 0 ? (
           <div className="text-center p-8 bg-black/40 backdrop-blur-md rounded-2xl border border-dashed border-white/20 hover:border-purple-500/50 transition-colors cursor-pointer" onClick={onOpenDeckBuilder}>
              <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Settings size={32} className="text-purple-400" />

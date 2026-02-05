@@ -106,7 +106,15 @@ const BattleHand: React.FC<BattleHandProps> = ({
                 y: translateY,
                 rotate: rotate,
                 scale: scale,
-                zIndex: isHovered ? 100 : index + 1
+                zIndex: isHovered ? 100 : index + 1,
+                // [P0 新手引导] 可打出卡牌呼吸发光动画
+                boxShadow: isAffordable && phase === 'PLAYER_TURN' && !isProcessing && !isHovered
+                  ? [
+                      '0 0 10px rgba(74,222,128,0.3), 0 0 20px rgba(74,222,128,0.2)',
+                      '0 0 20px rgba(74,222,128,0.6), 0 0 40px rgba(74,222,128,0.4)',
+                      '0 0 10px rgba(74,222,128,0.3), 0 0 20px rgba(74,222,128,0.2)'
+                    ]
+                  : 'none'
               }}
               exit={{ 
                 opacity: 0, 
@@ -116,7 +124,13 @@ const BattleHand: React.FC<BattleHandProps> = ({
               }}
               transition={{ 
                 duration: 0.25,
-                ease: [0.34, 1.56, 0.64, 1] // Spring-like bounce
+                ease: [0.34, 1.56, 0.64, 1], // Spring-like bounce
+                // [P0 新手引导] 呼吸动画循环
+                boxShadow: { 
+                  duration: 1.5, 
+                  repeat: Infinity, 
+                  ease: "easeInOut" 
+                }
               }}
               className="absolute origin-bottom cursor-pointer"
               style={{ bottom: '10px' }}
@@ -135,6 +149,11 @@ const BattleHand: React.FC<BattleHandProps> = ({
               {/* 悬停时的光晕效果 */}
               {isHovered && (
                 <div className="absolute -inset-4 bg-gradient-to-t from-amber-500/30 via-transparent to-transparent rounded-xl blur-xl pointer-events-none animate-pulse" />
+              )}
+              
+              {/* [P0 新手引导] 可打出卡牌的额外绿色脉冲边框 */}
+              {isAffordable && phase === 'PLAYER_TURN' && !isProcessing && !isHovered && (
+                <div className="absolute -inset-1 rounded-xl border-2 border-green-400/60 animate-pulse pointer-events-none" />
               )}
               
               {/* 卡牌阴影增强 */}

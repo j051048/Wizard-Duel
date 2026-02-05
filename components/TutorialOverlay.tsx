@@ -51,7 +51,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ onComplete, la
   // [New 6.4] 监听操作执行，实现引导闭环
   useEffect(() => {
     if (step.requiredAction && lastAction === step.requiredAction) {
-        setTimeout(handleNext, 1000); // 延迟跳转，让玩家看到操作结果
+        setTimeout(() => handleNext(true), 1000); // 延迟跳转，强制执行下一步
     }
   }, [lastAction, step.requiredAction]);
 
@@ -87,9 +87,9 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ onComplete, la
     }
   }, [currentStep, step.targetId]);
 
-  const handleNext = () => {
-    // [New 6.4] 如果是强制执行步骤，点击背景不跳转
-    if (step.isBlocking) return;
+  const handleNext = (force: boolean = false) => {
+    // [New 6.4] 如果是强制执行步骤，且非强制跳过，则点击背景不跳转
+    if (step.isBlocking && !force) return;
 
     if (currentStep < steps.length - 1) {
       setCurrentStep(prev => prev + 1);

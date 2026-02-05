@@ -2,6 +2,11 @@
  * Wizard Duel - 游戏逻辑引擎
  * 
  * 核心战斗系统：支持法力消耗、状态效果、Draft机制、回合制多卡连击逻辑
+ * 
+ * [Phase 2] 模块化重构：
+ * - 机制定义 -> services/mechanics.ts
+ * - AI 逻辑 -> services/ai.ts
+ * - 状态工具 -> services/stateUtils.ts
  */
 
 import { 
@@ -13,6 +18,12 @@ import {
   MINION_DATA
 } from '../constants.ts';
 import { GameSequenceExecutor } from './sequence';
+import { getMechanicHandler, MECHANIC_DEFINITIONS } from './mechanics';
+import { cloneDuelState } from './stateUtils';
+
+// [Phase 2] 重新导出 AI 模块，保持向后兼容
+export { executeAITurn, getAISpell, pickBestSpellForAI } from './ai';
+
 
 // ============ 卡牌查询 ============
 
@@ -145,85 +156,12 @@ export const getPlayableCards = (
   return hand.filter(spellId => canAffordSpell(spellId, mana, effects, costMod).canAfford);
 };
 
-
-// ============ 卡牌逻辑配置 (New 3.0 Data-Driven) ============
-
-const MECHANIC_DEFINITIONS: Record<string, (state: DuelState, caster: 'player' | 'opponent', spell: Spell, isCountered: boolean, isCrit: boolean) => GameAction[]> = {
-  burn: (state, caster, spell, countered) => {
-    if (countered) return [];
-    const target = caster === 'player' ? 'opponent' : 'player';
-    const val = spell.cardSet === 'classic' ? 1 : 2;
-    return [{ 
-      type: 'ADD_EFFECT', 
-      target, 
-      value: { type: 'burn', duration: 2, value: val },
-      description: `🔥 ${target === 'player' ? '你' : '对手'}被灼烧了 (每回合-${val}HP)`
-    }];
-  },
-  tangle: (state, caster, spell, countered) => {
-    if (countered) return [];
-    const target = caster === 'player' ? 'opponent' : 'player';
-    return [{ 
-      type: 'ADD_EFFECT', 
-      target, 
-      value: { type: 'tangle', duration: 1, value: 2 },
-      description: `🌿 ${target === 'player' ? '你' : '对手'}被缠绕了 (下张牌费用+2)`
-    }];
-  },
-  freeze: (state, caster, spell, countered) => {
-    if (countered) return [];
-    const target = caster === 'player' ? 'opponent' : 'player';
-    const targetEffects = target === 'player' ? state.playerEffects : state.opponentEffects;
-    if (targetEffects.some(e => e.type === 'thawed')) return [{ type: 'MESSAGE', target: 'system', description: '🛡️ 免疫冻结！' }];
-    
-    return [{ 
-      type: 'ADD_EFFECT', 
-      target, 
-      value: { type: 'frozen', duration: 1 },
-      description: `❄️ ${target === 'player' ? '你' : '对手'}被冻结了`
-    }];
-  },
-  heal: (state, caster) => {
-    return [{ 
-      type: 'HP_CHANGE', 
-      target: caster, 
-      value: 5, 
-      description: `💙 ${caster === 'player' ? '你' : '对手'}恢复了 5 点生命值`
-    }];
-  },
-  aoe: (state, caster, spell, countered) => {
-    if (countered) return [];
-    const target = caster === 'player' ? 'opponent' : 'player';
-    return [{ 
-      type: 'HP_CHANGE', 
-      target, 
-      value: -2, 
-      description: `💥 AOE爆炸！额外造成 2 点穿透伤害`
-    }];
-  },
-  draw: (state, caster, spell, countered) => {
-    if (countered) return [{ type: 'MESSAGE', target: 'system', description: `🤫 ${caster === 'player' ? '你' : '对手'}的抽牌效果被抵消了` }];
-    const count = spell.id === 'hero_vine' ? 2 : 2; // 统一为抽2
-    return [
-        { type: 'DRAW_CARD', target: caster, value: count, description: `📚 ${caster === 'player' ? '你' : '对手'}从卡组抽取了 ${count} 张牌` }
-    ];
-  },
-  silence: (state, caster, spell, countered) => {
-    if (countered) return [{ type: 'MESSAGE', target: 'system', description: '🤫 沉默失效' }];
-    const target = caster === 'player' ? 'opponent' : 'player';
-    return [{ 
-        type: 'REMOVE_EFFECT', 
-        target, 
-        subType: 'all', 
-        description: `🤫 沉默${target === 'player' ? '你' : '对手'}，移除所有效果` 
-    }];
-  }
-};
+// [Phase 2] MECHANIC_DEFINITIONS 已迁移到 services/mechanics.ts
 
 // ============ 单卡执行逻辑 (完全重构) ============
 
 export const executeSpell = (
-  state: DuelState,
+  state: Readonly<DuelState>,
   caster: 'player' | 'opponent',
   spellId: SpellType
 ): { newState: DuelState, logs: string[], command: GameCommand } => {
@@ -233,16 +171,21 @@ export const executeSpell = (
   
   const actions: GameAction[] = [];
   
+  // [P0 Fix] 深拷贝状态，避免直接修改传入的 state（状态不可变性）
+  const mutableState: DuelState = cloneDuelState(state);
+
+  
   // 1. 英雄技能占用逻辑
   if (spellId.startsWith('hero_')) {
-    const alreadyUsed = isPlayer ? state.heroSkillsUsed : state.opponentHeroSkillUsed;
+    const alreadyUsed = isPlayer ? mutableState.heroSkillsUsed : mutableState.opponentHeroSkillUsed;
     if (alreadyUsed) return { 
-        newState: state, 
+        newState: state as DuelState, 
         logs: [`${isPlayer ? '玩家' : '对手'}本回合已使用过英雄技能`], 
         command: { id: 'fail', caster, actions: [] } 
     };
-    if (isPlayer) state.heroSkillsUsed = true;
-    else state.opponentHeroSkillUsed = true;
+    // [P0 Fix] 修改的是拷贝后的状态，不影响原始 state
+    if (isPlayer) mutableState.heroSkillsUsed = true;
+    else mutableState.opponentHeroSkillUsed = true;
   }
 
   // 2. 费用计算与扣除
@@ -257,7 +200,7 @@ export const executeSpell = (
   }
 
   // 3. 克制判定 (Counter/Crit)
-  const targetLastId = isPlayer ? state.opponentLastSpell : state.playerLastSpell;
+  const targetLastId = isPlayer ? mutableState.opponentLastSpell : mutableState.playerLastSpell;
   const targetLast = targetLastId ? getSpellById(targetLastId) : null;
   
   let countered = false;
@@ -278,10 +221,11 @@ export const executeSpell = (
   if (crit) dmg = Math.floor(dmg * 1.5);
   if (countered) dmg = 0;
 
-  // 连击 (Charge)
-  const myLastId = isPlayer ? state.playerLastSpell : state.opponentLastSpell;
-  const isThunder = (id: string | null) => id && (id.startsWith('thunder') || id === 'hero_thunder');
-  if (!countered && spell.mechanic === 'charge' && isThunder(spell.id) && isThunder(myLastId)) {
+  // 连击 (Charge) - [P0 Fix] 雷电连击只考虑手牌法术，不包括英雄技能
+  const myLastId = isPlayer ? mutableState.playerLastSpell : mutableState.opponentLastSpell;
+  // [P0 Fix] 修正：hero_thunder 不应该触发法术连击（它是技能，不是法术）
+  const isThunderSpell = (id: string | null) => id && id.startsWith('thunder') && !id.startsWith('hero_');
+  if (!countered && spell.mechanic === 'charge' && isThunderSpell(spell.id) && isThunderSpell(myLastId)) {
       dmg = Math.floor(dmg * 1.5);
       actions.push({ type: 'MESSAGE', target: 'system', description: `⚡ 闪电连击！伤害增加50%！` });
   }
@@ -294,10 +238,10 @@ export const executeSpell = (
       actions.push({ type: 'ARMOR_CHANGE', target: caster, value: spell.armorGain, description: `${isPlayer ? '获得' : '对手获得'} ${spell.armorGain} 护甲` });
   }
 
-  // 6. 机制特效 Actions
+  // 6. 机制特效 Actions - [P0 Fix] 使用拷贝后的状态
   const mechanicGenerator = MECHANIC_DEFINITIONS[spell.mechanic];
   if (mechanicGenerator) {
-      actions.push(...mechanicGenerator(state, caster, spell, countered, crit));
+      actions.push(...mechanicGenerator(mutableState, caster, spell, countered, crit));
   }
 
   // [New 6.3] 随从召唤逻辑
@@ -312,181 +256,45 @@ export const executeSpell = (
   }
 
   // 7. 特殊操作: 手牌移除 & LastSpell 更新
+  // [P0 Fix] 同步英雄技能使用状态到命令执行前的状态
+  const preExecuteState: DuelState = {
+    ...mutableState,
+    heroSkillsUsed: mutableState.heroSkillsUsed,
+    opponentHeroSkillUsed: mutableState.opponentHeroSkillUsed,
+  };
+  
   const cmd: GameCommand = { id: `cast_${spellId}`, sourceSpell: spellId, caster, actions };
-  let { state: newState, logs } = GameSequenceExecutor.executeCommand(state, cmd);
+  let { state: newState, logs } = GameSequenceExecutor.executeCommand(preExecuteState, cmd);
+  
+  // [P0 Fix] 确保返回的是全新对象，避免引用污染
+  const finalState: DuelState = { ...newState };
   
   if (isPlayer) {
-      newState.playerLastSpell = spellId;
-      newState.playerHand = newState.playerHand.filter((id, i) => {
-          const firstIdx = newState.playerHand.indexOf(spellId);
-          return i !== firstIdx;
-      });
+      finalState.playerLastSpell = spellId;
+      const firstIdx = finalState.playerHand.indexOf(spellId);
+      if (firstIdx !== -1) {
+          finalState.playerHand = finalState.playerHand.filter((_, i) => i !== firstIdx);
+      }
   } else {
-      newState.opponentLastSpell = spellId;
+      finalState.opponentLastSpell = spellId;
       if (spellId.startsWith('hero_')) {
           // 英雄技能不消耗手牌
       } else {
-          newState.opponentHand = newState.opponentHand.filter((id, i) => {
-              const firstIdx = newState.opponentHand.indexOf(spellId);
-              return i !== firstIdx;
-          });
-          newState.opponentHandSize = newState.opponentHand.length;
+          const firstIdx = finalState.opponentHand.indexOf(spellId);
+          if (firstIdx !== -1) {
+              finalState.opponentHand = finalState.opponentHand.filter((_, i) => i !== firstIdx);
+              finalState.opponentHandSize = finalState.opponentHand.length;
+          }
       }
   }
 
-  return { newState, logs, command: cmd };
+  return { newState: finalState, logs, command: cmd };
 };
 
 
-// ============ AI 逻辑 (Patch 2.0) ============
+// [Phase 2] AI 逻辑已迁移到 services/ai.ts
+// 通过顶部的 export { executeAITurn, getAISpell, pickBestSpellForAI } from './ai' 重新导出
 
-const pickBestSpellForAI = (state: DuelState): SpellType | null => {
-   // 再次校验冻结 (Double Check)
-   if (state.opponentEffects.some(e => e.type === 'frozen')) return null;
-
-   // AI 从其真实手牌中选择
-   const availableInHand = state.opponentHand;
-   const affordable = availableInHand.filter(s => 
-     canAffordSpell(s, state.opponentMana, state.opponentEffects, state.opponentCostMod).canAfford
-   );
-   
-   // 1. 优先英雄技能 (如果还没用过)
-   if (!state.opponentHeroSkillUsed) {
-      // 对手根据难度或随机选择一个英雄技能调用（逻辑上AI目前没有手牌中的技能卡，所以直接模拟ID）
-      const heroSkillId: SpellType = 'hero_fire'; 
-      if (canAffordSpell(heroSkillId, state.opponentMana, state.opponentEffects, state.opponentCostMod).canAfford) {
-        return heroSkillId;
-      }
-   }
-
-   // 2. 优先斩杀：如果能一击击杀玩家
-   // 2. 优先斩杀：如果能一击击杀玩家
-   const killShot = affordable.find(s => {
-       const spell = getSpellById(s);
-       return spell.damage >= state.playerHP + state.playerArmor;
-   });
-   if (killShot) return killShot;
-   
-   // 3. 低血量时优先防御或治疗
-   if (state.opponentHP <= 10) {
-     // 优先治疗
-     const healSpell = affordable.find(s => getSpellById(s).mechanic === 'heal');
-     if (healSpell) return healSpell;
-     
-     // 其次叠甲
-     const armorSpell = affordable.find(s => (getSpellById(s).armorGain || 0) >= 3);
-     if (armorSpell) return armorSpell;
-   }
-   
-   // 4. 雷电连击优化
-   if (state.opponentLastSpell && (state.opponentLastSpell.startsWith('thunder') || state.opponentLastSpell === 'hero_thunder')) {
-     const thunderSpells = affordable.filter(s => s.startsWith('thunder'));
-     if (thunderSpells.length > 0) {
-       // 选择伤害最高的雷电
-       thunderSpells.sort((a, b) => getSpellById(b).damage - getSpellById(a).damage);
-       return thunderSpells[0];
-     }
-   }
-   
-   // 5. 元素克制：如果知道玩家上次用了什么，尝试克制
-   if (state.playerLastSpell) {
-     const counterSpell = affordable.find(s => getSpellById(s).beats === state.playerLastSpell);
-     if (counterSpell && getSpellById(counterSpell).damage > 0) {
-       return counterSpell;
-     }
-   }
-   
-   // 6. 优先高伤害卡牌（性价比考虑）
-   const damageSpells = affordable.filter(s => getSpellById(s).damage > 0);
-   if (damageSpells.length > 0) {
-     // 按伤害/费用比排序
-     damageSpells.sort((a, b) => {
-       const spellA = getSpellById(a);
-       const spellB = getSpellById(b);
-       const ratioA = spellA.damage / Math.max(1, spellA.manaCost);
-       const ratioB = spellB.damage / Math.max(1, spellB.manaCost);
-       return ratioB - ratioA;
-     });
-     // 有一定随机性，不总是选最优
-     const topChoices = damageSpells.slice(0, Math.min(3, damageSpells.length));
-     return topChoices[Math.floor(Math.random() * topChoices.length)];
-   }
-   
-   // 7. 随机选择
-   if (affordable.length > 0) {
-     return affordable[Math.floor(Math.random() * affordable.length)];
-   }
-   
-   return null;
-};
-
-export const executeAITurn = (state: DuelState): { newState: DuelState, logs: string[], commands: GameCommand[] } => {
-  // 🔧 深拷贝避免状态污染
-  let currentState = { 
-    ...state,
-    playerEffects: [...state.playerEffects],
-    opponentEffects: [...state.opponentEffects],
-    opponentDeck: [...state.opponentDeck],
-    playerHand: [...state.playerHand],
-  };
-  const logs: string[] = [];
-  const commands: GameCommand[] = [];
-
-  // [Fix] 检查冻结状态
-  const isFrozen = currentState.opponentEffects.some(e => e.type === 'frozen');
-  if (isFrozen) {
-     const freezeCmd: GameCommand = { id: 'ai_freeze', caster: 'opponent', actions: [{ type: 'MESSAGE', target: 'system', description: '❄️ 对手被彻底冻结，无法行动！' }] };
-     logs.push('❄️ 对手被彻底冻结，无法行动！');
-     return { newState: currentState, logs, commands: [freezeCmd] };
-  }
-  
-  // 模拟 AI 思考和出牌
-  let cardsPlayed = 0;
-  const maxCards = currentState.opponentHandSize;
-  
-  // 🔧 添加硬性循环上限，防止无限循环（例如全0费卡场景）
-  const MAX_ACTIONS = 20;
-  let actionCount = 0;
-  let lastMana = currentState.opponentMana;
-  
-  while (cardsPlayed < maxCards && currentState.opponentMana >= 0 && actionCount < MAX_ACTIONS) {
-      actionCount++;
-      
-      const spellId = pickBestSpellForAI(currentState);
-      if (!spellId) break; 
-      
-      const result = executeSpell(currentState, 'opponent', spellId);
-      
-      // 🔧 检测是否真的执行了（法力或手牌变化）
-      const manaChanged = result.newState.opponentMana !== currentState.opponentMana;
-      const handChanged = result.newState.opponentHandSize !== currentState.opponentHandSize;
-      
-      if (!manaChanged && !handChanged && result.logs.length === 0) {
-         // 没有任何变化，中断防止死循环
-         break;
-      }
-
-      currentState = result.newState;
-      logs.push(...result.logs);
-      commands.push(result.command);
-      cardsPlayed++;
-      
-      // 🔧 使用统一死亡检查
-      const gameOver = checkGameOver(currentState);
-      if (gameOver) break;
-  }
-  
-  if (actionCount >= MAX_ACTIONS) {
-    logs.push('⚠️ AI 行动次数达到上限');
-  }
-  
-  return { newState: currentState, logs, commands };
-};
-
-// 兼容旧接口
-export const getAISpell = (state: DuelState): SpellType => {
-    return pickBestSpellForAI(state) || 'rock';
-};
 
 // ============ 死亡检查 (统一判定) ============
 
