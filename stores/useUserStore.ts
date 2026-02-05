@@ -97,19 +97,28 @@ export const useUserStore = create<UserState>((set, get) => ({
 
   saveDeck: async (deck: Deck) => {
     const { activeAddress, decks } = get();
+    
+    // 限制最多 3 套卡组
+    let newDecks = [...decks];
+    const existingIndex = decks.findIndex((d) => d.id === deck.id);
+    
+    if (existingIndex >= 0) {
+      newDecks[existingIndex] = deck;
+    } else {
+      if (newDecks.length >= 3) {
+        // 如果已经有 3 套，且是新增，则替换最久没用的或者提示错误。
+        // 这里采用简单的 logic：如果满 3 套且试图新增，则不操作或返回。
+        // 在 UI 层我们会控制用户只能编辑已有的槽位。
+        return;
+      }
+      newDecks.push(deck);
+    }
+
     if (activeAddress) {
       await ApiService.saveDeck(activeAddress, deck);
     }
 
-    const existingIndex = decks.findIndex((d) => d.id === deck.id);
-    if (existingIndex >= 0) {
-      const newDecks = [...decks];
-      newDecks[existingIndex] = deck;
-      set({ decks: newDecks });
-    } else {
-      set({ decks: [...decks, deck] });
-    }
-    set({ selectedDeck: deck });
+    set({ decks: newDecks, selectedDeck: deck });
   },
 
   updateBalance: (newBalance) => set({ balance: newBalance }),

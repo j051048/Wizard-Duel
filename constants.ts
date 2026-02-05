@@ -808,3 +808,49 @@ export function isCardAvailableInMode(cardId: SpellType, gameMode: GameMode): bo
   const allowedSets = gameMode === 'standard' ? STANDARD_SETS : WILD_SETS;
   return allowedSets.includes(card.cardSet);
 }
+/**
+ * 预设卡组系统：为新手提供 3 套风格迥异的初始卡组
+ */
+export const PRESET_DECKS: { name: string; cards: SpellType[]; description: string; style: 'aggro' | 'control' | 'combo' }[] = [
+  {
+    name: '烈焰咆哮',
+    style: 'aggro',
+    description: '极致进攻，利用火焰的高额伤害和持久灼烧快速终结对手。',
+    cards: [
+      'fire', 'fire', 'fire', 'fire',         // 炎爆术 x4
+      'fire2', 'fire2', 'fire2', 'fire2',     // 火球术 x4
+      'fire4', 'fire4', 'fire4', 'fire4',     // 小火花 x4
+      'aoe', 'aoe',                           // 奥术爆炸 x2
+      'draw', 'draw',                         // 奥术智慧 x2
+      'thunder', 'thunder',                   // 闪电箭 x2
+      'rock', 'rock'                          // 铁皮术 x2
+    ]
+  },
+  {
+    name: '严寒禁区',
+    style: 'control',
+    description: '缜密防守，通过冰冻限制对手行动，并在防守中寻找反击机会。',
+    cards: [
+      'ice', 'ice', 'ice', 'ice',             // 暴风雪 x4
+      'ice2', 'ice2', 'ice2', 'ice2',         // 霜冻新星 x4
+      'rock3', 'rock3',                       // 大地震击 x2
+      'rock2', 'rock2',                       // 石墙 x2
+      'healing', 'healing', 'healing', 'healing', // 治疗波 x4
+      'vine2', 'vine2',                       // 纠缠根须 x2
+      'draw', 'draw'                          // 奥术智慧 x2
+    ]
+  },
+  {
+    name: '雷霆万钧',
+    style: 'combo',
+    description: '资源掌控，利用雷电连击和藤蔓控费，掌握战斗节奏。',
+    cards: [
+      'thunder', 'thunder', 'thunder', 'thunder', // 闪电箭 x4
+      'thunder2', 'thunder2', 'thunder2', 'thunder2', // 连锁闪电 x4
+      'vine', 'vine', 'vine', 'vine',         // 荆棘缠绕 x4
+      'vine2', 'vine2', 'vine2', 'vine2',     // 纠缠根须 x4
+      'draw', 'draw',                         // 奥术智慧 x2
+      'ice4', 'ice4'                          // 严重冻伤 x2
+    ]
+  }
+];

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { SpellType, Deck, GameMode } from '../types';
 import { getCardsForMode } from '../constants';
 import { HapticService } from '../services/haptic';
@@ -11,6 +11,12 @@ export const useDeckBuilder = (selectedDeck: Deck | null | undefined, gameMode: 
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [detailSpell, setDetailSpell] = useState<SpellType | null>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 当外部选中的卡组发生变化（如切换槽位）时，重置内部编辑器状态
+  useEffect(() => {
+    setDeckName(selectedDeck?.name || `新卡组`);
+    setSelectedCards(selectedDeck?.cards || []);
+  }, [selectedDeck?.id]);
 
   const handleCardPressStart = useCallback((spellId: SpellType) => {
       longPressTimerRef.current = setTimeout(() => {
@@ -66,6 +72,12 @@ export const useDeckBuilder = (selectedDeck: Deck | null | undefined, gameMode: 
     }
   }, [selectedCards]);
 
+  const loadPreset = useCallback((preset: { name: string, cards: SpellType[] }) => {
+    setDeckName(preset.name);
+    setSelectedCards(preset.cards);
+    HapticService.light();
+  }, []);
+
   return {
     deckName,
     setDeckName,
@@ -85,6 +97,7 @@ export const useDeckBuilder = (selectedDeck: Deck | null | undefined, gameMode: 
     totalCards,
     isValidDeck,
     addCard,
-    removeCard
+    removeCard,
+    loadPreset
   };
 };

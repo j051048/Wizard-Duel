@@ -361,6 +361,7 @@ function App() {
             <DeckBuilder
               onBack={() => ui.setGameState('LOBBY')}
               onSaveDeck={user.saveDeck}
+              onSelectDeck={user.setSelectedDeck}
               existingDecks={user.decks}
               selectedDeck={user.selectedDeck}
               gameMode={ui.gameMode}

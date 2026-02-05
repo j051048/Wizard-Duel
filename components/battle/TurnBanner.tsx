@@ -24,13 +24,13 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({ type, onAnimationComplet
         HapticService.medium();
       }
 
-      // 动画序列
-      const enterTimer = setTimeout(() => setPhase('hold'), 400);
-      const holdTimer = setTimeout(() => setPhase('exit'), 1200);
+      // 动画序列 (总时长约 2.5秒)
+      const enterTimer = setTimeout(() => setPhase('hold'), 300);
+      const holdTimer = setTimeout(() => setPhase('exit'), 1800); // 保持约 1.5 秒
       const exitTimer = setTimeout(() => {
         setPhase('hidden');
         onAnimationComplete?.();
-      }, 1600);
+      }, 2500); // 2.5 秒后彻底隐藏
 
       return () => {
         clearTimeout(enterTimer);
@@ -51,7 +51,7 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({ type, onAnimationComplet
       {/* 背景遮罩 */}
       <div 
         className={`
-          absolute inset-0 transition-opacity duration-300
+          absolute inset-0 transition-opacity duration-500
           ${phase === 'enter' || phase === 'hold' ? 'opacity-100' : 'opacity-0'}
         `}
         style={{ backgroundColor: isPlayer ? 'rgba(234, 179, 8, 0.15)' : 'rgba(239, 68, 68, 0.15)' }}
@@ -62,7 +62,7 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({ type, onAnimationComplet
         className={`
           absolute top-1/2 -mt-20 h-px w-full transition-all duration-500
           ${isPlayer ? 'bg-gradient-to-r from-transparent via-yellow-500 to-transparent' : 'bg-gradient-to-r from-transparent via-red-500 to-transparent'}
-          ${phase === 'enter' ? 'scale-x-0' : phase === 'hold' ? 'scale-x-100' : 'scale-x-0'}
+          ${phase === 'enter' ? 'scale-x-0 opacity-0' : phase === 'hold' ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'}
         `}
       />
 
@@ -71,17 +71,17 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({ type, onAnimationComplet
         className={`
           absolute top-1/2 mt-20 h-px w-full transition-all duration-500
           ${isPlayer ? 'bg-gradient-to-r from-transparent via-yellow-500 to-transparent' : 'bg-gradient-to-r from-transparent via-red-500 to-transparent'}
-          ${phase === 'enter' ? 'scale-x-0' : phase === 'hold' ? 'scale-x-100' : 'scale-x-0'}
+          ${phase === 'enter' ? 'scale-x-0 opacity-0' : phase === 'hold' ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0'}
         `}
       />
 
       {/* 主文字容器 */}
       <div 
         className={`
-          relative transition-all duration-400
+          relative transition-all duration-700 ease-out
           ${phase === 'enter' ? 'scale-150 opacity-0' : ''}
           ${phase === 'hold' ? 'scale-100 opacity-100' : ''}
-          ${phase === 'exit' ? 'scale-75 opacity-0 translate-y-10' : ''}
+          ${phase === 'exit' ? 'scale-95 opacity-0 -translate-y-2' : ''}
         `}
       >
         {/* 光晕背景 */}
