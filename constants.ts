@@ -460,7 +460,7 @@ export const SPELLS: Spell[] = [
     id: 'fire_ultimate', 
     name: '末日审判',        // Doomsday
     emoji: '☄️', 
-    artSrc: '/cards/fire-ultimate.webp',
+    artSrc: '/cards/fire-ultimate.png',
     color: 'text-red-600', 
     borderColor: 'border-red-600',
     shadowColor: 'rgba(220,38,38,0.7)',
@@ -469,14 +469,15 @@ export const SPELLS: Spell[] = [
     damage: 15,
     rarity: 'legendary',
     mechanic: 'burn',
+    cardSet: 'tournament',
     description: '造成15点伤害。如果获胜，下回合对手额外受到5点燃烧伤害。',
     shortDesc: '终极: 爆发+焚毁'
   },
   { 
     id: 'ice_ultimate', 
-    name: '绝对零度',      // Absolute Zero
+    name: '绝对终结',      // Eternal End
     emoji: '🌀', 
-    artSrc: '/cards/ice-ultimate.webp',
+    artSrc: '/cards/ice-ultimate.png',
     color: 'text-blue-200', 
     borderColor: 'border-blue-200',
     shadowColor: 'rgba(191,219,254,0.7)',
@@ -485,6 +486,7 @@ export const SPELLS: Spell[] = [
     damage: 10,
     rarity: 'legendary',
     mechanic: 'freeze',
+    cardSet: 'tournament',
     description: '造成10点伤害。如果平局或获胜，将对手冻结3回合。',
     shortDesc: '终极: 永恒冻结'
   },
@@ -492,7 +494,7 @@ export const SPELLS: Spell[] = [
     id: 'rock_ultimate', 
     name: '万象天引',       // Catastrophic Impact
     emoji: '🌍', 
-    artSrc: '/cards/rock-ultimate.webp',
+    artSrc: '/cards/rock-ultimate.png',
     color: 'text-stone-600', 
     borderColor: 'border-stone-600',
     shadowColor: 'rgba(68,64,60,0.7)',
@@ -502,6 +504,7 @@ export const SPELLS: Spell[] = [
     armorGain: 20,
     rarity: 'legendary',
     mechanic: 'fortify',
+    cardSet: 'tournament',
     description: '造成8点伤害，获得20点护甲，并抽3张牌。',
     shortDesc: '终极: 绝对防御'
   },
@@ -509,7 +512,7 @@ export const SPELLS: Spell[] = [
     id: 'thunder_ultimate', 
     name: '雷神降临',  // Thor's Descent
     emoji: '🌩️', 
-    artSrc: '/cards/thunder-ultimate.webp',
+    artSrc: '/cards/thunder-ultimate.png',
     color: 'text-yellow-600', 
     borderColor: 'border-yellow-600',
     shadowColor: 'rgba(202,138,4,0.7)',
@@ -518,6 +521,7 @@ export const SPELLS: Spell[] = [
     damage: 10,
     rarity: 'legendary',
     mechanic: 'charge',
+    cardSet: 'tournament',
     description: '造成10点伤害。如果你上回合使用了雷系法术，本回合伤害翻倍(20)。',
     shortDesc: '终极: 核弹打击'
   },
@@ -525,7 +529,7 @@ export const SPELLS: Spell[] = [
     id: 'vine_ultimate', 
     name: '自然之怒',    // Mother Nature's Wrath
     emoji: '🌿🌋', 
-    artSrc: '/cards/vine-ultimate.webp',
+    artSrc: '/cards/vine-ultimate.png',
     color: 'text-green-600', 
     borderColor: 'border-green-600',
     shadowColor: 'rgba(22,101,52,0.7)',
@@ -534,6 +538,7 @@ export const SPELLS: Spell[] = [
     damage: 7,
     rarity: 'legendary',
     mechanic: 'tangle',
+    cardSet: 'tournament',
     description: '造成7点伤害。如果获胜，对手下两个回合的所有法术费用增加(5)点。',
     shortDesc: '终极: 封魔立场'
   },

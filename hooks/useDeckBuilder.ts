@@ -1,7 +1,9 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { SpellType, Deck, GameMode } from '../types';
+import { SpellType, Deck, GameMode, Spell } from '../types';
 import { getCardsForMode } from '../constants';
 import { HapticService } from '../services/haptic';
+import { useUserStore } from '../stores/useUserStore';
+import { useToastStore } from '../stores/useToastStore';
 
 export const useDeckBuilder = (selectedDeck: Deck | null | undefined, gameMode: GameMode = 'standard') => {
   const [deckName, setDeckName] = useState(selectedDeck?.name || '新牌组');
@@ -37,7 +39,26 @@ export const useDeckBuilder = (selectedDeck: Deck | null | undefined, gameMode: 
       setDetailSpell(spellId);
   }, []);
 
-  const rawCardPool = getCardsForMode(gameMode).filter(s => s.id !== 'skip');
+  const { inventory } = useUserStore();
+  const toast = useToastStore();
+
+  // 计算拥有的卡牌数量
+  const ownedCounts = inventory.reduce((acc, spellId) => {
+    acc[spellId] = (acc[spellId] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // 获取单张卡牌在牌组中的上限
+  const getCardLimit = (spell: Spell): number => {
+    if (spell.cardSet === 'core') return 4; // 核心卡牌每种最多4张
+    return ownedCounts[spell.id] || 0;
+  };
+
+  const rawCardPool = getCardsForMode(gameMode).filter(s => {
+    if (s.id === 'skip') return false;
+    // 核心卡牌默认解锁，或者拥有至少 1 张
+    return s.cardSet === 'core' || ownedCounts[s.id] > 0;
+  });
 
   const filteredCardPool = rawCardPool.filter(card => {
     const matchesSearch = card.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -56,12 +77,30 @@ export const useDeckBuilder = (selectedDeck: Deck | null | undefined, gameMode: 
   const isValidDeck = totalCards >= 20 && totalCards <= 30;
 
   const addCard = useCallback((spellId: SpellType, e?: React.MouseEvent) => {
-    if (selectedCards.length < 30) {
-      setSelectedCards(prev => [...prev, spellId]);
-      setLastAddedId(spellId);
-      setTimeout(() => setLastAddedId(null), 500);
+    const spell = rawCardPool.find(s => s.id === spellId);
+    if (!spell) return;
+
+    const currentCount = selectedCards.filter(id => id === spellId).length;
+    const limit = getCardLimit(spell);
+
+    if (selectedCards.length >= 30) {
+      toast.error('数量限制', '您的牌组已满（上限 30 张）');
+      return;
     }
-  }, [selectedCards.length]);
+
+    if (currentCount >= limit) {
+      if (spell.cardSet === 'core') {
+        toast.warning('数量限制', `核心卡牌每种最多加入 ${limit} 张`);
+      } else {
+        toast.warning('收藏不足', `您的收藏中只有 ${limit} 张该卡牌，已全部加入牌组`);
+      }
+      return;
+    }
+
+    setSelectedCards(prev => [...prev, spellId]);
+    setLastAddedId(spellId);
+    setTimeout(() => setLastAddedId(null), 500);
+  }, [selectedCards, rawCardPool, ownedCounts, toast]);
 
   const removeCard = useCallback((spellId: SpellType) => {
     const index = selectedCards.lastIndexOf(spellId);

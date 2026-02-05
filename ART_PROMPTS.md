@@ -286,3 +286,32 @@ A floating hand holding a sapphire orb brimming with concentrated lightning, ene
 ```text
 A massive fist made of tectonic rock plates punching the ground, shockwaves, ancient earth power, Hearthstone style --ar 1:1
 ```
+
+---
+
+## 🌩️ 终极法术 - 传说系列 (5张)
+
+### 55. 末日审判 (`public/cards/fire-ultimate.webp`) [10费]
+```text
+A massive apocalyptic meteor shower rain down from a dark, fiery sky onto a volcanic landscape. One giant central meteor crashing with an orange and red explosion. Digital painting, high-fantasy card game art style, epic scale, vibrant lava and smoke, Hearthstone style --ar 1:1
+```
+
+### 56. 绝对终结 (`public/cards/ice-ultimate.webp`) [8费]
+```text
+A cataclysmic vortex of blue and white frost energy spiraling in a frozen wasteland. Massive jagged ice spikes erupting from the ground. A wizard silhouetted in the center of a blinding blizzard. Digital painting, high-fantasy card game art style, ethereal light, cold atmospheric textures, Hearthstone style --ar 1:1
+```
+
+### 57. 万象天引 (`public/cards/rock-ultimate.webp`) [9费]
+```text
+A catastrophic gravity distortion event where massive levitating rocks and earth chunks are being pulled into a central dark orb in the sky. Dust and debris swirling. Ancient ruins being torn apart. Digital painting, high-fantasy card game art style, earth tones, dramatic shadows and lighting, Hearthstone style --ar 1:1
+```
+
+### 58. 雷神降临 (`public/cards/thunder-ultimate.webp`) [7费]
+```text
+A legendary golden lightning strike descending from a storm-torn heaven, splitting the clouds. A divine silhouette of a thunder god appearing in the clouds. Electric sparks everywhere. Digital painting, high-fantasy card game art style, high contrast, vibrant yellow and purple, Hearthstone style --ar 1:1
+```
+
+### 59. 自然之怒 (`public/cards/vine-ultimate.webp`) [7费]
+```text
+A terrifying manifestation of nature's wrath: colossal ancient roots and glowing green vines erupting from a lush jungle floor, crushing stone pillars. Toxic green spores and magical energy. Digital painting, high-fantasy card game art style, complex vegetation, deep greens and emerald light, Hearthstone style --ar 1:1
+```

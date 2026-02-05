@@ -97,7 +97,8 @@ async function apiRequest<T>(
 const STORAGE_KEYS = {
   PROFILE: 'wizard_user_profile',
   DECKS: 'wizard_user_decks',
-  HISTORY: 'wizard_battle_history'
+  HISTORY: 'wizard_battle_history',
+  INVENTORY: 'wizard_user_inventory'
 };
 
 // Helper to load/save local data
@@ -205,6 +206,27 @@ export const ApiService = {
       body: JSON.stringify({ userId, ...metadata }),
     });
     return response.success;
+  },
+
+  // ---------- 收藏管理 ----------
+
+  async getInventory(userId: string): Promise<SpellType[]> {
+    if (CONFIG.useMock) {
+      const allInventories = _loadLocalData<Record<string, SpellType[]>>(STORAGE_KEYS.INVENTORY, {});
+      return allInventories[userId] || [];
+    }
+    // TODO: Real API
+    return [];
+  },
+
+  async saveInventory(userId: string, inventory: SpellType[]): Promise<void> {
+    if (CONFIG.useMock) {
+      const allInventories = _loadLocalData<Record<string, SpellType[]>>(STORAGE_KEYS.INVENTORY, {});
+      allInventories[userId] = inventory;
+      _saveLocalData(STORAGE_KEYS.INVENTORY, allInventories);
+      return;
+    }
+    // TODO: Real API
   },
 
   // ---------- 牌组管理 (NEW) ----------

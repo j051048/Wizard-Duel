@@ -374,7 +374,8 @@ function App() {
               onBack={() => ui.setGameState('LOBBY')}
               onUpdateBalance={user.setBalance}
               onAddCards={(cards) => {
-                // 这里可以添加卡牌到用户收藏
+                const cardIds = cards.map(c => c.id);
+                user.addCardsToInventory(cardIds);
                 toast.success('卡牌已添加', `${cards.length} 张卡牌已加入收藏`);
               }}
             />

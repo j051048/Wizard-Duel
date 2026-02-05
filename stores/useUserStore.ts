@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Rank, Deck, BattleRecord, PlayerStats } from '../types';
+import { Rank, Deck, BattleRecord, PlayerStats, SpellType } from '../types';
 import { ApiService } from '../services/api';
 
 interface UserState {
@@ -11,6 +11,7 @@ interface UserState {
   decks: Deck[];
   selectedDeck: Deck | null;
   history: BattleRecord[];
+  inventory: SpellType[];
   leaderboard: PlayerStats[];
   isLoading: boolean;
   hasCompletedTutorial: boolean;
@@ -24,6 +25,7 @@ interface UserState {
   setDecks: (decks: Deck[]) => void;
   setSelectedDeck: (deck: Deck | null) => void;
   setHistory: (history: BattleRecord[]) => void;
+  setInventory: (inventory: SpellType[]) => void;
   setLeaderboard: (leaderboard: PlayerStats[]) => void;
   setIsLoading: (loading: boolean) => void;
   setHasCompletedTutorial: (completed: boolean) => void;
@@ -33,6 +35,7 @@ interface UserState {
   loadLeaderboard: () => Promise<void>;
   saveDeck: (deck: Deck) => Promise<void>;
   updateBalance: (newBalance: number) => void;
+  addCardsToInventory: (cards: SpellType[]) => Promise<void>;
 }
 
 export const useUserStore = create<UserState>((set, get) => ({
@@ -44,6 +47,7 @@ export const useUserStore = create<UserState>((set, get) => ({
   decks: [],
   selectedDeck: null,
   history: [],
+  inventory: [],
   leaderboard: [],
   isLoading: false,
   hasCompletedTutorial: false,
@@ -56,6 +60,7 @@ export const useUserStore = create<UserState>((set, get) => ({
   setDecks: (decks) => set({ decks }),
   setSelectedDeck: (selectedDeck) => set({ selectedDeck }),
   setHistory: (history) => set({ history }),
+  setInventory: (inventory) => set({ inventory }),
   setLeaderboard: (leaderboard) => set({ leaderboard }),
   setIsLoading: (isLoading) => set({ isLoading }),
   setHasCompletedTutorial: (hasCompletedTutorial) => set({ hasCompletedTutorial }),
@@ -79,6 +84,9 @@ export const useUserStore = create<UserState>((set, get) => ({
 
       const hist = await ApiService.getHistory(address);
       set({ history: hist });
+
+      const inv = await ApiService.getInventory(address);
+      set({ inventory: inv });
     } catch (e) {
       console.error('Failed to load user data:', e);
     } finally {
@@ -122,4 +130,15 @@ export const useUserStore = create<UserState>((set, get) => ({
   },
 
   updateBalance: (newBalance) => set({ balance: newBalance }),
+
+  addCardsToInventory: async (cards) => {
+    const { activeAddress, inventory } = get();
+    const newInventory = [...inventory, ...cards];
+    
+    set({ inventory: newInventory });
+    
+    if (activeAddress) {
+      await ApiService.saveInventory(activeAddress, newInventory);
+    }
+  }
 }));
