@@ -69,7 +69,7 @@ export const calculateSpellProjection = (
   const isThunder = (id: string | null) => id && (id.startsWith('thunder') || id === 'hero_thunder');
   
   if (!result.isCountered && spell.mechanic === 'charge' && isThunder(spell.id) && isThunder(myLastSpell)) {
-      damage = Math.floor(damage * 1.5);
+      damage = Math.floor(damage * 1.3);
   }
 
   // AOE Extra Damage

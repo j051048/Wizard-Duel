@@ -316,7 +316,7 @@ export interface AIStatus {
 
 // [New 6.0] 动作队列指令
 export interface GameActionCommand {
-  type: 'UPDATE_STATE' | 'ADD_MESSAGE' | 'SET_PHASE' | 'SET_AI_STATUS' | 'PLAY_ANIMATION' | 'WAIT' | 'UPDATE_UI';
+  type: 'UPDATE_STATE' | 'ADD_MESSAGE' | 'SET_PHASE' | 'SET_AI_STATUS' | 'PLAY_ANIMATION' | 'WAIT' | 'UPDATE_UI' | 'EXECUTE_LOGIC' | 'SET_TARGETING';
   payload: any;
   delay?: number;
 }

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import { SpellType, DuelPhase } from '../../types';
 import { SpellCard } from '../SpellCard';
 import { getSpellById } from '../../services/gameLogic';
@@ -73,6 +73,12 @@ const BattleHand: React.FC<BattleHandProps> = ({
     }
   };
 
+  // [P0 优化] 使用 useMemo 缓存布局计算，避免在 map 循环中重复计算
+  const layoutConfig = useMemo(() => 
+    calculateHandLayout(hand.length, isMobile, window.innerWidth),
+    [hand.length, isMobile]
+  );
+
     return (
     <div className="flex justify-center items-end relative h-40 md:h-48 pointer-events-auto" style={{ width: '100%', maxWidth: '900px' }}>
       <AnimatePresence>
@@ -83,7 +89,7 @@ const BattleHand: React.FC<BattleHandProps> = ({
           const totalCards = hand.length;
           const centerIndex = (totalCards - 1) / 2;
           
-          const { angleStep, xSpacing } = calculateHandLayout(totalCards, isMobile, window.innerWidth);
+          const { angleStep, xSpacing } = layoutConfig;
           
           const offsetIndex = index - centerIndex;
           
