@@ -373,10 +373,9 @@ function App() {
               balance={user.balance}
               onBack={() => ui.setGameState('LOBBY')}
               onUpdateBalance={user.setBalance}
-              onAddCards={(cards) => {
-                const cardIds = cards.map(c => c.id);
+              onAddCards={(cardIds) => {
                 user.addCardsToInventory(cardIds);
-                toast.success('卡牌已添加', `${cards.length} 张卡牌已加入收藏`);
+                toast.success('卡牌已添加', `${cardIds.length} 张卡牌已加入收藏`);
               }}
             />
           )}

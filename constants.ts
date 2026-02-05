@@ -219,6 +219,7 @@ export const SPELLS: Spell[] = [
     damage: 8,
     rarity: 'mythic',
     mechanic: 'burn',
+    cardSet: 'tournament',
     description: '造成8点伤害。如果获胜，下回合对手额外受到3点燃烧伤害。',
     shortDesc: '灼烧: +3 持续伤害'
   },
@@ -235,6 +236,7 @@ export const SPELLS: Spell[] = [
     damage: 4,
     rarity: 'rare',
     mechanic: 'tangle',
+    cardSet: 'tournament',
     description: '造成4点伤害。如果获胜，对手下一张法术费用增加(1)点。',
     shortDesc: '缠绕: 费用+1'
   },
@@ -252,6 +254,7 @@ export const SPELLS: Spell[] = [
     armorGain: 6,
     rarity: 'rare',
     mechanic: 'freeze',
+    cardSet: 'tournament',
     description: '造成2点伤害，获得6点护甲。如果平局或胜利，冻结对手。',
     shortDesc: '冻结 + 坚韧'
   },
@@ -268,6 +271,7 @@ export const SPELLS: Spell[] = [
     damage: 6,
     rarity: 'mythic',
     mechanic: 'charge',
+    cardSet: 'tournament',
     // [P0 平衡] 连击从 x2 降为 x1.5，与代码逻辑保持一致
     description: '造成6点伤害。如果你上回合使用了雷系法术，伤害增加30%(8)。',
     shortDesc: '充能: 连击+30%'
@@ -286,6 +290,7 @@ export const SPELLS: Spell[] = [
     armorGain: 10,
     rarity: 'mythic',
     mechanic: 'fortify',
+    cardSet: 'tournament',
     description: '造成5点伤害，但获得10点护甲。',
     shortDesc: '坚韧: +10 护甲'
   },
@@ -385,6 +390,7 @@ export const SPELLS: Spell[] = [
     damage: 10,
     rarity: 'legendary',
     mechanic: 'burn',
+    cardSet: 'tournament',
     description: '造成10点伤害。如果获胜，下回合对手额外受到4点燃烧伤害。',
     shortDesc: '灼烧: +4 持续伤害'
   },
@@ -401,6 +407,7 @@ export const SPELLS: Spell[] = [
     damage: 5,
     rarity: 'rare',
     mechanic: 'tangle',
+    cardSet: 'tournament',
     description: '造成5点伤害。如果获胜，对手下一张法术费用增加(1)点。',
     shortDesc: '缠绕: 费用+1'
   },
@@ -417,6 +424,7 @@ export const SPELLS: Spell[] = [
     damage: 8,
     rarity: 'legendary',
     mechanic: 'freeze',
+    cardSet: 'tournament',
     description: '造成8点伤害。如果平局或胜利，冻结对手两回合。',
     shortDesc: '冻结: 持续2回合'
   },
@@ -433,6 +441,7 @@ export const SPELLS: Spell[] = [
     damage: 5,                // [P0 平衡] 基础伤害 5
     rarity: 'mythic',
     mechanic: 'charge',
+    cardSet: 'tournament',
     // [P0 平衡] 连击从 x2 降为 x1.5，与代码逻辑保持一致
     description: '造成5点伤害。如果你上回合使用了雷系法术，伤害增加30%(7)。',
     shortDesc: '充能: 连击+30%'
@@ -451,6 +460,7 @@ export const SPELLS: Spell[] = [
     armorGain: 15,
     rarity: 'legendary',
     mechanic: 'fortify',
+    cardSet: 'tournament',
     summonId: 'rock_golem',
     description: '造成6点伤害，获得15点护甲，并召唤一个大地巨像(5/10)。',
     shortDesc: '由于坚韧而召唤巨像'

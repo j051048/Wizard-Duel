@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Package, Gift, Crown, Sparkles, Star, Zap, X } from 'lucide-react';
 import { SpellCard } from './SpellCard';
 import { openPack, PACK_CONFIG, SPELLS } from '../constants';
-import { Spell } from '../types';
+import { Spell, SpellType } from '../types';
 import { HapticService } from '../services/haptic';
 import { useToastStore } from '../stores/useToastStore';
 
@@ -15,7 +15,7 @@ interface ShopScreenProps {
   balance: number;
   onBack: () => void;
   onUpdateBalance: (newBalance: number) => void;
-  onAddCards?: (cards: Spell[]) => void;
+  onAddCards?: (cards: SpellType[]) => void;
 }
 
 interface PackType {
@@ -168,7 +168,7 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
     setRevealIndex(0);
     setOpeningPack(pack);
     
-    onAddCards?.(finalCards);
+    onAddCards?.(finalCards.map(c => c.id));
   };
 
   const handleRevealNext = () => {
