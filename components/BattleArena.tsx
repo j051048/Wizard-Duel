@@ -250,8 +250,6 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
       <TargetingArrow data={targetingData} />
       
-      <TurnIndicator isPlayerTurn={phase === 'PLAYER_TURN'} roundNumber={duelState.roundNumber} />
-
       {!isLowQuality && (
           <canvas 
             ref={canvasRef}

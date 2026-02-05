@@ -61,11 +61,11 @@ const PACK_TYPES: PackType[] = [
     description: '保底1张传说卡牌',
     price: 1000,
     icon: <Sparkles className="w-8 h-8" />,
-    gradient: 'from-purple-500 to-pink-600',
+    gradient: 'from-purple-600 to-indigo-700',
     borderColor: 'border-purple-500',
     glowColor: 'shadow-purple-500/30',
     cardsCount: 5,
-    guaranteedRarity: 'mythic'
+    guaranteedRarity: 'legendary'
   }
 ];
 
@@ -150,14 +150,18 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
     setPityCounter(newPity);
     
     // 如果是高级卡包，确保保底
-    let finalCards = cards;
-    if (pack.guaranteedRarity === 'rare' && !cards.some(c => c.rarity === 'rare' || c.rarity === 'mythic')) {
-      const rareCards = SPELLS.filter(s => s.rarity === 'rare' && s.id !== 'skip');
-      finalCards[0] = rareCards[Math.floor(Math.random() * rareCards.length)];
+    let finalCards = [...cards];
+    if (pack.guaranteedRarity === 'rare' && !finalCards.some(c => c.rarity === 'rare' || c.rarity === 'mythic' || c.rarity === 'legendary')) {
+      const rareCards = SPELLS.filter(s => s.rarity === 'rare' && !s.id.startsWith('hero_'));
+      finalCards[Math.floor(Math.random() * finalCards.length)] = rareCards[Math.floor(Math.random() * rareCards.length)];
     }
-    if (pack.guaranteedRarity === 'mythic' && !cards.some(c => c.rarity === 'mythic')) {
-      const mythicCards = SPELLS.filter(s => s.rarity === 'mythic' && s.id !== 'skip');
-      finalCards[0] = mythicCards[Math.floor(Math.random() * mythicCards.length)];
+    if (pack.guaranteedRarity === 'mythic' && !finalCards.some(c => c.rarity === 'mythic' || c.rarity === 'legendary')) {
+      const mythicCards = SPELLS.filter(s => s.rarity === 'mythic' && !s.id.startsWith('hero_'));
+      finalCards[Math.floor(Math.random() * finalCards.length)] = mythicCards[Math.floor(Math.random() * mythicCards.length)];
+    }
+    if (pack.guaranteedRarity === 'legendary' && !finalCards.some(c => c.rarity === 'legendary')) {
+      const legendaryCards = SPELLS.filter(s => s.rarity === 'legendary' && !s.id.startsWith('hero_'));
+      finalCards[Math.floor(Math.random() * finalCards.length)] = legendaryCards[Math.floor(Math.random() * legendaryCards.length)];
     }
 
     setRevealedCards(finalCards);

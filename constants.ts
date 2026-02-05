@@ -383,7 +383,7 @@ export const SPELLS: Spell[] = [
     beats: 'vine',
     manaCost: 6,
     damage: 10,
-    rarity: 'mythic',
+    rarity: 'legendary',
     mechanic: 'burn',
     description: '造成10点伤害。如果获胜，下回合对手额外受到4点燃烧伤害。',
     shortDesc: '灼烧: +4 持续伤害'
@@ -415,7 +415,7 @@ export const SPELLS: Spell[] = [
     beats: 'thunder',
     manaCost: 6,
     damage: 8,
-    rarity: 'mythic',
+    rarity: 'legendary',
     mechanic: 'freeze',
     description: '造成8点伤害。如果平局或胜利，冻结对手两回合。',
     shortDesc: '冻结: 持续2回合'
@@ -449,11 +449,93 @@ export const SPELLS: Spell[] = [
     manaCost: 6,
     damage: 6,
     armorGain: 15,
-    rarity: 'mythic',
+    rarity: 'legendary',
     mechanic: 'fortify',
     summonId: 'rock_golem',
     description: '造成6点伤害，获得15点护甲，并召唤一个大地巨像(5/10)。',
     shortDesc: '由于坚韧而召唤巨像'
+  },
+  // ============ 终极法术 (Ultra-Rares) ============
+  { 
+    id: 'fire_ultimate', 
+    name: '末日审判',        // Doomsday
+    emoji: '☄️', 
+    artSrc: '/cards/fire-ultimate.webp',
+    color: 'text-red-600', 
+    borderColor: 'border-red-600',
+    shadowColor: 'rgba(220,38,38,0.7)',
+    beats: 'vine',
+    manaCost: 10,
+    damage: 15,
+    rarity: 'legendary',
+    mechanic: 'burn',
+    description: '造成15点伤害。如果获胜，下回合对手额外受到5点燃烧伤害。',
+    shortDesc: '终极: 爆发+焚毁'
+  },
+  { 
+    id: 'ice_ultimate', 
+    name: '绝对零度',      // Absolute Zero
+    emoji: '🌀', 
+    artSrc: '/cards/ice-ultimate.webp',
+    color: 'text-blue-200', 
+    borderColor: 'border-blue-200',
+    shadowColor: 'rgba(191,219,254,0.7)',
+    beats: 'thunder',
+    manaCost: 8,
+    damage: 10,
+    rarity: 'legendary',
+    mechanic: 'freeze',
+    description: '造成10点伤害。如果平局或获胜，将对手冻结3回合。',
+    shortDesc: '终极: 永恒冻结'
+  },
+  { 
+    id: 'rock_ultimate', 
+    name: '万象天引',       // Catastrophic Impact
+    emoji: '🌍', 
+    artSrc: '/cards/rock-ultimate.webp',
+    color: 'text-stone-600', 
+    borderColor: 'border-stone-600',
+    shadowColor: 'rgba(68,64,60,0.7)',
+    beats: 'fire',
+    manaCost: 9,
+    damage: 8,
+    armorGain: 20,
+    rarity: 'legendary',
+    mechanic: 'fortify',
+    description: '造成8点伤害，获得20点护甲，并抽3张牌。',
+    shortDesc: '终极: 绝对防御'
+  },
+  { 
+    id: 'thunder_ultimate', 
+    name: '雷神降临',  // Thor's Descent
+    emoji: '🌩️', 
+    artSrc: '/cards/thunder-ultimate.webp',
+    color: 'text-yellow-600', 
+    borderColor: 'border-yellow-600',
+    shadowColor: 'rgba(202,138,4,0.7)',
+    beats: 'rock',
+    manaCost: 7,
+    damage: 10,
+    rarity: 'legendary',
+    mechanic: 'charge',
+    description: '造成10点伤害。如果你上回合使用了雷系法术，本回合伤害翻倍(20)。',
+    shortDesc: '终极: 核弹打击'
+  },
+  { 
+    id: 'vine_ultimate', 
+    name: '自然之怒',    // Mother Nature's Wrath
+    emoji: '🌿🌋', 
+    artSrc: '/cards/vine-ultimate.webp',
+    color: 'text-green-600', 
+    borderColor: 'border-green-600',
+    shadowColor: 'rgba(22,101,52,0.7)',
+    beats: 'ice',
+    manaCost: 7,
+    damage: 7,
+    rarity: 'legendary',
+    mechanic: 'tangle',
+    description: '造成7点伤害。如果获胜，对手下两个回合的所有法术费用增加(5)点。',
+    shortDesc: '终极: 封魔立场'
   },
   // 新增机制卡牌
   { 
@@ -722,8 +804,15 @@ export const PACK_CONFIG = {
   cardsPerPack: 5,
   pitySystem: {
     rare: { threshold: 5, guaranteed: false },
-    mythic: { threshold: 10, guaranteed: false },
-    legendary: { threshold: 20, guaranteed: false }
+    mythic: { threshold: 12, guaranteed: false },
+    legendary: { threshold: 25, guaranteed: false }
+  },
+  // 基础概率：Common 75%, Rare 18%, Mythic 5%, Legendary 2%
+  dropRates: {
+    common: 0.75,
+    rare: 0.18,
+    mythic: 0.05,
+    legendary: 0.02
   }
 };
 
@@ -739,28 +828,43 @@ export const openPack = (currentPity: { rare: number, mythic: number, legendary:
     const rand = Math.random();
     
     // 保底检查
-    if (newPity.legendary >= PACK_CONFIG.pitySystem.legendary.threshold) {
-      rarity = 'mythic'; // 传说保底
+    if (newPity.legendary >= PACK_CONFIG.pitySystem.legendary.threshold - 1) {
+      rarity = 'legendary';
       newPity.legendary = 0;
-    } else if (newPity.mythic >= PACK_CONFIG.pitySystem.mythic.threshold) {
-      rarity = 'mythic'; // 史诗保底
+    } else if (newPity.mythic >= PACK_CONFIG.pitySystem.mythic.threshold - 1) {
+      rarity = 'mythic';
       newPity.mythic = 0;
-    } else if (newPity.rare >= PACK_CONFIG.pitySystem.rare.threshold) {
-      rarity = 'rare'; // 稀有保底
+    } else if (newPity.rare >= PACK_CONFIG.pitySystem.rare.threshold - 1) {
+      rarity = 'rare';
       newPity.rare = 0;
     } else {
       // 正常概率
-      if (rand < 0.6) rarity = 'common';
-      else if (rand < 0.85) rarity = 'common'; // 调整概率
-      else if (rand < 0.95) rarity = 'rare';
-      else if (rand < 0.99) rarity = 'mythic';
-      else rarity = 'mythic'; // 传说极低概率
+      if (rand < PACK_CONFIG.dropRates.legendary) {
+        rarity = 'legendary';
+      } else if (rand < PACK_CONFIG.dropRates.legendary + PACK_CONFIG.dropRates.mythic) {
+        rarity = 'mythic';
+      } else if (rand < PACK_CONFIG.dropRates.legendary + PACK_CONFIG.dropRates.mythic + PACK_CONFIG.dropRates.rare) {
+        rarity = 'rare';
+      } else {
+        rarity = 'common';
+      }
     }
     
-    // 选择该稀有度的随机卡牌
-    const availableCards = SPELLS.filter(s => s.rarity === rarity && s.id !== 'skip');
-    const randomCard = availableCards[Math.floor(Math.random() * availableCards.length)];
-    cards.push(randomCard);
+    // 选择该稀有度的随机卡牌 (排除英雄技能和空卡)
+    const availableCards = SPELLS.filter(s => 
+      s.rarity === rarity && 
+      !s.id.startsWith('hero_') && 
+      s.id !== 'skip'
+    );
+    
+    // 降级保护：如果该稀有度没有卡（可能是扩展示例），向下寻找
+    let finalCard = availableCards[Math.floor(Math.random() * availableCards.length)];
+    if (!finalCard) {
+       const fallbackCards = SPELLS.filter(s => s.rarity === 'common' && s.id !== 'skip');
+       finalCard = fallbackCards[Math.floor(Math.random() * fallbackCards.length)];
+    }
+    
+    cards.push(finalCard);
     
     // 更新保底计数器
     if (rarity === 'common') {
@@ -775,6 +879,10 @@ export const openPack = (currentPity: { rare: number, mythic: number, legendary:
       newPity.rare = 0;
       newPity.mythic = 0;
       newPity.legendary++;
+    } else if (rarity === 'legendary') {
+      newPity.rare = 0;
+      newPity.mythic = 0;
+      newPity.legendary = 0;
     }
   }
   

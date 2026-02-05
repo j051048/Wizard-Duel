@@ -447,6 +447,7 @@ function App() {
                 {/* 回合开始横幅 */}
                 <TurnBanner
                   type={gameLoopState.turnBanner}
+                  roundNumber={gameLoopState.duelState?.roundNumber || 0}
                   onAnimationComplete={() => {}}
                 />
               </>
