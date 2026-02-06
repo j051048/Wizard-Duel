@@ -22,7 +22,7 @@ const BattleBoard: React.FC<BattleBoardProps> = ({
   const oppSpellDetails = opponentCard ? getSpellById(opponentCard) : null;
 
   return (
-    <div className="flex-1 relative z-10 flex flex-col items-center justify-around pointer-events-none w-full">
+    <div id="battle-board-area" className="flex-1 relative z-10 flex flex-col items-center justify-around pointer-events-none w-full">
       {/* Opponent Minions Board */}
       <div className="flex justify-center gap-4 w-full h-32 items-center">
         {duelState?.opponentMinions.map(minion => (

@@ -30,6 +30,8 @@ import { ToastContainer } from './components/ui/Toast';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { TurnBanner } from './components/battle/TurnBanner';
 import { TurnTimer } from './components/battle/TurnTimer';
+import { TutorialOverlay } from './components/battle/TutorialOverlay';
+import { useTutorial } from './hooks/useTutorial';
 
 // Stores
 import { useToastStore } from './stores/useToastStore';
@@ -58,6 +60,14 @@ function App() {
   const { progress, startPreloading } = usePreloader();
   const [gameLoopState, gameLoopActions] = useGameLoop();
   const [audioState, audioActions] = useAudioManager();
+
+  // ============ 引导系统 ============
+  const tutorial = useTutorial(
+    true, 
+    ui.gameState,
+    gameLoopState.phase,
+    gameLoopState.duelState?.roundNumber || 0
+  );
 
   // ============ 初始化与同步 ============
 
@@ -387,6 +397,7 @@ function App() {
               opponentAvatar={gameLoopState.duelState.aiProfile?.avatar}
               onConfirm={(indices) => {
                 gameLoopActions.handleMulligan(indices);
+                tutorial.handleAction('MULLIGAN');
                 ui.setGameState('DUEL');
               }}
               timeLimit={30}
@@ -404,11 +415,13 @@ function App() {
                     audioActions.playSfx('cardPlay');
                     audioActions.playSpellSfx(spellId);
                     HapticService.medium();
+                    tutorial.handleAction('PLAY_CARD');
                   }
                 }}
                 onPass={() => {
                   gameLoopActions.passTurn();
                   audioActions.playSfx('button');
+                  tutorial.handleAction('END_TURN');
                 }}
                                 onSurrender={() => {
                   ui.showConfirmDialog({
@@ -489,6 +502,15 @@ function App() {
         onConfirm={() => ui.confirmDialog.onConfirm?.()}
         onCancel={ui.hideConfirmDialog}
       />
+
+      {/* 新手引导覆盖层 */}
+      {tutorial.activeStep && (
+        <TutorialOverlay 
+            step={tutorial.activeStep}
+            onNext={tutorial.nextStep}
+            onSkip={tutorial.nextStep}
+        />
+      )}
     </div>
   );
 }

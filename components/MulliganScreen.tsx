@@ -151,7 +151,7 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
         </div>
 
         {/* 手牌展示 */}
-        <div className="flex justify-center items-end gap-4 md:gap-6 mb-8 px-4">
+        <div id="mulligan-container" className="flex justify-center items-end gap-4 md:gap-6 mb-8 px-4">
           {initialHand.map((spellId, index) => {
             const isSelected = selectedIndices.has(index);
             const spell = getSpellById(spellId);

@@ -10,6 +10,7 @@ import { openPack, PACK_CONFIG, SPELLS } from '../constants';
 import { Spell, SpellType } from '../types';
 import { HapticService } from '../services/haptic';
 import { useToastStore } from '../stores/useToastStore';
+import { PackOpener } from './shop/PackOpener';
 
 interface ShopScreenProps {
   balance: number;
@@ -400,61 +401,14 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
       </div>
 
       {/* 开包动画弹窗 */}
+      {/* 开包动画弹窗 */}
       {openingPack && revealedCards.length > 0 && (
-        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-4">
-          <button
-            onClick={handleCloseReveal}
-            className="absolute top-4 right-4 p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
-          >
-            <X className="w-6 h-6 text-white" />
-          </button>
-          
-          <h2 className="text-2xl font-wizard font-bold text-white mb-2">
-            {openingPack.name}
-          </h2>
-          <p className="text-gray-400 text-sm mb-8">
-            点击卡牌翻开 ({revealIndex + 1}/{revealedCards.length})
-          </p>
-          
-          {/* 卡牌展示 */}
-          <div className="flex gap-4 justify-center flex-wrap mb-8">
-            {revealedCards.map((card, index) => (
-              <div
-                key={index}
-                className={`
-                  transition-all duration-500 transform cursor-pointer
-                  ${index <= revealIndex ? 'opacity-100 scale-100 rotate-0' : 'opacity-50 scale-90 rotate-y-180'}
-                `}
-                onClick={handleRevealNext}
-              >
-                {index <= revealIndex ? (
-                  <div className="animate-in zoom-in-50 duration-300">
-                    <SpellCard spell={card} />
-                  </div>
-                ) : (
-                  <SpellCard isFaceDown />
-                )}
-              </div>
-            ))}
-          </div>
-          
-          {/* 操作按钮 */}
-          {revealIndex >= revealedCards.length - 1 ? (
-            <button
-              onClick={handleCloseReveal}
-              className="px-8 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl font-bold text-white hover:scale-105 transition-transform"
-            >
-              完成
-            </button>
-          ) : (
-            <button
-              onClick={handleRevealNext}
-              className="px-8 py-3 bg-white/10 border border-white/20 rounded-xl font-bold text-white hover:bg-white/20 transition-colors"
-            >
-              翻开下一张
-            </button>
-          )}
-        </div>
+           <PackOpener 
+             packName={openingPack.name}
+             cards={revealedCards}
+             onClose={handleCloseReveal}
+             bgGradient={openingPack.gradient}
+           />
       )}
     </div>
   );

@@ -13,7 +13,7 @@ import { SpellCard } from './SpellCard';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { calculateSpellProjection } from '../services/projection';
 import { useSettings } from '../context/SettingsContext';
-import { TutorialOverlay, TutorialStep } from './tutorial/TutorialOverlay';
+// import { TutorialOverlay, TutorialStep } from './tutorial/TutorialOverlay';
 import CardDetailModal from './CardDetailModal';
 
 // Components
@@ -65,9 +65,9 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   
   // States
   const [hoveredSpellId, setHoveredSpellId] = useState<SpellType | null>(null);
-  const [isTutorialOpen, setIsTutorialOpen] = useState(duelState?.isTutorial || false);
+  // const [isTutorialOpen, setIsTutorialOpen] = useState(duelState?.isTutorial || false);
   const [isLogOpen, setIsLogOpen] = useState(false);
-  const [tutorialAction, setTutorialAction] = useState<string | undefined>(undefined);
+  // const [tutorialAction, setTutorialAction] = useState<string | undefined>(undefined);
   const [detailSpell, setDetailSpell] = useState<SpellType | null>(null);
   
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -137,9 +137,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     }
   }, [effectMessages, triggerCrit, addDamageNumber, triggerShake]);
 
+  /* 
   useEffect(() => {
     if (duelState?.isTutorial) setIsTutorialOpen(true);
   }, [duelState?.isTutorial]);
+  */
 
   const prevOppCard = useRef<SpellType | null>(null);
   useEffect(() => {
@@ -161,9 +163,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     setTargeting(null);
     spawnProjectile('player');
 
+    /*
     if (spellId.startsWith('fire')) {
         setTutorialAction('PLAY_FIRE_CARD');
     }
+    */
 
     onPlayCard(spellId, isConfirmed);
   };
@@ -311,7 +315,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       <div className="absolute bottom-0 left-0 right-0 z-30 safe-area-bottom">
         
         {/* 手牌区域 - 居中底部 */}
-        <div className="w-full flex justify-center pb-4 md:pb-6 pointer-events-none">
+        <div id="player-hand-container" className="w-full flex justify-center pb-4 md:pb-6 pointer-events-none">
                     <BattleHand 
             hand={duelState.playerHand}
             playableCards={playableCards}
@@ -359,6 +363,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         {/* 结束回合按钮 - 右下角 */}
         <div className="absolute right-2 md:right-6 bottom-4 md:bottom-6 z-40">
           <button 
+            id="end-turn-btn"
             onClick={onPass} 
             disabled={phase !== 'PLAYER_TURN'} 
             className={`
@@ -437,43 +442,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
          />
       )}
 
-            {isTutorialOpen && (
-        <TutorialOverlay 
-          steps={[
-            {
-               title: '⚔️ 战斗开始',
-               content: '欢迎来到竞技场！这里的规则很简单：相克则胜，平局则各扣血量。',
-               position: 'center'
-            },
-            {
-               targetId: 'player-card-0',
-               title: '🎴 出牌指引',
-               content: '点击卡牌查看详情，拖拽卡牌到中间区域即可释放魔法。',
-               position: 'top'
-            },
-            {
-               targetId: 'player-mana-bar',
-               title: '💧 消耗法力',
-               content: '每张牌都需要消耗法力。注意管理你的资源！',
-               position: 'top'
-            },
-            {
-               targetId: 'hero-skills-container',
-               title: '👑 英雄技能',
-               content: '你还有强大的英雄技能！每回合可以使用一次，它们不会消耗手牌。',
-               position: 'left'
-            }
-          ]}
-          onComplete={() => {
-            setIsTutorialOpen(false);
-            setTutorialAction(undefined);
-          }}
-          onSkip={() => {
-            setIsTutorialOpen(false);
-            setTutorialAction(undefined);
-          }}
-        />
-      )}
+      {/* Tutorial Overlay Removed - Moved to App.tsx */}
     </div>
   );
 };

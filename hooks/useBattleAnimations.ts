@@ -301,28 +301,77 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
             ctx.fill();
         }
 
-        // 2. Update & Render Projectiles
+        // 2. Update & Render Projectiles (Quadratic Bezier)
         projectilesRef.current = projectilesRef.current.filter(p => {
-            p.progress += deltaTime / 600; // 600ms duration
+            p.progress += deltaTime / 600; // 600ms flight duration
+            
             if (p.progress >= 1) {
                 // Impact!
-                spawnParticles(50, p.type === 'player' ? 30 : 70, 15, 'default');
+                spawnParticles(50, p.type === 'player' ? 30 : 70, 25, 'default');
+                triggerShake(p.type === 'player' ? 'default' : 'rock'); // Minor shake on impact
                 return false;
             }
             
-            const ease = p.progress; // Linear for now
-            const targetY = p.type === 'player' ? 30 : 70;
-            p.y = p.startY + (targetY - p.startY) * ease;
+            // Bezier Curve Calculation
+            // P0: (startX, startY), P1: (controlX, controlY), P2: (targetX, targetY)
+            const t = p.progress;
+            const invT = 1 - t;
             
+            // Standard target positions
+            const targetX = 50; 
+            const targetY = p.type === 'player' ? 30 : 70; // 30% for opponent area, 70% for player area
+            
+            // Calculate Control Point (Peak of the arc)
+            // We generate it dynamically based on ID to be deterministic but random-looking
+            // P1 should be halfway in Y, but offset in X to create the arc
+            const direction = p.type === 'player' ? -1 : 1;
+            const arcIntensity = 30 + (p.id * 100 % 20); // Random arc width
+            const side = (p.id * 100 % 2) > 1 ? 1 : -1; // Randomize left/right curve
+            
+            const controlX = p.startX + (side * arcIntensity);
+            const controlY = p.startY + (targetY - p.startY) / 2; // Midpoint Y
+
+            // Quadratic Bezier Formula: B(t) = (1-t)^2*P0 + 2(1-t)t*P1 + t^2*P2
+            const nextX = (invT * invT * p.startX) + (2 * invT * t * controlX) + (t * t * targetX);
+            const nextY = (invT * invT * p.startY) + (2 * invT * t * controlY) + (t * t * targetY);
+            
+            // Calculate rotation (tangent)
+            const dx = nextX - p.x;
+            const dy = nextY - p.y;
+            const angle = Math.atan2(dy, dx);
+            
+            p.x = nextX;
+            p.y = nextY;
+            
+            // Draw Projectile
             ctx.save();
-            ctx.globalAlpha = 1;
-            const grad = ctx.createRadialGradient((p.x/100)*w, (p.y/100)*h, 0, (p.x/100)*w, (p.y/100)*h, 20);
-            grad.addColorStop(0, 'white');
-            grad.addColorStop(1, p.type === 'player' ? 'rgba(168, 85, 247, 0)' : 'rgba(239, 68, 68, 0)');
+            ctx.translate((p.x/100)*w, (p.y/100)*h);
+            ctx.rotate(angle);
+            
+            // Trail Effect (Spawn particles behind)
+            if (p.progress % 0.05 < 0.02) {
+                 spawnParticles(p.x, p.y, 1, 'arcane');
+            }
+
+            // Glowing Orb
+            const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 15);
+            const color = p.type === 'player' ? '239, 68, 68' : '168, 85, 247'; // Red (Opponent/Target) vs Purple (Player/Source) - Wait, names are confusing.
+            // visual: Player shoots UP (Red?), Opponent shoots DOWN (Purple?) -> No, standard is Player=Blue/Green, Enemy=Red.
+            // Let's stick to theme: Player=Gold? Opponent=Purple?
+            // Actually config says: Player attacking -> Target is Opponent (Top).
+            
+            const orbColor = p.type === 'player' ? '255, 200, 0' : '168, 85, 247'; // Gold vs Purple
+            
+            grad.addColorStop(0, `rgba(${orbColor}, 1)`);
+            grad.addColorStop(0.4, `rgba(${orbColor}, 0.8)`);
+            grad.addColorStop(1, `rgba(${orbColor}, 0)`);
+            
             ctx.fillStyle = grad;
+            // Draw comet shape
             ctx.beginPath();
-            ctx.arc((p.x/100)*w, (p.y/100)*h, 15, 0, Math.PI*2);
+            ctx.ellipse(0, 0, 20, 8, 0, 0, Math.PI * 2);
             ctx.fill();
+            
             ctx.restore();
             return true;
         });
