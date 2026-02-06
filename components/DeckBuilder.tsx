@@ -12,6 +12,7 @@ import { PRESET_DECKS } from '../constants';
 import ManaCurve from './deck/ManaCurve';
 import CardPool from './deck/CardPool';
 import DeckList from './deck/DeckList';
+import { Check } from 'lucide-react';
 
 // Hooks
 import { useDeckBuilder } from '../hooks/useDeckBuilder';
@@ -36,6 +37,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 }) => {
   const isMobile = useIsMobile();
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
+  const [saveStatus, setSaveStatus] = React.useState<'idle' | 'saved'>('idle');
 
   // 使用本地状态跟踪当前激活的 Tab 索引，以支持选中空槽位
   const [activeTabIndex, setActiveTabIndex] = React.useState(() => {
@@ -89,6 +91,12 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     };
     
     onSaveDeck(deck);
+    
+    // Show success feedback
+    setSaveStatus('saved');
+    setTimeout(() => {
+      setSaveStatus('idle');
+    }, 2000);
   };
 
   return (
@@ -207,6 +215,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   isValidDeck={isValidDeck}
                   lastAddedId={lastAddedId}
                   isMobile={false}
+                  saveStatus={saveStatus}
                 />
              </div>
           ) : (
@@ -287,12 +296,20 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                          </button>
                          <button 
                             onClick={saveDeck}
-                            disabled={!isValidDeck}
-                            className={`flex-[2] h-10 rounded-lg text-xs font-bold shadow-lg flex items-center justify-center gap-2
-                               ${isValidDeck ? 'bg-amber-600 text-black' : 'bg-slate-700 text-slate-500'}
+                            disabled={!isValidDeck || saveStatus === 'saved'}
+                            className={`flex-[2] h-10 rounded-lg text-xs font-bold shadow-lg flex items-center justify-center gap-2 transition-all duration-300
+                               ${saveStatus === 'saved' 
+                                 ? 'bg-green-600 text-white scale-105 shadow-green-900/50' 
+                                 : (isValidDeck ? 'bg-amber-600 text-black active:scale-95' : 'bg-slate-700 text-slate-500')
+                               }
                             `}
                          >
-                            保存配置
+                            {saveStatus === 'saved' ? (
+                                <>
+                                   <Check size={16} />
+                                   <span>已保存</span>
+                                </>
+                            ) : '保存配置'}
                          </button>
                      </div>
                   </div>

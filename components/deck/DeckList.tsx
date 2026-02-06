@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Save, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Check } from 'lucide-react';
 import { SpellType, Deck } from '../../types';
 import { getSpellById } from '../../services/gameLogic';
 
@@ -11,6 +11,7 @@ interface DeckListProps {
   isValidDeck: boolean;
   lastAddedId: string | null;
   isMobile?: boolean;
+  saveStatus?: 'idle' | 'saved';
 }
 
 const DeckList: React.FC<DeckListProps> = ({
@@ -20,7 +21,8 @@ const DeckList: React.FC<DeckListProps> = ({
   onSave,
   isValidDeck,
   lastAddedId,
-  isMobile = false
+  isMobile = false,
+  saveStatus = 'idle'
 }) => {
   return (
     <div className={`flex flex-col bg-[#13111a] h-full ${isMobile ? '' : 'rounded-xl border border-[#4a4060] shadow-2xl'} relative overflow-hidden`}>
@@ -38,11 +40,17 @@ const DeckList: React.FC<DeckListProps> = ({
                </button>
                <button 
                   onClick={onSave} 
-                  disabled={!isValidDeck}
-                  className={`p-2 rounded-lg transition-all ${isValidDeck ? 'text-green-400 hover:text-green-300 hover:bg-green-900/30' : 'text-gray-600 cursor-not-allowed'}`}
-                  title="保存卡组"
+                  disabled={!isValidDeck || saveStatus === 'saved'}
+                  className={`
+                     p-2 rounded-lg transition-all duration-300
+                     ${saveStatus === 'saved' 
+                        ? 'text-white bg-green-500 hover:bg-green-600 shadow-[0_0_10px_rgba(34,197,94,0.5)] scale-110' 
+                        : (isValidDeck ? 'text-green-400 hover:text-green-300 hover:bg-green-900/30' : 'text-gray-600 cursor-not-allowed')
+                     }
+                  `}
+                  title={saveStatus === 'saved' ? "已保存" : "保存卡组"}
                >
-                  <Save size={20} />
+                  {saveStatus === 'saved' ? <Check size={20} /> : <Save size={20} />}
                </button>
             </div>
           </div>

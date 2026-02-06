@@ -497,50 +497,62 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                 onMouseLeaveCard={() => setHoveredSpellId(null)}
                 onDoubleClickCard={(spellId) => handlePlayCard(spellId, true)}
               />
+              
+              {/* [UI Polish] 底部纹理条 - 视觉装饰 */}
+              {/* Decorative Bottom Bar imitating a wooden/stone deck holder */}
+              <div className="absolute bottom-0 left-0 right-0 h-3 bg-[#0a0502] border-t border-[#3d2e1e] z-0 opacity-80 pointer-events-none">
+                 <div className="w-full h-full opacity-30 bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')] bg-repeat-x"></div>
+                 {/* Center Handle Graphic */}
+                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-1 rounded-full bg-[#5c4a35]"></div>
+              </div>
             </div>
 
             {/* 2. 顶层悬浮 HUD：分离式布局 (Split HUD) */}
             <div className="absolute bottom-16 md:bottom-0 left-0 right-0 z-[60] flex items-end justify-between px-2 w-full pointer-events-none">
               
               {/* 左侧：玩家头像与 Core Stats (Compact) */}
-              <div className="relative pointer-events-auto transform translate-y-2">
-                 {/* 头像容器 */}
-                 <div className="w-14 h-14 rounded-full border-2 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.3)] bg-slate-900 overflow-hidden relative z-10">
-                    <img src="/avatars/player-wizard.webp" className="w-full h-full object-cover" alt="Player" />
-                 </div>
-                 
-                 {/* HP Badge (左上) */}
-                 <div className="absolute -top-1 -left-1 bg-slate-900 text-red-500 border border-red-500/50 rounded-full w-6 h-6 flex items-center justify-center font-bold text-xs shadow-sm z-20">
-                    {duelState.playerHP}
-                 </div>
+                 {/* Avatar Group - Adjusted Layout for Skills */}
+                 <div className="relative pointer-events-auto transform translate-y-[-10px] flex flex-col items-center gap-1">
+                    {/* Avatar Container */}
+                    <div className="relative">
+                       <div className="w-14 h-14 rounded-full border-2 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.3)] bg-slate-900 overflow-hidden relative z-10">
+                          <img src="/avatars/player-wizard.webp" className="w-full h-full object-cover" alt="Player" />
+                       </div>
+                       
+                       {/* HP Badge (Top Left) */}
+                       <div className="absolute -top-1 -left-1 bg-slate-900 text-red-500 border border-red-500/50 rounded-full w-6 h-6 flex items-center justify-center font-bold text-xs shadow-sm z-20">
+                          {duelState.playerHP}
+                       </div>
 
-                 {/* Armor Badge (右上，如果有) */}
-                 {duelState.playerArmor > 0 && (
-                   <div className="absolute -top-1 -right-1 bg-slate-800 text-slate-300 border border-slate-600 rounded-full w-5 h-5 flex items-center justify-center text-[10px] z-20">
-                      🛡️{duelState.playerArmor}
-                   </div>
-                 )}
+                       {/* Armor Badge (Top Right) */}
+                       {duelState.playerArmor > 0 && (
+                         <div className="absolute -top-1 -right-1 bg-slate-800 text-slate-300 border border-slate-600 rounded-full w-5 h-5 flex items-center justify-center text-[10px] z-20">
+                            🛡️{duelState.playerArmor}
+                         </div>
+                       )}
 
-                 {/* Mana Bar (头像下方环绕或独立胶囊) */}
-                 <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-slate-900/90 border border-blue-500/50 rounded-full px-2 py-0.5 flex items-center gap-1 shadow-md z-20 min-w-[3rem] justify-center">
-                    <span className="text-blue-400 text-[10px]">💧</span>
-                    <span className="text-white font-bold text-xs leading-none">{duelState.playerMana}/{duelState.playerMaxMana}</span>
+                       {/* Mana Bar (Transformed to compact capsule below avatar) */}
+                       <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-slate-900/90 border border-blue-500/50 rounded-full px-2 py-0.5 flex items-center gap-1 shadow-md z-20 min-w-[3rem] justify-center text-[10px]">
+                          <span className="text-blue-400">💧</span>
+                          <span className="text-white font-bold">{duelState.playerMana}/{duelState.playerMaxMana}</span>
+                       </div>
+                    </div>
+
+                    {/* [UI Polish] Hero Skills - Horizontal Row Below Avatar */}
+                    {/* User Request: "横向放在巫师头像下方" */}
+                    <div className="flex gap-1 mt-2 bg-black/40 p-1 rounded-full backdrop-blur-sm border border-white/5">
+                      {heroSkills.slice(0, 3).map(skill => (
+                        <HeroSkillButton
+                          key={skill.id}
+                          skill={skill}
+                          canUse={phase === 'PLAYER_TURN' && !duelState.heroSkillsUsed && !gameLoopState.isProcessing}
+                          currentMana={duelState.playerMana}
+                          onClick={() => handlePlayCard(skill.id)}
+                          compact={true} 
+                        />
+                      ))}
+                    </div>
                  </div>
-
-                 {/* 英雄技能 (垂直排列于头像上方) */}
-                 <div className="absolute bottom-16 left-0 flex flex-col gap-2 opacity-90 scale-90 origin-bottom-left">
-                  {heroSkills.slice(0, 3).map(skill => (
-                    <HeroSkillButton
-                      key={skill.id}
-                      skill={skill}
-                      canUse={phase === 'PLAYER_TURN' && !duelState.heroSkillsUsed && !gameLoopState.isProcessing}
-                      currentMana={duelState.playerMana}
-                      onClick={() => handlePlayCard(skill.id)}
-                      compact={true} 
-                    />
-                  ))}
-                </div>
-              </div>
 
               {/* 右侧：回合结束按钮 (Floating Orb Style) */}
               <div className="pointer-events-auto transform translate-y-1 mb-1">
@@ -704,7 +716,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       />
 
       {/* 移动端 CombatFeed 仅在非日志开启时显示简略版，或者位置上移 */}
-      <div className={`${isMobile ? 'scale-75 origin-top-left absolute top-16 left-2 pointer-events-none' : ''}`}>
+      {/* 移动端 CombatFeed 仅在非日志开启时显示简略版，或者位置上移 */}
+      <div className={`${isMobile ? 'scale-75 origin-top-left absolute top-32 left-4 pointer-events-none z-30' : ''}`}>
          <CombatFeed messages={effectMessages} />
       </div>
 
