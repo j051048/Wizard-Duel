@@ -37,9 +37,21 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   const isMobile = useIsMobile();
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
 
-  // 查找当前正在编辑哪个槽位
-  const currentSlotIndex = existingDecks.findIndex(d => d.id === initialSelectedDeck?.id);
-  const activeSlot = currentSlotIndex >= 0 ? currentSlotIndex : 0;
+  // 使用本地状态跟踪当前激活的 Tab 索引，以支持选中空槽位
+  const [activeTabIndex, setActiveTabIndex] = React.useState(() => {
+    const idx = existingDecks.findIndex(d => d.id === initialSelectedDeck?.id);
+    return idx >= 0 ? idx : 0;
+  });
+
+  // 当外部传入的 selectedDeck 变化且对应存在的卡组时，同步 Tab 索引
+  React.useEffect(() => {
+    if (initialSelectedDeck) {
+      const idx = existingDecks.findIndex(d => d.id === initialSelectedDeck.id);
+      if (idx >= 0) {
+        setActiveTabIndex(idx);
+      }
+    }
+  }, [initialSelectedDeck, existingDecks]);
 
   const {
     deckName,
@@ -67,8 +79,9 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   const saveDeck = () => {
     if (!isValidDeck) return;
     
+    // 使用 activeTabIndex 来生成 ID，确保即使是新槽位也能正确命名
     const deck: Deck = {
-      id: initialSelectedDeck?.id || `deck_slot_${activeSlot}`,
+      id: initialSelectedDeck?.id || `deck_slot_${activeTabIndex}`,
       name: deckName,
       cards: selectedCards,
       createdAt: initialSelectedDeck?.createdAt || Date.now(),
@@ -95,9 +108,12 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             return (
               <button
                 key={i}
-                onClick={() => onSelectDeck(d || null)}
+                onClick={() => {
+                  setActiveTabIndex(i);
+                  onSelectDeck(d || null);
+                }}
                 className={`flex-1 h-8 md:h-12 rounded-t-lg md:rounded-t-xl border-t border-x transition-all flex items-center justify-center gap-1 md:gap-2 font-bold text-[10px] md:text-sm
-                  ${activeSlot === i 
+                  ${activeTabIndex === i 
                     ? 'bg-slate-900 border-white/20 text-amber-400 shadow-[0_-5px_15px_rgba(0,0,0,0.4)] z-10' 
                     : 'bg-black/60 border-white/5 text-gray-500 hover:text-gray-300'}
                 `}
