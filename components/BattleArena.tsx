@@ -27,6 +27,7 @@ import BattleEffects from './battle/BattleEffects';
 import CombatFeed from './battle/CombatFeed';
 import { TurnIndicator } from './battle/TurnIndicator';
 import { HeroSkillButton } from './battle/HeroSkillButton';
+import TurnBanner from './battle/TurnBanner';
 
 // Hooks
 import { useDragToPlay } from '../hooks/useDragToPlay';
@@ -66,11 +67,14 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   
   // States
   const [hoveredSpellId, setHoveredSpellId] = useState<SpellType | null>(null);
-  // const [isTutorialOpen, setIsTutorialOpen] = useState(duelState?.isTutorial || false);
   const [hasShownTutorial, setHasShownTutorial] = useState(false);
   const [isLogOpen, setIsLogOpen] = useState(false);
-  // const [tutorialAction, setTutorialAction] = useState<string | undefined>(undefined);
   const [detailSpell, setDetailSpell] = useState<SpellType | null>(null);
+  
+  // [P1 回合横幅] 回合开始显示横幅
+  const [turnBannerType, setTurnBannerType] = useState<'player' | 'opponent' | null>(null);
+  const prevPhaseRef = useRef<string | null>(null);
+  const prevRoundRef = useRef<number>(0);
   
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isMounted = useRef(true);
@@ -166,6 +170,31 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     return () => { isMounted.current = false; };
   }, []);
 
+  // [P1 回合横幅] 检测回合切换，显示横幅
+  useEffect(() => {
+    if (!duelState) return;
+    
+    const currentRound = duelState.roundNumber;
+    const prevRound = prevRoundRef.current;
+    const prevPhase = prevPhaseRef.current;
+    
+    // 新回合开始时显示玩家回合横幅
+    if (currentRound > prevRound && phase === 'PLAYER_TURN') {
+      setTurnBannerType('player');
+      const timer = setTimeout(() => setTurnBannerType(null), 2500);
+      return () => clearTimeout(timer);
+    }
+    // AI回合开始
+    if (phase === 'AI_TURN' && prevPhase === 'PLAYER_TURN') {
+      setTurnBannerType('opponent');
+      const timer = setTimeout(() => setTurnBannerType(null), 1800);
+      return () => clearTimeout(timer);
+    }
+    
+    prevPhaseRef.current = phase;
+    prevRoundRef.current = currentRound;
+  }, [phase, duelState?.roundNumber]);
+
   const handlePlayCard = (spellId: SpellType, isConfirmed: boolean = false) => {
     if (!duelState) return;
     
@@ -187,8 +216,18 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     onPlayCard(spellId, isConfirmed);
   };
 
+  // [P0 修复] 长按检测与拖拽冲突修复：检查是否正在拖拽
   const handleCardPressStart = (spellId: SpellType) => {
+      // 清除之前的计时器
+      if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+      }
+      
       longPressTimerRef.current = setTimeout(() => {
+          // [P0 Fix] 如果正在拖拽，不弹出详情弹窗
+          if (dragState?.isDragging) {
+              return;
+          }
           setDetailSpell(spellId);
           HapticService.medium();
       }, 600);
@@ -200,11 +239,29 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           longPressTimerRef.current = null;
       }
   };
+  
+  // [P0 Fix] 拖拽开始时立即清除长按计时器
+  useEffect(() => {
+      if (dragState?.isDragging && longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+      }
+  }, [dragState?.isDragging]);
 
   if (!duelState) return null;
 
+  // [P1 回合横幅] 玩家回合时边框发光
+  const isPlayerTurnGlow = phase === 'PLAYER_TURN' && !gameLoopState.isProcessing;
+
   return (
-    <div className={`fixed inset-0 w-full h-full bg-slate-950 no-select flex flex-col z-40 overflow-hidden ${shakeClass}`}>
+    <div className={`
+      fixed inset-0 w-full h-full bg-slate-950 no-select flex flex-col z-40 overflow-hidden 
+      ${shakeClass}
+      ${isPlayerTurnGlow ? 'ring-4 ring-amber-500/30 ring-inset' : ''}
+    `}>
+      {/* [P1 回合横幅] 回合开始全屏横幅 */}
+      <TurnBanner type={turnBannerType} roundNumber={duelState?.roundNumber || 1} />
+      
       {/* Background */}
       <div className="absolute inset-0 z-0 pointer-events-none arena-bg-overlay overflow-hidden">
         <img 

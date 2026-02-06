@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HapticService } from '../../services/haptic';
+import { SoundManager } from '../../services/SoundManager';
 
 interface TurnBannerProps {
   type: 'player' | 'opponent' | null;
@@ -11,21 +12,38 @@ interface TurnBannerProps {
 export const TurnBanner: React.FC<TurnBannerProps> = ({ type, roundNumber = 0 }) => {
   const isPlayer = type === 'player';
   
-  // Theme configuration
+  // [P1 增强] 播放回合开始音效
+  useEffect(() => {
+    if (type === 'player') {
+      HapticService.medium();
+      // 尝试播放回合开始音效
+      try {
+        SoundManager.play('turn_start');
+      } catch (e) {
+        // 音效文件可能不存在，静默处理
+      }
+    } else if (type === 'opponent') {
+      HapticService.light();
+    }
+  }, [type]);
+  
+  // Theme configuration - [P1 增强] 更鲜艳的配色
   const theme = isPlayer ? {
      main: '#eab308', // yellow-500
-     glow: 'rgba(234, 179, 8, 0.5)',
-     bg: 'linear-gradient(90deg, transparent 0%, rgba(66, 32, 6, 0.9) 20%, rgba(66, 32, 6, 0.9) 80%, transparent 100%)',
+     glow: 'rgba(234, 179, 8, 0.6)',
+     bg: 'linear-gradient(90deg, transparent 0%, rgba(66, 32, 6, 0.95) 15%, rgba(66, 32, 6, 0.95) 85%, transparent 100%)',
      border: '#facc15', // yellow-400
      text: 'YOUR TURN',
-     sub: 'P L A Y E R   P H A S E'
+     sub: 'PLAYER PHASE',
+     edgeGlow: '0 0 100px 20px rgba(234, 179, 8, 0.4)'
   } : {
      main: '#ef4444', // red-500
-     glow: 'rgba(239, 68, 68, 0.5)',
-     bg: 'linear-gradient(90deg, transparent 0%, rgba(69, 10, 10, 0.9) 20%, rgba(69, 10, 10, 0.9) 80%, transparent 100%)',
+     glow: 'rgba(239, 68, 68, 0.6)',
+     bg: 'linear-gradient(90deg, transparent 0%, rgba(69, 10, 10, 0.95) 15%, rgba(69, 10, 10, 0.95) 85%, transparent 100%)',
      border: '#f87171', // red-400
      text: 'ENEMY TURN',
-     sub: 'O P P O N E N T   P H A S E'
+     sub: 'OPPONENT PHASE',
+     edgeGlow: '0 0 100px 20px rgba(239, 68, 68, 0.4)'
   };
 
   return (
