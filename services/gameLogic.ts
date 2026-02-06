@@ -203,9 +203,29 @@ export const executeSpell = (
   const finalCost = spell.id === 'skip' ? 0 : Math.max(0, spell.manaCost + costMod);
   actions.push({ type: 'MANA_CHANGE', target: caster, value: -finalCost });
 
+  // [P0 Fix] 立即从拷贝的状态中移除手牌，确保后续所有中间状态都包含此更动
+  if (spell.id !== 'skip') {
+    if (isPlayer) {
+      const firstIdx = mutableState.playerHand.indexOf(spellId);
+      if (firstIdx !== -1) {
+        mutableState.playerHand = mutableState.playerHand.filter((_, i) => i !== firstIdx);
+      }
+      mutableState.playerLastSpell = spellId;
+    } else {
+      if (!spellId.startsWith('hero_')) {
+        const firstIdx = mutableState.opponentHand.indexOf(spellId);
+        if (firstIdx !== -1) {
+          mutableState.opponentHand = mutableState.opponentHand.filter((_, i) => i !== firstIdx);
+          mutableState.opponentHandSize = mutableState.opponentHand.length;
+        }
+      }
+      mutableState.opponentLastSpell = spellId;
+    }
+  }
+
   if (spell.id === 'skip') {
       const skipCmd: GameCommand = { id: 'skip', caster, actions: [{ type: 'MESSAGE', target: 'system', description: isPlayer ? '你跳过了出牌' : '对手跳过了出牌' }] };
-      const res = GameSequenceExecutor.executeCommand(state, skipCmd);
+      const res = GameSequenceExecutor.executeCommand(mutableState, skipCmd);
       return { newState: res.state, logs: res.logs, command: skipCmd };
   }
 
@@ -265,40 +285,11 @@ export const executeSpell = (
       });
   }
 
-  // 7. 特殊操作: 手牌移除 & LastSpell 更新
-  // [P0 Fix] 同步英雄技能使用状态到命令执行前的状态
-  const preExecuteState: DuelState = {
-    ...mutableState,
-    heroSkillsUsed: mutableState.heroSkillsUsed,
-    opponentHeroSkillUsed: mutableState.opponentHeroSkillUsed,
-  };
-  
+  // 7. 执行命令并生成日志
   const cmd: GameCommand = { id: `cast_${spellId}`, sourceSpell: spellId, caster, actions };
-  let { state: newState, logs } = GameSequenceExecutor.executeCommand(preExecuteState, cmd);
+  let { state: newState, logs } = GameSequenceExecutor.executeCommand(mutableState, cmd);
   
-  // [P0 Fix] 确保返回的是全新对象，避免引用污染
-  const finalState: DuelState = { ...newState };
-  
-  if (isPlayer) {
-      finalState.playerLastSpell = spellId;
-      const firstIdx = finalState.playerHand.indexOf(spellId);
-      if (firstIdx !== -1) {
-          finalState.playerHand = finalState.playerHand.filter((_, i) => i !== firstIdx);
-      }
-  } else {
-      finalState.opponentLastSpell = spellId;
-      if (spellId.startsWith('hero_')) {
-          // 英雄技能不消耗手牌
-      } else {
-          const firstIdx = finalState.opponentHand.indexOf(spellId);
-          if (firstIdx !== -1) {
-              finalState.opponentHand = finalState.opponentHand.filter((_, i) => i !== firstIdx);
-              finalState.opponentHandSize = finalState.opponentHand.length;
-          }
-      }
-  }
-
-  return { newState: finalState, logs, command: cmd };
+  return { newState, logs, command: cmd };
 };
 
 

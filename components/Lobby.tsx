@@ -15,6 +15,7 @@ import { ShoppingBag } from 'lucide-react';
 import { QuestManager } from '../services/QuestManager';
 import { HapticService } from '../services/haptic';
 import { SoundManager } from '../services/SoundManager';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 // Extracted Components
 import TopBar from './lobby/TopBar';
@@ -69,6 +70,7 @@ export const Lobby: React.FC<LobbyProps> = ({
   language,
   onLanguageChange,
 }) => {
+  const isMobile = useIsMobile();
   const [isRulesOpen, setIsRulesOpen] = useState(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [isQuestModalOpen, setIsQuestModalOpen] = useState(false);
@@ -125,7 +127,7 @@ export const Lobby: React.FC<LobbyProps> = ({
       />
 
       {/* CENTER STAGE: DECK CAROUSEL */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center -mt-10">
+      <div className={`relative z-10 flex-1 flex flex-col items-center justify-center ${isMobile ? 'mt-0' : '-mt-10'}`}>
          
          {/* Introduction / Season Text */}
          <div className="text-center mb-8 animate-fade-in-up">

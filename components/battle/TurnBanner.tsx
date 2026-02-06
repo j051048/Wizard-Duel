@@ -80,7 +80,7 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({ type, roundNumber = 0 })
                    boxShadow: `0 0 10px ${theme.glow}`
                }}
                initial={{ translateY: 0, scaleX: 0 }}
-               animate={{ translateY: -60, scaleX: 1 }}
+               animate={{ translateY: -50, scaleX: 1 }}
                exit={{ translateY: 0, scaleX: 0, opacity: 0 }}
                transition={{ duration: 0.5, ease: "circOut" }}
              />
@@ -94,7 +94,7 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({ type, roundNumber = 0 })
 
                }}
                initial={{ translateY: 0, scaleX: 0 }}
-               animate={{ translateY: 60, scaleX: 1 }}
+               animate={{ translateY: 50, scaleX: 1 }}
                exit={{ translateY: 0, scaleX: 0, opacity: 0 }}
                transition={{ duration: 0.5, ease: "circOut" }}
              />
@@ -105,7 +105,7 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({ type, roundNumber = 0 })
              
              {/* Main Title */}
              <motion.h1
-               className="text-5xl md:text-7xl font-black italic tracking-tighter"
+               className="text-3xl md:text-7xl font-black italic tracking-tighter"
                style={{ 
                    fontFamily: '"Outfit", sans-serif',
                    color: 'transparent',
@@ -131,11 +131,11 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({ type, roundNumber = 0 })
                  exit={{ opacity: 0 }}
                  transition={{ delay: 0.4 }}
               >
-                 <div className="h-[1px] w-12 bg-white/40" />
-                 <span className="text-xs md:text-sm font-mono text-white/80 tracking-widest uppercase">
+                 <div className="h-[1px] w-8 md:w-12 bg-white/40" />
+                 <span className="text-[10px] md:text-sm font-mono text-white/80 tracking-widest uppercase">
                     Round {roundNumber}
                  </span>
-                 <div className="h-[1px] w-12 bg-white/40" />
+                 <div className="h-[1px] w-8 md:w-12 bg-white/40" />
               </motion.div>
           </div>
 

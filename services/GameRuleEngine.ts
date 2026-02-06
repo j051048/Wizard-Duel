@@ -30,14 +30,19 @@ export class GameRuleEngine {
     // However, if it failed completely, usually we want to show that.
 
     // 2. Simulate/Apply the actions into a sequence of commands for the UI
-    // We start from the *original* state because we want to animate the transition step-by-step.
-    // Wait, `executeSpell` returns the *Final* state as `newState`.
-    // But `useGameLoop` needs the *Steps*.
-    
-    let tempState = { ...currentState };
-
-    // Push the logic command source if needed?
-    // Current loop pushes 'playerCard' UI updates before calling this. We can assume UI handled that.
+    // [P0 Fix] 起点状态必须包含已经移除的手牌和扣除的法力，否则动画过程中卡牌会“闪回”
+    let tempState: DuelState = {
+        ...currentState,
+        playerHand: postCastState.playerHand,
+        opponentHand: postCastState.opponentHand,
+        opponentHandSize: postCastState.opponentHandSize,
+        playerMana: postCastState.playerMana,
+        opponentMana: postCastState.opponentMana,
+        playerLastSpell: postCastState.playerLastSpell,
+        opponentLastSpell: postCastState.opponentLastSpell,
+        heroSkillsUsed: postCastState.heroSkillsUsed,
+        opponentHeroSkillUsed: postCastState.opponentHeroSkillUsed
+    };
 
     // 2.1 Process the main spell command actions
     if (spellCommand && spellCommand.actions.length > 0) {

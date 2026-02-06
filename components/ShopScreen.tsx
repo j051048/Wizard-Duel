@@ -127,6 +127,8 @@ const BUNDLES: BundleType[] = [
   }
 ];
 
+import { useIsMobile } from '../hooks/useIsMobile';
+
 export const ShopScreen: React.FC<ShopScreenProps> = ({
   balance,
   onBack,
@@ -138,6 +140,7 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
   onAddPacks,
   onConsumePack
 }) => {
+  const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<'packs' | 'bundles' | 'currency'>('packs');
   const [openingPack, setOpeningPack] = useState<PackType | null>(null);
   const [revealedCards, setRevealedCards] = useState<Spell[]>([]);
@@ -226,12 +229,10 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
     if (bundle.id === 'starter') {
         rewardMana = 500;
         onAddPacks?.('standard', 3); // 原逻辑：3个元素卡包
-    }
-    if (bundle.id === 'weekly') {
+    } else if (bundle.id === 'weekly') {
         rewardMana = 300;
         onAddPacks?.('premium', 1);
-    }
-    if (bundle.id === 'monthly') {
+    } else if (bundle.id === 'monthly') {
         rewardMana = 1000;
         onAddPacks?.('legendary', 3);
     }
@@ -245,32 +246,26 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 relative">
+    <div className="min-h-screen bg-slate-950 relative flex flex-col overflow-hidden">
       {/* 背景 */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-900/30 via-slate-950 to-slate-950" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-purple-500/10 blur-[100px] rounded-full" />
       </div>
 
       {/* 头部 */}
-      <header className="relative z-10 flex items-center justify-between p-4 border-b border-white/10 bg-black/20 backdrop-blur-md safe-area-top">
-        <button
-          onClick={onBack}
-          className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-        >
+      <header className="relative z-10 flex items-center justify-between p-3 md:p-4 border-b border-white/10 bg-black/40 backdrop-blur-md safe-area-top shrink-0">
+        <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
           <ArrowLeft className="w-6 h-6 text-white" />
         </button>
-        
-        <h1 className="text-xl font-wizard font-bold text-white">魔法商店</h1>
-        
-        <div className="flex items-center gap-2 bg-black/40 px-4 py-2 rounded-full border border-purple-500/30">
-          <span className="text-purple-400 text-xs font-bold">💎</span>
-          <span className="text-white font-mono font-bold">{balance}</span>
+        <h1 className="text-lg md:text-xl font-wizard font-bold text-white">魔法商店</h1>
+        <div className="flex items-center gap-2 bg-black/60 px-3 md:px-4 py-1.5 md:py-2 rounded-full border border-purple-500/30">
+          <span className="text-purple-400 text-[10px] md:text-xs">💎</span>
+          <span className="text-white text-sm md:text-base font-mono font-bold">{balance}</span>
         </div>
       </header>
 
       {/* 标签页 */}
-      <div className="relative z-10 flex border-b border-white/10 bg-black/20">
+      <div className="relative z-10 flex border-b border-white/10 bg-black/40 shrink-0">
         {[
           { id: 'packs', label: '卡包', icon: <Package className="w-4 h-4" /> },
           { id: 'bundles', label: '礼包', icon: <Gift className="w-4 h-4" /> },
@@ -280,7 +275,7 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
             className={`
-              flex-1 py-4 flex items-center justify-center gap-2 font-bold text-sm uppercase tracking-wider transition-all
+              flex-1 py-3 md:py-4 flex items-center justify-center gap-2 font-bold text-[10px] md:text-xs uppercase tracking-wider transition-all
               ${activeTab === tab.id 
                 ? 'text-purple-400 border-b-2 border-purple-500 bg-purple-500/10' 
                 : 'text-gray-500 hover:text-gray-300'
@@ -288,87 +283,74 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
             `}
           >
             {tab.icon}
-            {tab.label}
+            <span className={isMobile ? 'truncate' : ''}>{tab.label}</span>
           </button>
         ))}
       </div>
 
       {/* 内容区域 */}
-      <div className="relative z-10 p-4 pb-20 overflow-y-auto" style={{ height: 'calc(100vh - 140px)' }}>
+      <div className="relative z-10 flex-1 overflow-y-auto p-3 md:p-6 custom-scrollbar">
         
         {/* 卡包页面 */}
         {activeTab === 'packs' && (
-          <div className="space-y-4">
-            
-            {/* 我的卡包 (Inventory) */}
-            {packInventory && Object.keys(packInventory).some(k => packInventory[k] > 0) && (
-              <div className="mb-8 p-4 bg-slate-800/50 rounded-2xl border border-white/10 shadow-inner">
-                <h2 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
-                   <Package className="text-amber-400" />
-                   我的背包 <span className="text-sm font-normal text-gray-400">(My Packs)</span>
+          <div className="space-y-4 max-w-4xl mx-auto">
+            {/* 我的卡包 */}
+            {packInventory && Object.keys(packInventory).some(k => (packInventory[k] || 0) > 0) && (
+              <div className="mb-6 p-3 md:p-4 bg-slate-800/40 rounded-2xl border border-white/5">
+                <h2 className="text-white font-bold text-sm md:text-lg mb-3 flex items-center gap-2">
+                   <Package size={16} className="text-amber-400" /> 背包内容
                 </h2>
-                <div className="grid gap-4">
+                <div className="grid gap-2">
                   {PACK_TYPES.filter(p => (packInventory[p.id] || 0) > 0).map(pack => (
-                     <div key={`inv-${pack.id}`} className={`relative bg-slate-900 rounded-xl border ${pack.borderColor}/50 p-3 flex items-center gap-4 shadow-lg`}>
-                        <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${pack.gradient} flex items-center justify-center text-white`}>
-                           {pack.icon}
+                     <div key={`inv-${pack.id}`} className="bg-slate-900/60 rounded-xl border border-white/5 p-2 md:p-3 flex items-center gap-3">
+                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg bg-gradient-to-br ${pack.gradient} flex items-center justify-center text-white shrink-0`}>
+                           {React.cloneElement(pack.icon as React.ReactElement, { size: isMobile ? 20 : 24 })}
                         </div>
-                        <div className="flex-1">
-                           <div className="text-white font-bold">{pack.name}</div>
-                           <div className="text-xs text-gray-400">拥有数量: <span className="text-white font-mono font-bold">{packInventory[pack.id]}</span></div>
+                        <div className="flex-1 min-w-0">
+                           <div className="text-white font-bold text-xs md:text-sm truncate">{pack.name}</div>
+                           <div className="text-[10px] text-gray-500">数量: <span className="text-white font-mono">{packInventory[pack.id]}</span></div>
                         </div>
                         <button 
                           onClick={() => handleOpenInventoryPack(pack)}
-                          className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg text-white text-sm font-bold shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all"
-                        >
-                           开启
-                        </button>
+                          className="px-3 md:px-4 py-1.5 md:py-2 bg-blue-600 rounded-lg text-white text-[10px] md:text-sm font-bold shadow-lg"
+                        >开启</button>
                      </div>
                   ))}
                 </div>
               </div>
             )}
 
-            <p className="text-gray-400 text-sm text-center mb-6">
-              每个卡包包含5张卡牌，有几率开出稀有和传说卡牌
-            </p>
-            
-            <div className="grid gap-4">
+            <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
               {PACK_TYPES.map(pack => (
                 <div
                   key={pack.id}
-                  className={`
-                    relative bg-slate-900/80 rounded-2xl border ${pack.borderColor}/30 p-4
-                    hover:border-opacity-60 transition-all cursor-pointer group
-                    shadow-lg ${pack.glowColor}
-                  `}
                   onClick={() => handleBuyPack(pack)}
+                  className={`
+                    relative bg-slate-900/80 rounded-2xl border ${pack.borderColor}/30 p-3 md:p-4 transition-all active:scale-95
+                    shadow-lg ${pack.glowColor} flex ${isMobile ? 'flex-col items-center text-center' : 'items-center gap-4'}
+                  `}
                 >
-                  <div className="flex items-center gap-4">
-                    {/* 图标 */}
-                    <div className={`
-                      w-16 h-16 rounded-xl bg-gradient-to-br ${pack.gradient}
-                      flex items-center justify-center text-white
-                      shadow-lg group-hover:scale-110 transition-transform
-                    `}>
-                      {pack.icon}
-                    </div>
-                    
-                    {/* 信息 */}
-                    <div className="flex-1">
-                      <h3 className="text-white font-bold text-lg">{pack.name}</h3>
-                      <p className="text-gray-400 text-sm">{pack.description}</p>
-                      {pack.guaranteedRarity && (
-                        <span className="inline-block mt-1 text-xs px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full">
-                          保底{pack.guaranteedRarity === 'rare' ? '稀有' : '传说'}
-                        </span>
-                      )}
-                    </div>
-                    
-                    {/* 价格 */}
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-white">{pack.price}</div>
-                      <div className="text-xs text-purple-400">法力</div>
+                  <div className={`
+                    ${isMobile ? 'w-16 h-16 mb-2' : 'w-20 h-20'} rounded-xl bg-gradient-to-br ${pack.gradient}
+                    flex items-center justify-center text-white shrink-0 shadow-lg
+                  `}>
+                    {React.cloneElement(pack.icon as React.ReactElement, { size: isMobile ? 32 : 40 })}
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-white font-bold text-sm md:text-lg">{pack.name}</h3>
+                    {!isMobile && <p className="text-gray-400 text-xs md:text-sm">{pack.description}</p>}
+                    {pack.guaranteedRarity && (
+                      <span className="inline-block mt-1 text-[9px] md:text-xs px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full font-bold">
+                        保底{pack.guaranteedRarity === 'rare' ? '稀有' : '传说'}
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className={`${isMobile ? 'mt-2 pt-2 border-t border-white/5 w-full' : 'text-right'}`}>
+                    <div className="flex items-center justify-center md:justify-end gap-1">
+                      <span className="text-sm md:text-2xl font-bold text-white">{pack.price}</span>
+                      <span className="text-[10px] text-purple-400 font-bold">💎</span>
                     </div>
                   </div>
                 </div>
@@ -379,113 +361,79 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
 
         {/* 礼包页面 */}
         {activeTab === 'bundles' && (
-          <div className="space-y-4">
-            <p className="text-gray-400 text-sm text-center mb-6">
-              限时超值礼包，错过不再有
-            </p>
-            
-            <div className="grid gap-4">
-              {BUNDLES.map(bundle => (
-                <div
-                  key={bundle.id}
-                  className="relative bg-slate-900/80 rounded-2xl border border-white/10 p-4 overflow-hidden"
-                >
-                  {/* 标签 */}
-                  {bundle.tag && (
-                    <div className={`absolute top-0 right-0 ${bundle.tagColor} text-white text-xs font-bold px-3 py-1 rounded-bl-xl`}>
-                      {bundle.tag}
-                    </div>
-                  )}
+          <div className="space-y-4 max-w-4xl mx-auto">
+            {BUNDLES.map(bundle => (
+              <div key={bundle.id} className="relative bg-slate-900/60 rounded-2xl border border-white/5 p-3 md:p-4 overflow-hidden">
+                {bundle.tag && (
+                  <div className={`absolute top-0 right-0 ${bundle.tagColor} text-white text-[9px] md:text-xs font-bold px-2 md:px-3 py-0.5 md:py-1 rounded-bl-lg`}>
+                    {bundle.tag}
+                  </div>
+                )}
+                
+                <div className={`flex ${isMobile ? 'flex-col' : 'items-start gap-5'}`}>
+                  <div className="flex items-center gap-3 md:block">
+                     <div className={`w-12 h-12 md:w-20 md:h-20 rounded-xl bg-gradient-to-br ${bundle.gradient} flex items-center justify-center text-white shrink-0 ${purchasedBundles.includes(bundle.id) ? 'grayscale opacity-30' : ''}`}>
+                        {React.cloneElement(bundle.icon as React.ReactElement, { size: isMobile ? 24 : 40 })}
+                     </div>
+                     {isMobile && <h3 className="text-white font-bold text-base">{bundle.name}</h3>}
+                  </div>
                   
-                  <div className="flex items-start gap-4">
-                    {/* 图标 */}
-                    <div className={`
-                      w-16 h-16 rounded-xl bg-gradient-to-br ${bundle.gradient}
-                      flex items-center justify-center text-white flex-shrink-0
-                      ${purchasedBundles.includes(bundle.id) ? 'grayscale opacity-50' : ''}
-                    `}>
-                      {bundle.icon}
-                    </div>
+                  <div className="flex-1 min-w-0 mt-3 md:mt-0">
+                    {!isMobile && <h3 className="text-white font-bold text-lg mb-1">{bundle.name}</h3>}
+                    <p className="text-gray-400 text-xs mb-3">{bundle.description}</p>
                     
-                    {/* 信息 */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-white font-bold text-lg flex items-center gap-2">
-                        {bundle.name}
-                        {purchasedBundles.includes(bundle.id) && <span className="text-xs bg-gray-700 px-2 py-0.5 rounded text-gray-300">已拥有</span>}
-                      </h3>
-                      <p className="text-gray-400 text-sm mb-2">{bundle.description}</p>
-                      
-                      <ul className="space-y-1">
-                        {bundle.items.map((item, i) => (
-                          <li key={i} className="text-xs text-gray-500 flex items-center gap-1">
-                            <span className="text-green-400">✓</span> {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    
-                    {/* 价格 */}
-                    <div className="text-right flex-shrink-0">
-                      <div className="text-gray-500 text-sm line-through">{bundle.originalPrice}</div>
-                      <div className="text-2xl font-bold text-green-400">{bundle.price}</div>
-                      <button
-                        onClick={() => handleBuyBundle(bundle)}
-                        disabled={purchasedBundles.includes(bundle.id)}
-                        className={`mt-2 px-4 py-2 rounded-lg text-white text-sm font-bold transition-transform ${
-                            purchasedBundles.includes(bundle.id) 
-                            ? 'bg-gray-700 cursor-not-allowed text-gray-400' 
-                            : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:scale-105'
-                        }`}
-                      >
-                        {purchasedBundles.includes(bundle.id) ? '已购买' : '购买'}
-                      </button>
+                    <div className="grid grid-cols-2 md:grid-cols-1 gap-x-2 gap-y-1">
+                      {bundle.items.map((item, i) => (
+                        <div key={i} className="text-[10px] md:text-xs text-gray-500 flex items-center gap-1 truncate">
+                          <span className="text-green-400 text-xs">✓</span> {item}
+                        </div>
+                      ))}
                     </div>
                   </div>
+                  
+                  <div className={`mt-4 pt-4 border-t border-white/5 md:border-t-0 md:pt-0 md:text-right flex items-center justify-between md:flex-col md:justify-center gap-2`}>
+                    <div>
+                      <div className="text-gray-500 text-[10px] md:text-xs line-through">{bundle.originalPrice}</div>
+                      <div className="text-xl md:text-3xl font-bold text-green-400">{bundle.price}</div>
+                    </div>
+                    <button
+                      onClick={() => handleBuyBundle(bundle)}
+                      disabled={purchasedBundles.includes(bundle.id)}
+                      className={`px-6 py-2.5 rounded-xl text-white text-xs md:text-sm font-bold shadow-lg transition-all
+                         ${purchasedBundles.includes(bundle.id) ? 'bg-gray-800 text-gray-400' : 'bg-green-600 active:scale-95'}
+                      `}
+                    >
+                      {purchasedBundles.includes(bundle.id) ? '已拥有' : '立即购买'}
+                    </button>
+                  </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         )}
 
         {/* 充值页面 */}
         {activeTab === 'currency' && (
-          <div className="space-y-4">
-            <p className="text-gray-400 text-sm text-center mb-6">
-              充值法力值，解锁更多卡牌
-            </p>
-            
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { amount: 100, price: '¥6', bonus: 0 },
-                { amount: 500, price: '¥28', bonus: 50 },
-                { amount: 1000, price: '¥50', bonus: 150 },
-                { amount: 3000, price: '¥128', bonus: 600 },
-                { amount: 5000, price: '¥198', bonus: 1200 },
-                { amount: 10000, price: '¥388', bonus: 3000 }
-              ].map(item => (
-                <div
-                  key={item.amount}
-                  className="bg-slate-900/80 rounded-xl border border-white/10 p-4 text-center hover:border-purple-500/50 transition-all cursor-pointer"
-                >
-                  <div className="text-3xl mb-2">💎</div>
-                  <div className="text-2xl font-bold text-white">{item.amount}</div>
-                  {item.bonus > 0 && (
-                    <div className="text-xs text-green-400">+{item.bonus} 赠送</div>
-                  )}
-                  <div className="mt-2 text-lg font-bold text-purple-400">{item.price}</div>
-                </div>
-              ))}
-            </div>
-            
-            <p className="text-center text-gray-600 text-xs mt-4">
-              充值功能开发中，敬请期待
-            </p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-w-4xl mx-auto">
+            {[
+              { amount: 100, price: '¥6', bonus: 0 },
+              { amount: 500, price: '¥28', bonus: 50 },
+              { amount: 1000, price: '¥50', bonus: 150 },
+              { amount: 3000, price: '¥128', bonus: 600 },
+              { amount: 5000, price: '¥198', bonus: 1200 },
+              { amount: 10000, price: '¥388', bonus: 3000 }
+            ].map(item => (
+              <div key={item.amount} className="bg-slate-900/80 rounded-2xl border border-white/5 p-4 text-center active:scale-95 transition-all shadow-xl">
+                <div className="text-2xl md:text-4xl mb-2">💎</div>
+                <div className="text-xl md:text-2xl font-bold text-white">{item.amount}</div>
+                {item.bonus > 0 && <div className="text-[10px] md:text-xs text-green-400 font-bold">+{item.bonus} Bonus</div>}
+                <div className="mt-3 py-1 bg-purple-500/10 rounded-full border border-purple-500/20 text-sm md:text-lg font-bold text-purple-400">{item.price}</div>
+              </div>
+            ))}
           </div>
         )}
       </div>
 
-      {/* 开包动画弹窗 */}
-      {/* 开包动画弹窗 */}
       {openingPack && revealedCards.length > 0 && (
            <PackOpener 
              packName={openingPack.name}

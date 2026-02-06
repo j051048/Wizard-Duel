@@ -82,6 +82,75 @@ const BattleHand: React.FC<BattleHandProps> = ({
     [hand.length, isMobile]
   );
 
+  // ====== 移动端横向滚动布局 ======
+  if (isMobile) {
+    return (
+      <div className="mobile-hand-scroll w-full pointer-events-auto">
+        {hand.map((id, index) => {
+          const isAffordable = playableCards.includes(id);
+          const isSelectedForAction = selectedCardId === id;
+          
+          return (
+            <motion.div
+              key={`${id}-${index}`}
+              initial={{ opacity: 0, scale: 0.8, y: 20 }}
+              animate={{ 
+                opacity: 1, 
+                scale: isSelectedForAction ? 1.1 : 1,
+                y: isSelectedForAction ? -10 : 0,
+              }}
+              exit={{ opacity: 0, scale: 0.5, y: -30 }}
+              transition={{ duration: 0.2 }}
+              className={`relative mobile-card ${isSelectedForAction ? 'z-50' : ''}`}
+              onClick={() => handleCardClick(id as SpellType, isAffordable)}
+            >
+              {/* 选中提示 */}
+              <AnimatePresence>
+                {isSelectedForAction && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8, y: 5 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.5 }}
+                    className="absolute -top-10 left-1/2 -translate-x-1/2 bg-amber-500 text-black text-[10px] font-bold px-2 py-1 rounded-full shadow-lg whitespace-nowrap z-[250]"
+                  >
+                    👆 再点一次
+                    <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-amber-500 rotate-45" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              
+              {/* 可打出边框 */}
+              {isAffordable && phase === 'PLAYER_TURN' && !isProcessing && !isSelectedForAction && (
+                <div className="absolute -inset-0.5 rounded-lg border-2 border-green-400/60 animate-pulse pointer-events-none" />
+              )}
+              
+              {/* 选中高亮 */}
+              {isSelectedForAction && (
+                <div className="absolute -inset-1 rounded-lg border-3 border-amber-400 animate-pulse pointer-events-none shadow-[0_0_15px_rgba(251,191,36,0.5)]" />
+              )}
+              
+              <SpellCard 
+                spell={getSpellById(id as SpellType)} 
+                onPointerDown={(e) => {
+                  onPointerDownCard(id as SpellType);
+                  if (isAffordable && phase === 'PLAYER_TURN' && !isProcessing) {
+                    startDrag(id as SpellType, index, e.clientX, e.clientY);
+                  }
+                }}
+                onPointerUp={onPointerUpCard}
+                isAffordable={isAffordable}
+                disabled={!isAffordable || phase !== 'PLAYER_TURN' || isProcessing}
+                isSmall={true}
+                isSelected={isSelectedForAction}
+              />
+            </motion.div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // ====== 桌面端扇形布局（原有逻辑，完全不变）======
   return (
     <div className="flex justify-center items-end relative h-40 md:h-48 pointer-events-auto" style={{ width: '100%', maxWidth: '900px' }}>
       <AnimatePresence>
@@ -97,8 +166,7 @@ const BattleHand: React.FC<BattleHandProps> = ({
           const offsetIndex = index - centerIndex;
           
           const rotate = isHovered ? 0 : offsetIndex * angleStep;
-          const baseY = Math.abs(offsetIndex) * (isMobile ? 4 : 6);
-          // [P0 Phase 2] 选中等待确认时，卡牌上浮更明显
+          const baseY = Math.abs(offsetIndex) * 6;
           const translateY = isBeingDragged ? -80 : (isSelectedForAction ? -50 : (isHovered ? -60 : baseY));
           const translateX = offsetIndex * xSpacing;
           const scale = isSelectedForAction ? 1.15 : (isHovered ? 1.25 : 1);
@@ -152,7 +220,7 @@ const BattleHand: React.FC<BattleHandProps> = ({
               }}
               onClick={() => handleCardClick(id as SpellType, isAffordable)}
             >
-              {/* [P0 Phase 2] 选中时的"再点一次"提示气泡 */}
+              {/* 选中时的"再点一次"提示气泡 */}
               <AnimatePresence>
                 {isSelectedForAction && (
                   <motion.div
@@ -172,7 +240,7 @@ const BattleHand: React.FC<BattleHandProps> = ({
                 <div className="absolute -inset-4 bg-gradient-to-t from-amber-500/30 via-transparent to-transparent rounded-xl blur-xl pointer-events-none animate-pulse" />
               )}
               
-              {/* [P0 Phase 2] 选中状态的高亮边框（金色脉冲） */}
+              {/* 选中状态的高亮边框（金色脉冲） */}
               {isSelectedForAction && (
                 <div className="absolute -inset-1.5 rounded-xl border-4 border-amber-400 animate-pulse pointer-events-none z-50 shadow-[0_0_20px_rgba(251,191,36,0.6)]" />
               )}
@@ -195,7 +263,7 @@ const BattleHand: React.FC<BattleHandProps> = ({
                   onPointerUp={onPointerUpCard}
                   isAffordable={isAffordable}
                   disabled={!isAffordable || phase !== 'PLAYER_TURN' || isProcessing}
-                  isSmall={isMobile && !isHovered && !isSelectedForAction}
+                  isSmall={false}
                   isSelected={isHovered || isSelectedForAction}
                 />
               </div>

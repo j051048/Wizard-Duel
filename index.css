@@ -206,12 +206,20 @@
 }
 
 @layer base {
+  /* 全局 CSS 变量 - 安全区域 */
+  :root {
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sat: env(safe-area-inset-top, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+  }
+
   html, body, #root {
     @apply m-0 p-0 bg-[#0f0518];
     height: 100%;
     width: 100%;
-    overflow: hidden; /* Lock browser window scroll */
-    overscroll-behavior: none; /* Disable browser bounce */
+    overflow: hidden;
+    overscroll-behavior: none;
   }
 
   body {
@@ -427,5 +435,122 @@
     .arena-hand-area {
         height: 80px !important;
         bottom: 0 !important;
+    }
+}
+
+/* ====== 移动端战斗界面专用样式 ====== */
+@media (max-width: 767px) {
+    /* 移动端手牌横向滚动容器 */
+    .mobile-hand-scroll {
+        display: flex;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x mandatory;
+        scroll-behavior: smooth;
+        gap: 8px;
+        padding: 12px 16px;
+        padding-bottom: calc(12px + var(--sab));
+        background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.6), transparent);
+    }
+    
+    .mobile-hand-scroll::-webkit-scrollbar {
+        display: none;
+    }
+    
+    .mobile-hand-scroll > * {
+        flex-shrink: 0;
+        scroll-snap-align: center;
+    }
+    
+    /* 移动端卡牌尺寸 */
+    .mobile-card {
+        width: 80px !important;
+        height: 112px !important;
+        min-width: 80px;
+    }
+    
+    .mobile-card-small {
+        width: 64px !important;
+        height: 90px !important;
+        min-width: 64px;
+    }
+    
+    /* 移动端玩家信息框紧凑版 */
+    .mobile-player-frame {
+        padding: 6px 10px !important;
+        border-radius: 10px !important;
+    }
+    
+    .mobile-player-frame .avatar {
+        width: 36px !important;
+        height: 36px !important;
+    }
+    
+    /* 移动端对手信息简化版 */
+    .mobile-opponent-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        background: rgba(0,0,0,0.7);
+        backdrop-filter: blur(8px);
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .mobile-opponent-bar .hp-bar {
+        flex: 1;
+        height: 8px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .mobile-opponent-bar .hp-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #ef4444, #f87171);
+        transition: width 0.3s ease;
+    }
+    
+    /* 移动端结束回合按钮 */
+    .mobile-end-turn-btn {
+        padding: 10px 20px !important;
+        font-size: 14px !important;
+        border-radius: 12px !important;
+    }
+    
+    /* 移动端触摸优化 */
+    .touch-target {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    /* 禁用卡牌悬停效果（移动端无hover） */
+    .card-in-hand:hover {
+        transform: none !important;
+    }
+    
+    /* 移动端卡牌点击反馈 */
+    .card-in-hand:active {
+        transform: scale(0.95) !important;
+        transition: transform 0.1s ease !important;
+    }
+}
+
+/* 超小屏幕额外优化 (< 380px) */
+@media (max-width: 379px) {
+    .mobile-card {
+        width: 64px !important;
+        height: 90px !important;
+    }
+    
+    .mobile-hand-scroll {
+        gap: 4px;
+        padding: 8px 8px;
+    }
+    
+    .mobile-opponent-bar {
+        padding: 4px 8px;
     }
 }

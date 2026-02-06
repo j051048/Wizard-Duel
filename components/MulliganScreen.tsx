@@ -9,6 +9,7 @@ import { SpellCard } from './SpellCard';
 import { getSpellById } from '../services/gameLogic';
 import { RefreshCcw, Check, Clock } from 'lucide-react';
 import { HapticService } from '../services/haptic';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 interface MulliganScreenProps {
   initialHand: SpellType[];
@@ -86,13 +87,14 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
     }, 800);
   };
 
+  const isMobile = useIsMobile();
   const isLowTime = timeLeft <= 10;
   const isCriticalTime = timeLeft <= 5;
 
   return (
-    <div className="fixed inset-0 bg-slate-950 z-50 flex flex-col overflow-hidden">
+    <div className="fixed inset-0 bg-slate-950 z-50 flex flex-col overflow-hidden safe-area-bottom">
       {/* 背景 */}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0 text-white">
         <img 
           src="/ui/bg_arena.webp" 
           alt="Background"
@@ -102,38 +104,38 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
       </div>
 
       {/* 顶部：对手信息 */}
-      <div className="relative z-10 flex justify-center items-center py-6">
-        <div className="flex items-center gap-4 bg-black/40 backdrop-blur-md px-6 py-3 rounded-full border border-white/10">
-          <div className="w-12 h-12 rounded-full border-2 border-red-500/50 overflow-hidden bg-slate-800">
+      <div className={`relative z-10 flex justify-center items-center ${isMobile ? 'py-4' : 'py-6'}`}>
+        <div className={`flex items-center ${isMobile ? 'gap-2 px-4 py-2' : 'gap-4 px-6 py-3'} bg-black/40 backdrop-blur-md rounded-full border border-white/10`}>
+          <div className={`${isMobile ? 'w-8 h-8' : 'w-12 h-12'} rounded-full border-2 border-red-500/50 overflow-hidden bg-slate-800`}>
             {opponentAvatar ? (
               <img src={opponentAvatar} className="w-full h-full object-cover" alt={opponentName} />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-2xl">🧙</div>
+              <div className={`w-full h-full flex items-center justify-center ${isMobile ? 'text-lg' : 'text-2xl'}`}>🧙</div>
             )}
           </div>
           <div>
-            <p className="text-xs text-red-400 uppercase tracking-wider font-bold">对手</p>
-            <p className="text-white font-bold">{opponentName}</p>
+            <p className="text-[10px] text-red-400 uppercase tracking-wider font-bold">对手</p>
+            <p className={`text-white font-bold ${isMobile ? 'text-xs truncate max-w-[80px]' : ''}`}>{opponentName}</p>
           </div>
-          <div className="text-gray-500 text-sm">正在选择起手牌...</div>
+          <div className="text-gray-500 text-[10px] md:text-sm">正在选择...</div>
         </div>
       </div>
 
       {/* 中央：标题和倒计时 */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center">
         {/* 标题动画 */}
-        <div className={`text-center mb-8 transition-all duration-1000 ${showAnimation ? 'opacity-0 -translate-y-10' : 'opacity-100 translate-y-0'}`}>
-          <h1 className="text-3xl md:text-4xl font-wizard font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-200 mb-2">
+        <div className={`text-center ${isMobile ? 'mb-4' : 'mb-8'} transition-all duration-1000 ${showAnimation ? 'opacity-0 -translate-y-10' : 'opacity-100 translate-y-0'}`}>
+          <h1 className="text-2xl md:text-4xl font-wizard font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-200 mb-1 md:mb-2">
             选择起手牌
           </h1>
-          <p className="text-gray-400 text-sm">
+          <p className="text-gray-400 text-[10px] md:text-sm">
             点击要替换的牌，然后确认
           </p>
         </div>
 
         {/* 倒计时 */}
         <div className={`
-          mb-8 flex items-center gap-3 px-6 py-3 rounded-full transition-all
+          ${isMobile ? 'mb-4 px-4 py-2' : 'mb-8 px-6 py-3'} flex items-center gap-3 rounded-full transition-all
           ${isCriticalTime 
             ? 'bg-red-500/20 border border-red-500/50 animate-pulse' 
             : isLowTime 
@@ -141,17 +143,17 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
               : 'bg-black/40 border border-white/10'
           }
         `}>
-          <Clock className={`w-5 h-5 ${isCriticalTime ? 'text-red-400' : isLowTime ? 'text-yellow-400' : 'text-gray-400'}`} />
-          <span className={`font-mono font-bold text-2xl ${
+          <Clock className={`w-4 h-4 md:w-5 md:h-5 ${isCriticalTime ? 'text-red-400' : isLowTime ? 'text-yellow-400' : 'text-gray-400'}`} />
+          <span className={`font-mono font-bold ${isMobile ? 'text-lg' : 'text-2xl'} ${
             isCriticalTime ? 'text-red-400' : isLowTime ? 'text-yellow-400' : 'text-white'
           }`}>
             {timeLeft}
           </span>
-          <span className="text-gray-500 text-sm">秒</span>
+          <span className="text-gray-500 text-[10px] md:text-sm">秒</span>
         </div>
 
         {/* 手牌展示 */}
-        <div id="mulligan-container" className="flex justify-center items-end gap-4 md:gap-6 mb-8 px-4">
+        <div id="mulligan-container" className={`flex justify-center items-end ${isMobile ? 'gap-1.5' : 'gap-4 md:gap-6'} mb-6 md:mb-8 px-2`}>
           {initialHand.map((spellId, index) => {
             const isSelected = selectedIndices.has(index);
             const spell = getSpellById(spellId);
@@ -175,6 +177,7 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
                   spell={spell} 
                   isSelected={isSelected}
                   disabled={isConfirmed}
+                  isSmall={isMobile}
                 />
                 
                 {/* 替换标记 */}

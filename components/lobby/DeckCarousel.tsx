@@ -13,6 +13,8 @@ interface DeckCarouselProps {
   t: (key: string) => string;
 }
 
+import { useIsMobile } from '../../hooks/useIsMobile';
+
 const DeckCarousel: React.FC<DeckCarouselProps> = ({
   decks,
   selectedDeck,
@@ -21,6 +23,7 @@ const DeckCarousel: React.FC<DeckCarouselProps> = ({
   isLoading = false,
   t
 }) => {
+  const isMobile = useIsMobile();
   const currentDeckIndex = decks.findIndex(d => d.id === selectedDeck?.id);
   
   const nextDeck = () => {
@@ -36,29 +39,29 @@ const DeckCarousel: React.FC<DeckCarouselProps> = ({
   };
 
   return (
-    <div id="lobby-deck-selector" className="relative w-full max-w-sm h-64 md:h-80 perspective-1000 flex items-center justify-center mb-8">
+    <div id="lobby-deck-selector" className={`relative w-full ${isMobile ? 'max-w-xs' : 'max-w-sm'} h-64 md:h-80 perspective-1000 flex items-center justify-center mb-6 md:mb-8`}>
        {isLoading ? (
          <CardSkeleton />
        ) : decks.length === 0 ? (
-          <div className="text-center p-8 bg-black/40 backdrop-blur-md rounded-2xl border border-dashed border-white/20 hover:border-purple-500/50 transition-colors cursor-pointer" onClick={onOpenDeckBuilder}>
-             <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Settings size={32} className="text-purple-400" />
+          <div className="text-center p-6 md:p-8 bg-black/40 backdrop-blur-md rounded-2xl border border-dashed border-white/20 hover:border-purple-500/50 transition-colors cursor-pointer" onClick={onOpenDeckBuilder}>
+             <div className="w-12 md:w-16 h-12 md:h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Settings size={isMobile ? 24 : 32} className="text-purple-400" />
              </div>
-             <h3 className="text-xl font-bold text-white mb-2">{t('No Decks Found')}</h3>
-             <p className="text-gray-400 text-sm mb-4">{t('You need a deck to enter the arena.')}</p>
-             <button className="px-6 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-white font-bold transition-colors">
+             <h3 className="text-lg md:text-xl font-bold text-white mb-2">{t('No Decks Found')}</h3>
+             <p className="text-gray-400 text-xs md:text-sm mb-4">{t('You need a deck to enter the arena.')}</p>
+             <button className="px-5 md:px-6 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-white font-bold transition-colors text-sm md:text-base">
                 {t('Create Deck')}
              </button>
           </div>
        ) : (
           <>
              {/* Prev Button */}
-             <button onClick={prevDeck} className="absolute left-4 z-20 p-3 rounded-full bg-black/20 hover:bg-black/60 text-white/50 hover:text-white transition-all">
+             <button onClick={prevDeck} className={`absolute ${isMobile ? 'left-0' : 'left-4'} z-20 p-2 md:p-3 rounded-full bg-black/40 hover:bg-black/80 text-white/70 transition-all active:scale-90`}>
                 ◀
              </button>
              
              {/* Active Deck Card - Simulated 3D */}
-             <div className="relative w-48 h-72 md:w-56 md:h-80 bg-slate-900 rounded-xl border-2 border-amber-500/40 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transform hover:scale-105 transition-transform duration-500 group">
+             <div className={`relative ${isMobile ? 'w-44 h-64' : 'w-48 h-72 md:w-56 md:h-80'} bg-slate-900 rounded-xl border-2 border-amber-500/40 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transform hover:scale-105 transition-transform duration-500 group`}>
                  {/* Cover Art */}
                  <div className="absolute inset-1 rounded-lg overflow-hidden bg-slate-800">
                     {selectedDeck?.cards[0] && SPELLS.find(s => s.id === selectedDeck.cards[0])?.artSrc ? (
@@ -69,24 +72,24 @@ const DeckCarousel: React.FC<DeckCarouselProps> = ({
                  </div>
                  
                  {/* Deck Info Overlay */}
-                 <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black via-black/80 to-transparent pt-12">
-                    <div className="text-amber-400 text-xs font-bold uppercase tracking-widest mb-1">{t('Current Deck')}</div>
-                    <h3 className="text-xl font-bold text-white truncate">{selectedDeck?.name}</h3>
-                    <div className="flex items-center justify-between mt-2">
-                       <span className="text-xs text-gray-400">{selectedDeck?.cards.length}/30 {t('Cards')}</span>
+                 <div className="absolute bottom-0 left-0 w-full p-3 md:p-4 bg-gradient-to-t from-black via-black/80 to-transparent pt-12">
+                    <div className="text-amber-400 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-1">{t('Current Deck')}</div>
+                    <h3 className="text-lg md:text-xl font-bold text-white truncate">{selectedDeck?.name}</h3>
+                    <div className="flex items-center justify-between mt-1 md:mt-2">
+                       <span className="text-[10px] md:text-xs text-gray-400">{selectedDeck?.cards.length}/30 {t('Cards')}</span>
                        <button 
                           onClick={onOpenDeckBuilder}
-                          className="p-2 bg-white/10 hover:bg-purple-600 rounded-lg transition-colors text-white"
+                          className="p-1.5 md:p-2 bg-white/10 hover:bg-purple-600 rounded-lg transition-colors text-white"
                           title={t('Edit Deck')}
                        >
-                          <Settings size={14} />
+                          <Settings size={isMobile ? 12 : 14} />
                        </button>
                     </div>
                  </div>
              </div>
 
              {/* Next Button */}
-             <button onClick={nextDeck} className="absolute right-4 z-20 p-3 rounded-full bg-black/20 hover:bg-black/60 text-white/50 hover:text-white transition-all">
+             <button onClick={nextDeck} className={`absolute ${isMobile ? 'right-0' : 'right-4'} z-20 p-2 md:p-3 rounded-full bg-black/40 hover:bg-black/80 text-white/70 transition-all active:scale-90`}>
                 ▶
              </button>
           </>
