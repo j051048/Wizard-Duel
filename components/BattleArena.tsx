@@ -507,78 +507,82 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
               </div>
             </div>
 
-            {/* 2. 顶层悬浮 HUD：分离式布局 (Split HUD) */}
-            <div className="absolute bottom-16 md:bottom-0 left-0 right-0 z-[60] flex items-end justify-between px-2 w-full pointer-events-none">
-              
-              {/* 左侧：玩家头像与 Core Stats (Compact) */}
-                 {/* Avatar Group - Adjusted Layout for Skills */}
-                 <div className="relative pointer-events-auto transform translate-y-[-10px] flex flex-col items-center gap-1">
-                    {/* Avatar Container */}
-                    <div className="relative">
-                       <div className="w-14 h-14 rounded-full border-2 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.3)] bg-slate-900 overflow-hidden relative z-10">
-                          <img src="/avatars/player-wizard.webp" className="w-full h-full object-cover" alt="Player" />
+             {/* 2. 顶层悬浮 HUD：分离式布局 (Split HUD) */}
+             <div className="absolute bottom-12 left-0 right-0 z-[60] flex items-end justify-between px-2 w-full pointer-events-none safe-area-bottom">
+               
+               {/* 左侧：Avatar + Skills (Side-by-Side) */}
+               <div className="relative pointer-events-auto flex items-end gap-2 mb-2 ml-1">
+                  {/* Avatar Container */}
+                  <div className="relative group">
+                     <div className="w-16 h-16 rounded-full border-2 border-amber-500/60 shadow-[0_0_20px_rgba(0,0,0,0.6)] bg-slate-900 overflow-hidden relative z-10 ring-2 ring-black/50">
+                        <img src="/avatars/player-wizard.webp" className="w-full h-full object-cover" alt="Player" />
+                     </div>
+                     
+                     {/* HP Badge (Bottom Left) */}
+                     <div className="absolute -bottom-1 -left-1 bg-gradient-to-br from-red-900 to-slate-900 text-red-500 border border-red-500/50 rounded-full w-7 h-7 flex items-center justify-center font-bold text-sm shadow-md z-20">
+                        {duelState.playerHP}
+                     </div>
+
+                     {/* Armor Badge (Top Right) */}
+                     {duelState.playerArmor > 0 && (
+                       <div className="absolute -top-1 -right-1 bg-slate-800 text-slate-300 border border-slate-600 rounded-full w-5 h-5 flex items-center justify-center text-[10px] z-20 shadow-sm">
+                          🛡️{duelState.playerArmor}
                        </div>
-                       
-                       {/* HP Badge (Top Left) */}
-                       <div className="absolute -top-1 -left-1 bg-slate-900 text-red-500 border border-red-500/50 rounded-full w-6 h-6 flex items-center justify-center font-bold text-xs shadow-sm z-20">
-                          {duelState.playerHP}
-                       </div>
+                     )}
 
-                       {/* Armor Badge (Top Right) */}
-                       {duelState.playerArmor > 0 && (
-                         <div className="absolute -top-1 -right-1 bg-slate-800 text-slate-300 border border-slate-600 rounded-full w-5 h-5 flex items-center justify-center text-[10px] z-20">
-                            🛡️{duelState.playerArmor}
-                         </div>
-                       )}
+                     {/* Mana Bar (Floating above avatar) */}
+                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-900/95 border border-blue-500/50 rounded-full px-2 py-0.5 flex items-center gap-0.5 shadow-lg z-20 min-w-[3.5rem] justify-center whitespace-nowrap">
+                        <span className="text-blue-400 text-[10px]">💠</span>
+                        <span className="text-blue-100 font-bold text-xs">{duelState.playerMana}/{duelState.playerMaxMana}</span>
+                     </div>
+                  </div>
 
-                       {/* Mana Bar (Transformed to compact capsule below avatar) */}
-                       <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-slate-900/90 border border-blue-500/50 rounded-full px-2 py-0.5 flex items-center gap-1 shadow-md z-20 min-w-[3rem] justify-center text-[10px]">
-                          <span className="text-blue-400">💧</span>
-                          <span className="text-white font-bold">{duelState.playerMana}/{duelState.playerMaxMana}</span>
-                       </div>
-                    </div>
+                  {/* Skills (Right of Avatar) */}
+                  <div className="flex gap-1.5 p-1 bg-black/40 rounded-full backdrop-blur-sm border border-white/5 shadow-xl mb-1">
+                    {heroSkills.slice(0, 3).map(skill => (
+                      <HeroSkillButton
+                        key={skill.id}
+                        skill={skill}
+                        canUse={phase === 'PLAYER_TURN' && !duelState.heroSkillsUsed && !gameLoopState.isProcessing}
+                        currentMana={duelState.playerMana}
+                        onClick={() => handlePlayCard(skill.id)}
+                        compact={true} 
+                      />
+                    ))}
+                  </div>
+               </div>
 
-                    {/* [UI Polish] Hero Skills - Horizontal Row Below Avatar */}
-                    {/* User Request: "横向放在巫师头像下方" */}
-                    <div className="flex gap-1 mt-2 bg-black/40 p-1 rounded-full backdrop-blur-sm border border-white/5">
-                      {heroSkills.slice(0, 3).map(skill => (
-                        <HeroSkillButton
-                          key={skill.id}
-                          skill={skill}
-                          canUse={phase === 'PLAYER_TURN' && !duelState.heroSkillsUsed && !gameLoopState.isProcessing}
-                          currentMana={duelState.playerMana}
-                          onClick={() => handlePlayCard(skill.id)}
-                          compact={true} 
-                        />
-                      ))}
-                    </div>
-                 </div>
-
-              {/* 右侧：回合结束按钮 (Floating Orb Style) */}
-              <div className="pointer-events-auto transform translate-y-1 mb-1">
-                <button 
-                  id="end-turn-btn"
-                  onClick={onPass} 
-                  disabled={phase !== 'PLAYER_TURN'} 
-                  className={`
-                    shadow-xl transition-all duration-300 active:scale-95
-                    flex items-center justify-center gap-1
-                    ${phase === 'PLAYER_TURN' 
-                      ? 'bg-gradient-to-br from-amber-500 to-orange-700 text-white border-2 border-amber-300 ring-4 ring-amber-900/30' 
-                      : 'bg-slate-800 text-slate-500 border-2 border-slate-700 grayscale'
-                    }
-                    rounded-full px-4 py-2 min-w-[5rem]
-                  `}
-                >
-                  <span className="font-bold text-sm tracking-wide drop-shadow-md">
-                    {phase === 'PLAYER_TURN' ? '结束' : '等待'}
-                  </span>
+               {/* 右侧：End Turn Orb */}
+               <div className="pointer-events-auto mb-3 mr-1 relative">
+                  <button 
+                    id="end-turn-btn"
+                    onClick={onPass} 
+                    disabled={phase !== 'PLAYER_TURN'}
+                    className={`
+                      w-16 h-16 rounded-full flex flex-col items-center justify-center 
+                      border-[3px] shadow-[0_0_25px_rgba(0,0,0,0.5)] 
+                      transition-all duration-300 active:scale-90
+                      ${phase === 'PLAYER_TURN' 
+                        ? 'bg-gradient-to-br from-amber-400 via-orange-600 to-amber-900 border-amber-300 text-white animate-pulse-slow shadow-amber-500/30' 
+                        : 'bg-slate-800 border-slate-600 text-slate-500 grayscale'}
+                    `}
+                  >
+                    {phase === 'PLAYER_TURN' ? (
+                       <>
+                         <span className="text-xl leading-none drop-shadow-md">⚔️</span>
+                         <span className="text-[10px] font-bold uppercase tracking-wider drop-shadow-md">结束</span>
+                       </>
+                    ) : (
+                       <span className="text-2xl animate-spin-slow opacity-50">⏳</span>
+                    )}
+                  </button>
+                  
+                  {/* Energy Ring Effect (When Active) */}
                   {phase === 'PLAYER_TURN' && (
-                     <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse shadow-[0_0_5px_#4ade80]" />
+                     <div className="absolute inset-0 rounded-full border border-amber-400 opacity-0 animate-ping pointer-events-none" />
                   )}
-                </button>
-              </div>
-            </div>
+               </div>
+             </div>
           </div>
         ) : (
           /* ====== 桌面端原有布局：绝对定位覆盖 ====== */
@@ -635,11 +639,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
               />
             </div>
             
-            {/* 结束回合按钮 - 右下角 */}
-            <div className="absolute right-2 md:right-6 bottom-4 md:bottom-6 z-40">
+            {/* 结束回合按钮 - 右下角 (Desktop Only now, as mobile has specialized one above) */}
+            <div className="absolute right-6 bottom-6 z-40 hidden md:block">
               <button 
-                id="end-turn-btn"
-                onClick={onPass} 
+                id="end-turn-btn-desktop"
+                onClick={onPass}  
                 disabled={phase !== 'PLAYER_TURN'} 
                 className={`
                   relative px-6 py-3 md:px-8 md:py-4 rounded-xl font-bold text-sm md:text-base uppercase tracking-wider

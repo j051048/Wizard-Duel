@@ -33,13 +33,6 @@ const calculateHandLayout = (count: number, isMobile: boolean, screenWidth: numb
     let xSpacing = Math.max(isMobile ? 15 : 25, baseSpacing - (count * (isMobile ? 2.5 : 2)));
     
     // 动态压缩：如果卡牌多，强制限制总宽度不超过屏幕宽度的 85% (留给按钮)
-    if (isMobile && count > 3) {
-        const maxWidth = screenWidth * 0.85;
-        // xSpacing * (count - 1) = Total Width (approx center-to-center)
-        const calculatedSpacing = maxWidth / (count + 1);
-        xSpacing = Math.min(xSpacing, calculatedSpacing);
-    }
-    
     return { angleStep, xSpacing };
 };
 
@@ -91,7 +84,16 @@ const BattleHand: React.FC<BattleHandProps> = ({
 
   // [UI Polish] 移动端扇形布局
   return (
-    <div className={`flex justify-center items-end relative pointer-events-auto ${isMobile ? 'h-36 mb-6' : 'h-40 md:h-48'}`} style={{ width: '100%', maxWidth: isMobile ? '100vw' : '900px' }}>
+    <div 
+      className={`flex justify-center items-end relative pointer-events-auto ${isMobile ? 'h-36 mb-6' : 'h-40 md:h-48'}`} 
+      style={{ 
+        width: '100%', 
+        maxWidth: isMobile ? '100%' : '900px',
+        // [Safety Zone] Padding for mobile left/right UI elements
+        paddingLeft: isMobile ? '80px' : '0',
+        paddingRight: isMobile ? '80px' : '0' 
+      }}
+    >
       <AnimatePresence>
         {hand.map((id, index) => {
           const isAffordable = playableCards.includes(id);
