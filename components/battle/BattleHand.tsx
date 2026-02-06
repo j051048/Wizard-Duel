@@ -21,12 +21,24 @@ interface BattleHandProps {
 }
 
 const calculateHandLayout = (count: number, isMobile: boolean, screenWidth: number) => {
-    const baseAngle = isMobile ? (screenWidth < 380 ? 2 : 3) : 3;
-    const maxTotalAngle = isMobile ? 40 : 35; 
+    // [UI Polish] 移动端：激进的扇形参数，模仿炉石传说
+    const baseAngle = isMobile ? (screenWidth < 380 ? 10 : 8) : 3; // 增加基础角度
+    const maxTotalAngle = isMobile ? 80 : 35; // 允许更大的总扇面
     const angleStep = Math.min(baseAngle, maxTotalAngle / (count - 1 || 1));
     
-    const baseSpacing = isMobile ? (screenWidth < 380 ? 35 : 50) : 70;
-    const xSpacing = Math.max(25, baseSpacing - (count * 2));
+    // [UI Polish] 移动端：极度紧凑的间距，强制堆叠
+    // 假设卡牌宽度 ~100px。为了堆叠，间距应小于 50px。
+    const baseSpacing = isMobile ? (screenWidth < 380 ? 30 : 40) : 70;
+    // 随着卡牌数量增加，间距迅速减小，挤在一起
+    let xSpacing = Math.max(isMobile ? 15 : 25, baseSpacing - (count * (isMobile ? 2.5 : 2)));
+    
+    // 动态压缩：如果卡牌多，强制限制总宽度不超过屏幕宽度的 85% (留给按钮)
+    if (isMobile && count > 3) {
+        const maxWidth = screenWidth * 0.85;
+        // xSpacing * (count - 1) = Total Width (approx center-to-center)
+        const calculatedSpacing = maxWidth / (count + 1);
+        xSpacing = Math.min(xSpacing, calculatedSpacing);
+    }
     
     return { angleStep, xSpacing };
 };
@@ -47,15 +59,12 @@ const BattleHand: React.FC<BattleHandProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  // [P0 Phase 2] 单击选中状态
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const selectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // [P0 Phase 2] 处理单击选中 + 二次点击确认出牌
   const handleCardClick = (spellId: SpellType, isAffordable: boolean) => {
     if (!isAffordable || phase !== 'PLAYER_TURN' || isProcessing) return;
 
-    // 如果点击的是已选中的卡牌（等待确认），则出牌
     if (selectedCardId === spellId) {
       if (onDoubleClickCard) {
         HapticService.medium();
@@ -66,15 +75,13 @@ const BattleHand: React.FC<BattleHandProps> = ({
       return;
     }
 
-    // 第一次点击：选中卡牌
     setSelectedCardId(spellId);
     HapticService.light();
 
-    // 清除之前的超时，设置新的自动取消选中
     if (selectionTimeoutRef.current) clearTimeout(selectionTimeoutRef.current);
     selectionTimeoutRef.current = setTimeout(() => {
       setSelectedCardId(prev => (prev === spellId ? null : prev));
-    }, 2500); // 2.5秒后自动取消选中
+    }, 2500);
   };
 
   const layoutConfig = useMemo(() => 
@@ -82,77 +89,9 @@ const BattleHand: React.FC<BattleHandProps> = ({
     [hand.length, isMobile]
   );
 
-  // ====== 移动端横向滚动布局 ======
-  if (isMobile) {
-    return (
-      <div className="mobile-hand-scroll w-full pointer-events-auto">
-        {hand.map((id, index) => {
-          const isAffordable = playableCards.includes(id);
-          const isSelectedForAction = selectedCardId === id;
-          
-          return (
-            <motion.div
-              key={`${id}-${index}`}
-              initial={{ opacity: 0, scale: 0.8, y: 20 }}
-              animate={{ 
-                opacity: 1, 
-                scale: isSelectedForAction ? 1.1 : 1,
-                y: isSelectedForAction ? -10 : 0,
-              }}
-              exit={{ opacity: 0, scale: 0.5, y: -30 }}
-              transition={{ duration: 0.2 }}
-              className={`relative mobile-card ${isSelectedForAction ? 'z-50' : ''}`}
-              onClick={() => handleCardClick(id as SpellType, isAffordable)}
-            >
-              {/* 选中提示 */}
-              <AnimatePresence>
-                {isSelectedForAction && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8, y: 5 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.5 }}
-                    className="absolute -top-10 left-1/2 -translate-x-1/2 bg-amber-500 text-black text-[10px] font-bold px-2 py-1 rounded-full shadow-lg whitespace-nowrap z-[250]"
-                  >
-                    👆 再点一次
-                    <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-amber-500 rotate-45" />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              
-              {/* 可打出边框 */}
-              {isAffordable && phase === 'PLAYER_TURN' && !isProcessing && !isSelectedForAction && (
-                <div className="absolute -inset-0.5 rounded-lg border-2 border-green-400/60 animate-pulse pointer-events-none" />
-              )}
-              
-              {/* 选中高亮 */}
-              {isSelectedForAction && (
-                <div className="absolute -inset-1 rounded-lg border-3 border-amber-400 animate-pulse pointer-events-none shadow-[0_0_15px_rgba(251,191,36,0.5)]" />
-              )}
-              
-              <SpellCard 
-                spell={getSpellById(id as SpellType)} 
-                onPointerDown={(e) => {
-                  onPointerDownCard(id as SpellType);
-                  if (isAffordable && phase === 'PLAYER_TURN' && !isProcessing) {
-                    startDrag(id as SpellType, index, e.clientX, e.clientY);
-                  }
-                }}
-                onPointerUp={onPointerUpCard}
-                isAffordable={isAffordable}
-                disabled={!isAffordable || phase !== 'PLAYER_TURN' || isProcessing}
-                isSmall={true}
-                isSelected={isSelectedForAction}
-              />
-            </motion.div>
-          );
-        })}
-      </div>
-    );
-  }
-
-  // ====== 桌面端扇形布局（原有逻辑，完全不变）======
+  // [UI Polish] 移动端扇形布局
   return (
-    <div className="flex justify-center items-end relative h-40 md:h-48 pointer-events-auto" style={{ width: '100%', maxWidth: '900px' }}>
+    <div className={`flex justify-center items-end relative pointer-events-auto ${isMobile ? 'h-36 mb-6' : 'h-40 md:h-48'}`} style={{ width: '100%', maxWidth: isMobile ? '100vw' : '900px' }}>
       <AnimatePresence>
         {hand.map((id, index) => {
           const isAffordable = playableCards.includes(id);
@@ -166,24 +105,42 @@ const BattleHand: React.FC<BattleHandProps> = ({
           const offsetIndex = index - centerIndex;
           
           const rotate = isHovered ? 0 : offsetIndex * angleStep;
-          const baseY = Math.abs(offsetIndex) * 6;
-          const translateY = isBeingDragged ? -80 : (isSelectedForAction ? -50 : (isHovered ? -60 : baseY));
+          
+          // [UI Polish] 拱形幅度：中间高，两边低。移动端幅度更大
+          const archFactor = isMobile ? 12 : 6; 
+          const baseY = Math.abs(offsetIndex) * archFactor; 
+          
+          // 移动端默认放大卡牌，增强视觉冲击力
+          const baseScale = isMobile ? 1.15 : 1;
+
+          // 选中上浮逻辑
+          let translateY = isBeingDragged ? -80 : (isSelectedForAction ? -70 : (isHovered ? -60 : baseY));
+          // 移动端整体位置微调
+          if (isMobile) translateY += 10; 
+
           const translateX = offsetIndex * xSpacing;
-          const scale = isSelectedForAction ? 1.15 : (isHovered ? 1.25 : 1);
+          
+          // 状态缩放
+          const activeScale = isSelectedForAction ? 1.25 : (isHovered ? 1.25 : 1);
+          const finalScale = baseScale * activeScale;
+
+          // 移动端不需要 z-index 阴影动画以节省性能
+          const enableShadowAnim = !isMobile && isAffordable && phase === 'PLAYER_TURN' && !isProcessing && !isHovered && !isSelectedForAction;
 
           return (
             <motion.div 
               key={`${id}-${index}`} 
               layoutId={`${id}-${index}`}
-              initial={{ opacity: 0, y: 100, scale: 0.5, rotate: 0 }}
+              initial={{ opacity: 0, y: 150, scale: 0.5, rotate: 0 }}
               animate={{ 
                 opacity: isBeingDragged ? 0 : 1, 
                 x: translateX,
                 y: translateY,
                 rotate: rotate,
-                scale: scale,
+                scale: finalScale,
+                // [UI Polish] 选中时 Z轴 极大提升，防止被遮挡
                 zIndex: isSelectedForAction ? 200 : (isHovered ? 100 : index + 1),
-                boxShadow: isAffordable && phase === 'PLAYER_TURN' && !isProcessing && !isHovered && !isSelectedForAction
+                boxShadow: enableShadowAnim
                   ? [
                       '0 0 10px rgba(74,222,128,0.3), 0 0 20px rgba(74,222,128,0.2)',
                       '0 0 20px rgba(74,222,128,0.6), 0 0 40px rgba(74,222,128,0.4)',
@@ -200,23 +157,27 @@ const BattleHand: React.FC<BattleHandProps> = ({
               transition={{ 
                 duration: 0.25,
                 ease: [0.34, 1.56, 0.64, 1],
-                boxShadow: { 
+                boxShadow: enableShadowAnim ? { 
                   duration: 1.5, 
                   repeat: Infinity, 
                   ease: "easeInOut" 
-                }
+                } : undefined
               }}
               className="absolute origin-bottom cursor-pointer"
-              style={{ bottom: '10px' }}
+              style={{ bottom: isMobile ? '30px' : '10px' }} // 底部距离提升 (Elevated)
               id={`player-card-${index}`}
               onMouseEnter={() => {
-                setHoveredIndex(index);
-                onMouseEnterCard(id as SpellType);
-                HapticService.light();
+                if (!isMobile) {
+                    setHoveredIndex(index);
+                    onMouseEnterCard(id as SpellType);
+                    HapticService.light();
+                }
               }}
               onMouseLeave={() => {
-                setHoveredIndex(null);
-                onMouseLeaveCard();
+                if (!isMobile) {
+                    setHoveredIndex(null);
+                    onMouseLeaveCard();
+                }
               }}
               onClick={() => handleCardClick(id as SpellType, isAffordable)}
             >
@@ -235,14 +196,9 @@ const BattleHand: React.FC<BattleHandProps> = ({
                 )}
               </AnimatePresence>
 
-              {/* 悬停时的光晕效果 */}
-              {isHovered && (
-                <div className="absolute -inset-4 bg-gradient-to-t from-amber-500/30 via-transparent to-transparent rounded-xl blur-xl pointer-events-none animate-pulse" />
-              )}
-              
-              {/* 选中状态的高亮边框（金色脉冲） */}
-              {isSelectedForAction && (
-                <div className="absolute -inset-1.5 rounded-xl border-4 border-amber-400 animate-pulse pointer-events-none z-50 shadow-[0_0_20px_rgba(251,191,36,0.6)]" />
+              {/* 悬停/选中状态的高亮 */}
+              {(isHovered || isSelectedForAction) && (
+                 <div className="absolute -inset-1.5 rounded-xl border-4 border-amber-400 animate-pulse pointer-events-none z-50 shadow-[0_0_20px_rgba(251,191,36,0.6)]" />
               )}
               
               {/* 可打出卡牌的绿色脉冲边框 */}
@@ -250,7 +206,7 @@ const BattleHand: React.FC<BattleHandProps> = ({
                 <div className="absolute -inset-1 rounded-xl border-2 border-green-400/60 animate-pulse pointer-events-none" />
               )}
               
-              {/* 卡牌阴影增强 */}
+              {/* 卡牌渲染 */}
               <div className={`transition-all duration-300 ${isHovered || isSelectedForAction ? 'drop-shadow-[0_20px_40px_rgba(0,0,0,0.8)]' : 'drop-shadow-[0_5px_15px_rgba(0,0,0,0.5)]'}`}>
                 <SpellCard 
                   spell={getSpellById(id as SpellType)} 
@@ -263,8 +219,9 @@ const BattleHand: React.FC<BattleHandProps> = ({
                   onPointerUp={onPointerUpCard}
                   isAffordable={isAffordable}
                   disabled={!isAffordable || phase !== 'PLAYER_TURN' || isProcessing}
-                  isSmall={false}
+                  isSmall={false} // 扇形模式下不使用 Small 变体，保持细节，通过 transform scale 控制大小
                   isSelected={isHovered || isSelectedForAction}
+                  showCost={true}
                 />
               </div>
             </motion.div>

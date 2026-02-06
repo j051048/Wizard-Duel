@@ -3,6 +3,7 @@
  */
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Volume2, VolumeX, ScrollText, Flag } from 'lucide-react';
 import { SpellType, DuelState, GameLoopState } from '../types';
 import { GAME_CONFIG, SPELLS } from '../constants';
@@ -96,7 +97,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     );
   }, [duelState]);
 
-  const { dragState, startDrag } = useDragToPlay(
+
+  const { dragState, startDrag, dragX, dragY } = useDragToPlay(
     (id, confirmed) => handlePlayCard(id, confirmed),
     setTargeting,
     gameLoopState.isProcessing,
@@ -323,13 +325,38 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                </div>
             </div>
 
-            {/* 右侧：AI 思考状态 (如果不思考则为空占位) */}
-            {aiStatus === 'THINKING' && (
-              <div className="bg-black/40 backdrop-blur px-3 py-1 rounded-full border border-white/10 text-xs text-amber-300 animate-pulse flex items-center gap-2">
-                 <span>思考中...</span>
-                 <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" />
-              </div>
-            )}
+            {/* 右侧：整合后的按钮组 + AI思考状态 */}
+            <div className="flex flex-col items-end gap-2 pointer-events-auto z-50">
+               {/* Mobile Controls - Integrated to prevent overlap */}
+               <div className="flex gap-1">
+                  <button 
+                     onClick={() => setIsLogOpen(!isLogOpen)}
+                     className="w-8 h-8 rounded-full bg-black/40 backdrop-blur border border-white/20 flex items-center justify-center text-white/70 active:scale-90 transition-transform"
+                  >
+                     <ScrollText size={16} />
+                  </button>
+                  <button 
+                    onClick={onToggleMute}
+                    className="w-8 h-8 rounded-full bg-black/40 backdrop-blur border border-white/20 flex items-center justify-center text-white/70 active:scale-90 transition-transform"
+                  >
+                    {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                  </button>
+                  <button 
+                    onClick={onSurrender}
+                    className="w-8 h-8 rounded-full bg-red-900/40 backdrop-blur border border-red-500/30 flex items-center justify-center text-red-500/70 active:scale-90 transition-transform"
+                  >
+                    <Flag size={16} />
+                  </button>
+               </div>
+
+               {/* AI Status Bubble */}
+               {aiStatus === 'THINKING' && (
+                  <div className="bg-black/60 backdrop-blur px-3 py-1 rounded-full border border-white/10 text-xs text-amber-300 animate-pulse flex items-center gap-2 shadow-lg">
+                     <span>思考中...</span>
+                     <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" />
+                  </div>
+               )}
+            </div>
           </div>
         ) : (
           /* ====== 桌面端：原有完整布局 ====== */
@@ -628,66 +655,40 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     )}
   </div>
 
-      {/* Floating Dragged Card */}
+      {/* Floating Dragged Card - [Performance] Use motion.div with MotionValues to avoid re-renders */}
       {dragState?.isDragging && (
-        <div 
-          className="fixed z-[200] pointer-events-none transform -translate-x-1/2 -translate-y-1/2 scale-125 transition-transform duration-200"
-          style={{ left: dragState.currentX, top: dragState.currentY }}
+        <motion.div 
+          className="fixed z-[200] pointer-events-none transform -translate-x-1/2 -translate-y-1/2 scale-125"
+          style={{ left: dragX, top: dragY }}
         >
           <SpellCard spell={getSpellById(dragState.spellId)} isSmall={isMobile} isSelected />
-        </div>
+        </motion.div>
       )}
 
-      {/* Top Right Controls - 隐形化设计 (Stealth UI) */}
-      <div className={`fixed z-40 flex gap-1 transition-all ${isMobile ? 'top-2 right-2 opacity-60' : 'top-4 right-4 safe-area-top'}`}>
-        {/* 移动端只保留单一设置入口或非常小的图标 */}
-        {isMobile ? (
-          <div className="flex gap-1">
-             {/* 仅在移动端显示的极简菜单按钮 */}
+      {/* Top Right Controls - Desktop Only */}
+      {!isMobile && (
+        <div className="fixed z-40 top-4 right-4 safe-area-top flex gap-2">
              <button 
-                onClick={() => setIsLogOpen(!isLogOpen)}
-                className="w-8 h-8 rounded-full bg-black/20 backdrop-blur border border-white/10 flex items-center justify-center text-white/50"
+               onClick={onSurrender} 
+               className="p-2 backdrop-blur-md rounded-lg border border-red-500/30 text-red-400 hover:text-red-200 hover:bg-red-900/40 transition-colors bg-red-900/40"
+               title="投降"
              >
-                <ScrollText size={14} />
+               <Flag size={20} />
              </button>
              <button 
-               onClick={onSurrender}
-               className="w-8 h-8 rounded-full bg-red-900/20 backdrop-blur border border-red-500/20 flex items-center justify-center text-red-500/50"
+               onClick={() => setIsLogOpen(!isLogOpen)} 
+               className="p-2 backdrop-blur-md rounded-lg border border-white/10 text-white/60 hover:text-white transition-colors bg-black/40"
              >
-               <Flag size={14} />
+               <ScrollText size={20} />
              </button>
              <button 
-               onClick={onToggleMute}
-               className="w-8 h-8 rounded-full bg-black/20 backdrop-blur border border-white/10 flex items-center justify-center text-white/50"
+               onClick={onToggleMute} 
+               className="p-2 backdrop-blur-md rounded-lg border border-white/10 text-white/60 hover:text-white transition-colors bg-black/40"
              >
-               {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
              </button>
-          </div>
-        ) : (
-          /* Desktop Buttons (Standard) */
-          <div className="flex gap-2">
-            <button 
-              onClick={onSurrender} 
-              className="p-2 backdrop-blur-md rounded-lg border border-red-500/30 text-red-400 hover:text-red-200 hover:bg-red-900/40 transition-colors bg-red-900/40"
-              title="投降"
-            >
-              <Flag size={20} />
-            </button>
-            <button 
-              onClick={() => setIsLogOpen(!isLogOpen)} 
-              className="p-2 backdrop-blur-md rounded-lg border border-white/10 text-white/60 hover:text-white transition-colors bg-black/40"
-            >
-              <ScrollText size={20} />
-            </button>
-            <button 
-              onClick={onToggleMute} 
-              className="p-2 backdrop-blur-md rounded-lg border border-white/10 text-white/60 hover:text-white transition-colors bg-black/40"
-            >
-               {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-            </button>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <CombatLog 
         isOpen={isLogOpen} 
