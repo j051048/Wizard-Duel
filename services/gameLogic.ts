@@ -196,6 +196,20 @@ export const executeSpell = (
     // [P0 Fix] 修改的是拷贝后的状态，不影响原始 state
     if (isPlayer) mutableState.heroSkillsUsed = true;
     else mutableState.opponentHeroSkillUsed = true;
+  } else if (spellId !== 'skip') {
+    // [P0 Critical Fix] 手牌持有校验 - 防止双重触发导致的超额扣费
+    // 只有当卡牌确实在手牌中时才执行扣费和效果
+    const hand = isPlayer ? mutableState.playerHand : mutableState.opponentHand;
+    const hasCard = hand.includes(spellId);
+    if (!hasCard) {
+        // 卡牌不在手牌中，可能是重复点击或延迟导致的
+        // 默默失败或返回无操作，不扣费
+        return {
+            newState: state as DuelState,
+            logs: [], // 不记录日志，以免刷屏
+            command: { id: 'noop', caster, actions: [] }
+        };
+    }
   }
 
   // 3. 费用计算与扣除
