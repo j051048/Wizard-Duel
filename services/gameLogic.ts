@@ -203,6 +203,31 @@ export const executeSpell = (
   const finalCost = spell.id === 'skip' ? 0 : Math.max(0, spell.manaCost + costMod);
   actions.push({ type: 'MANA_CHANGE', target: caster, value: -finalCost });
 
+  // [Fix] 消耗缠绕效果 (Tangle) - 机制设计为"下一张牌"费用增加，因此生效一次后需移除
+  if (spell.id !== 'skip' && costMod > 0) {
+      const currentEffects = isPlayer ? mutableState.playerEffects : mutableState.opponentEffects;
+      const tangleEffect = currentEffects.find(e => e.type === 'tangle');
+      
+      // 如果存在缠绕效果，且持续时间较短（<=2，代表单次生效），则移除它
+      if (tangleEffect && tangleEffect.duration <= 2) {
+          actions.push({ 
+              type: 'REMOVE_EFFECT', 
+              target: caster, 
+              subType: 'tangle',
+              description: '🌿 挣脱缠绕' 
+          });
+          
+          // 同步移除 mutableState 中的状态，确保后续逻辑（如连击判定）状态一致
+          if (isPlayer) {
+              mutableState.playerEffects = mutableState.playerEffects.filter(e => e.type !== 'tangle');
+              mutableState.playerCostMod = 0;
+          } else {
+              mutableState.opponentEffects = mutableState.opponentEffects.filter(e => e.type !== 'tangle');
+              mutableState.opponentCostMod = 0;
+          }
+      }
+  }
+
   // [P0 Fix] 立即从拷贝的状态中移除手牌，确保后续所有中间状态都包含此更动
   if (spell.id !== 'skip') {
     if (isPlayer) {

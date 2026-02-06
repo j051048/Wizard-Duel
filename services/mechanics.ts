@@ -35,7 +35,7 @@ const tangle: MechanicHandler = (state, caster, spell, countered) => {
   return [{ 
     type: 'ADD_EFFECT', 
     target, 
-    value: { type: 'tangle', duration: 1, value: 1 }, // [Balance] 费用增加从 2 降为 1
+    value: { type: 'tangle', duration: 2, value: 1 }, // Duration 2 to survive turn switch
     description: `🌿 ${target === 'player' ? '你' : '对手'}被缠绕了 (下张牌费用+1)`
   }];
 };
