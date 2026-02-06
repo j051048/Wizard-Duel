@@ -6,7 +6,10 @@ import { Quest, QuestRarity, QuestType } from '../../types/quest';
 interface QuestItemProps {
   quest: Quest;
   onClaim: (questId: string) => void;
+  t: (key: string) => string;
 }
+
+// ... RARITY_COLORS, RARITY_TEXT_COLORS, getIcon ...
 
 const RARITY_COLORS: Record<QuestRarity, string> = {
   common: 'border-slate-600 bg-slate-800',
@@ -35,7 +38,7 @@ const getIcon = (iconName: string, className: string) => {
   }
 };
 
-const QuestItem: React.FC<QuestItemProps> = ({ quest, onClaim }) => {
+const QuestItem: React.FC<QuestItemProps> = ({ quest, onClaim, t }) => {
   const progress = Math.min(100, Math.round((quest.current / quest.target) * 100));
   const isCompleted = quest.isCompleted;
   const isClaimed = quest.isClaimed;
@@ -57,9 +60,9 @@ const QuestItem: React.FC<QuestItemProps> = ({ quest, onClaim }) => {
           </div>
           <div>
             <h4 className="font-bold text-gray-100 text-sm md:text-base leading-tight">
-              {quest.title}
+              {t(quest.title)}
             </h4>
-            <p className="text-xs text-gray-400 mt-1">{quest.description}</p>
+            <p className="text-xs text-gray-400 mt-1">{t(quest.description)}</p>
           </div>
         </div>
 
@@ -68,21 +71,21 @@ const QuestItem: React.FC<QuestItemProps> = ({ quest, onClaim }) => {
           {/* Reward Badge */}
           <div className="flex items-center gap-1 bg-amber-500/20 px-2 py-0.5 rounded text-amber-300 text-xs font-mono font-bold border border-amber-500/30">
             <span>+{quest.rewardGold}</span>
-            <span className="text-[10px]">GOLD</span>
+            <span className="text-[10px]">{t('GOLD')}</span>
           </div>
 
           {/* Action Button or Status */}
           {isClaimed ? (
              <div className="flex items-center gap-1 text-xs text-gray-500 font-bold px-3 py-1.5 bg-gray-900/50 rounded-lg border border-gray-700">
                 <Check size={12} />
-                <span>CLAIMED</span>
+                <span>{t('CLAIMED')}</span>
              </div>
           ) : isCompleted ? (
             <button
               onClick={() => onClaim(quest.id)}
               className="flex items-center gap-1 text-xs bg-amber-500 hover:bg-amber-400 text-black font-bold px-3 py-1.5 rounded-lg shadow-lg shadow-amber-500/20 active:scale-95 transition-all animate-pulse"
             >
-              <span>CLAIM</span>
+              <span>{t('CLAIM')}</span>
             </button>
           ) : (
             <div className="text-xs text-gray-500 font-mono">
@@ -110,14 +113,15 @@ const QuestItem: React.FC<QuestItemProps> = ({ quest, onClaim }) => {
 interface QuestListProps {
   quests: Quest[];
   onClaim: (questId: string) => void;
+  t: (key: string) => string;
 }
 
-export const QuestList: React.FC<QuestListProps> = ({ quests, onClaim }) => {
+export const QuestList: React.FC<QuestListProps> = ({ quests, onClaim, t }) => {
   if (quests.length === 0) {
     return (
       <div className="text-center p-8 text-gray-500 bg-black/20 rounded-xl border border-gray-800">
-        <p>No active quests available.</p>
-        <p className="text-sm mt-2">Come back tomorrow for more!</p>
+        <p>{t('No active quests available.')}</p>
+        <p className="text-sm mt-2">{t('Come back tomorrow for more!')}</p>
       </div>
     );
   }
@@ -125,10 +129,11 @@ export const QuestList: React.FC<QuestListProps> = ({ quests, onClaim }) => {
   return (
     <div className="space-y-3 w-full max-w-md mx-auto">
       {quests.map(quest => (
-        <QuestItem key={quest.id} quest={quest} onClaim={onClaim} />
+        <QuestItem key={quest.id} quest={quest} onClaim={onClaim} t={t} />
       ))}
     </div>
   );
 };
+
 
 export default QuestList;

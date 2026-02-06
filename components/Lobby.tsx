@@ -200,6 +200,7 @@ export const Lobby: React.FC<LobbyProps> = ({
         onClose={() => setIsQuestModalOpen(false)} 
         quests={quests}
         onClaim={handleClaimQuest}
+        t={t}
       />
     </div>
   );

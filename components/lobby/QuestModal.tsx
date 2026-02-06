@@ -9,13 +9,15 @@ interface QuestModalProps {
   onClose: () => void;
   quests: Quest[];
   onClaim: (questId: string) => void;
+  t: (key: string) => string;
 }
 
 export const QuestModal: React.FC<QuestModalProps> = ({ 
   isOpen, 
   onClose, 
   quests, 
-  onClaim 
+  onClaim,
+  t
 }) => {
   // 计算可领取的任务数用于显示徽章（如果需要）
   const claimableCount = quests.filter(q => q.isCompleted && !q.isClaimed).length;
@@ -46,9 +48,9 @@ export const QuestModal: React.FC<QuestModalProps> = ({
                     </div>
                     <div>
                       <h2 className="text-xl font-bold bg-gradient-to-r from-amber-100 to-amber-400 bg-clip-text text-transparent font-wizard tracking-wide">
-                        Daily Contracts
+                        {t('Daily Contracts')}
                       </h2>
-                      <p className="text-xs text-slate-400 font-mono">Completed: {quests.filter(q => q.isCompleted).length}/{quests.length}</p>
+                      <p className="text-xs text-slate-400 font-mono">{t('Completed')}: {quests.filter(q => q.isCompleted).length}/{quests.length}</p>
                     </div>
                 </div>
                 <button 
@@ -66,22 +68,22 @@ export const QuestModal: React.FC<QuestModalProps> = ({
                 <div className="bg-gradient-to-br from-indigo-900/40 to-purple-900/40 border border-indigo-500/20 rounded-xl p-4 flex items-start gap-3">
                   <Gift className="text-indigo-400 shrink-0 mt-0.5" size={18} />
                   <div>
-                    <h3 className="text-sm font-bold text-indigo-200">New Contracts Available</h3>
+                    <h3 className="text-sm font-bold text-indigo-200">{t('New Contracts Available')}</h3>
                     <p className="text-xs text-indigo-300/70 mt-1 leading-relaxed">
-                      Complete daily contracts to earn Gold. Contracts reset every 24 hours.
+                      {t('Complete daily contracts to earn Gold. Contracts reset every 24 hours.')}
                     </p>
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                   <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1 mb-2">Today's Targets</h3>
-                   <QuestList quests={quests} onClaim={onClaim} />
+                   <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1 mb-2">{t("Today's Targets")}</h3>
+                   <QuestList quests={quests} onClaim={onClaim} t={t} />
                 </div>
             </div>
             
             {/* Footer */}
             <div className="p-4 border-t border-slate-800/50 bg-slate-900/30 text-center">
-              <p className="text-[10px] text-slate-600 font-mono">Contracts reset in: --:--:--</p>
+              <p className="text-[10px] text-slate-600 font-mono">{t('Contracts reset in')}: --:--:--</p>
             </div>
           </motion.div>
         </div>
