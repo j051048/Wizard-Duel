@@ -15,6 +15,7 @@ import { calculateSpellProjection } from '../services/projection';
 import { useSettings } from '../context/SettingsContext';
 // import { TutorialOverlay, TutorialStep } from './tutorial/TutorialOverlay';
 import CardDetailModal from './CardDetailModal';
+import { TutorialBubble } from './ui/TutorialBubble';
 
 // Components
 import AIEmoteBubble from './battle/AIEmoteBubble';
@@ -66,6 +67,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   // States
   const [hoveredSpellId, setHoveredSpellId] = useState<SpellType | null>(null);
   // const [isTutorialOpen, setIsTutorialOpen] = useState(duelState?.isTutorial || false);
+  const [hasShownTutorial, setHasShownTutorial] = useState(false);
   const [isLogOpen, setIsLogOpen] = useState(false);
   // const [tutorialAction, setTutorialAction] = useState<string | undefined>(undefined);
   const [detailSpell, setDetailSpell] = useState<SpellType | null>(null);
@@ -110,6 +112,14 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   const heroSkills = useMemo(() => {
     return SPELLS.filter(s => s.id.startsWith('hero_'));
   }, []);
+
+  // [P0 新手引导] 判断是否显示首次出牌气泡
+  const shouldShowTutorial = 
+    !hasShownTutorial && 
+    duelState?.roundNumber === 1 && 
+    phase === 'PLAYER_TURN' && 
+    !gameLoopState.isProcessing &&
+    playableCards.length > 0;
 
   // Effects Monitoring
   useEffect(() => {
@@ -159,6 +169,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   const handlePlayCard = (spellId: SpellType, isConfirmed: boolean = false) => {
     if (!duelState) return;
     
+    // [P0 新手引导] 只要出过一张牌，就永久关闭引导
+    if (shouldShowTutorial) {
+        setHasShownTutorial(true);
+    }
+
     setHoveredSpellId(null);
     setTargeting(null);
     spawnProjectile('player');
@@ -314,8 +329,15 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
             {/* Player Area - 重新设计布局 */}
       <div className="absolute bottom-0 left-0 right-0 z-30 safe-area-bottom">
         
-        {/* 手牌区域 - 居中底部 */}
-        <div id="player-hand-container" className="w-full flex justify-center pb-4 md:pb-6 pointer-events-none">
+         {/* 手牌区域 */}
+         <div id="player-hand-container" className="w-full flex justify-center pb-4 md:pb-6 pointer-events-none relative">
+            
+            {/* [P0 新手引导] 首次出牌气泡 */}
+            <TutorialBubble 
+                isVisible={shouldShowTutorial} 
+                text="👆 拖动或双击卡牌打出！" 
+                position="top"
+            />
                     <BattleHand 
             hand={duelState.playerHand}
             playableCards={playableCards}

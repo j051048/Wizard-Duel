@@ -175,7 +175,17 @@ export const executeSpell = (
   const mutableState: DuelState = cloneDuelState(state);
 
   
-  // 1. 英雄技能占用逻辑
+  // 1. 冻结检查 (Move to top)
+  const effects = isPlayer ? state.playerEffects : state.opponentEffects;
+  if (effects.some(e => e.type === 'frozen')) {
+    return { 
+        newState: state as DuelState, 
+        logs: [`❄️ ${isPlayer ? '你' : '对手'}被冻结，无法行动！`], 
+        command: { id: 'frozen', caster, actions: [] } 
+    };
+  }
+
+  // 2. 英雄技能占用逻辑
   if (spellId.startsWith('hero_')) {
     const alreadyUsed = isPlayer ? mutableState.heroSkillsUsed : mutableState.opponentHeroSkillUsed;
     if (alreadyUsed) return { 
@@ -188,7 +198,7 @@ export const executeSpell = (
     else mutableState.opponentHeroSkillUsed = true;
   }
 
-  // 2. 费用计算与扣除
+  // 3. 费用计算与扣除
   const costMod = isPlayer ? state.playerCostMod : state.opponentCostMod;
   const finalCost = spell.id === 'skip' ? 0 : Math.max(0, spell.manaCost + costMod);
   actions.push({ type: 'MANA_CHANGE', target: caster, value: -finalCost });
@@ -226,8 +236,8 @@ export const executeSpell = (
   // [P0 Fix] 修正：hero_thunder 不应该触发法术连击（它是技能，不是法术）
   const isThunderSpell = (id: string | null) => id && id.startsWith('thunder') && !id.startsWith('hero_');
   if (!countered && spell.mechanic === 'charge' && isThunderSpell(spell.id) && isThunderSpell(myLastId)) {
-      dmg = Math.floor(dmg * 1.3); // [Balance] 连击伤害从 1.5 降为 1.3
-      actions.push({ type: 'MESSAGE', target: 'system', description: `⚡ 闪电连击！伤害增加30%！` });
+      dmg = Math.floor(dmg * 1.5); // [Balance] 连击伤害恢复为 1.5 (50% Bonus)
+      actions.push({ type: 'MESSAGE', target: 'system', description: `⚡ 闪电连击！伤害增加50%！` });
   }
 
   // 5. 组合 Actions
@@ -320,6 +330,8 @@ export const checkGameOver = (state: DuelState): 'WIN' | 'LOSS' | 'DRAW' | null 
 
 // ============ 回合准备 (Patch 2.0) ============
 
+// ============ 回合准备 (Patch 2.0) ============
+
 export const prepareNextTurn = (state: DuelState): DuelState => {
   const newState = { 
     ...state,
@@ -345,8 +357,7 @@ export const prepareNextTurn = (state: DuelState): DuelState => {
     if (e.type === 'burn') burnDmg += (e.value || 0);
     const nextDur = e.duration - 1;
     if (nextDur > 0) newPlayerEffects.push({ ...e, duration: nextDur });
-    // [P0 Fix] 冻结在回合初不会解除，而是在玩家无法行动一回合后解除
-    // 这里的逻辑需要配合 startNewRound 中的跳过逻辑，目前保持冻结状态持续时间自然递减
+    // [P0 Fix] 冻结状态自然递减
   });
   newState.playerEffects = newPlayerEffects;
   // 直接结算灼烧伤害
@@ -361,6 +372,12 @@ export const prepareNextTurn = (state: DuelState): DuelState => {
   });
   newState.opponentEffects = newOpponentEffects;
   if (oppBurnDmg > 0) newState.opponentHP -= oppBurnDmg;
+
+  // [P0 Fix] 立即死亡检查
+  // 如果任意一方死亡，直接返回状态，不执行法力恢复
+  if (checkGameOver(newState) !== null) {
+      return newState;
+  }
 
   // 3. 法力成长与恢复 (如果此时双方都存活)
   newState.playerMaxMana = Math.min(GAME_CONFIG.maxMana, state.playerMaxMana + 1);

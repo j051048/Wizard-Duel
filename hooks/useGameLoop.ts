@@ -9,6 +9,7 @@ import {
   canAffordSpell, checkGameOver
 } from '../services/gameLogic';
 import { GameSequenceExecutor } from '../services/sequence';
+import { GameRuleEngine } from '../services/GameRuleEngine';
 import { useAnimationQueue } from './useAnimationQueue';
 import { useTurnManager } from './useTurnManager';
 
@@ -219,30 +220,13 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
       
       setUiState(prev => ({ ...prev, playerCard: spellId }));
       
-      const commands: GameActionCommand[] = [];
-      const { newState, command } = executeSpell(state, 'player', spellId);
+      // [P0 Refactor] Use GameRuleEngine to cast spell
+      const { newState, commands: engineCommands } = GameRuleEngine.castSpell(state, spellId, 'player');
       
-      // Simulate actions for immediate UI feedback commands
-      let tempState = { ...state };
-      for (const action of command.actions) {
-         const result = GameSequenceExecutor.applyAction(tempState, action);
-         tempState = result.state;
-         commands.push({ type: 'UPDATE_STATE', payload: result.state });
-         if (result.log) commands.push({ type: 'ADD_MESSAGE', payload: result.log });
-         if (tempState.playerHP <= 0 || tempState.opponentHP <= 0) break;
-      }
+      const commands: GameActionCommand[] = [...engineCommands];
       
-      const gameOverResult = checkGameOver(tempState);
-      if (gameOverResult) {
-          commands.push({ type: 'UPDATE_UI', payload: {
-              isGameOver: true,
-              gameResult: gameOverResult === 'DRAW' ? 'LOSS' : gameOverResult,
-              resultText: gameOverResult,
-          }});
-          commands.push({ type: 'SET_PHASE', payload: 'ROUND_RESET' });
-      } else {
-          commands.push({ type: 'UPDATE_STATE', payload: newState });
-      }
+      // Game Over is checked inside castSpell and appropriate commands are added
+      // We just need to ensure the queue processes them
       
       enqueue(commands);
       return true;
@@ -289,33 +273,23 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
         if (tempState.playerHP <= 0 || tempState.opponentHP <= 0) break;
     }
     
-    // Minion Combat Phase
-    const activeMinions = [...tempState.playerMinions, ...tempState.opponentMinions].filter(m => !m.exhausted);
-    if (activeMinions.length > 0) {
-        commands.push({ type: 'ADD_MESSAGE', payload: '随从进攻阶段！' });
-        commands.push({ type: 'WAIT', payload: null, delay: 500 });
+// Minion Combat Phase
+    const activeMinionsCount = tempState.playerMinions.filter(m => !m.exhausted).length + tempState.opponentMinions.filter(m => !m.exhausted).length;
+    
+    if (activeMinionsCount > 0) {
+        // [P0 Refactor] Use GameRuleEngine for sequential combat & death checks
+        const combatResult = GameRuleEngine.resolveMinionCombat(tempState);
+        tempState = combatResult.finalState;
         
-        // Player Minions Attack
-        tempState.playerMinions.forEach((m, idx) => {
-            if (!m.exhausted) {
-                const action = { type: 'MINION_ATTACK', target: 'player', value: idx } as any;
-                const result = GameSequenceExecutor.applyAction(tempState, action);
-                tempState = result.state;
-                commands.push({ type: 'UPDATE_STATE', payload: tempState });
-                if (result.log) commands.push({ type: 'ADD_MESSAGE', payload: result.log });
-            }
-        });
+        // Add all combat commands to the queue
+        combatResult.commands.forEach(cmd => commands.push(cmd));
         
-        // Opponent Minions Attack
-        tempState.opponentMinions.forEach((m, idx) => {
-             if (!m.exhausted) {
-                const action = { type: 'MINION_ATTACK', target: 'opponent', value: idx } as any;
-                const result = GameSequenceExecutor.applyAction(tempState, action);
-                tempState = result.state;
-                commands.push({ type: 'UPDATE_STATE', payload: tempState });
-                if (result.log) commands.push({ type: 'ADD_MESSAGE', payload: result.log });
-            }
-        });
+        // If game ended during combat, stop here (checkGameOver is handled inside resolveMinionCombat to add UI commands, but we need to break outer flow)
+        if (checkGameOver(tempState)) {
+             // commands already has the GAME_OVER UI updates from resolveMinionCombat
+             enqueue(commands);
+             return;
+        }
     }
     
     const gameOverResult = checkGameOver(tempState);

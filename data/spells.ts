@@ -352,9 +352,9 @@ export const SPELLS: Spell[] = [
     borderColor: 'border-stone-400',
     shadowColor: 'rgba(168,162,158,0.5)',
     beats: 'fire',
-    manaCost: 1,
+    manaCost: 0,
     damage: 0,
-    armorGain: 3,
+    armorGain: 2,
     rarity: 'common',
     mechanic: 'fortify',
     description: '造成0点伤害，但获得3点护甲。',
@@ -516,7 +516,7 @@ export const SPELLS: Spell[] = [
     rarity: 'legendary',
     mechanic: 'charge',
     cardSet: 'tournament',
-    description: '造成10点伤害。如果你上回合使用了雷系法术，本回合伤害翻倍(20)。',
+    description: '造成10点伤害。如果你上回合使用了雷系法术，本回合伤害增加50%(15)。',
     shortDesc: '终极: 核弹打击'
   },
   { 
@@ -546,7 +546,7 @@ export const SPELLS: Spell[] = [
     borderColor: 'border-blue-500',
     shadowColor: 'rgba(59,130,246,0.5)',
     beats: 'fire',            // 🔧 修复：治疗克制火焰（水系）
-    manaCost: 2,
+    manaCost: 3,
     damage: 0,
     armorGain: 0,
     rarity: 'rare',
