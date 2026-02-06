@@ -48,7 +48,7 @@ const DeckList: React.FC<DeckListProps> = ({
           </div>
        )}
 
-       <div className={`flex-1 overflow-y-auto ${isMobile ? 'p-1' : 'p-2'} custom-scrollbar space-y-1 md:space-y-2 pb-24 md:pb-2`}>
+       <div className={`flex-1 overflow-y-auto ${isMobile ? 'p-1' : 'p-2'} custom-scrollbar space-y-1 md:space-y-2 pb-2 md:pb-2`}>
           {Object.keys(cardCounts).length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-500 py-12">
                <span className="text-4xl mb-2">📭</span>
@@ -70,19 +70,20 @@ const DeckList: React.FC<DeckListProps> = ({
                    className={`
                       group flex items-center gap-2 md:gap-3 p-1.5 md:p-2 rounded-lg border transition-all cursor-pointer relative overflow-hidden select-none
                       ${isJustAdded ? 'bg-amber-500/20 border-amber-500/50 scale-[1.01]' : 'bg-white/5 hover:bg-white/10 border-transparent hover:border-white/10'}
+                      ${isMobile ? 'h-10' : ''} 
                    `}
                    onClick={() => onRemoveCard(spellId as SpellType)}
                 >  
-                   <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-blue-900 ring-1 ring-blue-500 flex items-center justify-center font-black text-blue-100 text-xs md:text-sm shadow-inner z-10 shrink-0">
+                   <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-blue-900/80 ring-1 ring-blue-500 flex items-center justify-center font-black text-blue-100 text-xs md:text-sm shadow-inner z-10 shrink-0">
                       {spell.manaCost}
                    </div>
 
-                   <div className="flex-1 min-w-0 z-10">
-                      <div className={`font-bold text-xs md:text-sm truncate ${spell.color}`}>{spell.name}</div>
-                      <div className="text-[9px] md:text-[10px] text-gray-500 truncate">{spell.shortDesc}</div>
+                   <div className="flex-1 min-w-0 z-10 flex flex-col justify-center">
+                      <div className={`font-bold text-xs md:text-sm truncate ${spell.color} leading-tight`}>{spell.name}</div>
+                      {!isMobile && <div className="text-[9px] md:text-[10px] text-gray-500 truncate">{spell.shortDesc}</div>}
                    </div>
                    
-                   <div className="text-lg md:text-xl font-wizard text-amber-500 z-10 mr-1 md:mr-2">x{count}</div>
+                   <div className="text-base md:text-xl font-wizard text-amber-500 z-10 mr-1 md:mr-2">x{count}</div>
 
                    <div className="absolute right-0 top-0 bottom-0 w-1/3 opacity-15">
                       {spell.artSrc && <img src={spell.artSrc} className="w-full h-full object-cover" alt="" />}
@@ -95,26 +96,7 @@ const DeckList: React.FC<DeckListProps> = ({
           )}
        </div>
 
-       {/* Mobile Action Bar */}
-       {isMobile && (
-          <div className="absolute bottom-0 left-0 w-full p-4 bg-slate-900/90 backdrop-blur-xl border-t border-white/10 flex gap-3 safe-area-bottom">
-             <button 
-                onClick={onBack}
-                className="flex-1 h-12 rounded-xl bg-white/5 border border-white/10 text-white font-bold flex items-center justify-center gap-2"
-             >
-                <ArrowLeft size={18} /> 返回大厅
-             </button>
-             <button 
-                onClick={onSave}
-                disabled={!isValidDeck}
-                className={`flex-[2] h-12 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg transition-all
-                   ${isValidDeck ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-black' : 'bg-gray-800 text-gray-500 cursor-not-allowed opacity-50'}
-                `}
-             >
-                <Save size={18} /> 保存卡组配置
-             </button>
-          </div>
-       )}
+       {/* Mobile Action Bar Removed - Moved to Parent Drawer */}
     </div>
   );
 };

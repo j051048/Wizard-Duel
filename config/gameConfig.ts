@@ -6,7 +6,7 @@ export const API_BASE_URL = ''; // 默认为空，由 ApiService 处理环境变
 
 export const GAME_CONFIG: GameConfig = {
   maxHP: 30,             // [P0] 提升至标准卡牌游戏血量 (30点)
-  startingMana: 1,       // [P0] 1费起手，经典成长曲线
+  startingMana: 0,       // [P0] 0费起手 (回合1变为1费)，经典成长曲线
   maxMana: 10,           // [P0] 10费上限
   handSize: 5,           // [P1] 手牌上限提升至5，增加策略选择
   deckSize: 20,          // [P1] 牌库厚度增加

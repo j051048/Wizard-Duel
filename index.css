@@ -443,6 +443,7 @@
     /* 移动端手牌横向滚动容器 */
     .mobile-hand-scroll {
         display: flex;
+        align-items: flex-end; /* 底部对齐 */
         overflow-x: auto;
         overflow-y: hidden;
         -webkit-overflow-scrolling: touch;
@@ -450,8 +451,11 @@
         scroll-behavior: smooth;
         gap: 8px;
         padding: 12px 16px;
-        padding-bottom: calc(12px + var(--sab));
-        background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.6), transparent);
+        /* 关键：底部留出足够空间给控制栏，把卡牌顶上去 */
+        padding-bottom: calc(70px + var(--sab)); 
+        background: linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.6) 50%, transparent 100%);
+        mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+        -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
     }
     
     .mobile-hand-scroll::-webkit-scrollbar {
@@ -463,40 +467,44 @@
         scroll-snap-align: center;
     }
     
-    /* 移动端卡牌尺寸 */
+    /* 移动端卡牌尺寸 - 稍微缩小 */
     .mobile-card {
-        width: 80px !important;
-        height: 112px !important;
-        min-width: 80px;
+        width: 72px !important;
+        height: 100px !important;
+        min-width: 72px;
     }
     
     .mobile-card-small {
-        width: 64px !important;
-        height: 90px !important;
-        min-width: 64px;
+        width: 56px !important;
+        height: 80px !important;
+        min-width: 56px;
     }
     
     /* 移动端玩家信息框紧凑版 */
     .mobile-player-frame {
-        padding: 6px 10px !important;
-        border-radius: 10px !important;
+        padding: 4px 8px !important;
+        border-radius: 8px !important;
+        background: rgba(15, 23, 42, 0.85) !important;
+        backdrop-filter: blur(8px);
     }
     
     .mobile-player-frame .avatar {
-        width: 36px !important;
-        height: 36px !important;
+        width: 32px !important;
+        height: 32px !important;
+        border-width: 1.5px !important;
     }
     
     /* 移动端对手信息简化版 */
     .mobile-opponent-bar {
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 6px 12px;
-        background: rgba(0,0,0,0.7);
+        gap: 6px;
+        padding: 4px 10px;
+        background: rgba(15, 23, 42, 0.8);
         backdrop-filter: blur(8px);
-        border-radius: 12px;
-        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 20px;
+        border: 1px solid rgba(255,255,255,0.08);
+        max-width: 85%;
     }
     
     .mobile-opponent-bar .hp-bar {
@@ -513,11 +521,16 @@
         transition: width 0.3s ease;
     }
     
-    /* 移动端结束回合按钮 */
+    /* 移动端结束回合按钮 - 更紧凑 */
     .mobile-end-turn-btn {
-        padding: 10px 20px !important;
-        font-size: 14px !important;
-        border-radius: 12px !important;
+        padding: 8px 16px !important;
+        font-size: 13px !important;
+        border-radius: 8px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+        height: 38px !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
     
     /* 移动端触摸优化 */

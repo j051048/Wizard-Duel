@@ -278,8 +278,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         {isMobile ? (
           /* ====== 移动端：紧凑横条布局 ====== */
           <div className="mobile-opponent-bar w-[90%] max-w-md">
-            {/* 头像 */}
-            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-red-500/50 flex-shrink-0">
+            {/* 头像 - 缩小至 32px (w-8) */}
+            <div className="w-8 h-8 rounded-full overflow-hidden border border-red-500/50 flex-shrink-0 shadow-sm">
               <img 
                 src={duelState.aiProfile?.avatar || '/avatars/dark_mage.webp'} 
                 alt="Opponent"
@@ -439,87 +439,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       <div className="absolute bottom-0 left-0 right-0 z-30 safe-area-bottom">
         
         {isMobile ? (
-          /* ====== 移动端底部布局：垂直堆叠 (控制栏 + 手牌) ====== */
-          <div className="flex flex-col w-full justify-end">
+          /* ====== 移动端底部布局：分层叠加 (手牌在下 + 控制栏悬浮在上) ====== */
+          <div className="relative w-full flex flex-col justify-end pointer-events-none">
             
-            {/* 1. 上层控制栏：玩家信息、技能、结束按钮 */}
-            <div className="flex items-end justify-between px-3 pb-2 w-full pointer-events-none bg-gradient-to-t from-black/60 to-transparent">
-              {/* 左侧：玩家简要信息 + 技能 */}
-              <div className="flex flex-col gap-2 pointer-events-auto max-w-[65%]">
-                {/* 移动端玩家简报 */}
-                <div className="mobile-player-frame flex items-center gap-2 bg-slate-900/80 backdrop-blur-md border border-slate-700 shadow-lg">
-                    {/* 头像 */}
-                   <div className="avatar rounded-full overflow-hidden border border-blue-400/50">
-                     <img src="/avatars/player-wizard.webp" className="w-full h-full object-cover" alt="Player" />
-                   </div>
-                   
-                   {/* 数值 */}
-                   <div className="flex flex-col leading-none">
-                     <div className="flex items-center gap-1">
-                        <span className="text-red-400 font-bold text-xs">{duelState.playerHP}</span>
-                        {duelState.playerArmor > 0 && (
-                          <span className="text-slate-300 text-[10px] bg-slate-700 px-1 rounded flex items-center">
-                            🛡️{duelState.playerArmor}
-                          </span>
-                        )}
-                     </div>
-                     <div className="flex items-center gap-1 mt-0.5">
-                        <span className="text-blue-300 font-bold text-xs">{duelState.playerMana}</span>
-                        <span className="text-[10px] text-blue-400/60">/{duelState.playerMaxMana}</span>
-                     </div>
-                   </div>
-
-                   {/* Buffs (简化圆点) */}
-                   {duelState.playerEffects.length > 0 && (
-                     <div className="flex -space-x-1">
-                        {duelState.playerEffects.map((_, i) => (
-                          <div key={i} className="w-3 h-3 rounded-full bg-yellow-500/50 border border-black" />
-                        ))}
-                     </div>
-                   )}
-                </div>
-
-                {/* 英雄技能 (紧凑排列) */}
-                <div className="flex gap-3">
-                  {heroSkills.slice(0, 3).map(skill => (
-                    <HeroSkillButton
-                      key={skill.id}
-                      skill={skill}
-                      canUse={phase === 'PLAYER_TURN' && !duelState.heroSkillsUsed && !gameLoopState.isProcessing}
-                      currentMana={duelState.playerMana}
-                      onClick={() => handlePlayCard(skill.id)}
-                      compact={true} // 需要在组件中支持，目前先用默认
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* 右侧：结束回合按钮 (紧凑版) */}
-              <div className="pointer-events-auto pb-1">
-                <button 
-                  id="end-turn-btn"
-                  onClick={onPass} 
-                  disabled={phase !== 'PLAYER_TURN'} 
-                  className={`
-                    mobile-end-turn-btn
-                    relative font-bold text-white shadow-lg overflow-hidden
-                    flex items-center gap-2
-                    ${phase === 'PLAYER_TURN' 
-                      ? 'bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 border-b-4 border-amber-800 active:border-b-0 active:translate-y-1' 
-                      : 'bg-slate-700 text-slate-400 cursor-not-allowed border-b-4 border-slate-800 opacity-80 scale-95 grayscale'
-                    }
-                  `}
-                >
-                  <span className="relative z-10 drop-shadow-md">
-                    {phase === 'PLAYER_TURN' ? '结束' : '对手'}
-                  </span>
-                  {phase === 'PLAYER_TURN' && <div className="w-2 h-2 rounded-full bg-white animate-pulse" />}
-                </button>
-              </div>
-            </div>
-
-            {/* 2. 下层：横向滚动卡牌 */}
-            <div id="player-hand-container" className="w-full relative z-50">
+            {/* 1. 底层：横向滚动卡牌 (CSS中已设置 padding-bottom 留出空间) */}
+            <div id="player-hand-container" className="w-full relative z-40 pointer-events-auto">
               <TutorialBubble 
                   isVisible={shouldShowTutorial} 
                   text="👆 拖动或点击出牌！" 
@@ -539,6 +463,83 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                 onMouseLeaveCard={() => setHoveredSpellId(null)}
                 onDoubleClickCard={(spellId) => handlePlayCard(spellId, true)}
               />
+            </div>
+
+            {/* 2. 顶层悬浮：控制栏 (玩家信息、技能、结束按钮) */}
+            <div className="absolute bottom-0 left-0 right-0 z-50 flex items-end justify-between px-3 pb-1 w-full pointer-events-none">
+              {/* 左侧：玩家简要信息 + 技能 */}
+              <div className="flex flex-col gap-2 pointer-events-auto max-w-[70%] mb-1">
+                {/* 移动端玩家简报 */}
+                <div className="mobile-player-frame flex items-center gap-2 border border-slate-700/50 shadow-lg">
+                    {/* 头像 */}
+                   <div className="avatar rounded-full overflow-hidden border border-blue-400/50 flex-shrink-0">
+                     <img src="/avatars/player-wizard.webp" className="w-full h-full object-cover" alt="Player" />
+                   </div>
+                   
+                   {/* 数值 (HP/Mana) */}
+                   <div className="flex flex-col justify-center leading-none gap-0.5">
+                     <div className="flex items-center gap-1.5">
+                        <span className="text-red-400 font-bold text-xs">{duelState.playerHP}</span>
+                        {duelState.playerArmor > 0 && (
+                          <span className="text-slate-200 text-[10px] bg-slate-800/80 px-1 rounded flex items-center h-3.5">
+                            🛡️{duelState.playerArmor}
+                          </span>
+                        )}
+                     </div>
+                     <div className="flex items-center gap-1">
+                        <span className="text-blue-300 font-bold text-xs">{duelState.playerMana}</span>
+                        <span className="text-[9px] text-blue-400/50">/{duelState.playerMaxMana}</span>
+                     </div>
+                   </div>
+
+                   {/* Buffs (简化圆点) */}
+                   {duelState.playerEffects.length > 0 && (
+                     <div className="flex -space-x-1 pl-1">
+                        {duelState.playerEffects.map((_, i) => (
+                          <div key={i} className="w-2.5 h-2.5 rounded-full bg-yellow-500/50 border border-black shadow-sm" />
+                        ))}
+                     </div>
+                   )}
+                </div>
+
+                {/* 英雄技能 (紧凑排列) */}
+                <div className="flex gap-2 pl-1 opacity-90 scale-90 origin-bottom-left">
+                  {heroSkills.slice(0, 3).map(skill => (
+                    <HeroSkillButton
+                      key={skill.id}
+                      skill={skill}
+                      canUse={phase === 'PLAYER_TURN' && !duelState.heroSkillsUsed && !gameLoopState.isProcessing}
+                      currentMana={duelState.playerMana}
+                      onClick={() => handlePlayCard(skill.id)}
+                      compact={true} 
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* 右侧：结束回合按钮 (紧凑版) */}
+              <div className="pointer-events-auto pb-1 mb-0.5">
+                <button 
+                  id="end-turn-btn"
+                  onClick={onPass} 
+                  disabled={phase !== 'PLAYER_TURN'} 
+                  className={`
+                    mobile-end-turn-btn
+                    relative font-bold text-white overflow-hidden
+                    flex items-center gap-1.5
+                    transition-all duration-200
+                    ${phase === 'PLAYER_TURN' 
+                      ? 'bg-gradient-to-r from-amber-600 to-amber-500 hover:brightness-110 active:scale-95 border-b-2 border-amber-800' 
+                      : 'bg-slate-800 text-slate-500 cursor-not-allowed border-b-2 border-slate-900 grayscale opacity-80'
+                    }
+                  `}
+                >
+                  <span className="relative z-10 drop-shadow-sm">
+                    {phase === 'PLAYER_TURN' ? '结束' : '对手'}
+                  </span>
+                  {phase === 'PLAYER_TURN' && <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
+                </button>
+              </div>
             </div>
           </div>
         ) : (
@@ -638,23 +639,35 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         </div>
       )}
 
-      {/* Controls */}
-      <div className="fixed top-4 right-4 z-40 safe-area-top flex gap-2">
+      {/* Top Right Controls - 移动端更紧凑 */}
+      <div className={`fixed z-40 flex gap-2 transition-all ${isMobile ? 'top-2 right-2 gap-1.5' : 'top-4 right-4 safe-area-top'}`}>
         <button 
           onClick={onSurrender} 
-          className="p-2 bg-red-900/40 backdrop-blur-md rounded-lg border border-red-500/30 text-red-400 hover:text-red-200 hover:bg-red-900/60 transition-colors"
+          className={`
+            backdrop-blur-md rounded-lg border border-red-500/30 text-red-400 hover:text-red-200 hover:bg-red-900/60 transition-colors
+            ${isMobile ? 'p-1.5 bg-red-900/30' : 'p-2 bg-red-900/40'}
+          `}
           title="投降"
         >
-          <Flag size={20} />
+          <Flag size={isMobile ? 16 : 20} />
         </button>
         <button 
           onClick={() => setIsLogOpen(!isLogOpen)} 
-          className="p-2 bg-black/40 backdrop-blur-md rounded-lg border border-white/10 text-white/60 hover:text-white transition-colors"
+          className={`
+            backdrop-blur-md rounded-lg border border-white/10 text-white/60 hover:text-white transition-colors
+            ${isMobile ? 'p-1.5 bg-black/30' : 'p-2 bg-black/40'}
+          `}
         >
-          <ScrollText size={20} />
+          <ScrollText size={isMobile ? 16 : 20} />
         </button>
-        <button onClick={onToggleMute} className="p-2 bg-black/40 backdrop-blur-md rounded-lg border border-white/10 text-white/60">
-           {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+        <button 
+          onClick={onToggleMute} 
+          className={`
+            backdrop-blur-md rounded-lg border border-white/10 text-white/60 hover:text-white transition-colors
+            ${isMobile ? 'p-1.5 bg-black/30' : 'p-2 bg-black/40'}
+          `}
+        >
+           {isMuted ? <VolumeX size={isMobile ? 16 : 20} /> : <Volume2 size={isMobile ? 16 : 20} />}
         </button>
       </div>
 

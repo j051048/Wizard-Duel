@@ -127,49 +127,59 @@ const CardPool: React.FC<CardPoolProps> = ({
        {/* Decorative Corner */}
        {!isMobile && <div className="absolute top-0 left-0 w-16 h-16 border-t-2 border-l-2 border-amber-600/30 rounded-tl-xl pointer-events-none"></div>}
        
-       {/* Filters Header */}
-       <div className={`${isMobile ? 'p-3' : 'p-4'} border-b border-white/5 bg-black/20 space-y-3`}>
-          <div className={`flex ${isMobile ? 'flex-col gap-2' : 'justify-between items-center'}`}>
-            <h3 className={`${isMobile ? 'text-lg' : 'text-xl'} font-wizard text-amber-100 flex items-center gap-2`}>
-               <span className={isMobile ? 'text-xl' : 'text-2xl'}>📖</span> 卡牌收藏
-            </h3>
+       {/* Filters Header - Mobile Optimized */}
+       <div className={`${isMobile ? 'p-2 bg-slate-900/90 backdrop-blur sticky top-0 z-20 shadow-lg' : 'p-4 border-b border-white/5 bg-black/20 space-y-3'}`}>
+          {!isMobile && (
+             <h3 className="text-xl font-wizard text-amber-100 flex items-center gap-2 mb-3">
+                <span className="text-2xl">📖</span> 卡牌收藏
+             </h3>
+          )}
+
+          <div className={`flex ${isMobile ? 'gap-2 items-center' : 'justify-between items-center'}`}>
             {/* Search Input */}
-            <div className="relative w-full md:w-auto">
+            <div className={`relative ${isMobile ? 'flex-1' : 'w-auto'}`}>
               <input 
                 type="text" 
                 value={searchTerm}
                 onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="搜索卡牌..." 
-                className={`bg-black/40 border border-white/10 rounded-full px-4 py-1.5 text-sm text-white focus:outline-none focus:border-amber-500 transition-all ${isMobile ? 'w-full text-xs' : 'w-48'}`}
+                placeholder={isMobile ? "搜索..." : "搜索卡牌..."}
+                className={`
+                  bg-black/40 border border-white/10 rounded-full text-white focus:outline-none focus:border-amber-500 transition-all 
+                  ${isMobile ? 'w-full text-xs px-3 py-2' : 'w-48 px-4 py-1.5 text-sm'}
+                `}
               />
             </div>
-          </div>
 
-          {/* Mana Filter Gems - Mobile Scrollable */}
-          <div className="flex items-center gap-2">
-             <span className="text-[10px] text-gray-500 shrink-0 uppercase tracking-tighter">费用:</span>
-             <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
-                <button 
-                    onClick={() => onCostFilterChange(null)}
-                    className={`shrink-0 px-3 py-1 rounded-full text-[10px] font-bold transition-all border ${activeCostFilter === null ? 'bg-amber-600 border-amber-400 text-white' : 'bg-transparent border-white/10 text-gray-500 hover:border-white/30'}`}
-                >
-                  全部
-                </button>
-                {[0, 1, 2, 3, 4, 5, 6, 7].map(cost => (
-                  <button
-                      key={cost}
-                      onClick={() => onCostFilterChange(activeCostFilter === cost ? null : cost)}
-                      className={`
-                        shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all border shadow-sm
-                        ${activeCostFilter === cost 
-                          ? 'bg-blue-600 border-blue-400 text-white scale-110 shadow-blue-500/50' 
-                          : 'bg-[#1a233b] border-blue-900/50 text-blue-300 hover:bg-blue-900'}
-                      `}
-                  >
-                      {cost === 7 ? '7+' : cost}
-                  </button>
-                ))}
-             </div>
+            {/* Mana Filter - Mobile compact */}
+            <div className={`flex items-center gap-1 ${isMobile ? 'overflow-x-auto no-scrollbar max-w-[60%]' : ''}`}>
+               {!isMobile && <span className="text-[10px] text-gray-500 shrink-0 uppercase tracking-tighter mr-1">费用:</span>}
+               
+               <button 
+                  onClick={() => onCostFilterChange(null)}
+                  className={`shrink-0 rounded-full font-bold transition-all border flex items-center justify-center
+                    ${isMobile ? 'w-7 h-7 text-[10px] p-0' : 'px-3 py-1 text-[10px]'}
+                    ${activeCostFilter === null ? 'bg-amber-600 border-amber-400 text-white' : 'bg-transparent border-white/10 text-gray-500 hover:border-white/30'}
+                  `}
+               >
+                 {isMobile ? 'All' : '全部'}
+               </button>
+
+               {[0, 1, 2, 3, 4, 5, 6, 7].map(cost => (
+                 <button
+                     key={cost}
+                     onClick={() => onCostFilterChange(activeCostFilter === cost ? null : cost)}
+                     className={`
+                       shrink-0 rounded-full flex items-center justify-center font-bold transition-all border shadow-sm
+                       ${isMobile ? 'w-7 h-7 text-[10px]' : 'w-7 h-7 text-xs'}
+                       ${activeCostFilter === cost 
+                         ? 'bg-blue-600 border-blue-400 text-white scale-110 shadow-blue-500/50' 
+                         : 'bg-[#1a233b] border-blue-900/50 text-blue-300 hover:bg-blue-900'}
+                     `}
+                 >
+                     {cost === 7 ? '7+' : cost}
+                 </button>
+               ))}
+            </div>
           </div>
        </div>
 
@@ -180,7 +190,7 @@ const CardPool: React.FC<CardPoolProps> = ({
               <span className="text-xs">没有找到匹配的卡牌</span>
             </div>
           ) : (
-            <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-3 md:grid-cols-4'} gap-2 md:gap-4 pb-12`}>
+            <div className={`grid ${isMobile ? 'grid-cols-3 gap-1.5 pb-40' : 'grid-cols-3 md:grid-cols-4 gap-4 pb-12'}`}>
                {filteredCardPool.map((spell) => (
                   <div 
                     key={spell.id} 
