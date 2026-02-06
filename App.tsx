@@ -46,6 +46,7 @@ import { HapticService } from './services/haptic';
 import { calculateRankUpdate } from './services/rankSystem';
 import { DungeonService } from './services/dungeon';
 import { GAME_CONFIG } from './constants';
+import { QuestManager } from './services/QuestManager';
 
 function App() {
   const { address, isConnected } = useAccount();
@@ -158,6 +159,17 @@ function App() {
 
     const newStreak = result === 'WIN' ? user.winStreak + 1 : 0;
     user.setWinStreak(newStreak);
+
+    // [Quest] 更新任务进度
+    QuestManager.updateProgress('play_cards', 1); // 每次对战算一次 play_games (暂用 play_cards 代替，需优化)
+    if (result === 'WIN') {
+      QuestManager.updateProgress('win_games', 1);
+    }
+    // 假设每次对战造成一定伤害，这里暂且模拟
+    if (gameLoopState.duelState) {
+       const damage = gameLoopState.duelState.opponentMaxMana - gameLoopState.duelState.opponentHP; // 粗略估算
+       if (damage > 0) QuestManager.updateProgress('deal_damage', damage);
+    }
 
     const { newScore, newRank, scoreDelta } = calculateRankUpdate(user.rankScore, result, newStreak);
     user.setRankScore(newScore);
@@ -308,6 +320,10 @@ function App() {
             onOpenModeSelect={() => ui.setGameState('MODE_SELECT')}
             language={ui.language}
             onLanguageChange={ui.setLanguage}
+            onClaimQuestReward={(amount) => {
+              user.setBalance(user.balance + amount);
+              toast.success('奖励到账', `获得 ${amount} 法力值！`);
+            }}
           />
         )}
 
@@ -387,6 +403,11 @@ function App() {
                 user.addCardsToInventory(cardIds);
                 toast.success('卡牌已添加', `${cardIds.length} 张卡牌已加入收藏`);
               }}
+              purchasedBundles={user.purchasedBundles}
+              onPurchaseBundle={user.purchaseBundle}
+              packInventory={user.packInventory}
+              onAddPacks={user.addPacks}
+              onConsumePack={user.consumePack}
             />
           )}
 

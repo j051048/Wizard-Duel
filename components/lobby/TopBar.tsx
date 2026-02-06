@@ -1,5 +1,5 @@
 import React from 'react';
-import { Volume2, VolumeX, BookOpen, Crown, Zap } from 'lucide-react';
+import { Volume2, VolumeX, BookOpen, Crown, Zap, Calendar } from 'lucide-react';
 import { Language, GameMode } from '../../types';
 
 interface TopBarProps {
@@ -12,6 +12,8 @@ interface TopBarProps {
   gameMode?: GameMode;
   onOpenModeSelect?: () => void;
   onOpenTutorial: () => void;
+  onOpenQuests?: () => void;
+  hasPendingQuests?: boolean;
   t: (key: string) => string;
 }
 
@@ -25,6 +27,8 @@ const TopBar: React.FC<TopBarProps> = ({
   gameMode = 'standard',
   onOpenModeSelect,
   onOpenTutorial,
+  onOpenQuests,
+  hasPendingQuests,
   t
 }) => {
   return (
@@ -69,6 +73,19 @@ const TopBar: React.FC<TopBarProps> = ({
          >
             <span className="text-xs font-bold text-gray-300">{language === 'zh' ? 'CN' : 'EN'}</span>
          </button>
+
+         {onOpenQuests && (
+           <button 
+             onClick={onOpenQuests} 
+             className="relative w-10 h-10 rounded-full bg-black/40 backdrop-blur border border-white/10 hover:border-amber-500/50 hover:bg-amber-500/10 flex items-center justify-center transition-all group"
+             title="Daily Quests"
+           >
+              <Calendar size={18} className="text-gray-300 group-hover:text-amber-400 transition-colors"/>
+              {hasPendingQuests && (
+                <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 border-2 border-black rounded-full animate-pulse" />
+              )}
+           </button>
+         )}
 
          {onOpenModeSelect && (
            <button onClick={onOpenModeSelect} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur border border-white/10 hover:border-white/30 hover:bg-white/10 flex items-center justify-center transition-all">

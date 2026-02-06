@@ -208,24 +208,35 @@ export const PackOpener: React.FC<PackOpenerProps> = ({
                                 >
                                     <div className="relative w-32 h-48 sm:w-40 sm:h-56"> 
                                         {/* Flipper Container */}
-                                        <motion.div
-                                            className="w-full h-full relative"
-                                            initial={false}
-                                            animate={{ rotateY: isRevealed ? 180 : 0 }}
-                                            transition={{ type: 'spring', damping: 20, stiffness: 100 }}
-                                            style={{ transformStyle: 'preserve-3d' }}
-                                        >
+                                        <div className="w-full h-full relative" style={{ perspective: '1000px' }}>
                                             {/* FRONT (The actual card) */}
-                                            <div className="absolute inset-0 backface-hidden" style={{ transform: 'rotateY(180deg)' }}>
+                                            <motion.div 
+                                                className="absolute inset-0"
+                                                initial={{ rotateY: -180 }}
+                                                animate={{ 
+                                                    rotateY: isRevealed ? 0 : -180,
+                                                    zIndex: isRevealed ? 10 : 0 
+                                                }}
+                                                transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+                                                style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                                            >
                                                 <SpellCard spell={card} />
-                                                {/* Legendary Glow Effect */}
                                                 {(card.rarity === 'legendary' || card.rarity === 'mythic') && isRevealed && (
                                                     <div className="absolute inset-0 bg-yellow-400/20 blur-xl animate-pulse pointer-events-none" />
                                                 )}
-                                            </div>
+                                            </motion.div>
 
                                             {/* BACK (Card back) */}
-                                            <div className="absolute inset-0 backface-hidden">
+                                            <motion.div 
+                                                className="absolute inset-0"
+                                                initial={{ rotateY: 0 }}
+                                                animate={{ 
+                                                    rotateY: isRevealed ? 180 : 0,
+                                                    zIndex: isRevealed ? 0 : 10
+                                                }}
+                                                transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+                                                style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                                            >
                                                 <div 
                                                     className={`
                                                       w-full h-full rounded-xl shadow-xl overflow-hidden border-2
@@ -234,12 +245,10 @@ export const PackOpener: React.FC<PackOpenerProps> = ({
                                                     `}
                                                 >
                                                     <img src="/ui/card_back.webp" className="w-full h-full object-cover" alt="Card Back" />
-                                                    
-                                                    {/* Rarity Glow Hint (Peek) */}
                                                     <div className={`absolute inset-0 bg-gradient-to-t ${rarityColor} opacity-0 group-hover:opacity-40 transition-opacity duration-500`} />
                                                 </div>
-                                            </div>
-                                        </motion.div>
+                                            </motion.div>
+                                        </div>
                                     </div>
                                 </motion.div>
                             );

@@ -16,6 +16,9 @@ interface UserState {
   isLoading: boolean;
   hasCompletedTutorial: boolean;
 
+  purchasedBundles: string[];
+  packInventory: Record<string, number>;
+
   // Actions
   setActiveAddress: (address: string | null) => void;
   setBalance: (balance: number) => void;
@@ -23,13 +26,17 @@ interface UserState {
   setRankScore: (score: number) => void;
   setWinStreak: (streak: number) => void;
   setDecks: (decks: Deck[]) => void;
+  setPurchasedBundles: (ids: string[]) => void;
+  addPacks: (packId: string, count: number) => void;
+  consumePack: (packId: string) => boolean;
+  purchaseBundle: (bundleId: string) => void;
   setSelectedDeck: (deck: Deck | null) => void;
   setHistory: (history: BattleRecord[]) => void;
   setInventory: (inventory: SpellType[]) => void;
   setLeaderboard: (leaderboard: PlayerStats[]) => void;
   setIsLoading: (loading: boolean) => void;
   setHasCompletedTutorial: (completed: boolean) => void;
-
+  
   // Complex Actions
   loadUserData: (address: string) => Promise<void>;
   loadLeaderboard: () => Promise<void>;
@@ -45,6 +52,8 @@ export const useUserStore = create<UserState>((set, get) => ({
   rankScore: 0,
   winStreak: 0,
   decks: [],
+  purchasedBundles: [],
+  packInventory: {},
   selectedDeck: null,
   history: [],
   inventory: [],
@@ -58,6 +67,34 @@ export const useUserStore = create<UserState>((set, get) => ({
   setRankScore: (rankScore) => set({ rankScore }),
   setWinStreak: (winStreak) => set({ winStreak }),
   setDecks: (decks) => set({ decks }),
+  setPurchasedBundles: (purchasedBundles) => set({ purchasedBundles }),
+  
+  addPacks: (packId, count) => {
+    const { packInventory } = get();
+    const newInv = { ...packInventory, [packId]: (packInventory[packId] || 0) + count };
+    set({ packInventory: newInv });
+    try { localStorage.setItem('wizard_duel_packs', JSON.stringify(newInv)); } catch(e) {}
+  },
+  
+  consumePack: (packId) => {
+    const { packInventory } = get();
+    if (!packInventory[packId] || packInventory[packId] <= 0) return false;
+    const newInv = { ...packInventory, [packId]: packInventory[packId] - 1 };
+    set({ packInventory: newInv });
+    try { localStorage.setItem('wizard_duel_packs', JSON.stringify(newInv)); } catch(e) {}
+    return true;
+  },
+
+  purchaseBundle: (bundleId) => {
+    const { purchasedBundles } = get();
+    if (!purchasedBundles.includes(bundleId)) {
+      set({ purchasedBundles: [...purchasedBundles, bundleId] });
+      // 这里可以添加 localStorage 持久化
+      try {
+        localStorage.setItem('wizard_duel_purchases', JSON.stringify([...purchasedBundles, bundleId]));
+      } catch (e) {}
+    }
+  },
   setSelectedDeck: (selectedDeck) => set({ selectedDeck }),
   setHistory: (history) => set({ history }),
   setInventory: (inventory) => set({ inventory }),
@@ -87,6 +124,22 @@ export const useUserStore = create<UserState>((set, get) => ({
 
       const inv = await ApiService.getInventory(address);
       set({ inventory: inv });
+      
+      // 读取本地购买记录
+      const savedPurchases = localStorage.getItem('wizard_duel_purchases');
+      if (savedPurchases) {
+        try {
+          set({ purchasedBundles: JSON.parse(savedPurchases) });
+        } catch (e) {}
+      }
+      
+      // 读取本地卡包库存
+      const savedPacks = localStorage.getItem('wizard_duel_packs');
+      if (savedPacks) {
+        try {
+          set({ packInventory: JSON.parse(savedPacks) });
+        } catch (e) {}
+      }
     } catch (e) {
       console.error('Failed to load user data:', e);
     } finally {

@@ -4,12 +4,17 @@
  * 包含法术预览、下注选择、开始对战等功能
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BattleRecord, Deck, GameMode, Rank, Language } from '../types';
+import { Quest } from '../types/quest';
 import { TRANSLATIONS } from '../translations';
 import { RulesModal } from './RulesModal';
 import { TutorialModal } from './TutorialModal';
+import { QuestModal } from './lobby/QuestModal';
 import { ShoppingBag } from 'lucide-react';
+import { QuestManager } from '../services/QuestManager';
+import { HapticService } from '../services/haptic';
+import { SoundManager } from '../services/SoundManager';
 
 // Extracted Components
 import TopBar from './lobby/TopBar';
@@ -34,6 +39,7 @@ interface LobbyProps {
   onSelectDeck: (deck: Deck) => void;
   onOpenTavernMode?: () => void;
   onOpenShop?: () => void;
+  onClaimQuestReward?: (amount: number) => void; // 新增：领取奖励回调
   gameMode?: GameMode;
   onOpenModeSelect?: () => void;
   language: Language;
@@ -57,6 +63,7 @@ export const Lobby: React.FC<LobbyProps> = ({
   onSelectDeck,
   onOpenTavernMode,
   onOpenShop,
+  onClaimQuestReward,
   gameMode = 'standard',
   onOpenModeSelect,
   language,
@@ -64,9 +71,32 @@ export const Lobby: React.FC<LobbyProps> = ({
 }) => {
   const [isRulesOpen, setIsRulesOpen] = useState(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const [isQuestModalOpen, setIsQuestModalOpen] = useState(false);
+  const [quests, setQuests] = useState<Quest[]>([]);
+  
   const canStart = balance >= selectedBet;
 
   const t = (key: string) => TRANSLATIONS[language][key] || key;
+  
+  // 初始化任务
+  useEffect(() => {
+    setQuests(QuestManager.init());
+  }, []);
+  
+  // 领取任务奖励
+  const handleClaimQuest = (questId: string) => {
+      const result = QuestManager.claimReward(questId);
+      if (result.success) {
+          setQuests(result.quests);
+          if (result.reward && onClaimQuestReward) {
+              onClaimQuestReward(result.reward);
+          }
+          HapticService.success();
+          try { SoundManager.play('victory', 0.5); } catch(e) {}
+      }
+  };
+  
+  const hasPendingQuests = quests.some(q => q.isCompleted && !q.isClaimed);
 
   return (
     <div className="min-h-full relative no-select overflow-hidden flex flex-col">
@@ -89,6 +119,8 @@ export const Lobby: React.FC<LobbyProps> = ({
         gameMode={gameMode}
         onOpenModeSelect={onOpenModeSelect}
         onOpenTutorial={() => setIsTutorialOpen(true)}
+        onOpenQuests={() => setIsQuestModalOpen(true)}
+        hasPendingQuests={hasPendingQuests}
         t={t}
       />
 
@@ -161,6 +193,12 @@ export const Lobby: React.FC<LobbyProps> = ({
             {/* Global Modals */}
       <RulesModal isOpen={isRulesOpen} onClose={() => setIsRulesOpen(false)} />
       <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
+      <QuestModal 
+        isOpen={isQuestModalOpen} 
+        onClose={() => setIsQuestModalOpen(false)} 
+        quests={quests}
+        onClaim={handleClaimQuest}
+      />
     </div>
   );
 };

@@ -17,6 +17,11 @@ interface ShopScreenProps {
   onBack: () => void;
   onUpdateBalance: (newBalance: number) => void;
   onAddCards?: (cards: SpellType[]) => void;
+  purchasedBundles?: string[];
+  onPurchaseBundle?: (bundleId: string) => void;
+  packInventory?: Record<string, number>;
+  onAddPacks?: (packId: string, count: number) => void;
+  onConsumePack?: (packId: string) => boolean;
 }
 
 interface PackType {
@@ -126,7 +131,12 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
   balance,
   onBack,
   onUpdateBalance,
-  onAddCards
+  onAddCards,
+  purchasedBundles = [],
+  onPurchaseBundle,
+  packInventory = {},
+  onAddPacks,
+  onConsumePack
 }) => {
   const [activeTab, setActiveTab] = useState<'packs' | 'bundles' | 'currency'>('packs');
   const [openingPack, setOpeningPack] = useState<PackType | null>(null);
@@ -136,16 +146,7 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
   
   const toast = useToastStore();
 
-  const handleBuyPack = (pack: PackType) => {
-    if (balance < pack.price) {
-      toast.error('法力不足', `需要 ${pack.price} 法力，当前只有 ${balance}`);
-      HapticService.failure();
-      return;
-    }
-
-    HapticService.medium();
-    onUpdateBalance(balance - pack.price);
-    
+  const executeOpenPack = (pack: PackType) => {
     // 生成卡包内容
     const { cards, newPity } = openPack(pityCounter);
     setPityCounter(newPity);
@@ -172,6 +173,25 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
     onAddCards?.(finalCards.map(c => c.id));
   };
 
+  const handleBuyPack = (pack: PackType) => {
+    if (balance < pack.price) {
+      toast.error('法力不足', `需要 ${pack.price} 法力，当前只有 ${balance}`);
+      HapticService.failure();
+      return;
+    }
+
+    HapticService.medium();
+    onUpdateBalance(balance - pack.price);
+    executeOpenPack(pack);
+  };
+  
+  const handleOpenInventoryPack = (pack: PackType) => {
+     if (onConsumePack?.(pack.id)) {
+         HapticService.medium();
+         executeOpenPack(pack);
+     }
+  };
+
   const handleRevealNext = () => {
     HapticService.light();
     if (revealIndex < revealedCards.length - 1) {
@@ -187,6 +207,11 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
   };
 
   const handleBuyBundle = (bundle: BundleType) => {
+    // 检查限购
+    if (bundle.tag === '限购1次' && purchasedBundles.includes(bundle.id)) {
+        return;
+    }
+
     if (balance < bundle.price) {
       toast.error('法力不足', `需要 ${bundle.price} 法力`);
       HapticService.failure();
@@ -195,7 +220,27 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
 
     // 模拟购买
     HapticService.success();
-    onUpdateBalance(balance - bundle.price + 500); // 假设礼包包含500法力
+    
+    // 根据礼包类型发放奖励 (Mock)
+    let rewardMana = 0;
+    if (bundle.id === 'starter') {
+        rewardMana = 500;
+        onAddPacks?.('standard', 3); // 原逻辑：3个元素卡包
+    }
+    if (bundle.id === 'weekly') {
+        rewardMana = 300;
+        onAddPacks?.('premium', 1);
+    }
+    if (bundle.id === 'monthly') {
+        rewardMana = 1000;
+        onAddPacks?.('legendary', 3);
+    }
+    
+    onUpdateBalance(balance - bundle.price + rewardMana); 
+    
+    // 记录购买
+    onPurchaseBundle?.(bundle.id);
+
     toast.success('购买成功', `${bundle.name} 已添加到您的账户`);
   };
 
@@ -254,6 +299,36 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
         {/* 卡包页面 */}
         {activeTab === 'packs' && (
           <div className="space-y-4">
+            
+            {/* 我的卡包 (Inventory) */}
+            {packInventory && Object.keys(packInventory).some(k => packInventory[k] > 0) && (
+              <div className="mb-8 p-4 bg-slate-800/50 rounded-2xl border border-white/10 shadow-inner">
+                <h2 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
+                   <Package className="text-amber-400" />
+                   我的背包 <span className="text-sm font-normal text-gray-400">(My Packs)</span>
+                </h2>
+                <div className="grid gap-4">
+                  {PACK_TYPES.filter(p => (packInventory[p.id] || 0) > 0).map(pack => (
+                     <div key={`inv-${pack.id}`} className={`relative bg-slate-900 rounded-xl border ${pack.borderColor}/50 p-3 flex items-center gap-4 shadow-lg`}>
+                        <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${pack.gradient} flex items-center justify-center text-white`}>
+                           {pack.icon}
+                        </div>
+                        <div className="flex-1">
+                           <div className="text-white font-bold">{pack.name}</div>
+                           <div className="text-xs text-gray-400">拥有数量: <span className="text-white font-mono font-bold">{packInventory[pack.id]}</span></div>
+                        </div>
+                        <button 
+                          onClick={() => handleOpenInventoryPack(pack)}
+                          className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg text-white text-sm font-bold shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all"
+                        >
+                           开启
+                        </button>
+                     </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <p className="text-gray-400 text-sm text-center mb-6">
               每个卡包包含5张卡牌，有几率开出稀有和传说卡牌
             </p>
@@ -327,13 +402,17 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
                     <div className={`
                       w-16 h-16 rounded-xl bg-gradient-to-br ${bundle.gradient}
                       flex items-center justify-center text-white flex-shrink-0
+                      ${purchasedBundles.includes(bundle.id) ? 'grayscale opacity-50' : ''}
                     `}>
                       {bundle.icon}
                     </div>
                     
                     {/* 信息 */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-white font-bold text-lg">{bundle.name}</h3>
+                      <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                        {bundle.name}
+                        {purchasedBundles.includes(bundle.id) && <span className="text-xs bg-gray-700 px-2 py-0.5 rounded text-gray-300">已拥有</span>}
+                      </h3>
                       <p className="text-gray-400 text-sm mb-2">{bundle.description}</p>
                       
                       <ul className="space-y-1">
@@ -351,9 +430,14 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
                       <div className="text-2xl font-bold text-green-400">{bundle.price}</div>
                       <button
                         onClick={() => handleBuyBundle(bundle)}
-                        className="mt-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg text-white text-sm font-bold hover:scale-105 transition-transform"
+                        disabled={purchasedBundles.includes(bundle.id)}
+                        className={`mt-2 px-4 py-2 rounded-lg text-white text-sm font-bold transition-transform ${
+                            purchasedBundles.includes(bundle.id) 
+                            ? 'bg-gray-700 cursor-not-allowed text-gray-400' 
+                            : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:scale-105'
+                        }`}
                       >
-                        购买
+                        {purchasedBundles.includes(bundle.id) ? '已购买' : '购买'}
                       </button>
                     </div>
                   </div>
