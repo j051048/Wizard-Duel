@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { QUEUE_DEFAULT_DELAY } from '../config/timing';
 
-const DEFAULT_DELAY = 450;
+const DEFAULT_DELAY = QUEUE_DEFAULT_DELAY;
 
 /**
  * 动画队列管理器
@@ -30,6 +31,16 @@ export function useAnimationQueue<T extends { delay?: number }>(
     }
   }, []);
 
+    // [P0 Fix 3.7] 使用 ref 追踪组件是否已卸载，防止卸载后更新 state
+  const isMountedRef = useRef(true);
+  
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   useEffect(() => {
     if (queue.length === 0 || timerRef.current) return;
 
@@ -39,6 +50,9 @@ export function useAnimationQueue<T extends { delay?: number }>(
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
       
+      // [P0 Fix 3.7] 组件已卸载则不执行
+      if (!isMountedRef.current) return;
+      
       // 执行动作
       processRef.current(action);
       
@@ -46,9 +60,12 @@ export function useAnimationQueue<T extends { delay?: number }>(
       setQueue(prev => prev.slice(1));
     }, delay);
 
+    // [P0 Fix 3.7] 清理当前 timer，防止组件卸载后触发 setState
     return () => {
-      // 组件卸载时不一定要清除计时器，取决于业务需求
-      // 这里为了防止内存泄漏，可以选择清除，但要注意不打断正在进行的动画链
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
     };
   }, [queue]);
 
@@ -57,6 +74,7 @@ export function useAnimationQueue<T extends { delay?: number }>(
       return () => {
           if (timerRef.current) {
               clearTimeout(timerRef.current);
+              timerRef.current = null;
           }
       };
   }, []);

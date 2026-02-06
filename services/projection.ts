@@ -1,5 +1,5 @@
 import { DuelState, SpellType, Spell } from '../types';
-import { SPELLS } from '../constants';
+import { SPELLS, GAME_CONFIG } from '../constants';
 import { getSpellById, recalculateCostMod } from './gameLogic';
 
 export interface SpellProjection {
@@ -64,29 +64,23 @@ export const calculateSpellProjection = (
   if (result.isCrit) damage = Math.floor(damage * 1.5);
   if (result.isCountered) damage = 0;
 
-  // Charge / Thunder Combo
+    // Charge / Thunder Combo
+  // [P0 Fix 3.3] 与 gameLogic.ts 统一：hero_thunder 不触发法术连击，倍率为 1.5
   const myLastSpell = state.playerLastSpell;
-  const isThunder = (id: string | null) => id && (id.startsWith('thunder') || id === 'hero_thunder');
+  const isThunderSpell = (id: string | null) => id && id.startsWith('thunder') && !id.startsWith('hero_');
   
-  if (!result.isCountered && spell.mechanic === 'charge' && isThunder(spell.id) && isThunder(myLastSpell)) {
-      damage = Math.floor(damage * 1.3);
+  if (!result.isCountered && spell.mechanic === 'charge' && isThunderSpell(spell.id) && isThunderSpell(myLastSpell)) {
+      damage = Math.floor(damage * 1.5);
   }
 
-  // AOE Extra Damage
-  if (!result.isCountered && spell.mechanic === 'aoe') {
-      // AOE does main damage + 2 extra piercing
-      // Current logic: spell.damage goes through normal math, + 2 direct.
-      // But verify `executeSpell` logic:
-      // logs.push(...applyDamage(effect... damage))
-      // logs.push(...handler(aoe)) -> handler does extra 2 damage directly.
-      // So TOTAL damage = Base calc + 2.
-      // Let's separate them for calculation if armor matters, but for projection sum is fine.
-      // Actually AOE extra damage ignores armor in `mechanic_handlers`.
-  }
+      // [P0 Fix 3.3] AOE 穿透伤害与 mechanics.ts 统一为 1
+    // AOE extra damage 忽略护甲，直接扣血
+    // 此处不在 damage 上累加，在最终计算中单独处理
 
   // 4. Mechanic Specifics
+    // [P0 Fix 3.3] 治疗量与 mechanics.ts 统一为 3
   if (spell.mechanic === 'heal' && !result.isCountered) {
-      result.healing = 5;
+      result.healing = 3;
   }
   
   result.armorGain = spell.armorGain || 0;
@@ -106,16 +100,16 @@ export const calculateSpellProjection = (
       result.netHpChange = -hpDamage;
       result.netArmorChange = -absorb;
 
-      // AOE Exception: Extra 2 damage ignores armor
+            // [P0 Fix 3.3] AOE 穿透伤害与 mechanics.ts 统一为 1
       if (spell.mechanic === 'aoe' && !result.isCountered) {
-          result.damage += 2;
-          result.netHpChange -= 2; // Direct HP removal
+          result.damage += 1;
+          result.netHpChange -= 1; // Direct HP removal (ignores armor)
       }
   } else if (result.target === 'player') {
       // Self cast (Heal?)
-       if (result.healing > 0) {
-           // Cap at max HP
-           const missingHp = 100 - state.playerHP; // Assuming 100 max
+              if (result.healing > 0) {
+           // [P0 Fix 3.3] 使用 GAME_CONFIG.maxHP 而非硬编码 100
+           const missingHp = GAME_CONFIG.maxHP - state.playerHP;
            const actualHeal = Math.min(result.healing, missingHp);
            result.netHpChange = actualHeal;
        }

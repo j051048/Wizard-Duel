@@ -80,16 +80,30 @@ export class GameSequenceExecutor {
         else newState.opponentEffects = effects;
         break;
       }
-      case 'REMOVE_EFFECT': {
+            case 'REMOVE_EFFECT': {
           const target = action.target;
           const typeToRemove = action.subType;
-          if (target === 'player') {
-              newState.playerEffects = newState.playerEffects.filter(e => e.type !== typeToRemove);
-          } else if (target === 'opponent') {
-              newState.opponentEffects = newState.opponentEffects.filter(e => e.type !== typeToRemove);
-          } else if (target === 'both') {
-              newState.playerEffects = [];
-              newState.opponentEffects = [];
+          
+          // [P0 Fix 3.4] 'all' 表示移除目标的所有效果（silence 净化机制）
+          if (typeToRemove === 'all') {
+              if (target === 'player') {
+                  newState.playerEffects = [];
+              } else if (target === 'opponent') {
+                  newState.opponentEffects = [];
+              } else if (target === 'both') {
+                  newState.playerEffects = [];
+                  newState.opponentEffects = [];
+              }
+          } else {
+              // 移除指定类型的效果
+              if (target === 'player') {
+                  newState.playerEffects = newState.playerEffects.filter(e => e.type !== typeToRemove);
+              } else if (target === 'opponent') {
+                  newState.opponentEffects = newState.opponentEffects.filter(e => e.type !== typeToRemove);
+              } else if (target === 'both') {
+                  newState.playerEffects = newState.playerEffects.filter(e => e.type !== typeToRemove);
+                  newState.opponentEffects = newState.opponentEffects.filter(e => e.type !== typeToRemove);
+              }
           }
           break;
       }
@@ -201,34 +215,39 @@ export class GameSequenceExecutor {
       }
     }
 
-    // 触发检查
-    this.resolveTriggers(newState, action.type === 'HP_CHANGE' && action.value < 0 ? 'ON_DAMAGE' : 'ON_CAST', action);
+        // [P0 Fix 3.1] 触发检查 - 使用返回值而非直接修改
+    const postTriggerState = this.resolveTriggers(newState, action.type === 'HP_CHANGE' && action.value < 0 ? 'ON_DAMAGE' : 'ON_CAST', action);
 
-    return { state: newState, log };
+    return { state: postTriggerState, log };
   }
 
-  /**
+    /**
    * 触发器解析逻辑 (增强实现)
+   * [P0 Fix 3.1] 不再直接修改传入的 state，返回新的状态对象
    */
-  static resolveTriggers(state: DuelState, timing: TriggerTiming, context?: any) {
-      const allTriggers = [...state.playerTriggers, ...state.opponentTriggers];
+  static resolveTriggers(state: DuelState, timing: TriggerTiming, context?: any): DuelState {
+      let currentState: DuelState = { ...state };
+      const allTriggers = [...currentState.playerTriggers, ...currentState.opponentTriggers];
       const matchingTriggers = allTriggers.filter(t => t.timing === timing);
 
       for (const trigger of matchingTriggers) {
-          if (!trigger.condition || trigger.condition(state, context)) {
-              const actions = trigger.action(state, context);
+          if (!trigger.condition || trigger.condition(currentState, context)) {
+              const actions = trigger.action(currentState, context);
               for (const act of actions) {
-                  // 递归执行触发产生的动作，并捕获返回值更新状态
-                  const result = this.applyAction(state, act);
-                  // 将新状态的属性同步回当前 state
-                  Object.assign(state, result.state);
+                  // 递归执行触发产生的动作，返回新状态
+                  const result = this.applyAction(currentState, act);
+                  currentState = result.state;
               }
               if (trigger.isOnce) {
-                  state.playerTriggers = state.playerTriggers.filter(t => t.id !== trigger.id);
-                  state.opponentTriggers = state.opponentTriggers.filter(t => t.id !== trigger.id);
+                  currentState = {
+                      ...currentState,
+                      playerTriggers: currentState.playerTriggers.filter(t => t.id !== trigger.id),
+                      opponentTriggers: currentState.opponentTriggers.filter(t => t.id !== trigger.id)
+                  };
               }
           }
       }
+      return currentState;
   }
 
   /**
@@ -238,8 +257,8 @@ export class GameSequenceExecutor {
     let currentState = state;
     const logs: string[] = [];
 
-    // ON_CAST 触发点
-    this.resolveTriggers(currentState, 'ON_CAST', command);
+        // [P0 Fix 3.1] ON_CAST 触发点 - 使用返回值
+    currentState = this.resolveTriggers(currentState, 'ON_CAST', command);
 
     for (const action of command.actions) {
       const result = this.applyAction(currentState, action);

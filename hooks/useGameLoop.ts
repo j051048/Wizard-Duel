@@ -12,6 +12,10 @@ import { GameSequenceExecutor } from '../services/sequence';
 import { GameRuleEngine } from '../services/GameRuleEngine';
 import { useAnimationQueue } from './useAnimationQueue';
 import { useTurnManager } from './useTurnManager';
+import {
+  AI_THINK_DELAY, AI_CARD_PLAY_DELAY, AI_EMOTE_DELAY,
+  PHASE_TRANSITION_DELAY, BANNER_WAIT_DELAY, ROUND_TRANSITION_DELAY
+} from '../config/timing';
 
 const initialAIStatus: AIStatus = { emote: null, message: null };
 
@@ -165,8 +169,8 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
         commands.push({ type: 'SET_PHASE', payload: 'ROUND_RESET' });
     } else {
         // Round Start Sequence
-        commands.push({ type: 'EXECUTE_LOGIC', payload: () => showTurnBanner('player'), delay: 200 });
-        commands.push({ type: 'WAIT', payload: null, delay: 1500 });
+                commands.push({ type: 'EXECUTE_LOGIC', payload: () => showTurnBanner('player'), delay: PHASE_TRANSITION_DELAY });
+        commands.push({ type: 'WAIT', payload: null, delay: BANNER_WAIT_DELAY });
         commands.push({ type: 'SET_PHASE', payload: 'PLAYER_TURN' }); 
         commands.push({ type: 'UPDATE_UI', payload: {
             playerCard: null,
@@ -239,39 +243,51 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
      
      const commands: GameActionCommand[] = [];
      
-     // Switch to Opponent Turn
-     commands.push({ type: 'EXECUTE_LOGIC', payload: () => showTurnBanner('opponent'), delay: 200 });
-     commands.push({ type: 'WAIT', payload: null, delay: 1500 });
+          // Switch to Opponent Turn
+     commands.push({ type: 'EXECUTE_LOGIC', payload: () => showTurnBanner('opponent'), delay: PHASE_TRANSITION_DELAY });
+     commands.push({ type: 'WAIT', payload: null, delay: BANNER_WAIT_DELAY });
      
      commands.push({ type: 'SET_PHASE', payload: 'OPPONENT_TURN' });
      commands.push({ type: 'UPDATE_UI', payload: { playerCard: null } });
      commands.push({ type: 'ADD_MESSAGE', payload: '对手回合...' });
-     commands.push({ type: 'SET_AI_STATUS', payload: { emote: 'thinking', message: '让我想想...' }, delay: 1000 });
+     commands.push({ type: 'SET_AI_STATUS', payload: { emote: 'thinking', message: '让我想想...' }, delay: AI_EMOTE_DELAY });
      
      // [P1] 增加 AI 思考时间，避免出牌太快
-     commands.push({ type: 'WAIT', payload: null, delay: 1500 });
+     commands.push({ type: 'WAIT', payload: null, delay: AI_THINK_DELAY });
      
-     // Calculate AI Turn
-     const { newState, commands: aiCommands } = executeAITurn(state);
+     // [P0 Fix 3.2] 使用 GameRuleEngine.castSpell 逐张处理 AI 的牌
+     // 不再重放 executeAITurn 的 actions，避免双重执行
+     const { newState: aiResultState, commands: aiCommands } = executeAITurn(state);
      
-     let tempState = { ...state };
+     // 构建中间状态快照链：从 AI 计算结果中提取每张牌的 UI 指令
+     let progressState = { ...state };
      
-     // Process AI Actions
-      for (const cmd of aiCommands) {
+     for (const cmd of aiCommands) {
         if (cmd.sourceSpell) {
             commands.push({ type: 'UPDATE_UI', payload: { opponentCard: cmd.sourceSpell } });
-            commands.push({ type: 'SET_AI_STATUS', payload: { emote: 'thinking_fast', message: '就是这张！' }, delay: 800 });
+            commands.push({ type: 'SET_AI_STATUS', payload: { emote: 'thinking_fast', message: '就是这张！' }, delay: AI_EMOTE_DELAY });
         }
 
-        for (const action of cmd.actions) {
-            const result = GameSequenceExecutor.applyAction(tempState, action);
-            tempState = result.state;
-            commands.push({ type: 'UPDATE_STATE', payload: result.state });
-            if (result.log) commands.push({ type: 'ADD_MESSAGE', payload: result.log });
-            if (tempState.playerHP <= 0 || tempState.opponentHP <= 0) break;
+        // [P0 Fix 3.2] 使用 GameRuleEngine 重新计算每张牌的效果以生成正确的 UI 命令
+        // 而非从 executeAITurn 的内部 actions 重复执行
+        if (cmd.sourceSpell && cmd.sourceSpell !== 'skip') {
+            const castResult = GameRuleEngine.castSpell(progressState, cmd.sourceSpell, 'opponent');
+            progressState = castResult.newState;
+            
+            // 将 GameRuleEngine 生成的 UI 命令加入队列
+            castResult.commands.forEach(c => commands.push(c));
+            
+            // [P0 AI Pacing] 每张牌打出后等待，让玩家看清
+            commands.push({ type: 'WAIT', payload: null, delay: AI_CARD_PLAY_DELAY });
+            
+            if (checkGameOver(progressState)) break;
+        } else if (cmd.sourceSpell === 'skip') {
+            commands.push({ type: 'ADD_MESSAGE', payload: '对手跳过了出牌' });
         }
-        if (tempState.playerHP <= 0 || tempState.opponentHP <= 0) break;
     }
+    
+    // 使用 progressState 作为后续逻辑的基础
+    let tempState = progressState;
     
 // Minion Combat Phase
     const activeMinionsCount = tempState.playerMinions.filter(m => !m.exhausted).length + tempState.opponentMinions.filter(m => !m.exhausted).length;
@@ -292,7 +308,7 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
         }
     }
     
-    const gameOverResult = checkGameOver(tempState);
+        const gameOverResult = checkGameOver(tempState);
     if (gameOverResult) {
          commands.push({ type: 'UPDATE_UI', payload: {
             isGameOver: true,
@@ -302,7 +318,7 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
         commands.push({ type: 'SET_PHASE', payload: 'ROUND_RESET' });
     } else {
         // Trigger Next Round
-        commands.push({ type: 'WAIT', payload: null, delay: 1000 });
+        commands.push({ type: 'WAIT', payload: null, delay: ROUND_TRANSITION_DELAY });
         commands.push({ 
            type: 'EXECUTE_LOGIC', 
            payload: () => {
@@ -339,17 +355,17 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
      setDuelState(newState);
      
      // Start Game Sequence
-     const commands: GameActionCommand[] = [
+          const commands: GameActionCommand[] = [
         { type: 'UPDATE_STATE', payload: newState },
         // Show Player Turn Banner via Queue
-        { type: 'EXECUTE_LOGIC', payload: () => showTurnBanner('player'), delay: 500 },
-        { type: 'WAIT', payload: null, delay: 1500 },
+        { type: 'EXECUTE_LOGIC', payload: () => showTurnBanner('player'), delay: PHASE_TRANSITION_DELAY },
+        { type: 'WAIT', payload: null, delay: BANNER_WAIT_DELAY },
         { type: 'ADD_MESSAGE', payload: '对战开始！你的回合。' },
         // Trigger Round 1 Start (Mana, Draw)
         { 
             type: 'EXECUTE_LOGIC', 
             payload: () => startNewRound({ ...newState, roundNumber: 0 }),
-            delay: 1000 
+            delay: ROUND_TRANSITION_DELAY 
         }
      ];
      

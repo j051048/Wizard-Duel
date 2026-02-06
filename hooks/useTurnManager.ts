@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { DuelPhase } from '../types';
+import { 
+  TURN_DURATION_SECONDS, MULLIGAN_DURATION_SECONDS, TURN_BANNER_DEFAULT_DURATION 
+} from '../config/timing';
 
-const TURN_DURATION = 60;
-const MULLIGAN_DURATION = 30;
+const TURN_DURATION = TURN_DURATION_SECONDS;
+const MULLIGAN_DURATION = MULLIGAN_DURATION_SECONDS;
 
 interface UseTurnManagerReturn {
   phase: DuelPhase;
@@ -66,10 +69,10 @@ export function useTurnManager(
     }
   }, [startTimer, stopTimer]);
 
-  // 显示横幅
+    // 显示横幅
   const showTurnBanner = useCallback((type: 'player' | 'opponent') => {
     setTurnBanner(type);
-    setTimeout(() => setTurnBanner(null), 1500);
+    setTimeout(() => setTurnBanner(null), TURN_BANNER_DEFAULT_DURATION);
   }, []);
 
   const resetTurnManager = useCallback(() => {

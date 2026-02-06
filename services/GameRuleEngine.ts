@@ -1,6 +1,7 @@
 import { DuelState, GameActionCommand, StatusEffect, SpellType } from '../types';
 import { checkGameOver, executeSpell, executeAITurn, prepareNextTurn } from './gameLogic';
 import { GameSequenceExecutor } from './sequence';
+import { MINION_ATTACK_DELAY, MINION_COMBAT_START_DELAY } from '../config/timing';
 
 /**
  * GameRuleEngine
@@ -136,8 +137,8 @@ export class GameRuleEngine {
           return { finalState: currentState, commands };
       }
 
-      commands.push({ type: 'ADD_MESSAGE', payload: '⚔️ 随从进攻阶段！' });
-      commands.push({ type: 'WAIT', payload: null, delay: 500 });
+            commands.push({ type: 'ADD_MESSAGE', payload: '⚔️ 随从进攻阶段！' });
+      commands.push({ type: 'WAIT', payload: null, delay: MINION_COMBAT_START_DELAY });
       
       // 1. Player Minions Attack
       for (const id of playerMinionIds) {
@@ -148,7 +149,7 @@ export class GameRuleEngine {
            // Double check exhaustion (though we filtered initially)
            if (currentState.playerMinions[idx].exhausted) continue;
 
-           commands.push({ type: 'EXECUTE_LOGIC', payload: () => {}, delay: 300 });
+           commands.push({ type: 'EXECUTE_LOGIC', payload: () => {}, delay: MINION_ATTACK_DELAY });
 
            // target='player' means Player is the Attacker source (Legacy convention)
            const action = { type: 'MINION_ATTACK', target: 'player', value: idx } as any;
@@ -167,7 +168,7 @@ export class GameRuleEngine {
            if (idx === -1) continue;
            if (currentState.opponentMinions[idx].exhausted) continue;
 
-           commands.push({ type: 'WAIT', payload: null, delay: 300 });
+           commands.push({ type: 'WAIT', payload: null, delay: MINION_ATTACK_DELAY });
 
            // target='opponent' means Opponent is the Attacker source
            const action = { type: 'MINION_ATTACK', target: 'opponent', value: idx } as any;
