@@ -35,6 +35,7 @@ export const TRANSLATIONS: Record<Language, Record<string, string>> = {
     'GOLD': '金币',
     'No active quests available.': '暂无可用悬赏',
     'Come back tomorrow for more!': '请明日再来！',
+    'CLOSE_WIDGET': '收起',
     
     // Quest Titles & Descriptions
     'First Blood': '第一滴血',
@@ -86,6 +87,7 @@ export const TRANSLATIONS: Record<Language, Record<string, string>> = {
     'GOLD': 'GOLD',
     'No active quests available.': 'No active quests available.',
     'Come back tomorrow for more!': 'Come back tomorrow for more!',
+    'CLOSE_WIDGET': 'CLOSE',
     
     // Quest Titles & Descriptions
     'First Blood': 'First Blood',

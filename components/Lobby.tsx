@@ -11,7 +11,7 @@ import { TRANSLATIONS } from '../translations';
 import { RulesModal } from './RulesModal';
 import { TutorialModal } from './TutorialModal';
 import { QuestModal } from './lobby/QuestModal';
-import { ShoppingBag } from 'lucide-react';
+import { ShoppingBag, Book } from 'lucide-react';
 import { QuestManager } from '../services/QuestManager';
 import { HapticService } from '../services/haptic';
 import { SoundManager } from '../services/SoundManager';
@@ -22,6 +22,7 @@ import TopBar from './lobby/TopBar';
 import DeckCarousel from './lobby/DeckCarousel';
 import WagerSelector from './lobby/WagerSelector';
 import PlayButton from './lobby/PlayButton';
+import { DailyGoalWidget } from './lobby/DailyGoalWidget';
 
 interface LobbyProps {
   balance: number;
@@ -40,6 +41,7 @@ interface LobbyProps {
   onSelectDeck: (deck: Deck) => void;
   onOpenTavernMode?: () => void;
   onOpenShop?: () => void;
+  onOpenCollection?: () => void;
   onClaimQuestReward?: (amount: number) => void; // 新增：领取奖励回调
   gameMode?: GameMode;
   onOpenModeSelect?: () => void;
@@ -64,6 +66,7 @@ export const Lobby: React.FC<LobbyProps> = ({
   onSelectDeck,
   onOpenTavernMode,
   onOpenShop,
+  onOpenCollection,
   onClaimQuestReward,
   gameMode = 'standard',
   onOpenModeSelect,
@@ -130,11 +133,20 @@ export const Lobby: React.FC<LobbyProps> = ({
       <div className={`relative z-10 flex-1 flex flex-col items-center justify-center ${isMobile ? 'mt-0' : '-mt-10'}`}>
          
          {/* Introduction / Season Text */}
-         <div className="text-center mb-8 animate-fade-in-up">
+         <div className="text-center mb-6 animate-fade-in-up">
             <h1 className="text-4xl md:text-6xl font-wizard text-transparent bg-clip-text bg-gradient-to-b from-white to-purple-300 drop-shadow-[0_5px_15px_rgba(168,85,247,0.4)]">
                {t('Wizard Duel')}
             </h1>
             <p className="text-purple-200/60 text-xs tracking-[0.5em] font-tech uppercase mt-2">{t('Season 1: Elemental Rising')}</p>
+         </div>
+
+         {/* Daily Goal Widget */}
+         <div className="w-full max-w-md px-4 mb-4 z-20">
+             <DailyGoalWidget 
+                quests={quests}
+                onClaim={handleClaimQuest}
+                t={t}
+             />
          </div>
 
          {/* The Deck Display */}
@@ -177,6 +189,17 @@ export const Lobby: React.FC<LobbyProps> = ({
             >
                <ShoppingBag size={14} />
                <span>商店</span>
+            </button>
+         )}
+
+         {/* 收藏入口 */}
+         {onOpenCollection && (
+            <button 
+               onClick={onOpenCollection}
+               className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 font-bold uppercase tracking-widest border border-blue-500/30 px-4 py-2 rounded-full hover:bg-blue-900/20 transition-all bg-blue-500/10"
+            >
+               <Book size={14} />
+               <span>图鉴</span>
             </button>
          )}
          

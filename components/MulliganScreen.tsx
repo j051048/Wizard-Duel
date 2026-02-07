@@ -3,7 +3,7 @@
  * 允许玩家选择要替换的起始手牌
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SpellType } from '../types';
 import { SpellCard } from './SpellCard';
 import { getSpellById } from '../services/gameLogic';
@@ -28,10 +28,18 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
   onConfirm,
   timeLimit = 30
 }) => {
-  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
+    const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [showAnimation, setShowAnimation] = useState(true);
+  
+  // [P0 Fix A-5] 使用 ref 存储最新的 selectedIndices 和 isConfirmed，
+  // 避免 setInterval 闭包中引用过期值
+  const selectedIndicesRef = useRef(selectedIndices);
+  useEffect(() => { selectedIndicesRef.current = selectedIndices; }, [selectedIndices]);
+  
+  const isConfirmedRef = useRef(isConfirmed);
+  useEffect(() => { isConfirmedRef.current = isConfirmed; }, [isConfirmed]);
 
   // 倒计时
   useEffect(() => {
@@ -40,7 +48,14 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
-          handleConfirm();
+          // [P0 Fix A-5] 通过 ref 读取最新值，避免闭包陷阱
+          if (!isConfirmedRef.current) {
+            setIsConfirmed(true);
+            HapticService.medium();
+            setTimeout(() => {
+              onConfirm(Array.from(selectedIndicesRef.current));
+            }, 800);
+          }
           return 0;
         }
         // 最后5秒警告震动
@@ -52,7 +67,7 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isConfirmed]);
+  }, [isConfirmed, onConfirm]);
 
   // 入场动画
   useEffect(() => {

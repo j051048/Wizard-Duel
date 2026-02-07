@@ -1,17 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { HapticService } from '../services/haptic';
 import { globalFPSMonitor } from '../services/performance';
-
-interface DamageNumber {
-  id: number;
-  value: number;
-  x: number;
-  y: number;
-  isPlayer: boolean;
-  isCrit: boolean;
-  opacity: number;
-  age: number;
-}
+import { FloatingTextItem, FloatingTextType } from '../components/battle/feedback/FloatingText';
 
 interface Projectile {
     id: number;
@@ -57,14 +47,13 @@ const createParticlePool = (): PooledParticle[] => {
 export const useBattleAnimations = (isLowQuality: boolean) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
-  // Refs for high-performance animation (Avoiding Re-renders)
-  const damageNumbersRef = useRef<DamageNumber[]>([]);
+  // Refs for high-performance animation
   const projectilesRef = useRef<Projectile[]>([]);
-  
-  // Object Pool: Pre-allocated particles
   const particlePoolRef = useRef<PooledParticle[]>(createParticlePool());
   const activeParticleCount = useRef(0);
   
+  // React State for DOM-based animations (Floating Texts)
+  const [floatingTexts, setFloatingTexts] = useState<FloatingTextItem[]>([]);
   const [showCritEffect, setShowCritEffect] = useState(false);
   const [showBloodFlash, setShowBloodFlash] = useState(false);
   const [shakeClass, setShakeClass] = useState('');
@@ -165,6 +154,41 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
       }
   }, []);
 
+  // NEW: Add Floating Text (Replaces Canvas Damage Numbers)
+  const addFloatingText = useCallback((text: string, type: FloatingTextType, isPlayer: boolean, xOffset: number = 0) => {
+    // Determine screen coordinates (roughly)
+    // isPlayer = true -> Player takes damage/heal -> Text appears in Player area (bottom)
+    // BUT wait, isPlayer in `addDamageNumber` meant 'Target is Player'.
+    // Here we make it explicit.
+    
+    // Position Logic:
+    // Player Avatar Area: ~BottomCenter (50%, 75%)
+    // Opponent Avatar Area: ~TopCenter (50%, 20%)
+    
+    // Random jitter
+    const jitterX = (Math.random() - 0.5) * 60;
+    const jitterY = (Math.random() - 0.5) * 30;
+
+    const baseX = window.innerWidth * 0.5 + xOffset + jitterX;
+    const baseY = isPlayer ? window.innerHeight * 0.70 : window.innerHeight * 0.20;
+
+    const id = Date.now().toString() + Math.random();
+
+    setFloatingTexts(prev => [...prev, {
+        id,
+        text,
+        type,
+        x: baseX,
+        y: baseY + jitterY,
+        duration: 1.5
+    }]);
+
+    // Auto-remove after duration (cleanup)
+    setTimeout(() => {
+        setFloatingTexts(prev => prev.filter(item => item.id !== id));
+    }, 1600);
+  }, []);
+
   const addDamageNumber = useCallback((damage: number, isPlayer: boolean, isCrit: boolean = false, type: ParticleType = 'default') => {
     HapticService.medium();
     if (isCrit) HapticService.heavy();
@@ -174,22 +198,17 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
        setTimeout(() => setShowBloodFlash(false), 400);
     }
 
+    addFloatingText(
+        `-${damage}`, 
+        isCrit ? 'crit' : 'damage', 
+        isPlayer
+    );
+
+    // Particle Burst on Hit (Still Canvas)
     const x = 50 + (Math.random() - 0.5) * 15; 
     const y = isPlayer ? 70 : 30;
-    
-    damageNumbersRef.current.push({ 
-        id: Date.now() + Math.random(), 
-        value: damage, 
-        x, y, 
-        isPlayer, 
-        isCrit,
-        opacity: 1,
-        age: 0
-    });
-
-    // Particle Burst on Hit
     spawnParticles(x, y, isCrit ? 40 : 20, type);
-  }, [spawnParticles]);
+  }, [addFloatingText, spawnParticles]);
 
   const triggerCrit = useCallback(() => {
     setShowCritEffect(true);
@@ -199,7 +218,6 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
   const spawnProjectile = useCallback((type: 'player' | 'opp') => {
     if (isLowQuality) return;
     const startY = type === 'player' ? 90 : 10;
-    const endY = type === 'player' ? 30 : 70;
     
     projectilesRef.current.push({
         id: Math.random(),
@@ -222,6 +240,7 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
       spawnParticles(percentX, percentY, 2, 'arcane');
   }, [isLowQuality, spawnParticles]);
 
+  // Canvas Loop (Particles & Projectiles only)
   useEffect(() => {
     if (isLowQuality) return;
     const canvas = canvasRef.current;
@@ -230,7 +249,7 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
     // Performance: Use desynchronized context for smoother rendering
     const ctx = canvas.getContext('2d', { 
         alpha: true,
-        desynchronized: true // Allows canvas to render independently from DOM updates
+        desynchronized: true 
     });
     if (!ctx) return;
 
@@ -244,21 +263,21 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
 
     let animationId: number;
     let lastTime = performance.now();
-    let lowFpsFrames = 0; // Track consecutive low-fps frames
+    let lowFpsFrames = 0; 
 
     const render = (time: number) => {
         globalFPSMonitor.tick();
         const deltaTime = time - lastTime;
         lastTime = time;
         
-        // Adaptive performance: if frame time is too high, reduce work
-        const isSlowFrame = deltaTime > 33; // Below 30fps
+        // Adaptive performance
+        const isSlowFrame = deltaTime > 33; 
         if (isSlowFrame) {
             lowFpsFrames++;
         } else {
             lowFpsFrames = Math.max(0, lowFpsFrames - 1);
         }
-        const performanceMode = lowFpsFrames > 5; // 5 consecutive slow frames triggers degraded mode
+        const performanceMode = lowFpsFrames > 5; 
         
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
@@ -267,7 +286,7 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
 
         // 1. Update & Render Particles (Object Pool)
         const pool = particlePoolRef.current;
-        const stride = performanceMode ? 2 : 1; // Skip every other particle in performance mode
+        const stride = performanceMode ? 2 : 1; 
         for (let i = 0; i < pool.length; i += stride) {
             const p = pool[i];
             if (!p.active) continue;
@@ -303,39 +322,30 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
 
         // 2. Update & Render Projectiles (Quadratic Bezier)
         projectilesRef.current = projectilesRef.current.filter(p => {
-            p.progress += deltaTime / 600; // 600ms flight duration
+            p.progress += deltaTime / 600; 
             
             if (p.progress >= 1) {
                 // Impact!
                 spawnParticles(50, p.type === 'player' ? 30 : 70, 25, 'default');
-                triggerShake(p.type === 'player' ? 'default' : 'rock'); // Minor shake on impact
+                triggerShake(p.type === 'player' ? 'default' : 'rock'); 
                 return false;
             }
             
-            // Bezier Curve Calculation
-            // P0: (startX, startY), P1: (controlX, controlY), P2: (targetX, targetY)
             const t = p.progress;
             const invT = 1 - t;
             
-            // Standard target positions
             const targetX = 50; 
-            const targetY = p.type === 'player' ? 30 : 70; // 30% for opponent area, 70% for player area
+            const targetY = p.type === 'player' ? 30 : 70; 
             
-            // Calculate Control Point (Peak of the arc)
-            // We generate it dynamically based on ID to be deterministic but random-looking
-            // P1 should be halfway in Y, but offset in X to create the arc
-            const direction = p.type === 'player' ? -1 : 1;
-            const arcIntensity = 30 + (p.id * 100 % 20); // Random arc width
-            const side = (p.id * 100 % 2) > 1 ? 1 : -1; // Randomize left/right curve
+            const arcIntensity = 30 + (p.id * 100 % 20); 
+            const side = (p.id * 100 % 2) > 1 ? 1 : -1; 
             
             const controlX = p.startX + (side * arcIntensity);
-            const controlY = p.startY + (targetY - p.startY) / 2; // Midpoint Y
+            const controlY = p.startY + (targetY - p.startY) / 2; 
 
-            // Quadratic Bezier Formula: B(t) = (1-t)^2*P0 + 2(1-t)t*P1 + t^2*P2
             const nextX = (invT * invT * p.startX) + (2 * invT * t * controlX) + (t * t * targetX);
             const nextY = (invT * invT * p.startY) + (2 * invT * t * controlY) + (t * t * targetY);
             
-            // Calculate rotation (tangent)
             const dx = nextX - p.x;
             const dy = nextY - p.y;
             const angle = Math.atan2(dy, dx);
@@ -343,90 +353,24 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
             p.x = nextX;
             p.y = nextY;
             
-            // Draw Projectile
+            // Draw
             ctx.save();
             ctx.translate((p.x/100)*w, (p.y/100)*h);
             ctx.rotate(angle);
             
-            // Trail Effect (Spawn particles behind)
-            if (p.progress % 0.05 < 0.02) {
-                 spawnParticles(p.x, p.y, 1, 'arcane');
-            }
+            if (p.progress % 0.05 < 0.02) spawnParticles(p.x, p.y, 1, 'arcane');
 
-            // Glowing Orb
+            const orbColor = p.type === 'player' ? '255, 200, 0' : '168, 85, 247'; 
+            
             const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 15);
-            const color = p.type === 'player' ? '239, 68, 68' : '168, 85, 247'; // Red (Opponent/Target) vs Purple (Player/Source) - Wait, names are confusing.
-            // visual: Player shoots UP (Red?), Opponent shoots DOWN (Purple?) -> No, standard is Player=Blue/Green, Enemy=Red.
-            // Let's stick to theme: Player=Gold? Opponent=Purple?
-            // Actually config says: Player attacking -> Target is Opponent (Top).
-            
-            const orbColor = p.type === 'player' ? '255, 200, 0' : '168, 85, 247'; // Gold vs Purple
-            
             grad.addColorStop(0, `rgba(${orbColor}, 1)`);
             grad.addColorStop(0.4, `rgba(${orbColor}, 0.8)`);
             grad.addColorStop(1, `rgba(${orbColor}, 0)`);
             
             ctx.fillStyle = grad;
-            // Draw comet shape
             ctx.beginPath();
             ctx.ellipse(0, 0, 20, 8, 0, 0, Math.PI * 2);
             ctx.fill();
-            
-            ctx.restore();
-            return true;
-        });
-
-        // 3. Update & Render Damage Numbers
-        damageNumbersRef.current = damageNumbersRef.current.filter(d => {
-            d.age += deltaTime;
-            const maxAge = 1500; // [UX] 停留时间从 1200ms -> 1500ms
-            if (d.age > maxAge) return false;
-            
-            // 弹性动画曲线
-            const progress = d.age / maxAge;
-            const easeOutElastic = (x: number): number => {
-                const c4 = (2 * Math.PI) / 3;
-                return x === 0 ? 0 : x === 1 ? 1 : Math.pow(2, -10 * x) * Math.sin((x * 10 - 0.75) * c4) + 1;
-            };
-            const yOffset = easeOutElastic(Math.min(1, d.age / 800)) * 100; // 前800ms弹出，之后悬停慢慢消失
-            
-            const opacity = progress > 0.7 ? 1 - (progress - 0.7) / 0.3 : 1; // 最后30%时间淡出
-            
-            ctx.save();
-            ctx.globalAlpha = opacity;
-            ctx.shadowBlur = d.isCrit ? 20 : 10;
-            ctx.shadowColor = d.isCrit ? 'rgba(255, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.5)';
-            
-            // 颜色逻辑：isPlayer=true (玩家受伤) -> Red, isPlayer=false (对手受伤) -> Gold/White
-            // 暴击时更加显眼
-            const mainColor = d.isPlayer ? '#ef4444' : (d.isCrit ? '#fbbf24' : '#ffffff');
-            
-            ctx.fillStyle = mainColor;
-            ctx.font = `italic 900 ${d.isCrit ? '80px' : '56px'} "Outfit", system-ui, sans-serif`; // [UX] 字体加大
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            
-            const drawX = (d.x / 100) * w;
-            const drawY = (d.y / 100) * h - yOffset;
-            
-            // 描边增强可读性
-            ctx.lineWidth = d.isCrit ? 8 : 5;
-            ctx.strokeStyle = '#000000';
-            ctx.lineJoin = 'round';
-            ctx.strokeText(`-${d.value}`, drawX, drawY);
-            ctx.fillText(`-${d.value}`, drawX, drawY);
-            
-            if (d.isCrit) {
-                const scale = 1 + Math.sin(d.age / 100) * 0.1; // 呼吸效果
-                ctx.translate(drawX, drawY - 70);
-                ctx.scale(scale, scale);
-                ctx.font = 'bold 32px "Outfit", system-ui, sans-serif';
-                ctx.fillStyle = '#ff3333';
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 3;
-                ctx.strokeText('CRITICAL!', 0, 0);
-                ctx.fillText('CRITICAL!', 0, 0);
-            }
             
             ctx.restore();
             return true;
@@ -447,7 +391,8 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
     showCritEffect,
     showBloodFlash,
     shakeClass,
-    projectiles: [], // No longer used in DOM
+    floatingTexts, // New
+    addFloatingText, // New
     addDamageNumber,
     triggerCrit,
     triggerShake,

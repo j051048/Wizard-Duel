@@ -31,14 +31,13 @@ export class GameRuleEngine {
     // However, if it failed completely, usually we want to show that.
 
     // 2. Simulate/Apply the actions into a sequence of commands for the UI
-    // [P0 Fix] 起点状态必须包含已经移除的手牌和扣除的法力，否则动画过程中卡牌会“闪回”
+    // [P0 Fix] 起点状态必须包含已经移除的手牌 (Direct Modification)，
+    // 但不能包含扣除的法力 (Action Based)，否则 Action 会再次扣除导致双倍扣费
     let tempState: DuelState = {
         ...currentState,
         playerHand: postCastState.playerHand,
         opponentHand: postCastState.opponentHand,
         opponentHandSize: postCastState.opponentHandSize,
-        playerMana: postCastState.playerMana,
-        opponentMana: postCastState.opponentMana,
         playerLastSpell: postCastState.playerLastSpell,
         opponentLastSpell: postCastState.opponentLastSpell,
         heroSkillsUsed: postCastState.heroSkillsUsed,

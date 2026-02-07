@@ -20,11 +20,12 @@ export type MechanicHandler = (
 const burn: MechanicHandler = (state, caster, spell, countered) => {
   if (countered) return [];
   const target = caster === 'player' ? 'opponent' : 'player';
-  const val = spell.cardSet === 'classic' ? 1 : 2;
+  const val = spell.value || (spell.cardSet === 'classic' ? 1 : 2);
+  const dur = spell.effectDuration || 2;
   return [{ 
     type: 'ADD_EFFECT', 
     target, 
-    value: { type: 'burn', duration: 2, value: val },
+    value: { type: 'burn', duration: dur, value: val },
     description: `🔥 ${target === 'player' ? '你' : '对手'}被灼烧了 (每回合-${val}HP)`
   }];
 };
@@ -32,11 +33,13 @@ const burn: MechanicHandler = (state, caster, spell, countered) => {
 const tangle: MechanicHandler = (state, caster, spell, countered) => {
   if (countered) return [];
   const target = caster === 'player' ? 'opponent' : 'player';
+  const val = spell.value || 1;
+  const dur = spell.effectDuration || 2;
   return [{ 
     type: 'ADD_EFFECT', 
     target, 
-    value: { type: 'tangle', duration: 2, value: 1 }, // Duration 2 to survive turn switch
-    description: `🌿 ${target === 'player' ? '你' : '对手'}被缠绕了 (下张牌费用+1)`
+    value: { type: 'tangle', duration: dur, value: val }, // Duration 2 to survive turn switch
+    description: `🌿 ${target === 'player' ? '你' : '对手'}被缠绕了 (下张牌费用+${val})`
   }];
 };
 
@@ -48,20 +51,22 @@ const freeze: MechanicHandler = (state, caster, spell, countered) => {
     return [{ type: 'MESSAGE', target: 'system', description: '🛡️ 免疫冻结！' }];
   }
   
+  const dur = spell.effectDuration || 1;
   return [{ 
     type: 'ADD_EFFECT', 
     target, 
-    value: { type: 'frozen', duration: 1 },
-    description: `❄️ ${target === 'player' ? '你' : '对手'}被冻结了`
+    value: { type: 'frozen', duration: dur },
+    description: `❄️ ${target === 'player' ? '你' : '对手'}被冻结了${dur > 1 ? ` (${dur}回合)` : ''}`
   }];
 };
 
-const heal: MechanicHandler = (state, caster) => {
+const heal: MechanicHandler = (state, caster, spell) => {
+  const amount = spell.value || 3;
   return [{ 
     type: 'HP_CHANGE', 
     target: caster, 
-    value: 3, // [Balance] 治疗量从 5 降为 3 (参考2费标准)
-    description: `💙 ${caster === 'player' ? '你' : '对手'}恢复了 3 点生命值`
+    value: amount, 
+    description: `💙 ${caster === 'player' ? '你' : '对手'}恢复了 ${amount} 点生命值`
   }];
 };
 
@@ -80,7 +85,7 @@ const draw: MechanicHandler = (state, caster, spell, countered) => {
   if (countered) {
     return [{ type: 'MESSAGE', target: 'system', description: `🤫 ${caster === 'player' ? '你' : '对手'}的抽牌效果被抵消了` }];
   }
-  const count = spell.id === 'hero_vine' ? 2 : 2; // 统一为抽2
+  const count = spell.value || (spell.id === 'hero_vine' ? 2 : 2); 
   return [
     { type: 'DRAW_CARD', target: caster, value: count, description: `📚 ${caster === 'player' ? '你' : '对手'}从卡组抽取了 ${count} 张牌` }
   ];

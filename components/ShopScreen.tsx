@@ -1,133 +1,28 @@
 /**
- * ShopScreen - 商店页面
- * 卡包购买、礼包、首充等商业化入口
+ * ShopScreen - 商店页面 (Refactored for E-2/E-4)
+ * 使用 ShopService 处理商品逻辑，包含限时礼包和限购逻辑
  */
 
 import React, { useState } from 'react';
-import { ArrowLeft, Package, Gift, Crown, Sparkles, Star, Zap, X } from 'lucide-react';
-import { SpellCard } from './SpellCard';
-import { openPack, PACK_CONFIG, SPELLS } from '../constants';
-import { Spell, SpellType } from '../types';
+import { ArrowLeft, Package, Gift, Crown, Sparkles, Star, Zap, Lock, ShoppingBag } from 'lucide-react';
+import { Spell } from '../types';
 import { HapticService } from '../services/haptic';
 import { useToastStore } from '../stores/useToastStore';
 import { PackOpener } from './shop/PackOpener';
+import { ShopService, Product } from '../services/ShopService';
+import { openPack, SPELLS } from '../constants'; 
 
 interface ShopScreenProps {
   balance: number;
   onBack: () => void;
   onUpdateBalance: (newBalance: number) => void;
-  onAddCards?: (cards: SpellType[]) => void;
+  onAddCards?: (cards: string[]) => void;
   purchasedBundles?: string[];
   onPurchaseBundle?: (bundleId: string) => void;
   packInventory?: Record<string, number>;
   onAddPacks?: (packId: string, count: number) => void;
   onConsumePack?: (packId: string) => boolean;
 }
-
-interface PackType {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  icon: React.ReactNode;
-  gradient: string;
-  borderColor: string;
-  glowColor: string;
-  cardsCount: number;
-  guaranteedRarity?: string;
-}
-
-const PACK_TYPES: PackType[] = [
-  {
-    id: 'standard',
-    name: '元素卡包',
-    description: '包含5张随机卡牌',
-    price: 100,
-    icon: <Package className="w-8 h-8" />,
-    gradient: 'from-blue-600 to-indigo-700',
-    borderColor: 'border-blue-500',
-    glowColor: 'shadow-blue-500/30',
-    cardsCount: 5
-  },
-  {
-    id: 'premium',
-    name: '黄金卡包',
-    description: '保底1张稀有卡牌',
-    price: 300,
-    icon: <Crown className="w-8 h-8" />,
-    gradient: 'from-yellow-500 to-amber-600',
-    borderColor: 'border-yellow-500',
-    glowColor: 'shadow-yellow-500/30',
-    cardsCount: 5,
-    guaranteedRarity: 'rare'
-  },
-  {
-    id: 'legendary',
-    name: '传说卡包',
-    description: '保底1张传说卡牌',
-    price: 1000,
-    icon: <Sparkles className="w-8 h-8" />,
-    gradient: 'from-purple-600 to-indigo-700',
-    borderColor: 'border-purple-500',
-    glowColor: 'shadow-purple-500/30',
-    cardsCount: 5,
-    guaranteedRarity: 'legendary'
-  }
-];
-
-interface BundleType {
-  id: string;
-  name: string;
-  description: string;
-  originalPrice: number;
-  price: number;
-  icon: React.ReactNode;
-  gradient: string;
-  items: string[];
-  tag?: string;
-  tagColor?: string;
-}
-
-const BUNDLES: BundleType[] = [
-  {
-    id: 'starter',
-    name: '新手礼包',
-    description: '开局必买，超值优惠',
-    originalPrice: 500,
-    price: 99,
-    icon: <Gift className="w-8 h-8" />,
-    gradient: 'from-green-500 to-emerald-600',
-    items: ['3个元素卡包', '500法力值', '1张稀有卡牌'],
-    tag: '限购1次',
-    tagColor: 'bg-green-500'
-  },
-  {
-    id: 'weekly',
-    name: '周卡',
-    description: '每日领取奖励，持续7天',
-    originalPrice: 700,
-    price: 299,
-    icon: <Star className="w-8 h-8" />,
-    gradient: 'from-orange-500 to-red-600',
-    items: ['立即获得300法力', '每日50法力x7天', '1个黄金卡包'],
-    tag: '超值',
-    tagColor: 'bg-orange-500'
-  },
-  {
-    id: 'monthly',
-    name: '月卡',
-    description: '每日领取奖励，持续30天',
-    originalPrice: 3000,
-    price: 999,
-    icon: <Zap className="w-8 h-8" />,
-    gradient: 'from-purple-600 to-indigo-700',
-    items: ['立即获得1000法力', '每日100法力x30天', '3个传说卡包'],
-    tag: '最划算',
-    tagColor: 'bg-purple-500'
-  }
-];
-
-import { useIsMobile } from '../hooks/useIsMobile';
 
 export const ShopScreen: React.FC<ShopScreenProps> = ({
   balance,
@@ -140,310 +35,262 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
   onAddPacks,
   onConsumePack
 }) => {
-  const isMobile = useIsMobile();
-  const [activeTab, setActiveTab] = useState<'packs' | 'bundles' | 'currency'>('packs');
-  const [openingPack, setOpeningPack] = useState<PackType | null>(null);
+  const [activeTab, setActiveTab] = useState<'packs' | 'bundles'>('packs');
+  const [openingProduct, setOpeningProduct] = useState<Product | null>(null);
+  const [inventoryPackOpening, setInventoryPackOpening] = useState<string | null>(null);
+  
+  // Pack Opener State
   const [revealedCards, setRevealedCards] = useState<Spell[]>([]);
-  const [revealIndex, setRevealIndex] = useState(0);
   const [pityCounter, setPityCounter] = useState({ rare: 0, mythic: 0, legendary: 0 });
   
   const toast = useToastStore();
 
-  const executeOpenPack = (pack: PackType) => {
-    // 生成卡包内容
-    const { cards, newPity } = openPack(pityCounter);
-    setPityCounter(newPity);
+  // === Transaction Logic ===
+  const handlePurchase = (product: Product) => {
+    // 1. Validate
+    const historyMap = purchasedBundles.reduce((acc, id) => ({...acc, [id]: 1}), {}); 
     
-    // 如果是高级卡包，确保保底
-    let finalCards = [...cards];
-    if (pack.guaranteedRarity === 'rare' && !finalCards.some(c => c.rarity === 'rare' || c.rarity === 'mythic' || c.rarity === 'legendary')) {
-      const rareCards = SPELLS.filter(s => s.rarity === 'rare' && !s.id.startsWith('hero_'));
-      finalCards[Math.floor(Math.random() * finalCards.length)] = rareCards[Math.floor(Math.random() * rareCards.length)];
-    }
-    if (pack.guaranteedRarity === 'mythic' && !finalCards.some(c => c.rarity === 'mythic' || c.rarity === 'legendary')) {
-      const mythicCards = SPELLS.filter(s => s.rarity === 'mythic' && !s.id.startsWith('hero_'));
-      finalCards[Math.floor(Math.random() * finalCards.length)] = mythicCards[Math.floor(Math.random() * mythicCards.length)];
-    }
-    if (pack.guaranteedRarity === 'legendary' && !finalCards.some(c => c.rarity === 'legendary')) {
-      const legendaryCards = SPELLS.filter(s => s.rarity === 'legendary' && !s.id.startsWith('hero_'));
-      finalCards[Math.floor(Math.random() * finalCards.length)] = legendaryCards[Math.floor(Math.random() * legendaryCards.length)];
-    }
-
-    setRevealedCards(finalCards);
-    setRevealIndex(0);
-    setOpeningPack(pack);
-    
-    onAddCards?.(finalCards.map(c => c.id));
-  };
-
-  const handleBuyPack = (pack: PackType) => {
-    if (balance < pack.price) {
-      toast.error('法力不足', `需要 ${pack.price} 法力，当前只有 ${balance}`);
-      HapticService.failure();
-      return;
-    }
-
-    HapticService.medium();
-    onUpdateBalance(balance - pack.price);
-    executeOpenPack(pack);
-  };
-  
-  const handleOpenInventoryPack = (pack: PackType) => {
-     if (onConsumePack?.(pack.id)) {
-         HapticService.medium();
-         executeOpenPack(pack);
-     }
-  };
-
-  const handleRevealNext = () => {
-    HapticService.light();
-    if (revealIndex < revealedCards.length - 1) {
-      setRevealIndex(prev => prev + 1);
-    }
-  };
-
-  const handleCloseReveal = () => {
-    setOpeningPack(null);
-    setRevealedCards([]);
-    setRevealIndex(0);
-    toast.success('开包完成', `获得了 ${revealedCards.length} 张卡牌！`);
-  };
-
-  const handleBuyBundle = (bundle: BundleType) => {
-    // 检查限购
-    if (bundle.tag === '限购1次' && purchasedBundles.includes(bundle.id)) {
+    if (balance < product.price) {
+        toast.error('余额不足', `还需要 ${product.price - balance} 法力值`);
+        HapticService.failure();
         return;
     }
 
-    if (balance < bundle.price) {
-      toast.error('法力不足', `需要 ${bundle.price} 法力`);
-      HapticService.failure();
-      return;
+    const result = ShopService.processPurchase(balance, product.id, historyMap);
+    
+    if (!result.success) {
+        toast.error('购买失败', result.error || '未知错误');
+        return;
     }
 
-    // 模拟购买
-    HapticService.success();
+    // 2. Execute Cost
+    onUpdateBalance(balance - result.cost);
+    HapticService.medium();
     
-    // 根据礼包类型发放奖励 (Mock)
-    let rewardMana = 0;
-    if (bundle.id === 'starter') {
-        rewardMana = 500;
-        onAddPacks?.('standard', 3); // 原逻辑：3个元素卡包
-    } else if (bundle.id === 'weekly') {
-        rewardMana = 300;
-        onAddPacks?.('premium', 1);
-    } else if (bundle.id === 'monthly') {
-        rewardMana = 1000;
-        onAddPacks?.('legendary', 3);
-    }
+    // 3. Process Rewards
+    let cardsOpened: Spell[] = [];
+    let packsToAdd: {id: string, count: number}[] = [];
     
-    onUpdateBalance(balance - bundle.price + rewardMana); 
-    
-    // 记录购买
-    onPurchaseBundle?.(bundle.id);
+    result.rewards.forEach(reward => {
+        if (reward.type === 'pack') {
+            if (product.type === 'pack') {
+                // Direct open
+                const { cards, newPity } = openPack(pityCounter);
+                setPityCounter(newPity);
+                cardsOpened = cards;
+            } else {
+                packsToAdd.push({ id: reward.id || 'standard', count: reward.count });
+            }
+        } else if (reward.type === 'mana') {
+            onUpdateBalance(balance - result.cost + reward.count); 
+        } else if (reward.type === 'card') {
+             const spell = SPELLS.find(s => s.id === reward.id);
+             if (spell) cardsOpened.push(spell);
+        }
+    });
 
-    toast.success('购买成功', `${bundle.name} 已添加到您的账户`);
+    // 4. Finalize
+    if (product.type === 'bundle') {
+        onPurchaseBundle?.(product.id);
+        packsToAdd.forEach(p => onAddPacks?.(p.id, p.count));
+        
+        if (cardsOpened.length > 0) {
+             onAddCards?.(cardsOpened.map(c => c.id));
+             setRevealedCards(cardsOpened);
+             setOpeningProduct(product); 
+        } else {
+             toast.success('购买成功', `所有的物品已放入库存`);
+        }
+    } else if (product.type === 'pack') {
+        onAddCards?.(cardsOpened.map(c => c.id));
+        setRevealedCards(cardsOpened);
+        setOpeningProduct(product);
+    }
   };
 
+  const handleOpenInventory = (packId: string) => {
+      if (onConsumePack?.(packId)) {
+        const { cards, newPity } = openPack(pityCounter);
+        setPityCounter(newPity);
+        setRevealedCards(cards);
+        onAddCards?.(cards.map(c => c.id));
+        setInventoryPackOpening(packId); 
+      }
+  };
+
+  // === Render ===
+
+  // Pack Opener Overlay
+  if ((openingProduct && revealedCards.length > 0) || (inventoryPackOpening && revealedCards.length > 0)) {
+     return (
+         <PackOpener 
+            cards={revealedCards}
+            onClose={() => {
+                setOpeningProduct(null);
+                setInventoryPackOpening(null);
+                setRevealedCards([]);
+            }}
+            packName={openingProduct?.name || '卡包'}
+         />
+     );
+  }
+
+  const products = ShopService.getProducts(activeTab === 'packs' ? 'pack' : 'bundle');
+
   return (
-    <div className="min-h-screen bg-slate-950 relative flex flex-col overflow-hidden">
-      {/* 背景 */}
-      <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-900/30 via-slate-950 to-slate-950" />
-      </div>
-
-      {/* 头部 */}
-      <header className="relative z-10 flex items-center justify-between p-3 md:p-4 border-b border-white/10 bg-black/40 backdrop-blur-md safe-area-top shrink-0">
-        <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-          <ArrowLeft className="w-6 h-6 text-white" />
+    <div className="min-h-screen bg-slate-950 pb-20 pt-20 px-4 animate-in fade-in">
+      {/* Header */}
+      <div className="fixed top-0 left-0 right-0 bg-slate-900/80 backdrop-blur-md z-40 p-4 border-b border-white/10 flex items-center justify-between safe-area-top">
+        <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+          <ArrowLeft size={24} />
         </button>
-        <h1 className="text-lg md:text-xl font-wizard font-bold text-white">魔法商店</h1>
-        <div className="flex items-center gap-2 bg-black/60 px-3 md:px-4 py-1.5 md:py-2 rounded-full border border-purple-500/30">
-          <span className="text-purple-400 text-[10px] md:text-xs">💎</span>
-          <span className="text-white text-sm md:text-base font-mono font-bold">{balance}</span>
+        <div className="flex items-center gap-2 font-bold text-xl tracking-widest text-[#ffd700]">
+           <ShoppingBag className="mb-1" />
+           <span>神秘商店</span>
         </div>
-      </header>
-
-      {/* 标签页 */}
-      <div className="relative z-10 flex border-b border-white/10 bg-black/40 shrink-0">
-        {[
-          { id: 'packs', label: '卡包', icon: <Package className="w-4 h-4" /> },
-          { id: 'bundles', label: '礼包', icon: <Gift className="w-4 h-4" /> },
-          { id: 'currency', label: '充值', icon: <Zap className="w-4 h-4" /> }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`
-              flex-1 py-3 md:py-4 flex items-center justify-center gap-2 font-bold text-[10px] md:text-xs uppercase tracking-wider transition-all
-              ${activeTab === tab.id 
-                ? 'text-purple-400 border-b-2 border-purple-500 bg-purple-500/10' 
-                : 'text-gray-500 hover:text-gray-300'
-              }
-            `}
-          >
-            {tab.icon}
-            <span className={isMobile ? 'truncate' : ''}>{tab.label}</span>
-          </button>
-        ))}
+        <div className="bg-black/40 px-3 py-1 rounded-lg border border-purple-500/30 font-mono text-purple-300">
+          {balance} 💎
+        </div>
       </div>
 
-      {/* 内容区域 */}
-      <div className="relative z-10 flex-1 overflow-y-auto p-3 md:p-6 custom-scrollbar">
+      {/* Tabs */}
+      <div className="flex gap-4 mb-8 overflow-x-auto pb-2 no-scrollbar">
+         <button 
+           onClick={() => setActiveTab('packs')}
+           className={`px-6 py-2 rounded-full font-bold transition-all whitespace-nowrap ${activeTab === 'packs' ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30' : 'bg-white/5 text-gray-400'}`}
+         >
+           卡包抽取
+         </button>
+         <button 
+           onClick={() => setActiveTab('bundles')}
+           className={`px-6 py-2 rounded-full font-bold transition-all whitespace-nowrap ${activeTab === 'bundles' ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30' : 'bg-white/5 text-gray-400'}`}
+         >
+           超值礼包
+         </button>
+      </div>
+
+      {/* Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         
-        {/* 卡包页面 */}
+        {/* Packs */}
         {activeTab === 'packs' && (
-          <div className="space-y-4 max-w-4xl mx-auto">
-            {/* 我的卡包 */}
-            {packInventory && Object.keys(packInventory).some(k => (packInventory[k] || 0) > 0) && (
-              <div className="mb-6 p-3 md:p-4 bg-slate-800/40 rounded-2xl border border-white/5">
-                <h2 className="text-white font-bold text-sm md:text-lg mb-3 flex items-center gap-2">
-                   <Package size={16} className="text-amber-400" /> 背包内容
-                </h2>
-                <div className="grid gap-2">
-                  {PACK_TYPES.filter(p => (packInventory[p.id] || 0) > 0).map(pack => (
-                     <div key={`inv-${pack.id}`} className="bg-slate-900/60 rounded-xl border border-white/5 p-2 md:p-3 flex items-center gap-3">
-                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg bg-gradient-to-br ${pack.gradient} flex items-center justify-center text-white shrink-0`}>
-                           {React.cloneElement(pack.icon as React.ReactElement, { size: isMobile ? 20 : 24 })}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                           <div className="text-white font-bold text-xs md:text-sm truncate">{pack.name}</div>
-                           <div className="text-[10px] text-gray-500">数量: <span className="text-white font-mono">{packInventory[pack.id]}</span></div>
-                        </div>
-                        <button 
-                          onClick={() => handleOpenInventoryPack(pack)}
-                          className="px-3 md:px-4 py-1.5 md:py-2 bg-blue-600 rounded-lg text-white text-[10px] md:text-sm font-bold shadow-lg"
-                        >开启</button>
-                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
-              {PACK_TYPES.map(pack => (
-                <div
-                  key={pack.id}
-                  onClick={() => handleBuyPack(pack)}
-                  className={`
-                    relative bg-slate-900/80 rounded-2xl border ${pack.borderColor}/30 p-3 md:p-4 transition-all active:scale-95
-                    shadow-lg ${pack.glowColor} flex ${isMobile ? 'flex-col items-center text-center' : 'items-center gap-4'}
-                  `}
-                >
-                  <div className={`
-                    ${isMobile ? 'w-16 h-16 mb-2' : 'w-20 h-20'} rounded-xl bg-gradient-to-br ${pack.gradient}
-                    flex items-center justify-center text-white shrink-0 shadow-lg
-                  `}>
-                    {React.cloneElement(pack.icon as React.ReactElement, { size: isMobile ? 32 : 40 })}
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-white font-bold text-sm md:text-lg">{pack.name}</h3>
-                    {!isMobile && <p className="text-gray-400 text-xs md:text-sm">{pack.description}</p>}
-                    {pack.guaranteedRarity && (
-                      <span className="inline-block mt-1 text-[9px] md:text-xs px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full font-bold">
-                        保底{pack.guaranteedRarity === 'rare' ? '稀有' : '传说'}
-                      </span>
-                    )}
-                  </div>
-                  
-                  <div className={`${isMobile ? 'mt-2 pt-2 border-t border-white/5 w-full' : 'text-right'}`}>
-                    <div className="flex items-center justify-center md:justify-end gap-1">
-                      <span className="text-sm md:text-2xl font-bold text-white">{pack.price}</span>
-                      <span className="text-[10px] text-purple-400 font-bold">💎</span>
+            <>
+            {/* Inventory Packs */}
+            {Object.entries(packInventory).map(([packId, count]) => (
+                (count as number) > 0 && (
+                <div key={`inv-${packId}`} className="relative bg-slate-900/50 border border-green-500/50 rounded-xl p-6 flex flex-col items-center gap-4 group hover:bg-slate-900 transition-colors">
+                    <div className="absolute top-2 right-2 bg-green-500 text-xs font-bold px-2 py-1 rounded text-black">
+                        库存: {count}
                     </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* 礼包页面 */}
-        {activeTab === 'bundles' && (
-          <div className="space-y-4 max-w-4xl mx-auto">
-            {BUNDLES.map(bundle => (
-              <div key={bundle.id} className="relative bg-slate-900/60 rounded-2xl border border-white/5 p-3 md:p-4 overflow-hidden">
-                {bundle.tag && (
-                  <div className={`absolute top-0 right-0 ${bundle.tagColor} text-white text-[9px] md:text-xs font-bold px-2 md:px-3 py-0.5 md:py-1 rounded-bl-lg`}>
-                    {bundle.tag}
-                  </div>
-                )}
-                
-                <div className={`flex ${isMobile ? 'flex-col' : 'items-start gap-5'}`}>
-                  <div className="flex items-center gap-3 md:block">
-                     <div className={`w-12 h-12 md:w-20 md:h-20 rounded-xl bg-gradient-to-br ${bundle.gradient} flex items-center justify-center text-white shrink-0 ${purchasedBundles.includes(bundle.id) ? 'grayscale opacity-30' : ''}`}>
-                        {React.cloneElement(bundle.icon as React.ReactElement, { size: isMobile ? 24 : 40 })}
-                     </div>
-                     {isMobile && <h3 className="text-white font-bold text-base">{bundle.name}</h3>}
-                  </div>
-                  
-                  <div className="flex-1 min-w-0 mt-3 md:mt-0">
-                    {!isMobile && <h3 className="text-white font-bold text-lg mb-1">{bundle.name}</h3>}
-                    <p className="text-gray-400 text-xs mb-3">{bundle.description}</p>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-1 gap-x-2 gap-y-1">
-                      {bundle.items.map((item, i) => (
-                        <div key={i} className="text-[10px] md:text-xs text-gray-500 flex items-center gap-1 truncate">
-                          <span className="text-green-400 text-xs">✓</span> {item}
-                        </div>
-                      ))}
+                    <div className="w-24 h-24 rounded-lg bg-gradient-to-br from-green-500/20 to-emerald-600/20 flex items-center justify-center border border-green-500/30 group-hover:scale-105 transition-transform animate-pulse-gentle">
+                        <Package size={48} className="text-green-400" />
                     </div>
-                  </div>
-                  
-                  <div className={`mt-4 pt-4 border-t border-white/5 md:border-t-0 md:pt-0 md:text-right flex items-center justify-between md:flex-col md:justify-center gap-2`}>
-                    <div>
-                      <div className="text-gray-500 text-[10px] md:text-xs line-through">{bundle.originalPrice}</div>
-                      <div className="text-xl md:text-3xl font-bold text-green-400">{bundle.price}</div>
+                    <div className="text-center">
+                        <h3 className="font-bold text-lg text-white">拥有: {packId === 'standard' ? '基础卡包' : '卡包'}</h3>
+                        <p className="text-sm text-gray-400">点击立即开启</p>
                     </div>
-                    <button
-                      onClick={() => handleBuyBundle(bundle)}
-                      disabled={purchasedBundles.includes(bundle.id)}
-                      className={`px-6 py-2.5 rounded-xl text-white text-xs md:text-sm font-bold shadow-lg transition-all
-                         ${purchasedBundles.includes(bundle.id) ? 'bg-gray-800 text-gray-400' : 'bg-green-600 active:scale-95'}
-                      `}
+                    <button 
+                        onClick={() => handleOpenInventory(packId)}
+                        className="w-full py-3 mt-auto bg-green-600 hover:bg-green-500 rounded-lg font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-green-600/20"
                     >
-                      {purchasedBundles.includes(bundle.id) ? '已拥有' : '立即购买'}
+                        <Package size={18} /> 开包
                     </button>
-                  </div>
                 </div>
-              </div>
+                )
             ))}
-          </div>
+
+            {products.map(pack => (
+                <div key={pack.id} className={`bg-gradient-to-b from-${pack.badgeColor?.split('-')[1] || 'blue'}-500/5 to-transparent border border-white/10 hover:border-${pack.badgeColor?.split('-')[1] || 'blue'}-500 rounded-2xl p-6 flex flex-col items-center gap-4 transition-all group relative overflow-hidden`}>
+                    
+                    <div className={`w-20 h-20 rounded-xl bg-gradient-to-br from-gray-800 to-gray-700 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-500`}>
+                        {GetProductIcon(pack)}
+                    </div>
+                    
+                    <div className="text-center z-10">
+                        <h3 className="font-bold text-xl mb-1">{pack.name}</h3>
+                        <p className="text-sm text-gray-400 mb-2">{pack.description}</p>
+                    </div>
+
+                    <button
+                        onClick={() => handlePurchase(pack)}
+                        className={`w-full mt-auto py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95
+                            ${balance >= pack.price ? 'bg-white text-black hover:bg-gray-100' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}
+                        `}
+                    >
+                         {balance >= pack.price ? (
+                             <>
+                                <span className="text-cyan-600">{pack.price}</span> 💎 购买
+                             </>
+                         ) : (
+                             <span>余额不足</span>
+                         )}
+                    </button>
+                </div>
+            ))}
+            </>
         )}
 
-        {/* 充值页面 */}
-        {activeTab === 'currency' && (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-w-4xl mx-auto">
-            {[
-              { amount: 100, price: '¥6', bonus: 0 },
-              { amount: 500, price: '¥28', bonus: 50 },
-              { amount: 1000, price: '¥50', bonus: 150 },
-              { amount: 3000, price: '¥128', bonus: 600 },
-              { amount: 5000, price: '¥198', bonus: 1200 },
-              { amount: 10000, price: '¥388', bonus: 3000 }
-            ].map(item => (
-              <div key={item.amount} className="bg-slate-900/80 rounded-2xl border border-white/5 p-4 text-center active:scale-95 transition-all shadow-xl">
-                <div className="text-2xl md:text-4xl mb-2">💎</div>
-                <div className="text-xl md:text-2xl font-bold text-white">{item.amount}</div>
-                {item.bonus > 0 && <div className="text-[10px] md:text-xs text-green-400 font-bold">+{item.bonus} Bonus</div>}
-                <div className="mt-3 py-1 bg-purple-500/10 rounded-full border border-purple-500/20 text-sm md:text-lg font-bold text-purple-400">{item.price}</div>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Bundles */}
+        {activeTab === 'bundles' && products.map(bundle => {
+             const isPurchased = purchasedBundles.includes(bundle.id);
+             return (
+                <div key={bundle.id} className={`bg-slate-900 border border-white/10 rounded-2xl p-6 flex flex-col gap-4 relative overflow-hidden ${isPurchased ? 'opacity-50 grayscale' : ''}`}>
+                    {bundle.badge && !isPurchased && (
+                        <div className={`absolute top-0 right-0 ${bundle.badgeColor} text-white text-xs font-bold px-3 py-1 rounded-bl-xl shadow-lg`}>
+                            {bundle.badge}
+                        </div>
+                    )}
+                    
+                    <div className="flex items-center gap-4">
+                        <div className={`w-16 h-16 rounded-lg bg-gradient-to-br from-slate-800 to-slate-700 flex items-center justify-center`}>
+                            {GetProductIcon(bundle)}
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-lg">{bundle.name}</h3>
+                            <div className="flex gap-2 text-sm text-gray-400">
+                                {bundle.originalPrice && <span className="line-through">💎{bundle.originalPrice}</span>}
+                                <span className="text-red-400 font-bold">💎{bundle.price}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <ul className="space-y-2 bg-black/20 p-3 rounded-lg text-sm text-gray-300">
+                        {bundle.items.map((item, i) => (
+                            <li key={i} className="flex items-center gap-2">
+                                <CheckCircle size={14} className="text-green-500" />
+                                {item.type === 'pack' ? `${item.count}个卡包` : item.type === 'mana' ? `${item.count}法力` : '稀有卡牌'}
+                            </li>
+                        ))}
+                    </ul>
+
+                    <button 
+                        disabled={isPurchased}
+                        onClick={() => !isPurchased && handlePurchase(bundle)}
+                        className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl font-bold shadow-lg shadow-purple-900/40 hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:from-gray-700 disabled:to-gray-800"
+                    >
+                        {isPurchased ? '已购买' : `立即购买 ${bundle.price} 💎`}
+                    </button>
+                </div>
+             );
+        })}
       </div>
-
-      {openingPack && revealedCards.length > 0 && (
-           <PackOpener 
-             packName={openingPack.name}
-             cards={revealedCards}
-             onClose={handleCloseReveal}
-             bgGradient={openingPack.gradient}
-           />
-      )}
     </div>
   );
 };
 
 export default ShopScreen;
+
+const CheckCircle = ({size, className}: {size: number, className?: string}) => (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+);
+
+const GetProductIcon = (product: Product) => {
+    if (product.id.includes('dragon')) return <span className="text-3xl">🐲</span>;
+    if (product.id.includes('starter')) return <Gift className="text-green-400" />;
+    if (product.id.includes('weekly')) return <Star className="text-orange-400" />;
+    if (product.id.includes('legendary')) return <Sparkles className="text-purple-400" />;
+    if (product.id.includes('premium')) return <Crown className="text-yellow-400" />;
+    return <Package className="text-blue-400" />;
+};

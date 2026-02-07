@@ -3,7 +3,12 @@ import { useAccount } from 'wagmi';
 import { Sparkles, Settings, CheckCircle, ShoppingBag } from 'lucide-react';
 
 // Hooks
+import { SpellType, GameMode } from './types/card';
+import { DungeonNode } from './types/dungeon';
 import { usePreloader } from './hooks/usePreloader';
+
+// ... (other imports)
+
 import { useGameLoop } from './hooks/useGameLoop';
 import { useAudioManager } from './hooks/useAudioManager';
 import { useSettings } from './context/SettingsContext';
@@ -28,16 +33,22 @@ import { LoginScreen } from './components/LoginScreen';
 import { MulliganScreen } from './components/MulliganScreen';
 import { ToastContainer } from './components/ui/Toast';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
-import { TurnBanner } from './components/battle/TurnBanner';
-import { TurnTimer } from './components/battle/TurnTimer';
+// [P0 Fix A-3] TurnBanner 和 TurnTimer 已移入 BattleArena 内部，由 useTurnManager 统一驱动
+// import { TurnBanner } from './components/battle/TurnBanner';
+// import { TurnTimer } from './components/battle/TurnTimer';
 import { TutorialOverlay } from './components/battle/TutorialOverlay';
 import { useTutorial } from './hooks/useTutorial';
 
 // Stores
 import { useToastStore } from './stores/useToastStore';
 
+// UI Components
+import { OrientationWarning } from './components/ui/OrientationWarning';
+import { useScreenOrientation } from './hooks/useScreenOrientation';
+
 // Lazy loaded components
 const ShopScreen = React.lazy(() => import('./components/ShopScreen'));
+const CollectionBook = React.lazy(() => import('./components/CollectionBook'));
 
 // Services & Constants
 import { ApiService } from './services/api';
@@ -61,6 +72,9 @@ function App() {
   const { progress, startPreloading } = usePreloader();
   const [gameLoopState, gameLoopActions] = useGameLoop();
   const [audioState, audioActions] = useAudioManager();
+  
+  // D-3: Orientation Check
+  const { isMobileLandscape } = useScreenOrientation();
 
   // ============ 引导系统 ============
   const tutorial = useTutorial(
@@ -70,13 +84,133 @@ function App() {
     gameLoopState.duelState?.roundNumber || 0
   );
 
+  // ============ 逻辑处理器 ============
+
+  const handleResourcesLoaded = useCallback(() => {
+    ui.setIsResourcesLoaded(true);
+    audioActions.playBgm('lobby');
+  }, [ui, audioActions]);
+
+  const handleSelectMode = useCallback((mode: GameMode) => {
+    if (mode === 'dungeon') {
+      if (!user.selectedDeck) {
+        toast.warning('需要牌组', '地牢模式需要先在牌组编辑器中选择一个起始牌组！');
+        ui.setGameState('LOBBY');
+        return;
+      }
+      const newRun = DungeonService.startNewRun(user.selectedDeck);
+      ui.setDungeonRun(newRun);
+      ui.setGameState('DUNGEON_MAP');
+      audioActions.playBgm('lobby');
+    } else {
+      ui.setGameMode(mode);
+      ui.setGameState('LOBBY');
+    }
+  }, [user.selectedDeck, ui, audioActions, toast]);
+
+  const handleResetGame = useCallback(() => {
+    const wasDungeon = !!ui.dungeonRun;
+    const isWin = ui.finalResult?.result === 'WIN';
+
+    ui.resetResult();
+    gameLoopActions.reset();
+    
+    if (wasDungeon) {
+      if (isWin) {
+        ui.setDungeonRun(prev => prev ? DungeonService.advanceNode(prev) : null);
+        ui.setGameState('DUNGEON_MAP');
+      } else {
+        ui.setDungeonRun(null);
+        ui.setGameState('LOBBY');
+      }
+    } else {
+      ui.setGameState('LOBBY');
+    }
+    audioActions.playBgm('lobby');
+  }, [ui, gameLoopActions, audioActions]);
+
+  const handleGameEnd = useCallback(async (
+    result: 'WIN' | 'LOSS',
+    playerCard: SpellType,
+    opponentCard: SpellType,
+    opponentMaxMana: number,
+    opponentHP: number
+  ) => {
+    if (result === 'WIN') {
+      audioActions.playSfx('victory');
+      HapticService.success();
+    } else {
+      audioActions.playSfx('defeat');
+      HapticService.failure();
+    }
+
+    const newStreak = result === 'WIN' ? user.winStreak + 1 : 0;
+    user.setWinStreak(newStreak);
+
+    // [Quest] 更新任务进度
+    QuestManager.updateProgress('play_cards', 1); 
+    if (result === 'WIN') {
+      QuestManager.updateProgress('win_games', 1);
+    }
+    
+    const damage = opponentMaxMana - opponentHP; 
+    if (damage > 0) QuestManager.updateProgress('deal_damage', damage);
+
+    const { newScore, newRank, scoreDelta } = calculateRankUpdate(user.rankScore, result, newStreak);
+    user.setRankScore(newScore);
+    user.setUserRank(newRank);
+
+    try {
+      let finalPayout = 0;
+      let finalIsCrit = false;
+
+      if (user.activeAddress) {
+        const res = await ApiService.settleGame(
+          user.activeAddress,
+          ui.selectedBet,
+          result,
+          playerCard,
+          opponentCard,
+          { 
+            finalPlayerHP: 100, // Should use real HP from state if available
+            finalOpponentHP: opponentHP 
+          },
+          newScore,
+          newRank
+        );
+        user.setBalance(res.newBalance);
+        user.loadUserData(user.activeAddress);
+        finalPayout = res.payout;
+        finalIsCrit = res.isCrit;
+      } else {
+        // Fallback for non-logged in (shouldn't happen with current logic)
+        const mock = calculatePayout(ui.selectedBet, result);
+        finalPayout = mock.payout;
+        finalIsCrit = mock.isCrit;
+      }
+
+      ui.setFinalResult({
+        result,
+        player: playerCard,
+        opponent: opponentCard,
+        payout: finalPayout,
+        isCrit: finalIsCrit,
+        rankUpdates: { scoreDelta, newScore, newRank }
+      });
+      ui.setGameState('RESULT');
+    } catch (e) {
+      console.error('Settlement failed:', e);
+      handleResetGame();
+    }
+  }, [ui, user, audioActions, handleResetGame]);
+
   // ============ 初始化与同步 ============
 
   useEffect(() => {
     startPreloading();
   }, [startPreloading]);
 
-    // 登录完成处理
+  // 登录完成处理
   const handleLoginComplete = useCallback((address: string, isGuest: boolean) => {
     user.setActiveAddress(address);
     ui.setIsLoggedIn(true);
@@ -96,11 +230,23 @@ function App() {
 
   // 游戏结束判定
   useEffect(() => {
-    if (gameLoopState.isGameOver && gameLoopState.gameResult) {
+    if (gameLoopState.isGameOver && gameLoopState.gameResult && ui.gameState === 'DUEL') {
       const finalRes = gameLoopState.gameResult === 'DRAW' ? 'LOSS' : gameLoopState.gameResult;
-      handleGameEnd(finalRes as 'WIN' | 'LOSS');
+      
+      // Safe access to loop state properties
+      const pCard = (gameLoopState.playerCard || 'fire') as SpellType;
+      const oCard = (gameLoopState.opponentCard || 'fire') as SpellType;
+      const dState = gameLoopState.duelState;
+      
+      handleGameEnd(
+        finalRes as 'WIN' | 'LOSS',
+        pCard,
+        oCard,
+        dState?.opponentMaxMana || 0,
+        dState?.opponentHP || 0
+      );
     }
-  }, [gameLoopState.isGameOver, gameLoopState.gameResult]); // handleGameEnd is a stable function, no need to add to deps
+  }, [gameLoopState.isGameOver, gameLoopState.gameResult, handleGameEnd, gameLoopState.playerCard, gameLoopState.opponentCard, gameLoopState.duelState, ui.gameState]);
 
   // 震动与音效反馈
   useEffect(() => {
@@ -119,112 +265,6 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameLoopState.effectMessages]); 
 
-  // ============ 逻辑处理器 ============
-
-  const handleResourcesLoaded = () => {
-    ui.setIsResourcesLoaded(true);
-    audioActions.playBgm('lobby');
-  };
-
-    const handleSelectMode = (mode: any) => {
-    if (mode === 'dungeon') {
-      if (!user.selectedDeck) {
-        toast.warning('需要牌组', '地牢模式需要先在牌组编辑器中选择一个起始牌组！');
-        ui.setGameState('LOBBY');
-        return;
-      }
-      const newRun = DungeonService.startNewRun(user.selectedDeck);
-      ui.setDungeonRun(newRun);
-      ui.setGameState('DUNGEON_MAP');
-      audioActions.playBgm('lobby');
-    } else {
-      ui.setGameMode(mode);
-      ui.setGameState('LOBBY');
-    }
-  };
-
-  const handleGameEnd = async (result: 'WIN' | 'LOSS') => {
-    const lastPlayerSpell = gameLoopState.playerCard || 'fire';
-    const lastOpponentSpell = gameLoopState.opponentCard || 'fire';
-    
-    const { payout, isCrit } = calculatePayout(ui.selectedBet, result);
-
-    if (result === 'WIN') {
-      audioActions.playSfx('victory');
-      HapticService.success();
-    } else {
-      audioActions.playSfx('defeat');
-      HapticService.failure();
-    }
-
-    const newStreak = result === 'WIN' ? user.winStreak + 1 : 0;
-    user.setWinStreak(newStreak);
-
-    // [Quest] 更新任务进度
-    QuestManager.updateProgress('play_cards', 1); // 每次对战算一次 play_games (暂用 play_cards 代替，需优化)
-    if (result === 'WIN') {
-      QuestManager.updateProgress('win_games', 1);
-    }
-    // 假设每次对战造成一定伤害，这里暂且模拟
-    if (gameLoopState.duelState) {
-       const damage = gameLoopState.duelState.opponentMaxMana - gameLoopState.duelState.opponentHP; // 粗略估算
-       if (damage > 0) QuestManager.updateProgress('deal_damage', damage);
-    }
-
-    const { newScore, newRank, scoreDelta } = calculateRankUpdate(user.rankScore, result, newStreak);
-    user.setRankScore(newScore);
-    user.setUserRank(newRank);
-
-    try {
-      if (user.activeAddress) {
-        const { newBalance } = await ApiService.settleGame(
-          user.activeAddress,
-          ui.selectedBet,
-          result,
-          payout,
-          lastPlayerSpell,
-          lastOpponentSpell,
-          isCrit
-        );
-        user.setBalance(newBalance);
-        user.loadUserData(user.activeAddress);
-      }
-
-      ui.setFinalResult({
-        result,
-        player: lastPlayerSpell,
-        opponent: lastOpponentSpell,
-        payout,
-        isCrit,
-        rankUpdates: { scoreDelta, newScore, newRank }
-      });
-      ui.setGameState('RESULT');
-    } catch (e) {
-      console.error('Settlement failed:', e);
-      handleResetGame();
-    }
-  };
-
-  const handleResetGame = () => {
-    const wasDungeon = !!ui.dungeonRun;
-    const isWin = ui.finalResult?.result === 'WIN';
-
-    ui.resetResult();
-    gameLoopActions.reset();
-    
-    if (wasDungeon) {
-      if (isWin) {
-        ui.setDungeonRun(prev => prev ? DungeonService.advanceNode(prev) : null);
-        ui.setGameState('DUNGEON_MAP');
-      } else {
-        ui.setDungeonRun(null);
-        ui.setGameState('LOBBY');
-      }
-    } else {
-      ui.setGameState('LOBBY');
-    }
-    audioActions.playBgm('lobby');
-  };
 
     // ============ 渲染逻辑 ============
 
@@ -245,6 +285,10 @@ function App() {
 
   return (
     <div className={`h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-slate-950 text-white font-tech selection:bg-purple-500/30 touch-pan-y ${isLowQuality ? 'low-quality' : ''}`}>
+      
+      {/* D-3: Force Portrait on Mobile */}
+      {isMobileLandscape && <OrientationWarning />}
+
       {ui.gameState === 'LOBBY' && (
         <header className="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-md border-b border-white/10 px-4 py-3 flex justify-between items-center safe-area-top">
           <div className="flex items-center gap-2">
@@ -307,6 +351,7 @@ function App() {
               ui.setGameState('MATCHMAKING');
             }}
             onOpenShop={() => ui.setGameState('SHOP')}
+            onOpenCollection={() => ui.setGameState('COLLECTION')}
             history={user.history}
             isMuted={audioState.isMuted}
             onToggleMute={audioActions.toggleMute}
@@ -320,7 +365,7 @@ function App() {
             onOpenModeSelect={() => ui.setGameState('MODE_SELECT')}
             language={ui.language}
             onLanguageChange={ui.setLanguage}
-            onClaimQuestReward={(amount) => {
+            onClaimQuestReward={(amount: number) => {
               user.setBalance(user.balance + amount);
               toast.success('奖励到账', `获得 ${amount} 法力值！`);
             }}
@@ -328,7 +373,7 @@ function App() {
         )}
 
         {ui.gameState === 'MODE_SELECT' && (
-          <ModeSelect onSelectMode={handleSelectMode} onBackToLobby={() => ui.setGameState('LOBBY')} tags={[]} />
+          <ModeSelect onSelectMode={handleSelectMode} onBackToLobby={() => ui.setGameState('LOBBY')} />
         )}
 
                 {ui.gameState === 'MATCHMAKING' && (
@@ -365,7 +410,7 @@ function App() {
           {ui.gameState === 'DUNGEON_MAP' && ui.dungeonRun && (
             <DungeonMap 
               runState={ui.dungeonRun} 
-              onSelectNode={(node) => {
+              onSelectNode={(node: DungeonNode) => {
                 if (['BATTLE', 'ELITE', 'BOSS'].includes(node.type)) {
                   const diff = node.type === 'BOSS' ? 'hard' : node.type === 'ELITE' ? 'medium' : 'easy';
                   const opp = AI_PROFILES.find(p => p.difficulty === diff) || AI_PROFILES[0];
@@ -394,12 +439,12 @@ function App() {
             />
           )}
 
-                    {ui.gameState === 'SHOP' && (
+          {ui.gameState === 'SHOP' && (
             <ShopScreen
               balance={user.balance}
               onBack={() => ui.setGameState('LOBBY')}
               onUpdateBalance={user.setBalance}
-              onAddCards={(cardIds) => {
+              onAddCards={(cardIds: SpellType[]) => {
                 user.addCardsToInventory(cardIds);
                 toast.success('卡牌已添加', `${cardIds.length} 张卡牌已加入收藏`);
               }}
@@ -411,12 +456,16 @@ function App() {
             />
           )}
 
+          {ui.gameState === 'COLLECTION' && (
+            <CollectionBook onBack={() => ui.setGameState('LOBBY')} />
+          )}
+
           {ui.gameState === 'MULLIGAN' && gameLoopState.duelState && (
             <MulliganScreen
               initialHand={gameLoopState.duelState.playerHand}
               opponentName={gameLoopState.duelState.aiProfile?.name}
               opponentAvatar={gameLoopState.duelState.aiProfile?.avatar}
-              onConfirm={(indices) => {
+              onConfirm={(indices: number[]) => {
                 gameLoopActions.handleMulligan(indices);
                 tutorial.handleAction('MULLIGAN');
                 ui.setGameState('DUEL');
@@ -428,10 +477,10 @@ function App() {
           {ui.gameState === 'DUEL' && (
             gameLoopState.duelState ? (
               <>
-                <BattleArena
+                                <BattleArena
                 gameLoopState={gameLoopState}
                 selectedBet={ui.selectedBet}
-                onPlayCard={(spellId) => {
+                onPlayCard={(spellId: SpellType) => {
                   if (gameLoopActions.playCard(spellId)) {
                     audioActions.playSfx('cardPlay');
                     audioActions.playSpellSfx(spellId);
@@ -444,7 +493,7 @@ function App() {
                   audioActions.playSfx('button');
                   tutorial.handleAction('END_TURN');
                 }}
-                                onSurrender={() => {
+                onSurrender={() => {
                   ui.showConfirmDialog({
                     title: '确认投降',
                     message: '投降将判定为失败，确定要放弃这场对战吗？',
@@ -464,26 +513,9 @@ function App() {
                 onToggleMute={audioActions.toggleMute}
                 isPlayerShaking={ui.isPlayerShaking}
                 isOpponentShaking={ui.isOpponentShaking}
-                                setTargeting={gameLoopActions.setTargeting}
+                setTargeting={gameLoopActions.setTargeting}
                 />
-                
-                {/* 回合计时器 */}
-                <TurnTimer
-                  isActive={gameLoopState.phase === 'PLAYER_TURN' && !gameLoopState.isProcessing}
-                  duration={60}
-                  warningTime={15}
-                  onTimeUp={() => {
-                    toast.warning('时间耗尽', '回合自动结束');
-                    gameLoopActions.passTurn();
-                  }}
-                />
-                
-                {/* 回合开始横幅 */}
-                <TurnBanner
-                  type={gameLoopState.turnBanner}
-                  roundNumber={gameLoopState.duelState?.roundNumber || 0}
-                  onAnimationComplete={() => {}}
-                />
+                {/* [P0 Fix A-3] TurnTimer 和 TurnBanner 已移入 BattleArena 内部统一管理 */}
               </>
             ) : (
               <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-50">

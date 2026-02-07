@@ -62,7 +62,7 @@ export const ModeSelect: React.FC<ModeSelectProps> = ({ onSelectMode, onBackToLo
 
         {/* 冒险模式 (新) */}
         <div
-          onClick={() => onSelectMode('wild' as any)} 
+          onClick={() => onSelectMode('dungeon')} 
           className="group relative bg-gradient-to-br from-purple-600/30 to-indigo-900/40 border border-purple-500/50 rounded-2xl p-4 md:p-6 cursor-pointer hover:border-purple-400 transition-all duration-300 active:scale-95 shadow-[0_0_20px_rgba(139,92,246,0.2)]"
         >
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] opacity-20" />

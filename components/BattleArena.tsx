@@ -17,9 +17,7 @@ import { HapticService } from '../services/haptic';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { calculateSpellProjection } from '../services/projection';
 import { useSettings } from '../context/SettingsContext';
-import { 
-  TURN_BANNER_PLAYER_DURATION, TURN_BANNER_OPPONENT_DURATION, LONG_PRESS_THRESHOLD 
-} from '../config/timing';
+import { LONG_PRESS_THRESHOLD } from '../config/timing';
 
 // Components
 import { SpellCard } from './SpellCard'; // Needed for Drag Preview
@@ -29,13 +27,16 @@ import BattleBoard from './battle/BattleBoard';
 import BattleEffects from './battle/BattleEffects';
 import CombatFeed from './battle/CombatFeed';
 import TurnBanner from './battle/TurnBanner';
+import { TurnTimer } from './battle/TurnTimer';
 import CardDetailModal from './CardDetailModal';
 
+// New Sub-Components
 // New Sub-Components
 import { OpponentHUD } from './battle/hud/OpponentHUD';
 import { PlayerHUD } from './battle/hud/PlayerHUD';
 import { HandArea } from './battle/hand/HandArea';
 import { DragDropZone } from './battle/board/DragDropZone';
+import { FloatingTextOverlay } from './battle/feedback/FloatingText';
 
 // Hooks
 import { useDragToPlay } from '../hooks/useDragToPlay';
@@ -79,17 +80,12 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [detailSpell, setDetailSpell] = useState<SpellType | null>(null);
   
-  // [P1 回合横幅] 回合开始显示横幅
-  const [turnBannerType, setTurnBannerType] = useState<'player' | 'opponent' | null>(null);
-  const prevPhaseRef = useRef<string | null>(null);
-  const prevRoundRef = useRef<number>(0);
-  
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isMounted = useRef(true);
 
   // Hooks
   const { 
-    canvasRef, showCritEffect, showBloodFlash, projectiles, 
+    canvasRef, showCritEffect, showBloodFlash, floatingTexts, 
     addDamageNumber, triggerCrit, triggerShake, spawnProjectile, shakeClass,
     updateDragTrail
   } = useBattleAnimations(isLowQuality);
@@ -179,30 +175,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     return () => { isMounted.current = false; };
   }, []);
 
-  // [P1 回合横幅] 检测回合切换，显示横幅
-  useEffect(() => {
-    if (!duelState) return;
-    
-    const currentRound = duelState.roundNumber;
-    const prevRound = prevRoundRef.current;
-    const prevPhase = prevPhaseRef.current;
-    
-        // 新回合开始时显示玩家回合横幅
-    if (currentRound > prevRound && phase === 'PLAYER_TURN') {
-      setTurnBannerType('player');
-      const timer = setTimeout(() => setTurnBannerType(null), TURN_BANNER_PLAYER_DURATION);
-      return () => clearTimeout(timer);
-    }
-    // [P0 Fix 3.6] 修正：DuelPhase 中没有 'AI_TURN'，正确值是 'OPPONENT_TURN'
-    if (phase === 'OPPONENT_TURN' && prevPhase === 'PLAYER_TURN') {
-      setTurnBannerType('opponent');
-      const timer = setTimeout(() => setTurnBannerType(null), TURN_BANNER_OPPONENT_DURATION);
-      return () => clearTimeout(timer);
-    }
-    
-    prevPhaseRef.current = phase;
-    prevRoundRef.current = currentRound;
-  }, [phase, duelState?.roundNumber]);
+    // [P0 Fix A-2] TurnBanner 逻辑已移除，统一由 useTurnManager.showTurnBanner 控制
+  // 通过 gameLoopState.turnBanner 传入 TurnBanner 组件
 
   const handlePlayCard = (spellId: SpellType, isConfirmed: boolean = false) => {
     if (!duelState) return;
@@ -245,7 +219,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   
   if (!duelState) return null;
 
-  // [P1 回合横幅] 玩家回合时边框发光
+    // 玩家回合时边框发光
   const isPlayerTurnGlow = phase === 'PLAYER_TURN' && !gameLoopState.isProcessing;
 
   return (
@@ -254,8 +228,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       ${shakeClass}
       ${isPlayerTurnGlow ? 'ring-4 ring-amber-500/30 ring-inset' : ''}
     `}>
-      {/* [P1 回合横幅] 回合开始全屏横幅 */}
-      <TurnBanner type={turnBannerType} roundNumber={duelState?.roundNumber || 1} />
+            {/* [P0 Fix A-2] 回合横幅 — 统一由 useTurnManager 驱动 */}
+      <TurnBanner type={gameLoopState.turnBanner} roundNumber={duelState?.roundNumber || 1} />
       
       {/* Background */}
       <div className="absolute inset-0 z-0 pointer-events-none arena-bg-overlay overflow-hidden">
@@ -267,6 +241,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-slate-950/80" />
       </div>
+
+      <FloatingTextOverlay items={floatingTexts} />
 
       {/* Opponent Area */}
       <div className="w-full flex justify-center items-start pt-4 md:pt-6 z-20 relative safe-area-top">
@@ -392,6 +368,14 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       <div className={`${isMobile ? 'scale-75 origin-top-left absolute top-32 left-4 pointer-events-none z-30' : ''}`}>
          <CombatFeed messages={effectMessages} />
       </div>
+
+            {/* [P0 Fix A-3] 回合计时器 — 统一在 BattleArena 内部渲染，由 useTurnManager 驱动 */}
+      <TurnTimer 
+        isActive={phase === 'PLAYER_TURN' && !gameLoopState.isProcessing}
+        duration={60}
+        warningTime={15}
+        onTimeUp={() => onPass && onPass()}
+      />
 
       {detailSpell && (
          <CardDetailModal 

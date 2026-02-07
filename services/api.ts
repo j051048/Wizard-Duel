@@ -130,10 +130,11 @@ export interface SettleGameRequest {
   userId: string;
   bet: number;
   result: 'WIN' | 'LOSS' | 'DRAW';
-  payout: number;
   playerSpell: SpellType;
   opponentSpell: SpellType;
-  isCrit: boolean;
+  // 以下字段由后端计算或验证
+  payout?: number;
+  isCrit?: boolean;
   // 游戏元数据
   gameId?: string;
   roundNumber?: number;
@@ -270,14 +271,12 @@ export const ApiService = {
     userId: string,
     bet: number,
     result: 'WIN' | 'LOSS' | 'DRAW',
-    payout: number,
     playerSpell: SpellType,
     opponentSpell: SpellType,
-    isCrit: boolean,
     gameMetadata?: { gameId?: string; roundNumber?: number; finalPlayerHP?: number; finalOpponentHP?: number },
     newScore?: number,
     newRank?: Rank
-  ): Promise<{ newBalance: number; verified: boolean }> {
+  ): Promise<{ newBalance: number; verified: boolean; payout: number; isCrit: boolean }> {
     if (CONFIG.useMock) {
       await mockDelay(500);
       
@@ -289,6 +288,9 @@ export const ApiService = {
         rankScore: 0, 
         stats: { wins: 0, losses: 0, totalGames: 0, winStreak: 0 } 
       };
+
+      // 后端计算核心逻辑 (防篡改)
+      const { payout, isCrit } = calculatePayout(bet, result);
 
       // Update Balance
       const profit = result === 'WIN' ? payout - bet : (result === 'DRAW' ? 0 : -bet);
@@ -331,33 +333,33 @@ export const ApiService = {
       histories[userId] = userHistory;
       _saveLocalData(STORAGE_KEYS.HISTORY, histories);
 
-      return { newBalance: profile.balance, verified: true };
+      return { newBalance: profile.balance, verified: true, payout, isCrit };
     }
 
     // 生产模式：调用真实后端
+    // 后端会忽略 client 传来的 payout/isCrit，自行重新计算
+    const { payout: _unused_p, isCrit: _unused_c } = calculatePayout(bet, result); 
+    
     const request: SettleGameRequest = {
       userId,
       bet,
       result,
-      payout,
       playerSpell,
       opponentSpell,
-      isCrit,
       ...gameMetadata,
-      newScore, newRank // Pass these if backend supports it
+      newScore, newRank
     };
 
-    const response = await apiRequest<{ newBalance: number; verified: boolean }>('/api/games/settle', {
+    const response = await apiRequest<{ newBalance: number; verified: boolean; payout: number; isCrit: boolean }>('/api/games/settle', {
       method: 'POST',
       body: JSON.stringify(request),
     });
 
     if (!response.success) {
       console.error('游戏结算失败:', response.error);
-      // 降级处理：尝试从本地档案获取余额或保持现状
       const profiles = _loadLocalData<Record<string, UserProfile>>(STORAGE_KEYS.PROFILE, {});
       const profile = profiles[userId];
-      return { newBalance: profile ? profile.balance : 1000, verified: false };
+      return { newBalance: profile ? profile.balance : 1000, verified: false, payout: 0, isCrit: false };
     }
 
     return response.data!;
