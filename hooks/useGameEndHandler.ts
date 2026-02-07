@@ -88,7 +88,7 @@ export function useGameEndHandler({
           const { supabase, saveBattleResult } = await import('../services/supabase');
           const { data: { session } } = await supabase.auth.getSession();
           
-          if (session) {
+                    if (session) {
             const mock = calculatePayout(ui.selectedBet, result);
             await saveBattleResult({
               user_id: session.user.id,
@@ -98,6 +98,11 @@ export function useGameEndHandler({
               gold_earned: mock.payout,
               xp_earned: result === 'WIN' ? 50 : 10,
             });
+
+            // 同步 rankScore 到 Supabase profiles.xp
+            await supabase.from('profiles').update({
+              xp: newScore,
+            }).eq('id', session.user.id);
             
             finalPayout = mock.payout;
             finalIsCrit = mock.isCrit;
