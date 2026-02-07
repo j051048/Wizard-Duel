@@ -1,9 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Plus, Info } from 'lucide-react';
 import { SpellType, Spell, GameMode } from '../../types';
 import { SpellCard } from '../SpellCard';
 import { getMechanicName } from '../../constants';
 import { createPortal } from 'react-dom';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface CardPoolProps {
   filteredCardPool: Spell[];
@@ -105,8 +107,10 @@ const CardTooltip: React.FC<{ spell: Spell; targetRect: DOMRect | null; visible:
   );
 };
 
-import { useIsMobile } from '../../hooks/useIsMobile';
-
+/**
+ * CardPool - 卡牌池组件
+ * [P0 性能] 使用虚拟滚动优化大量卡牌渲染
+ */
 const CardPool: React.FC<CardPoolProps> = ({
   filteredCardPool,
   onAddCard,
@@ -121,6 +125,31 @@ const CardPool: React.FC<CardPoolProps> = ({
   const isMobile = useIsMobile();
   const [hoveredSpell, setHoveredSpell] = useState<Spell | null>(null);
   const [hoveredRect, setHoveredRect] = useState<DOMRect | null>(null);
+  
+  // 虚拟滚动容器 ref
+  const parentRef = useRef<HTMLDivElement>(null);
+  
+  // 计算列数和卡牌尺寸
+  const columns = isMobile ? 3 : 4;
+  const cardHeight = isMobile ? 130 : 180; // 卡牌高度 + 间距
+  const gap = isMobile ? 6 : 16;
+  
+  // 将卡牌分组为行
+  const rows = useMemo(() => {
+    const result: Spell[][] = [];
+    for (let i = 0; i < filteredCardPool.length; i += columns) {
+      result.push(filteredCardPool.slice(i, i + columns));
+    }
+    return result;
+  }, [filteredCardPool, columns]);
+  
+  // 虚拟化行
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => cardHeight,
+    overscan: 3, // 预渲染上下各 3 行
+  });
 
   return (
     <div className={`flex flex-col bg-[#1a1425] h-full ${isMobile ? '' : 'rounded-xl border border-[#3b304e] shadow-2xl'} relative overflow-hidden`}>
@@ -183,54 +212,93 @@ const CardPool: React.FC<CardPoolProps> = ({
           </div>
        </div>
 
-       <div className={`flex-1 overflow-y-auto ${isMobile ? 'p-2' : 'p-4'} custom-scrollbar`}>
+       {/* [P0 性能] 虚拟滚动容器 */}
+       <div 
+         ref={parentRef}
+         className={`flex-1 overflow-y-auto ${isMobile ? 'px-2' : 'px-4'} custom-scrollbar`}
+       >
           {filteredCardPool.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-500">
               <span className="text-4xl mb-2">🔍</span>
               <span className="text-xs">没有找到匹配的卡牌</span>
             </div>
           ) : (
-            <div className={`grid ${isMobile ? 'grid-cols-3 gap-1.5 pb-40' : 'grid-cols-3 md:grid-cols-4 gap-4 pb-12'}`}>
-               {filteredCardPool.map((spell) => (
-                  <div 
-                    key={spell.id} 
-                    className="relative group cursor-pointer touch-manipulation" 
-                    onClick={(e) => onAddCard(spell.id, e)}
-                    onContextMenu={(e) => onRightClick(e, spell.id)}
-                    onPointerDown={() => onPressStart(spell.id)}
-                    onPointerUp={onPressEnd}
-                    onPointerLeave={() => {
-                      onPressEnd();
-                      setHoveredSpell(null);
-                      setHoveredRect(null);
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isMobile) {
-                        setHoveredSpell(spell);
-                        setHoveredRect(e.currentTarget.getBoundingClientRect());
-                      }
-                    }}
-                    onMouseLeave={() => {
-                      setHoveredSpell(null);
-                      setHoveredRect(null);
+            <div
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                width: '100%',
+                position: 'relative',
+              }}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const rowCards = rows[virtualRow.index];
+                return (
+                  <div
+                    key={virtualRow.key}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: `${virtualRow.size}px`,
+                      transform: `translateY(${virtualRow.start}px)`,
                     }}
                   >
-                    <div className={`transform transition-transform duration-200 ${!isMobile ? 'group-hover:scale-105 group-hover:-translate-y-2' : ''} pointer-events-none`}>
-                       <SpellCard spell={spell} isSmall showMechanic={false} />
-                    </div>
-                    
-                    {/* Hover/Touch Overlay */}
-                    {!isMobile && (
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded-lg pointer-events-none">
-                        <div className="bg-green-600 text-white rounded-full p-1 shadow-lg transform scale-0 group-hover:scale-100 transition-transform">
-                            <Plus size={16} />
+                    <div 
+                      className="grid h-full"
+                      style={{
+                        gridTemplateColumns: `repeat(${columns}, 1fr)`,
+                        gap: `${gap}px`,
+                        padding: `${gap / 2}px 0`,
+                      }}
+                    >
+                      {rowCards.map((spell) => (
+                        <div 
+                          key={spell.id} 
+                          className="relative group cursor-pointer touch-manipulation" 
+                          onClick={(e) => onAddCard(spell.id, e)}
+                          onContextMenu={(e) => onRightClick(e, spell.id)}
+                          onPointerDown={() => onPressStart(spell.id)}
+                          onPointerUp={onPressEnd}
+                          onPointerLeave={() => {
+                            onPressEnd();
+                            setHoveredSpell(null);
+                            setHoveredRect(null);
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isMobile) {
+                              setHoveredSpell(spell);
+                              setHoveredRect(e.currentTarget.getBoundingClientRect());
+                            }
+                          }}
+                          onMouseLeave={() => {
+                            setHoveredSpell(null);
+                            setHoveredRect(null);
+                          }}
+                        >
+                          <div className={`transform transition-transform duration-200 ${!isMobile ? 'group-hover:scale-105 group-hover:-translate-y-2' : ''} pointer-events-none`}>
+                             <SpellCard spell={spell} isSmall showMechanic={false} />
+                          </div>
+                          
+                          {/* Hover/Touch Overlay */}
+                          {!isMobile && (
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded-lg pointer-events-none">
+                              <div className="bg-green-600 text-white rounded-full p-1 shadow-lg transform scale-0 group-hover:scale-100 transition-transform">
+                                  <Plus size={16} />
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    )}
+                      ))}
+                    </div>
                   </div>
-               ))}
+                );
+              })}
             </div>
           )}
+          
+          {/* 底部留白 - 移动端为抽屉预留空间 */}
+          {isMobile && <div className="h-40" />}
           
           {!isMobile && (
             <CardTooltip 

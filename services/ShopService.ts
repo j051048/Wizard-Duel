@@ -20,9 +20,32 @@ export interface Product {
     limit?: number; // Purchase limit (e.g. 1 for Starter Bundle)
     badge?: string;
     badgeColor?: string;
+    expiresAt?: number; // 限时礼包过期时间戳
+    isFirstPurchase?: boolean; // 是否是首充礼包
 }
 
 export const SHOP_CATALOG: Product[] = [
+    // === [P0 商业化] 首充礼包 - 最高优先级展示 ===
+    {
+        id: 'first_purchase_bundle',
+        type: 'bundle',
+        name: '🌟 首充双倍',
+        description: '首次购买限定！双倍价值',
+        price: 100,
+        originalPrice: 600,
+        currencyType: 'mana',
+        items: [
+            { type: 'pack', id: 'premium', count: 3 },
+            { type: 'card', id: 'fire3', count: 1 }, // 地狱爆破 - 稀有卡
+            { type: 'card', id: 'ice3', count: 1 }, // 寒冰屏障
+            { type: 'mana', count: 300 }
+        ],
+        limit: 1,
+        badge: '🔥 首充必买',
+        badgeColor: 'bg-gradient-to-r from-yellow-500 to-amber-600',
+        isFirstPurchase: true
+    },
+
     // === Packs ===
     {
         id: 'standard_pack',
@@ -105,13 +128,75 @@ export const SHOP_CATALOG: Product[] = [
             { type: 'mana', count: 500 }
         ],
         badge: '限时',
-        badgeColor: 'bg-red-600'
+        badgeColor: 'bg-red-600',
+        expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000 // 7 天后过期
+    },
+    
+    // === [P0 商业化] 限时折扣礼包 ===
+    {
+        id: 'weekend_special',
+        type: 'bundle',
+        name: '周末特惠',
+        description: '仅限周末，错过等一周！',
+        price: 300,
+        originalPrice: 900,
+        currencyType: 'mana',
+        items: [
+            { type: 'pack', id: 'premium', count: 5 },
+            { type: 'mana', count: 150 }
+        ],
+        badge: '⏰ 限时67%OFF',
+        badgeColor: 'bg-gradient-to-r from-red-500 to-pink-600',
+        expiresAt: getWeekendExpiry()
     }
 ];
 
+// 计算本周末结束时间
+function getWeekendExpiry(): number {
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    // 计算到下周一 00:00 的毫秒数
+    const daysUntilMonday = dayOfWeek === 0 ? 1 : 8 - dayOfWeek;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + daysUntilMonday);
+    monday.setHours(0, 0, 0, 0);
+    return monday.getTime();
+}
+
 export class ShopService {
     static getProducts(category: ProductType): Product[] {
-        return SHOP_CATALOG.filter(p => p.type === category);
+        return SHOP_CATALOG.filter(p => {
+            if (p.type !== category) return false;
+            // 过滤已过期的限时商品
+            if (p.expiresAt && Date.now() > p.expiresAt) return false;
+            return true;
+        });
+    }
+    
+    // [P0 商业化] 获取首充礼包（优先展示）
+    static getFirstPurchaseBundle(): Product | undefined {
+        return SHOP_CATALOG.find(p => p.isFirstPurchase);
+    }
+    
+    // [P0 商业化] 获取限时礼包（带倒计时）
+    static getLimitedBundles(): Product[] {
+        return SHOP_CATALOG.filter(p => 
+            p.type === 'bundle' && 
+            p.expiresAt && 
+            Date.now() < p.expiresAt
+        );
+    }
+    
+    // [P0 商业化] 计算剩余时间
+    static getTimeRemaining(expiresAt: number): { hours: number, minutes: number, seconds: number } | null {
+        const remaining = expiresAt - Date.now();
+        if (remaining <= 0) return null;
+        
+        const hours = Math.floor(remaining / (1000 * 60 * 60));
+        const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+        
+        return { hours, minutes, seconds };
     }
 
     static getProductById(id: string): Product | undefined {
@@ -133,6 +218,11 @@ export class ShopService {
     ): { success: boolean, cost: number, rewards: any[], error?: string } {
         const product = this.getProductById(productId);
         if (!product) return { success: false, cost: 0, rewards: [], error: '商品不存在' };
+
+        // 检查是否已过期
+        if (product.expiresAt && Date.now() > product.expiresAt) {
+            return { success: false, cost: 0, rewards: [], error: '商品已过期' };
+        }
 
         if (!this.checkPurchaseLimit(productId, purchasedHistory)) {
             return { success: false, cost: 0, rewards: [], error: '已达购买上限' };

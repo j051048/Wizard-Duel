@@ -16,6 +16,10 @@ interface FloatingTextProps {
   items: FloatingTextItem[];
 }
 
+/**
+ * FloatingTextOverlay - 飘字效果组件
+ * [P0 UX] 优化伤害数字显示时间和动画
+ */
 export const FloatingTextOverlay: React.FC<FloatingTextProps> = ({ items }) => {
   return (
     <div className="absolute inset-0 z-50 pointer-events-none overflow-hidden">
@@ -35,28 +39,31 @@ const FloatingText: React.FC<{ item: FloatingTextItem }> = ({ item }) => {
         return {
           color: 'text-red-500',
           shadow: 'drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]',
-          scale: [0.5, 1.5, 1],
-          yOffset: -120,
+          scale: [0.5, 1.8, 1.2],  // 暴击更大的弹跳
+          yOffset: -140,  // 飘得更高
           emoji: '💥',
-          fontSize: 'text-4xl font-extrabold'
+          fontSize: 'text-5xl font-extrabold',  // 更大字体
+          shake: true
         };
       case 'heal':
         return {
           color: 'text-green-400',
           shadow: 'drop-shadow-[0_0_5px_rgba(74,222,128,0.6)]',
-          scale: [0.8, 1.1, 1],
-          yOffset: -80,
+          scale: [0.8, 1.2, 1],
+          yOffset: -90,
           emoji: '💚',
-          fontSize: 'text-2xl font-bold'
+          fontSize: 'text-3xl font-bold',
+          shake: false
         };
       case 'armor':
         return {
           color: 'text-blue-300',
           shadow: 'drop-shadow-[0_0_5px_rgba(147,197,253,0.6)]',
-          scale: [0.8, 1.1, 1],
-          yOffset: -60,
+          scale: [0.8, 1.2, 1],
+          yOffset: -70,
           emoji: '🛡️',
-          fontSize: 'text-2xl font-bold'
+          fontSize: 'text-3xl font-bold',
+          shake: false
         };
       case 'mana':
         return {
@@ -65,7 +72,8 @@ const FloatingText: React.FC<{ item: FloatingTextItem }> = ({ item }) => {
           scale: [0.8, 1.1, 1],
           yOffset: -60,
           emoji: '💎',
-          fontSize: 'text-xl font-bold'
+          fontSize: 'text-xl font-bold',
+          shake: false
         };
        case 'status':
         return {
@@ -74,20 +82,25 @@ const FloatingText: React.FC<{ item: FloatingTextItem }> = ({ item }) => {
           scale: [0.9, 1.1, 1],
           yOffset: -50,
           emoji: '',
-          fontSize: 'text-lg font-bold'
+          fontSize: 'text-lg font-bold',
+          shake: false
         };
       case 'damage':
       default:
         return {
           color: 'text-white',
-          shadow: 'drop-shadow-[0_0_2px_black]',
-          scale: [1, 1.5, 0.8],
-          yOffset: -100,
+          shadow: 'drop-shadow-[0_0_4px_rgba(0,0,0,0.8)]',
+          scale: [0.8, 1.6, 1],  // 更大的弹跳
+          yOffset: -110,
           emoji: '',
-          fontSize: 'text-3xl font-bold'
+          fontSize: 'text-4xl font-bold',  // 更大字体
+          shake: false
         };
     }
   }, [item.type]);
+
+  // [P0 UX] 延长显示时间：暴击 2.5s，普通 2s
+  const duration = item.type === 'crit' ? 2.5 : (item.duration || 2.0);
 
   return (
     <motion.div
@@ -95,22 +108,26 @@ const FloatingText: React.FC<{ item: FloatingTextItem }> = ({ item }) => {
         opacity: 0, 
         scale: settings.scale[0], 
         x: item.x, 
-        y: item.y 
+        y: item.y,
+        rotate: settings.shake ? -5 : 0
       }}
       animate={{ 
-        opacity: [0, 1, 1, 0], 
+        opacity: [0, 1, 1, 1, 0],  // 更长的显示时间
         scale: settings.scale, 
-        y: item.y + settings.yOffset 
+        y: item.y + settings.yOffset,
+        rotate: settings.shake ? [0, -5, 5, -3, 3, 0] : 0,
+        x: settings.shake ? [item.x, item.x - 5, item.x + 5, item.x - 3, item.x + 3, item.x] : item.x
       }}
       exit={{ opacity: 0 }}
       transition={{ 
-        duration: item.duration || 1.5, 
+        duration: duration, 
         ease: "easeOut",
-        times: [0, 0.1, 0.7, 1] 
+        times: [0, 0.1, 0.4, 0.8, 1]  // 调整淡出时机
       }}
       className={`absolute flex items-center gap-1 ${settings.fontSize} ${settings.color} ${settings.shadow} font-wizard z-50`}
       style={{
-          textShadow: '2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000'
+          textShadow: '3px 3px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000',
+          WebkitTextStroke: '1px rgba(0,0,0,0.5)'
       }}
     >
       {settings.emoji && <span className="text-[0.8em]">{settings.emoji}</span>}
