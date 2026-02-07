@@ -19,8 +19,9 @@ export const GlobalChat: React.FC<GlobalChatProps> = ({ userId, username, isOpen
     if (!isOpen) return;
 
     // 初始化并监听消息
-    const initChat = async () => {
+        const initChat = async () => {
       const channel = await matchmaking.init(userId, username);
+      if (!channel) return; // Supabase not configured
       
       channel.on('broadcast', { event: 'chat' }, (payload: { payload: ChatMessage }) => {
         setMessages(prev => [...prev.slice(-49), payload.payload]);

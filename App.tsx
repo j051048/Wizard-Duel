@@ -43,6 +43,7 @@ const ResultsModal = React.lazy(() => import('./components/ResultsModal'));
 const TavernMode = React.lazy(() => import('./components/TavernMode'));
 const ShopScreen = React.lazy(() => import('./components/ShopScreen'));
 const CollectionBook = React.lazy(() => import('./components/CollectionBook'));
+const UserProfilePage = React.lazy(() => import('./components/UserProfilePage'));
 
 // Immediate Components
 import { LoadingScreen } from './components/LoadingScreen';
@@ -179,10 +180,11 @@ function App() {
             onOpenModeSelect={() => ui.setGameState('MODE_SELECT')}
             language={ui.language}
             onLanguageChange={ui.setLanguage}
-            onClaimQuestReward={(amount: number) => {
+                        onClaimQuestReward={(amount: number) => {
               user.setBalance(user.balance + amount);
               toast.success('奖励到账', `获得 ${amount} 法力值！`);
             }}
+            onOpenProfile={() => ui.setGameState('PROFILE')}
           />
         )}
 
@@ -274,9 +276,28 @@ function App() {
             />
           )}
 
-          {/* Collection */}
+                    {/* Collection */}
           {ui.gameState === 'COLLECTION' && (
             <CollectionBook onBack={() => ui.setGameState('LOBBY')} />
+          )}
+
+          {/* User Profile */}
+          {ui.gameState === 'PROFILE' && (
+            <UserProfilePage
+              onBack={() => ui.setGameState('LOBBY')}
+              balance={user.balance}
+              userRank={user.userRank}
+              rankScore={user.rankScore}
+              history={user.history}
+              activeAddress={user.activeAddress}
+              isGuest={ui.isGuest}
+              onUpdateBalance={user.setBalance}
+              onUpdateName={(name: string) => {
+                localStorage.setItem('wizard_display_name', name);
+                toast.success('昵称已更新', name);
+              }}
+              displayName={localStorage.getItem('wizard_display_name') || (user.activeAddress ? `Wizard_${user.activeAddress.slice(0, 6)}` : '游客法师')}
+            />
           )}
 
           {/* Mulligan */}

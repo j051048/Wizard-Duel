@@ -45,7 +45,8 @@ interface LobbyProps {
   onOpenTavernMode?: () => void;
   onOpenShop?: () => void;
   onOpenCollection?: () => void;
-  onClaimQuestReward?: (amount: number) => void; // 新增：领取奖励回调
+    onClaimQuestReward?: (amount: number) => void; // 新增：领取奖励回调
+  onOpenProfile?: () => void;
   gameMode?: GameMode;
   onOpenModeSelect?: () => void;
   language: Language;
@@ -70,7 +71,8 @@ export const Lobby: React.FC<LobbyProps> = ({
   onOpenTavernMode,
   onOpenShop,
   onOpenCollection,
-  onClaimQuestReward,
+    onClaimQuestReward,
+  onOpenProfile,
   gameMode = 'standard',
   onOpenModeSelect,
   language,
@@ -130,7 +132,8 @@ export const Lobby: React.FC<LobbyProps> = ({
         gameMode={gameMode}
         onOpenModeSelect={onOpenModeSelect}
         onOpenTutorial={() => setIsTutorialOpen(true)}
-        onOpenQuests={() => setIsQuestModalOpen(true)}
+                onOpenQuests={() => setIsQuestModalOpen(true)}
+        onOpenProfile={onOpenProfile}
         hasPendingQuests={hasPendingQuests}
         t={t}
       />

@@ -13,6 +13,7 @@ interface TopBarProps {
   onOpenModeSelect?: () => void;
   onOpenTutorial: () => void;
   onOpenQuests?: () => void;
+  onOpenProfile?: () => void;
   hasPendingQuests?: boolean;
   t: (key: string) => string;
 }
@@ -30,6 +31,7 @@ const TopBar: React.FC<TopBarProps> = ({
   onOpenModeSelect,
   onOpenTutorial,
   onOpenQuests,
+  onOpenProfile,
   hasPendingQuests,
   t
 }) => {
@@ -37,16 +39,16 @@ const TopBar: React.FC<TopBarProps> = ({
 
   return (
     <div className={`relative z-10 flex justify-between items-start ${isMobile ? 'p-3' : 'p-4 md:p-6'} safe-area-top`}>
-      {/* Player Profile */}
+            {/* Player Profile */}
       <div className="flex items-center gap-2 md:gap-3 animate-slide-in-left">
-         <div className="relative group">
-            <div className={`${isMobile ? 'w-10 h-10' : 'w-14 h-14'} rounded-full border-2 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.3)] overflow-hidden bg-black`}>
+         <button onClick={onOpenProfile} className="relative group cursor-pointer active:scale-95 transition-transform">
+            <div className={`${isMobile ? 'w-10 h-10' : 'w-14 h-14'} rounded-full border-2 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.3)] overflow-hidden bg-black group-hover:border-amber-400 group-hover:shadow-[0_0_25px_rgba(245,158,11,0.5)] transition-all`}>
                <img src="/pwa-192x192.png" alt="Avatar" className="w-full h-full object-cover" />
             </div>
             <div className={`absolute -bottom-1 -right-1 bg-slate-900 ${isMobile ? 'text-[8px] px-1' : 'text-[10px] px-1.5'} text-amber-500 border border-amber-500/30 py-0.5 rounded-full font-bold`}>
                L.{Math.floor(rankScore / 100) + 1}
             </div>
-         </div>
+         </button>
          
          <div className="flex flex-col">
            <div className="flex items-center gap-1">

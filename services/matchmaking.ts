@@ -46,8 +46,8 @@ class MatchmakingService {
       },
     });
 
-    // 监听在线状态变更
-    this.lobbyChannel
+        // 监听在线状态变更
+    this.lobbyChannel!
       .on('presence', { event: 'sync' }, () => {
         const state = this.lobbyChannel!.presenceState();
         // console.log('Online users:', state);
@@ -69,7 +69,7 @@ class MatchmakingService {
         this.handleMatchAccept(payload);
       });
 
-    await this.lobbyChannel.subscribe(async (status) => {
+    await this.lobbyChannel!.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         await this.updateStatus('online');
       }
