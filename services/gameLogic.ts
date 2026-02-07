@@ -7,6 +7,12 @@
  * - 机制定义 -> services/mechanics.ts
  * - AI 逻辑 -> services/ai.ts
  * - 状态工具 -> services/stateUtils.ts
+ * 
+ * [Phase 3] 战斗系统模块化：
+ * - 元素相克 -> services/combat/elementSystem.ts
+ * - 伤害计算 -> services/combat/damageCalculation.ts
+ * - 连击系统 -> services/combat/comboSystem.ts
+ * - 回合管理 -> services/combat/turnManager.ts
  */
 
 import { 
@@ -24,12 +30,19 @@ import { cloneDuelState } from './stateUtils';
 // [Phase 2] 重新导出 AI 模块，保持向后兼容
 export { executeAITurn, getAISpell, pickBestSpellForAI } from './ai';
 
+// [Phase 3] 重新导出战斗模块，保持向后兼容
+export {
+  getSpellById,
+  evaluateElementInteraction,
+  calculateSpellDamage,
+  calculateSpellCost,
+  calculateComboBonus,
+  updateComboState,
+  prepareNextTurn,
+  checkGameOver,
+  recalculateCostMod
+} from './combat';
 
-// ============ 卡牌查询 ============
-
-export const getSpellById = (id: SpellType): Spell => {
-  return SPELLS.find(s => s.id === id) || SPELLS[0];
-};
 
 // ============ 抽牌逻辑 ============
 
@@ -115,16 +128,15 @@ export const createInitialDuelState = (playerDeck: SpellType[], gameMode: GameMo
   };
 };
 
-// ============ 回合准备 ============
-
 // ============ 辅助逻辑 ============
-
-export const recalculateCostMod = (effects: StatusEffect[]): number => {
-  const tangle = effects.find(e => e.type === 'tangle');
-  return tangle ? (tangle.value || 0) : 0;
-};
+// recalculateCostMod 已迁移到 services/combat/turnManager.ts
 
 // ============ 法力检查 ============
+
+import { 
+  getSpellById, 
+  calculateSpellCost 
+} from './combat';
 
 export const canAffordSpell = (
   spellId: SpellType, 
@@ -138,8 +150,7 @@ export const canAffordSpell = (
     return { canAfford: false, reason: '❄️ 你被冻结了，无法行动！' };
   }
 
-  const spell = getSpellById(spellId);
-  const finalCost = spell.id === 'skip' ? 0 : Math.max(0, spell.manaCost + costMod);
+  const finalCost = calculateSpellCost(spellId, costMod);
   
   if (mana < finalCost) {
     return { canAfford: false, reason: `法力不足 (需要 ${finalCost}, 当前 ${mana})` };
@@ -159,6 +170,12 @@ export const getPlayableCards = (
 // [Phase 2] MECHANIC_DEFINITIONS 已迁移到 services/mechanics.ts
 
 // ============ 单卡执行逻辑 (完全重构) ============
+
+import { 
+  evaluateElementInteraction,
+  calculateComboBonus,
+  updateComboState
+} from './combat';
 
 export const executeSpell = (
   state: Readonly<DuelState>,
@@ -214,7 +231,7 @@ export const executeSpell = (
 
   // 3. 费用计算与扣除
   const costMod = isPlayer ? state.playerCostMod : state.opponentCostMod;
-  const finalCost = spell.id === 'skip' ? 0 : Math.max(0, spell.manaCost + costMod);
+  const finalCost = calculateSpellCost(spellId, costMod);
   actions.push({ type: 'MANA_CHANGE', target: caster, value: -finalCost });
 
   // [Fix] 消耗缠绕效果 (Tangle) - 机制设计为"下一张牌"费用增加，因此生效一次后需移除
@@ -268,61 +285,37 @@ export const executeSpell = (
       return { newState: res.state, logs: res.logs, command: skipCmd };
   }
 
-  // 3. 克制判定 (Counter/Crit)
+  // 3. 克制判定 (Counter/Crit) - 使用 combat 模块
   const targetLastId = isPlayer ? mutableState.opponentLastSpell : mutableState.playerLastSpell;
-  const targetLast = targetLastId ? getSpellById(targetLastId) : null;
+  const { countered, crit } = evaluateElementInteraction(spellId, targetLastId);
   
-  let countered = false;
-  let crit = false;
-  
-  if (targetLast) {
-    if (targetLast.beats === spell.id) {
-       countered = true;
-       actions.push({ type: 'MESSAGE', target: 'system', description: `🚫 [${spell.name}] 被 [${targetLast.name}] 抵消！` });
-    } else if (spell.beats === targetLastId) {
-       crit = true;
-       actions.push({ type: 'MESSAGE', target: 'system', description: `🌊 属性克制！造成暴击！` });
-    }
+  if (countered) {
+    actions.push({ type: 'MESSAGE', target: 'system', description: `🚫 [${spell.name}] 被抵消！` });
+  } else if (crit) {
+    actions.push({ type: 'MESSAGE', target: 'system', description: `🌊 属性克制！造成暴击！` });
   }
 
-  // 4. 基础伤害与护甲
+  // 4. 基础伤害与连击计算
   let dmg = spell.damage;
   if (crit) dmg = Math.floor(dmg * 1.5);
   if (countered) dmg = 0;
 
-  // 连击 (Charge) - [P0 Balance v2.0] 雷电连击上限为2次 (最多+100%伤害)
-  const myLastId = isPlayer ? mutableState.playerLastSpell : mutableState.opponentLastSpell;
-  // [P0 Fix] 修正：hero_thunder 不应该触发法术连击（它是技能，不是法术）
-  const isThunderSpell = (id: string | null) => id && id.startsWith('thunder') && !id.startsWith('hero_');
-  
-  // [P0 Balance] 追踪连击次数，上限2次
-  const MAX_THUNDER_COMBO = 2;
-  const currentCombo = isPlayer ? mutableState.playerConsecutiveThunder : mutableState.opponentConsecutiveThunder;
-  
-  if (!countered && spell.mechanic === 'charge' && isThunderSpell(spell.id)) {
-      if (isThunderSpell(myLastId) && currentCombo < MAX_THUNDER_COMBO) {
-          // 连击生效，增加计数
-          const newCombo = currentCombo + 1;
-          const comboMultiplier = 1 + (newCombo * 0.5); // 1次=1.5x, 2次=2x
-          dmg = Math.floor(spell.damage * comboMultiplier);
-          
-          if (isPlayer) mutableState.playerConsecutiveThunder = newCombo;
-          else mutableState.opponentConsecutiveThunder = newCombo;
-          
-          actions.push({ type: 'MESSAGE', target: 'system', description: `⚡ 闪电连击 x${newCombo}！伤害 +${newCombo * 50}%！` });
-      } else if (isThunderSpell(myLastId) && currentCombo >= MAX_THUNDER_COMBO) {
-          // 已达上限，不再增加伤害，但维持当前连击数
-          dmg = Math.floor(spell.damage * 2); // 维持2x
-          actions.push({ type: 'MESSAGE', target: 'system', description: `⚡ 闪电连击已达上限 (x${MAX_THUNDER_COMBO})！` });
-      } else {
-          // 重置连击计数
-          if (isPlayer) mutableState.playerConsecutiveThunder = 0;
-          else mutableState.opponentConsecutiveThunder = 0;
-      }
+  // 连击 (Charge) - 使用 combat 模块
+  if (!countered) {
+    const comboResult = calculateComboBonus(mutableState, caster, spellId, countered);
+    if (comboResult.comboMessage) {
+      actions.push({ type: 'MESSAGE', target: 'system', description: comboResult.comboMessage });
+    }
+    if (comboResult.multiplier > 1.0) {
+      dmg = Math.floor(spell.damage * comboResult.multiplier);
+    }
+    // 更新连击状态
+    const updatedState = updateComboState(mutableState, caster, spellId, comboResult.newComboCount);
+    Object.assign(mutableState, updatedState);
   } else {
-      // 非雷电法术，重置连击计数
-      if (isPlayer) mutableState.playerConsecutiveThunder = 0;
-      else mutableState.opponentConsecutiveThunder = 0;
+    // 被抵消则重置连击
+    const updatedState = updateComboState(mutableState, caster, spellId, 0);
+    Object.assign(mutableState, updatedState);
   }
 
   // 5. 组合 Actions
@@ -363,100 +356,6 @@ export const executeSpell = (
 
 // [Phase 2] AI 逻辑已迁移到 services/ai.ts
 // 通过顶部的 export { executeAITurn, getAISpell, pickBestSpellForAI } from './ai' 重新导出
-
-
-// ============ 死亡检查 (统一判定) ============
-
-/**
- * 统一死亡检查 - 在所有效果结算后调用
- * 返回游戏结果：'WIN' | 'LOSS' | 'DRAW' | null (游戏继续)
- */
-export const checkGameOver = (state: DuelState): 'WIN' | 'LOSS' | 'DRAW' | null => {
-  const playerDead = state.playerHP <= 0;
-  const opponentDead = state.opponentHP <= 0;
-  
-  if (playerDead && opponentDead) {
-    return 'DRAW'; // 同归于尽 = 平局
-  }
-  if (playerDead) {
-    return 'LOSS';
-  }
-  if (opponentDead) {
-    return 'WIN';
-  }
-  return null; // 游戏继续
-};
-
-// ============ 回合准备 (Patch 2.0) ============
-
-// ============ 回合准备 (Patch 2.0) ============
-
-export const prepareNextTurn = (state: DuelState): DuelState => {
-  const newState = { 
-    ...state,
-    // [P0 Fix] 重置英雄技能使用状态（确保在法力恢复前重置）
-    heroSkillsUsed: false,
-    opponentHeroSkillUsed: false,
-    // 深拷贝数组，避免状态污染
-    playerEffects: [...state.playerEffects],
-    opponentEffects: [...state.opponentEffects],
-    playerHand: [...state.playerHand],
-    playerDeck: [...state.playerDeck],
-    opponentDeck: [...state.opponentDeck],
-  };
-
-  // 1. 回合数自增
-  newState.roundNumber += 1;
-
-  // 2. 状态效果结算 (DoT 优先结算)
-  // [P0 Fix] 灼烧伤害优先于法力恢复，因为如果死于灼烧就无需后续逻辑
-  let burnDmg = 0;
-  const newPlayerEffects: StatusEffect[] = [];
-  state.playerEffects.forEach(e => {
-    if (e.type === 'burn') burnDmg += (e.value || 0);
-    const nextDur = e.duration - 1;
-    if (nextDur > 0) newPlayerEffects.push({ ...e, duration: nextDur });
-    // [P0 Fix] 冻结状态自然递减
-  });
-  newState.playerEffects = newPlayerEffects;
-  // 直接结算灼烧伤害
-  if (burnDmg > 0) newState.playerHP -= burnDmg;
-
-  let oppBurnDmg = 0;
-  const newOpponentEffects: StatusEffect[] = [];
-  state.opponentEffects.forEach(e => {
-    if (e.type === 'burn') oppBurnDmg += (e.value || 0);
-    const nextDur = e.duration - 1;
-    if (nextDur > 0) newOpponentEffects.push({ ...e, duration: nextDur });
-  });
-  newState.opponentEffects = newOpponentEffects;
-  if (oppBurnDmg > 0) newState.opponentHP -= oppBurnDmg;
-
-  // [P0 Fix] 立即死亡检查
-  // 如果任意一方死亡，直接返回状态，不执行法力恢复
-  if (checkGameOver(newState) !== null) {
-      return newState;
-  }
-
-  // 3. 法力成长与恢复 (如果此时双方都存活)
-  newState.playerMaxMana = Math.min(GAME_CONFIG.maxMana, state.playerMaxMana + 1);
-  newState.opponentMaxMana = Math.min(GAME_CONFIG.maxMana, state.opponentMaxMana + 1);
-  newState.playerMana = newState.playerMaxMana;
-  newState.opponentMana = newState.opponentMaxMana;
-
-  // 4. 计算费用修正 (Tangle)
-  const playerTangle = newState.playerEffects.find(e => e.type === 'tangle');
-  newState.playerCostMod = playerTangle ? (playerTangle.value || 0) : 0;
-  
-  const oppTangle = newState.opponentEffects.find(e => e.type === 'tangle');
-  newState.opponentCostMod = oppTangle ? (oppTangle.value || 0) : 0;
-
-  // 5. 随从状态重置
-  newState.playerMinions = newState.playerMinions.map(m => ({ ...m, exhausted: false }));
-  newState.opponentMinions = newState.opponentMinions.map(m => ({ ...m, exhausted: false }));
-
-  return newState;
-};
 
 // ============ 赔率计算 ============
 

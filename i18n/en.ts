@@ -1,0 +1,56 @@
+/**
+ * English Translations
+ */
+
+export const en = {
+  // Lobby
+  'Online': 'ONLINE',
+  'Season 1: Elemental Rising': 'Season 1: Elemental Rising',
+  'No Decks Found': 'No Decks Found',
+  'You need a deck to enter the arena.': 'You need a deck to enter the arena.',
+  'Create Deck': 'Create Deck',
+  'Current Deck': 'Current Deck',
+  'Cards': 'Cards',
+  'Edit Deck': 'Edit Deck',
+  'Select Wager': 'Select Wager',
+  'ENTER ARENA': 'ENTER ARENA',
+  'Select a Deck': 'Select a Deck',
+  'Insufficient Funds': 'Insufficient Funds',
+  'ESTIMATED REWARD': 'ESTIMATED REWARD',
+  'Visit Tavern': 'Visit Tavern',
+  'League': 'League',
+  'PTS': 'PTS',
+  'Wizard Duel': 'WIZARD DUEL',
+  'Season': 'Season',
+  'Elemental Rising': 'Elemental Rising',
+
+  // Quests
+  'Daily Contracts': 'Daily Contracts',
+  'Completed': 'Completed',
+  'New Contracts Available': 'New Contracts Available',
+  'Complete daily contracts to earn Gold. Contracts reset every 24 hours.': 'Complete daily contracts to earn Gold. Contracts reset every 24 hours.',
+  "Today's Targets": "Today's Targets",
+  'Contracts reset in': 'Contracts reset in',
+  'CLAIM': 'CLAIM',
+  'CLAIMED': 'CLAIMED',
+  'GOLD': 'GOLD',
+  'No active quests available.': 'No active quests available.',
+  'Come back tomorrow for more!': 'Come back tomorrow for more!',
+  'CLOSE_WIDGET': 'CLOSE',
+  
+  // Quest Titles & Descriptions
+  'First Blood': 'First Blood',
+  'Win 1 Duel': 'Win 1 Duel',
+  'Spellcaster': 'Spellcaster',
+  'Cast 10 Spells': 'Cast 10 Spells',
+  'Damage Dealer': 'Damage Dealer',
+  'Deal 50 Damage': 'Deal 50 Damage',
+  'Pyromancer': 'Pyromancer',
+  'Cast 3 Fire Spells': 'Cast 3 Fire Spells',
+  'Cryomancer': 'Cryomancer',
+  'Cast 3 Ice Spells': 'Cast 3 Ice Spells',
+  'Grand Magus': 'Grand Magus',
+  'Win 3 Duels': 'Win 3 Duels',
+  'Total Destruction': 'Total Destruction',
+  'Deal 200 Damage': 'Deal 200 Damage',
+};
