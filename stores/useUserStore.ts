@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Rank, Deck, BattleRecord, PlayerStats, SpellType } from '../types';
 import { ApiService } from '../services/api';
+import { supabase, getProfile } from '../services/supabase';
 
 interface UserState {
   activeAddress: string | null;
@@ -43,6 +44,7 @@ interface UserState {
   saveDeck: (deck: Deck) => Promise<void>;
   updateBalance: (newBalance: number) => void;
   addCardsToInventory: (cards: SpellType[]) => Promise<void>;
+  login: (address: string, isGuest: boolean) => Promise<void>;
 }
 
 export const useUserStore = create<UserState>((set, get) => ({
@@ -194,5 +196,10 @@ export const useUserStore = create<UserState>((set, get) => ({
     if (activeAddress) {
       await ApiService.saveInventory(activeAddress, newInventory);
     }
+  },
+
+  login: async (address, isGuest) => {
+    get().setActiveAddress(address);
+    await get().loadUserData(address);
   }
 }));

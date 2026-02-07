@@ -8,7 +8,8 @@ import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { signMessage } from '@wagmi/core';
 import { config } from '../index';
 import { Wallet, User, Sparkles, Shield, ChevronRight } from 'lucide-react';
-import { signInWithWallet } from '../services/supabase';
+import { signInWithWallet, getProfile } from '../services/supabase';
+import { useUserStore } from '../stores/useUserStore';
 
 interface LoginScreenProps {
   onLoginComplete: (address: string, isGuest: boolean) => void;
@@ -79,6 +80,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginComplete }) => 
         
         if (signature) {
           await signInWithWallet(address);
+          
+          const userStore = useUserStore.getState();
+          await userStore.login(address, false);
+          
           onLoginComplete(address, false);
         }
       } catch (e) {
