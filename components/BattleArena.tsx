@@ -384,12 +384,6 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
            onClose={() => setDetailSpell(null)} 
          />
       )}
-
-      {/* Turn Transition Banner */}
-      <TurnBanner 
-        type={turnBanner} 
-        roundNumber={duelState?.roundNumber || 0} 
-      />
     </div>
   );
 };

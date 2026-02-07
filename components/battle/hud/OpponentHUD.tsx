@@ -107,12 +107,21 @@ export const OpponentHUD: React.FC<OpponentHUDProps> = ({
               </button>
            </div>
 
-                      {/* AI Status Bubble */}
-           {/* [P0 Fix 3.5] 修复运算符优先级：&& 优先于 ||，需要加括号 */}
+                      {/* AI Status Bubble - 显示 AI 思考进度 */}
            {(aiStatus.emote === 'thinking' || aiStatus.emote === 'thinking_fast') && (
-              <div className="bg-black/60 backdrop-blur px-3 py-1 rounded-full border border-white/10 text-xs text-amber-300 animate-pulse flex items-center gap-2 shadow-lg">
-                 <span>思考中...</span>
-                 <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" />
+              <div className="bg-black/70 backdrop-blur px-3 py-1.5 rounded-xl border border-amber-500/30 flex items-center gap-2 shadow-lg">
+                 <div className="flex items-center gap-1.5">
+                   <span className="text-xs text-amber-300 font-bold">思考中</span>
+                   <div className="flex gap-0.5">
+                     <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                     <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                     <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                   </div>
+                 </div>
+                 {/* 进度条 */}
+                 <div className="w-12 h-1.5 bg-amber-900/50 rounded-full overflow-hidden">
+                   <div className="h-full bg-gradient-to-r from-amber-500 to-amber-400 rounded-full animate-progress-grow" />
+                 </div>
               </div>
            )}
         </div>
