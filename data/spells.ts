@@ -197,23 +197,23 @@ export const SPELLS: Spell[] = [
   // ============ Ultimates ============
   defineSpell({
     id: 'fire_ultimate', name: '末日审判', manaCost: 10, damage: 15, rarity: 'legendary', mechanic: 'burn', cardSet: 'tournament',
-    artSrc: '/cards/fire-ultimate.png', value: 5
+    artSrc: '/cards/fire-ultimate.webp', value: 5
   }),
   defineSpell({
     id: 'ice_ultimate', name: '绝对终结', manaCost: 8, damage: 10, rarity: 'legendary', mechanic: 'freeze', cardSet: 'tournament',
-    artSrc: '/cards/ice-ultimate.png', effectDuration: 3
+    artSrc: '/cards/ice-ultimate.webp', effectDuration: 3
   }),
   defineSpell({
     id: 'rock_ultimate', name: '万象天引', manaCost: 9, damage: 8, armorGain: 20, rarity: 'legendary', mechanic: 'fortify', cardSet: 'tournament',
-    artSrc: '/cards/rock-ultimate.png'
+    artSrc: '/cards/rock-ultimate.webp'
   }),
   defineSpell({
     id: 'thunder_ultimate', name: '雷神降临', manaCost: 7, damage: 10, rarity: 'legendary', mechanic: 'charge', cardSet: 'tournament',
-    artSrc: '/cards/thunder-ultimate.png'
+    artSrc: '/cards/thunder-ultimate.webp'
   }),
   defineSpell({
     id: 'vine_ultimate', name: '自然之怒', manaCost: 7, damage: 7, rarity: 'legendary', mechanic: 'tangle', cardSet: 'tournament',
-    artSrc: '/cards/vine-ultimate.png'
+    artSrc: '/cards/vine-ultimate.webp'
   }),
 
   // ============ Utilities ============
@@ -265,7 +265,7 @@ export const SPELLS: Spell[] = [
     id: 'skip', 
     name: '跳过回合', 
     emoji: '🏳️', 
-    artSrc: '', 
+    artSrc: '/cards/skip-turn.webp', 
     color: 'text-gray-400', 
     borderColor: 'border-gray-400',
     shadowColor: 'rgba(156,163,175,0.5)',
