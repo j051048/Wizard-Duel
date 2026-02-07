@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { Rank, Deck, BattleRecord, PlayerStats, SpellType } from '../types';
 import { ApiService } from '../services/api';
-import { supabase, getProfile } from '../services/supabase';
 
 interface UserState {
   activeAddress: string | null;
@@ -107,21 +106,30 @@ export const useUserStore = create<UserState>((set, get) => ({
   loadUserData: async (address: string) => {
     set({ isLoading: true });
     try {
-      // 1. 从 Supabase 获取 Profile (如果已登录)
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        const profile = await getProfile(session.user.id);
-        if (profile) {
-          set({
-            balance: profile.gold || 0,
-            userRank: (profile.level && profile.level > 10 ? 'Gold' : 'Iron') as Rank, // 简化逻辑
-            rankScore: profile.xp || 0,
-            winStreak: profile.win_count || 0,
-          });
+            // 1. 尝试从 Supabase 获取 Profile（可选，失败则回退）
+      let supabaseLoaded = false;
+      try {
+        const { supabase, getProfile } = await import('../services/supabase');
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          const profile = await getProfile(session.user.id);
+          if (profile) {
+            set({
+              balance: profile.gold || 0,
+              userRank: (profile.level && profile.level > 10 ? 'Gold' : 'Iron') as Rank,
+              rankScore: profile.xp || 0,
+              winStreak: profile.win_count || 0,
+            });
+            supabaseLoaded = true;
+          }
         }
-      } else {
-        // 回退到 Mock 逻辑 (针对未登录游客)
+      } catch (supabaseErr) {
+        console.warn('Supabase unavailable, using local/mock data:', supabaseErr);
+      }
+
+      // 2. 回退到 Mock/本地逻辑
+      if (!supabaseLoaded) {
         const profile = await ApiService.getProfile(address);
         set({
           balance: profile.balance,

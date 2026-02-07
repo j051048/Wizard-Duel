@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, isSupabaseConfigured } from './supabase';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
 export interface OnlineUser {
@@ -25,7 +25,11 @@ class MatchmakingService {
   private username: string = 'Anonymous';
   private onMatchFound: MatchmakingCallback | null = null;
 
-  async init(userId: string, username: string) {
+    async init(userId: string, username: string) {
+    if (!isSupabaseConfigured) {
+      console.warn('Matchmaking unavailable: Supabase not configured');
+      return;
+    }
     this.userId = userId;
     this.username = username;
     

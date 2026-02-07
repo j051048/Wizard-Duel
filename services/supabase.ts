@@ -1,22 +1,27 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/supabase';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase credentials missing. Check your .env file.');
+/** Supabase 是否已正确配置 */
+export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
+
+if (!isSupabaseConfigured) {
+  console.warn('Supabase credentials missing. Running in offline/mock mode.');
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storage: window.localStorage,
-    storageKey: 'wizard-duel-auth',
-  }
-});
+export const supabase = isSupabaseConfigured
+  ? createClient<Database>(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: window.localStorage,
+        storageKey: 'wizard-duel-auth',
+      }
+    })
+  : null as any; // 未配置时为 null，调用方需通过 isSupabaseConfigured 检查
 
 /**
  * 钱包签名登录流程
@@ -26,6 +31,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
  * 这里我们简化流程，将钱包地址作为用户标识。
  */
 export const signInWithWallet = async (address: string) => {
+  if (!isSupabaseConfigured) throw new Error('Supabase not configured');
   const { data: { user }, error: authError } = await supabase.auth.signInAnonymously({
     options: {
       data: {
@@ -62,6 +68,7 @@ export const signInWithWallet = async (address: string) => {
 };
 
 export const getProfile = async (userId: string) => {
+  if (!isSupabaseConfigured) throw new Error('Supabase not configured');
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -79,6 +86,7 @@ export const saveBattleResult = async (result: {
   gold_earned: number;
   xp_earned: number;
 }) => {
+  if (!isSupabaseConfigured) throw new Error('Supabase not configured');
   const { error: logError } = await supabase
     .from('battle_logs')
     .insert(result);

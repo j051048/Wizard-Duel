@@ -8,7 +8,6 @@ import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { signMessage } from '@wagmi/core';
 import { config } from '../index';
 import { Wallet, User, Sparkles, Shield, ChevronRight } from 'lucide-react';
-import { signInWithWallet, getProfile } from '../services/supabase';
 import { useUserStore } from '../stores/useUserStore';
 
 interface LoginScreenProps {
@@ -66,7 +65,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginComplete }) => 
     }, 500);
   };
 
-  const handleConnectedContinue = async () => {
+    const handleConnectedContinue = async () => {
     if (!agreedToTerms) {
       setShowTerms(true);
       return;
@@ -75,19 +74,25 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginComplete }) => 
     if (address) {
       setIsLoading(true);
       try {
+        // 1. 请求钱包签名验证身份
         const message = `Welcome to Wizard Duel!\n\nVerify your wallet to enter the arena.\n\nTimestamp: ${Date.now()}`;
         const signature = await signMessage(config, { message });
         
         if (signature) {
-          await signInWithWallet(address);
+          // 2. 尝试 Supabase 登录（可选，失败不阻塞）
+          try {
+            const { signInWithWallet } = await import('../services/supabase');
+            await signInWithWallet(address);
+          } catch (supabaseErr) {
+            console.warn('Supabase login skipped (not configured or unavailable):', supabaseErr);
+          }
           
-          const userStore = useUserStore.getState();
-          await userStore.login(address, false);
-          
+          // 3. 无论 Supabase 是否成功，都完成登录流程
           onLoginComplete(address, false);
         }
       } catch (e) {
-        console.error('Signing failed:', e);
+        console.error('Wallet signing failed:', e);
+        // 签名被用户拒绝或出错，不阻塞 — 允许重试
       } finally {
         setIsLoading(false);
       }
