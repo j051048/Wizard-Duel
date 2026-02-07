@@ -148,6 +148,22 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       `}
                       placeholder="输入卡组名称..."
                     />
+                    
+                    {/* Mobile Preset Decks - Below Name */}
+                    {isMobile && (
+                      <div className="flex gap-1.5 justify-center mt-2">
+                        {PRESET_DECKS.map((preset) => (
+                          <button
+                            key={preset.name}
+                            onClick={() => loadPreset(preset)}
+                            className="px-2 py-1 rounded-md bg-purple-900/40 border border-purple-500/30 text-[10px] text-purple-200 hover:bg-purple-600 hover:text-white transition-all flex items-center gap-1"
+                          >
+                            <span>{preset.style === 'aggro' ? '🔥' : preset.style === 'control' ? '❄️' : '⚡'}</span>
+                            {preset.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   
                   {!isMobile && (
