@@ -182,9 +182,34 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({
       confirmedTxRef.current = txHash;
       const rawAmount = customAmount ? parseFloat(customAmount) : donateAmount;
       const finalAmount = Math.floor(rawAmount);
-      onUpdateBalance(balance + finalAmount);
+      const newBalance = balance + finalAmount;
+      onUpdateBalance(newBalance);
       setShowDonatePanel(false);
       setCustomAmount('');
+
+      // 持久化余额到 localStorage（Mock 模式的数据源）
+      if (activeAddress) {
+        try {
+          const profiles = JSON.parse(localStorage.getItem('wizard_user_profile') || '{}');
+          if (profiles[activeAddress]) {
+            profiles[activeAddress].balance = newBalance;
+            localStorage.setItem('wizard_user_profile', JSON.stringify(profiles));
+          }
+        } catch (e) { /* ignore */ }
+
+        // 尝试同步到 Supabase（如果已配置）
+        import('../services/supabase').then(async ({ supabase, isSupabaseConfigured }) => {
+          if (!isSupabaseConfigured) return;
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+              await supabase.from('profiles').update({ gold: newBalance }).eq('id', session.user.id);
+            }
+          } catch (e) {
+            console.warn('Supabase balance sync skipped:', e);
+          }
+        }).catch(() => {});
+      }
 
       // 持久化已处理的交易哈希（只保留最近50条）
       processedTxs.push(txHash);
