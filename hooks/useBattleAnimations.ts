@@ -3,6 +3,16 @@ import { HapticService } from '../services/haptic';
 import { globalFPSMonitor } from '../services/performance';
 import { FloatingTextItem, FloatingTextType } from '../components/battle/feedback/FloatingText';
 
+/**
+ * useBattleAnimations Hook (v2.0)
+ * 
+ * [P0 UX] 增强打击反馈系统
+ * - 新增: 停顿帧 (Hit Stop) 效果
+ * - 新增: 更强烈的屏幕震动
+ * - 新增: 伤害数字弹出动画增强
+ * - 优化: 粒子系统性能
+ */
+
 interface Projectile {
     id: number;
     type: 'player' | 'opp';
@@ -44,6 +54,14 @@ const createParticlePool = (): PooledParticle[] => {
     }));
 };
 
+// [P0 UX] 停顿帧配置
+const HIT_STOP_DURATION = {
+    light: 30,   // 30ms - 普通攻击
+    medium: 50,  // 50ms - 中等伤害
+    heavy: 80,   // 80ms - 高伤害/暴击
+    ultra: 120   // 120ms - 致命一击
+};
+
 export const useBattleAnimations = (isLowQuality: boolean) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
@@ -54,6 +72,7 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
   
   // React State for DOM-based animations (Floating Texts)
   const [floatingTexts, setFloatingTexts] = useState<FloatingTextItem[]>([]);
+  const [isHitStopped, setIsHitStopped] = useState(false);  // [P0 UX] 停顿帧状态
   const [showCritEffect, setShowCritEffect] = useState(false);
   const [showBloodFlash, setShowBloodFlash] = useState(false);
   const [shakeClass, setShakeClass] = useState('');
@@ -156,18 +175,13 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
 
   // NEW: Add Floating Text (Replaces Canvas Damage Numbers)
   const addFloatingText = useCallback((text: string, type: FloatingTextType, isPlayer: boolean, xOffset: number = 0) => {
-    // Determine screen coordinates (roughly)
-    // isPlayer = true -> Player takes damage/heal -> Text appears in Player area (bottom)
-    // BUT wait, isPlayer in `addDamageNumber` meant 'Target is Player'.
-    // Here we make it explicit.
-    
     // Position Logic:
     // Player Avatar Area: ~BottomCenter (50%, 75%)
     // Opponent Avatar Area: ~TopCenter (50%, 20%)
     
-    // Random jitter
-    const jitterX = (Math.random() - 0.5) * 60;
-    const jitterY = (Math.random() - 0.5) * 30;
+    // Random jitter for visual variety
+    const jitterX = (Math.random() - 0.5) * 80;
+    const jitterY = (Math.random() - 0.5) * 40;
 
     const baseX = window.innerWidth * 0.5 + xOffset + jitterX;
     const baseY = isPlayer ? window.innerHeight * 0.70 : window.innerHeight * 0.20;
@@ -180,16 +194,51 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
         type,
         x: baseX,
         y: baseY + jitterY,
-        duration: 1.5
+        duration: type === 'crit' ? 2.0 : 1.5  // 暴击显示更久
     }]);
 
     // Auto-remove after duration (cleanup)
     setTimeout(() => {
         setFloatingTexts(prev => prev.filter(item => item.id !== id));
-    }, 1600);
+    }, type === 'crit' ? 2100 : 1600);
+  }, []);
+
+  // [P0 UX] 停顿帧效果 - 在伤害结算时短暂冻结画面
+  const triggerHitStop = useCallback((intensity: 'light' | 'medium' | 'heavy' | 'ultra' = 'medium') => {
+    const duration = HIT_STOP_DURATION[intensity];
+    
+    // 设置停顿状态
+    setIsHitStopped(true);
+    
+    // 在停顿期间禁用动画
+    if (canvasRef.current) {
+      canvasRef.current.style.animationPlayState = 'paused';
+    }
+    
+    // 延迟恢复
+    setTimeout(() => {
+      setIsHitStopped(false);
+      if (canvasRef.current) {
+        canvasRef.current.style.animationPlayState = 'running';
+      }
+    }, duration);
   }, []);
 
   const addDamageNumber = useCallback((damage: number, isPlayer: boolean, isCrit: boolean = false, type: ParticleType = 'default') => {
+    // [P0 UX] 根据伤害量决定停顿强度
+    let hitStopIntensity: 'light' | 'medium' | 'heavy' | 'ultra' = 'light';
+    if (damage >= 10) hitStopIntensity = 'ultra';
+    else if (damage >= 6) hitStopIntensity = 'heavy';
+    else if (damage >= 3) hitStopIntensity = 'medium';
+    
+    if (isCrit) {
+      hitStopIntensity = 'ultra';  // 暴击总是最强停顿
+    }
+    
+    // 触发停顿帧
+    triggerHitStop(hitStopIntensity);
+    
+    // 触觉反馈
     HapticService.medium();
     if (isCrit) HapticService.heavy();
 

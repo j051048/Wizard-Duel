@@ -1,9 +1,10 @@
 /**
  * 卡牌相关类型定义
  * [Phase B-5] 从 types.ts 拆分
+ * [Balance v2.0] 新增低费卡牌类型
  */
 
-export type SpellType = "fire" | "vine" | "ice" | "thunder" | "rock" | "fire2" | "vine2" | "ice2" | "thunder2" | "rock2" | "fire3" | "vine3" | "ice3" | "thunder3" | "rock3" | "fire4" | "vine4" | "ice4" | "thunder4" | "rock4" | "fire5" | "vine5" | "ice5" | "thunder5" | "rock5" | "fire6" | "vine6" | "ice6" | "rock6" | "fire_ultimate" | "vine_ultimate" | "ice_ultimate" | "thunder_ultimate" | "rock_ultimate" | "healing" | "aoe" | "draw" | "silence" | "hero_fire" | "hero_vine" | "hero_ice" | "hero_thunder" | "hero_rock" | "skip";
+export type SpellType = "fire" | "vine" | "ice" | "thunder" | "rock" | "fire2" | "vine2" | "ice2" | "thunder2" | "rock2" | "fire3" | "vine3" | "ice3" | "thunder3" | "rock3" | "fire4" | "vine4" | "ice4" | "thunder4" | "rock4" | "fire5" | "vine5" | "ice5" | "thunder5" | "rock5" | "fire6" | "vine6" | "ice6" | "rock6" | "fire_ultimate" | "vine_ultimate" | "ice_ultimate" | "thunder_ultimate" | "rock_ultimate" | "healing" | "aoe" | "draw" | "silence" | "hero_fire" | "hero_vine" | "hero_ice" | "hero_thunder" | "hero_rock" | "skip" | "ice5" | "thunder6" | "vine7" | "rock7" | "fire7";
 
 export type Rarity = "common" | "rare" | "mythic" | "legendary";
 

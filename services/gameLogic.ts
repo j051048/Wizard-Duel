@@ -290,13 +290,39 @@ export const executeSpell = (
   if (crit) dmg = Math.floor(dmg * 1.5);
   if (countered) dmg = 0;
 
-  // 连击 (Charge) - [P0 Fix] 雷电连击只考虑手牌法术，不包括英雄技能
+  // 连击 (Charge) - [P0 Balance v2.0] 雷电连击上限为2次 (最多+100%伤害)
   const myLastId = isPlayer ? mutableState.playerLastSpell : mutableState.opponentLastSpell;
   // [P0 Fix] 修正：hero_thunder 不应该触发法术连击（它是技能，不是法术）
   const isThunderSpell = (id: string | null) => id && id.startsWith('thunder') && !id.startsWith('hero_');
-  if (!countered && spell.mechanic === 'charge' && isThunderSpell(spell.id) && isThunderSpell(myLastId)) {
-      dmg = Math.floor(dmg * 1.5); // [Balance] 连击伤害恢复为 1.5 (50% Bonus)
-      actions.push({ type: 'MESSAGE', target: 'system', description: `⚡ 闪电连击！伤害增加50%！` });
+  
+  // [P0 Balance] 追踪连击次数，上限2次
+  const MAX_THUNDER_COMBO = 2;
+  const currentCombo = isPlayer ? mutableState.playerConsecutiveThunder : mutableState.opponentConsecutiveThunder;
+  
+  if (!countered && spell.mechanic === 'charge' && isThunderSpell(spell.id)) {
+      if (isThunderSpell(myLastId) && currentCombo < MAX_THUNDER_COMBO) {
+          // 连击生效，增加计数
+          const newCombo = currentCombo + 1;
+          const comboMultiplier = 1 + (newCombo * 0.5); // 1次=1.5x, 2次=2x
+          dmg = Math.floor(spell.damage * comboMultiplier);
+          
+          if (isPlayer) mutableState.playerConsecutiveThunder = newCombo;
+          else mutableState.opponentConsecutiveThunder = newCombo;
+          
+          actions.push({ type: 'MESSAGE', target: 'system', description: `⚡ 闪电连击 x${newCombo}！伤害 +${newCombo * 50}%！` });
+      } else if (isThunderSpell(myLastId) && currentCombo >= MAX_THUNDER_COMBO) {
+          // 已达上限，不再增加伤害，但维持当前连击数
+          dmg = Math.floor(spell.damage * 2); // 维持2x
+          actions.push({ type: 'MESSAGE', target: 'system', description: `⚡ 闪电连击已达上限 (x${MAX_THUNDER_COMBO})！` });
+      } else {
+          // 重置连击计数
+          if (isPlayer) mutableState.playerConsecutiveThunder = 0;
+          else mutableState.opponentConsecutiveThunder = 0;
+      }
+  } else {
+      // 非雷电法术，重置连击计数
+      if (isPlayer) mutableState.playerConsecutiveThunder = 0;
+      else mutableState.opponentConsecutiveThunder = 0;
   }
 
   // 5. 组合 Actions

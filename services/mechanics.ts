@@ -43,20 +43,34 @@ const tangle: MechanicHandler = (state, caster, spell, countered) => {
   }];
 };
 
+/**
+ * 冻结机制 (Balanced v2.0)
+ * 
+ * 机制说明：
+ * - 冻结使目标跳过下一次行动机会
+ * - effectDuration 现在统一为 1（跳过一次行动）
+ * - 多个冻结效果不叠加持续时间（刷新机制）
+ * - 免疫冻结状态 (thawed) 可以抵挡冻结
+ */
 const freeze: MechanicHandler = (state, caster, spell, countered) => {
   if (countered) return [];
   const target = caster === 'player' ? 'opponent' : 'player';
   const targetEffects = target === 'player' ? state.playerEffects : state.opponentEffects;
+  
+  // 检查免疫状态
   if (targetEffects.some(e => e.type === 'thawed')) {
     return [{ type: 'MESSAGE', target: 'system', description: '🛡️ 免疫冻结！' }];
   }
   
-  const dur = spell.effectDuration || 1;
+  // [P0 Balance] 冻结统一为 1 回合，不再支持多回合冻结
+  // 即使卡牌设置了 effectDuration > 1，也强制为 1
+  const dur = Math.min(spell.effectDuration || 1, 1);
+  
   return [{ 
     type: 'ADD_EFFECT', 
     target, 
     value: { type: 'frozen', duration: dur },
-    description: `❄️ ${target === 'player' ? '你' : '对手'}被冻结了${dur > 1 ? ` (${dur}回合)` : ''}`
+    description: `❄️ ${target === 'player' ? '你' : '对手'}被冻结了！(跳过下一次行动)`
   }];
 };
 

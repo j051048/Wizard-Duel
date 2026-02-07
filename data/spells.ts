@@ -146,6 +146,33 @@ export const SPELLS: Spell[] = [
     artSrc: '/cards/rock-pebble.webp'
   }),
 
+  // ============ 新增低费卡牌 (Balance v2.0) ============
+  // [P0 Balance] 填补费用曲线空白，增加前期选择
+  
+  // 0费卡牌 - 灵活过渡
+  defineSpell({
+    id: 'fire7', name: '余烬', manaCost: 0, damage: 1, rarity: 'common', mechanic: 'burn',
+    artSrc: '/cards/fire-spark.webp', value: 1  // 0费1伤+1灼烧，弱但免费
+  }),
+  defineSpell({
+    id: 'vine7', name: '嫩芽', manaCost: 0, damage: 0, rarity: 'common', mechanic: 'tangle',
+    artSrc: '/cards/vine-lash.webp', value: 1  // 0费纯控制
+  }),
+  
+  // 1费卡牌 - 补充
+  defineSpell({
+    id: 'ice5', name: '寒霜箭', manaCost: 1, damage: 1, rarity: 'common', mechanic: 'freeze',
+    artSrc: '/cards/ice-bite.webp'  // 1费1伤+冻结，快速控制
+  }),
+  defineSpell({
+    id: 'thunder6', name: '电火花', manaCost: 1, damage: 3, rarity: 'common', mechanic: 'charge',
+    artSrc: '/cards/thunder-shock.webp'  // 1费3伤，高性价比但无机制
+  }),
+  defineSpell({
+    id: 'rock7', name: '碎石甲', manaCost: 1, damage: 1, armorGain: 2, rarity: 'common', mechanic: 'fortify',
+    artSrc: '/cards/rock-pebble.webp'  // 1费攻防兼备
+  }),
+
   // ============ Mid Cost Fillers (C-6) ============
   defineSpell({
       // New: 2 Mana Hybrid
@@ -163,57 +190,51 @@ export const SPELLS: Spell[] = [
       artSrc: '/cards/vine-growth.webp'
   }),
 
-  // ============ High Cost / Legendaries ============
-  // Adjusting rock5 (Mountain) -> Moved/Renamed to rock_mountain due to conflict? 
-  // Wait, I used rock5 above as '坚岩护手'. Original rock5 was '崇山峻岭' (6 mana).
-  // I should rename the new rock5 to rock_gauntlet or just use available IDs. 
-  // Let's call the new one 'rock_spike' (but id must be in union). 
-  // The union defined rock5. I'll use rock_spike for the new one if allowed, or reuse rock5 for the legendary and create a new ID.
-  // Actually, I'll use rock5 for Mountain (Legendary) as intended, and use 'rock3' which I already defined.
-  // I need more IDs in SpellType union to be safe.
-  
+  // ============ High Cost / Legendaries (Balanced v2.0) ============
+  // [P0 Balance] 高费卡性价比调整
   defineSpell({
-     id: 'rock6', name: '崇山峻岭', manaCost: 6, damage: 6, armorGain: 10, rarity: 'legendary', mechanic: 'fortify', cardSet: 'tournament',
-     artSrc: '/cards/rock-mountain.webp', summonId: 'rock_golem'
+     id: 'rock6', name: '崇山峻岭', manaCost: 7, damage: 4, armorGain: 8, rarity: 'legendary', mechanic: 'fortify', cardSet: 'tournament',
+     artSrc: '/cards/rock-mountain.webp', summonId: 'rock_golem'  // 费用 6→7，伤害 6→4，护甲 10→8
   }),
-   defineSpell({
-     id: 'fire6', name: '火焰波', manaCost: 6, damage: 10, rarity: 'legendary', mechanic: 'burn', cardSet: 'tournament',
-     artSrc: '/cards/fire-wave.webp', value: 4
+  defineSpell({
+     id: 'fire6', name: '火焰波', manaCost: 6, damage: 7, rarity: 'legendary', mechanic: 'burn', cardSet: 'tournament',
+     artSrc: '/cards/fire-wave.webp', value: 2  // 伤害 10→7，灼烧 4→2
   }),
-   defineSpell({
-     id: 'ice6', name: '绝对零度', manaCost: 6, damage: 8, rarity: 'legendary', mechanic: 'freeze', cardSet: 'tournament',
-     artSrc: '/cards/ice-zero.webp', effectDuration: 2
+  defineSpell({
+     id: 'ice6', name: '绝对零度', manaCost: 6, damage: 6, rarity: 'legendary', mechanic: 'freeze', cardSet: 'tournament',
+     artSrc: '/cards/ice-zero.webp', effectDuration: 1  // 伤害 8→6，冻结 2→1 回合
   }),
   defineSpell({
      id: 'thunder5', name: '雷神之怒', manaCost: 5, damage: 5, rarity: 'mythic', mechanic: 'charge', cardSet: 'tournament',
      artSrc: '/cards/thunder-storm.webp'
   }),
   defineSpell({
-     id: 'vine6', name: '森林之握', manaCost: 4, damage: 5, rarity: 'rare', mechanic: 'tangle', cardSet: 'tournament',
-     artSrc: '/cards/vine-grasp.webp'
+     id: 'vine6', name: '森林之握', manaCost: 4, damage: 4, rarity: 'rare', mechanic: 'tangle', cardSet: 'tournament',
+     artSrc: '/cards/vine-grasp.webp', value: 2  // 伤害 5→4，增加缠绕值
   }),
 
 
-  // ============ Ultimates ============
+  // ============ Ultimates (Balanced v2.0) ============
+  // [P0 Balance] Ultimate 卡牌整体削弱，避免一卡定胜负
   defineSpell({
-    id: 'fire_ultimate', name: '末日审判', manaCost: 10, damage: 15, rarity: 'legendary', mechanic: 'burn', cardSet: 'tournament',
-    artSrc: '/cards/fire-ultimate.webp', value: 5
+    id: 'fire_ultimate', name: '末日审判', manaCost: 10, damage: 10, rarity: 'legendary', mechanic: 'burn', cardSet: 'tournament',
+    artSrc: '/cards/fire-ultimate.webp', value: 3  // 伤害 15→10，灼烧 5→3
   }),
   defineSpell({
-    id: 'ice_ultimate', name: '绝对终结', manaCost: 8, damage: 10, rarity: 'legendary', mechanic: 'freeze', cardSet: 'tournament',
-    artSrc: '/cards/ice-ultimate.webp', effectDuration: 3
+    id: 'ice_ultimate', name: '绝对终结', manaCost: 8, damage: 8, rarity: 'legendary', mechanic: 'freeze', cardSet: 'tournament',
+    artSrc: '/cards/ice-ultimate.webp', effectDuration: 1  // 伤害 10→8，冻结 3→1 回合
   }),
   defineSpell({
-    id: 'rock_ultimate', name: '万象天引', manaCost: 9, damage: 8, armorGain: 20, rarity: 'legendary', mechanic: 'fortify', cardSet: 'tournament',
-    artSrc: '/cards/rock-ultimate.webp'
+    id: 'rock_ultimate', name: '万象天引', manaCost: 9, damage: 6, armorGain: 12, rarity: 'legendary', mechanic: 'fortify', cardSet: 'tournament',
+    artSrc: '/cards/rock-ultimate.webp'  // 伤害 8→6，护甲 20→12
   }),
   defineSpell({
-    id: 'thunder_ultimate', name: '雷神降临', manaCost: 7, damage: 10, rarity: 'legendary', mechanic: 'charge', cardSet: 'tournament',
-    artSrc: '/cards/thunder-ultimate.webp'
+    id: 'thunder_ultimate', name: '雷神降临', manaCost: 8, damage: 8, rarity: 'legendary', mechanic: 'charge', cardSet: 'tournament',
+    artSrc: '/cards/thunder-ultimate.webp'  // 费用 7→8，伤害 10→8
   }),
   defineSpell({
-    id: 'vine_ultimate', name: '自然之怒', manaCost: 7, damage: 7, rarity: 'legendary', mechanic: 'tangle', cardSet: 'tournament',
-    artSrc: '/cards/vine-ultimate.webp'
+    id: 'vine_ultimate', name: '自然之怒', manaCost: 7, damage: 6, rarity: 'legendary', mechanic: 'tangle', cardSet: 'tournament',
+    artSrc: '/cards/vine-ultimate.webp', value: 2  // 伤害 7→6，增加缠绕值
   }),
 
   // ============ Utilities ============

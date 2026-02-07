@@ -2,6 +2,15 @@ import { SpellType, DuelPhase } from '../../../types';
 import BattleHand from '../BattleHand';
 import { TutorialBubble } from '../../ui/TutorialBubble';
 
+/**
+ * HandArea - 手牌区域组件 (v2.0)
+ * 
+ * [P0 UX] 移动端优化:
+ * - 安全区域适配
+ * - 触控热区扩大
+ * - 小屏幕滚动支持
+ */
+
 interface HandAreaProps {
   hand: SpellType[];
   playableCards: SpellType[];
@@ -35,7 +44,8 @@ export const HandArea: React.FC<HandAreaProps> = ({
   if (isMobile) {
       /* ====== 移动端底部布局：横向滚动卡牌 ====== */
       return (
-        <div className="absolute bottom-0 left-0 right-0 z-30 safe-area-bottom pointer-events-none">
+        <div className="absolute bottom-0 left-0 right-0 z-30 pointer-events-none" 
+             style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
             <div className="relative w-full flex flex-col justify-end">
                 <div id="player-hand-container" className="w-full relative z-40 pointer-events-auto">
                     <TutorialBubble 
@@ -43,20 +53,23 @@ export const HandArea: React.FC<HandAreaProps> = ({
                         text="👆 拖动或点击出牌！" 
                         position="top"
                     />
-                    <BattleHand 
-                        hand={hand}
-                        playableCards={playableCards}
-                        phase={phase}
-                        isProcessing={isProcessing}
-                        isMobile={true}
-                        dragState={dragState}
-                        startDrag={startDrag}
-                        onPointerDownCard={onCardPressStart}
-                        onPointerUpCard={onCardPressEnd}
-                        onMouseEnterCard={setHoveredSpellId}
-                        onMouseLeaveCard={() => setHoveredSpellId(null)}
-                        onDoubleClickCard={(spellId) => handlePlayCard(spellId, true)}
-                    />
+                    {/* [P0 UX] 横向滚动容器 - 支持多卡牌 */}
+                    <div className="overflow-x-auto overflow-y-hidden scrollbar-hide px-2">
+                        <BattleHand 
+                            hand={hand}
+                            playableCards={playableCards}
+                            phase={phase}
+                            isProcessing={isProcessing}
+                            isMobile={true}
+                            dragState={dragState}
+                            startDrag={startDrag}
+                            onPointerDownCard={onCardPressStart}
+                            onPointerUpCard={onCardPressEnd}
+                            onMouseEnterCard={setHoveredSpellId}
+                            onMouseLeaveCard={() => setHoveredSpellId(null)}
+                            onDoubleClickCard={(spellId) => handlePlayCard(spellId, true)}
+                        />
+                    </div>
                     
                     {/* [UI Polish] 底部纹理条 - 视觉装饰 */}
                     <div className="absolute bottom-0 left-0 right-0 h-3 bg-[#0a0502] border-t border-[#3d2e1e] z-0 opacity-80 pointer-events-none">
@@ -72,7 +85,7 @@ export const HandArea: React.FC<HandAreaProps> = ({
 
   /* ====== 桌面端布局 ====== */
   return (
-    <div id="player-hand-container" className="absolute bottom-0 left-0 right-0 z-30 pointer-events-none flex justify-center pb-4 md:pb-6">
+    <div id="player-hand-container" className="absolute bottom-0 left-0 right-0 z-30 pointer-events-none flex justify-center pb-4 md:pb-6 safe-area-bottom">
         <div className="relative pointer-events-auto">
              {/* [P0 新手引导] 首次出牌气泡 */}
              <TutorialBubble 

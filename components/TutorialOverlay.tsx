@@ -1,152 +1,286 @@
-import React, { useState, useEffect } from 'react';
-import { X, ChevronRight, Info } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, ChevronRight, SkipForward, Lightbulb, Target } from 'lucide-react';
+import { TutorialStepConfig } from '../data/tutorialSteps';
 
-interface TutorialStep {
-  title: string;
-  content: string;
-  targetId?: string; 
-  position: 'top' | 'bottom' | 'center' | 'left' | 'right';
-  requiredAction?: 'PLAY_FIRE_CARD' | 'USE_SKILL'; // [New 6.4] 需要执行的操作
-  isBlocking?: boolean; // [New 6.4] 是否锁定操作
-}
+/**
+ * TutorialOverlay (v2.0)
+ * 
+ * 全新设计的新手引导覆盖层
+ * - 支持高亮特定元素
+ * - 箭头指向目标
+ * - 阻塞/非阻塞模式
+ * - 进度条显示
+ */
 
 interface TutorialOverlayProps {
-  onComplete: () => void;
-  lastAction?: string; // 最近一次玩家执行的操作 ID
+  step: TutorialStepConfig | null;
+  onNext: () => void;
+  onSkip?: () => void;
+  progress?: { current: number; total: number; percentage: number };
 }
 
-const steps: TutorialStep[] = [
-  {
-    title: "欢迎来到巫师对决！",
-    content: "你将扮演一名掌握五行元素的巫师，通过合理的卡牌组合击败对手。点击屏幕继续。",
-    position: 'center'
-  },
-  {
-    title: "你的手牌",
-    content: "点击卡牌可以预览效果和预估伤害。再次点击或上划即可释放魔法！",
-    targetId: 'player-card-0',
-    position: 'bottom'
-  },
-  {
-    title: "克制实战！",
-    content: "对手现在使用了 [荆棘缠绕]，属于藤蔓系。请从手牌中拖拽一张 [火系卡牌] 来克制它，造成双倍伤害！",
-    targetId: 'player-card-0',
-    position: 'bottom',
-    requiredAction: 'PLAY_FIRE_CARD',
-    isBlocking: true
-  },
-  {
-    title: "做得好！",
-    content: "双倍伤害非常致命。消灭对手的生命值即可获胜。祝你好运，巫师！",
-    position: 'center'
-  }
-];
+export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ 
+  step, 
+  onNext, 
+  onSkip,
+  progress 
+}) => {
+  const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+  const [contentPosition, setContentPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
-export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ onComplete, lastAction }) => {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [highlightStyle, setHighlightStyle] = useState<React.CSSProperties>({});
-
-  const step = steps[currentStep];
-
-  // [New 6.4] 监听操作执行，实现引导闭环
+  // 计算目标元素位置
   useEffect(() => {
-    if (step.requiredAction && lastAction === step.requiredAction) {
-        setTimeout(() => handleNext(true), 1000); // 延迟跳转，强制执行下一步
+    if (!step?.targetId) {
+      setTargetRect(null);
+      return;
     }
-  }, [lastAction, step.requiredAction]);
 
-  useEffect(() => {
-    if (step.targetId) {
-      const el = document.getElementById(step.targetId);
+    const updatePosition = () => {
+      const el = document.getElementById(step.targetId!);
       if (el) {
-        const rect = el.getBoundingClientRect();
-        setHighlightStyle({
-          position: 'fixed',
-          top: rect.top - 8,
-          left: rect.left - 8,
-          width: rect.width + 16,
-          height: rect.height + 16,
-          boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.7)',
-          borderRadius: '12px',
-          zIndex: 90,
-          pointerEvents: 'none',
-          transition: 'all 0.3s ease'
-        });
+        setTargetRect(el.getBoundingClientRect());
       }
-    } else {
-      setHighlightStyle({
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        zIndex: 90,
-        pointerEvents: 'none'
-      });
-    }
-  }, [currentStep, step.targetId]);
+    };
 
-  const handleNext = (e?: React.MouseEvent | boolean) => {
-    // 如果是 MouseEvent，阻止冒泡；如果是 boolean true 则强制跳过
-    const force = typeof e === 'boolean' ? e : false;
+    updatePosition();
     
-    // [New 6.4] 如果是强制执行步骤，且非强制跳过，则点击背景不跳转
-    if (step.isBlocking && !force) return;
+    // 监听窗口变化
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition);
+    
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition);
+    };
+  }, [step?.targetId]);
 
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(prev => prev + 1);
-    } else {
-      onComplete();
+  // 计算内容框位置
+  useEffect(() => {
+    if (!step) return;
+
+    const padding = 20;
+    const boxWidth = 320;
+    const boxHeight = 200;
+    
+    let x = window.innerWidth / 2 - boxWidth / 2;
+    let y = window.innerHeight / 2 - boxHeight / 2;
+
+    if (targetRect) {
+      switch (step.position) {
+        case 'top':
+          x = targetRect.left + targetRect.width / 2 - boxWidth / 2;
+          y = targetRect.top - boxHeight - padding - 20;
+          break;
+        case 'bottom':
+          x = targetRect.left + targetRect.width / 2 - boxWidth / 2;
+          y = targetRect.bottom + padding + 20;
+          break;
+        case 'left':
+          x = targetRect.left - boxWidth - padding - 20;
+          y = targetRect.top + targetRect.height / 2 - boxHeight / 2;
+          break;
+        case 'right':
+          x = targetRect.right + padding + 20;
+          y = targetRect.top + targetRect.height / 2 - boxHeight / 2;
+          break;
+      }
     }
-  };
+
+    // 边界检查
+    x = Math.max(padding, Math.min(x, window.innerWidth - boxWidth - padding));
+    y = Math.max(padding, Math.min(y, window.innerHeight - boxHeight - padding));
+
+    setContentPosition({ x, y });
+  }, [step, targetRect]);
+
+  const handleBackdropClick = useCallback(() => {
+    if (step?.isBlocking) return;
+    if (!step?.requireAction) {
+      onNext();
+    }
+  }, [step, onNext]);
+
+  if (!step) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center p-6 select-none" onClick={handleNext}>
-      {/* Highlight Layer */}
-      <div style={highlightStyle} />
+    <AnimatePresence>
+      <div className="fixed inset-0 z-[200] select-none">
+        {/* 背景遮罩 */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0"
+          onClick={handleBackdropClick}
+        >
+          {/* SVG 遮罩 - 高亮目标区域 */}
+          <svg className="absolute inset-0 w-full h-full">
+            <defs>
+              <mask id="spotlight-mask">
+                <rect width="100%" height="100%" fill="white" />
+                {targetRect && (
+                  <rect
+                    x={targetRect.left - 8}
+                    y={targetRect.top - 8}
+                    width={targetRect.width + 16}
+                    height={targetRect.height + 16}
+                    rx="12"
+                    fill="black"
+                  />
+                )}
+              </mask>
+            </defs>
+            <rect
+              width="100%"
+              height="100%"
+              fill="rgba(0, 0, 0, 0.8)"
+              mask="url(#spotlight-mask)"
+            />
+          </svg>
 
-      {/* Content Box */}
-      <div className={`
-        relative z-[101] max-w-sm w-full bg-slate-900/95 border-2 border-purple-500/50 rounded-2xl p-6 shadow-2xl transition-all
-        ${step.position === 'center' ? 'mt-0' : step.position === 'bottom' ? 'mt-auto mb-32' : 'mt-32'}
-      `}>
-         <div className="flex items-start gap-4 mb-4">
-            <div className="p-3 bg-purple-500 rounded-xl">
-               <Info className="text-white w-6 h-6" />
+          {/* 高亮边框 */}
+          {targetRect && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="absolute pointer-events-none"
+              style={{
+                left: targetRect.left - 8,
+                top: targetRect.top - 8,
+                width: targetRect.width + 16,
+                height: targetRect.height + 16,
+              }}
+            >
+              <div className="w-full h-full rounded-xl border-2 border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.5)] animate-pulse" />
+            </motion.div>
+          )}
+        </motion.div>
+
+        {/* 箭头指示器 */}
+        {step.showArrow && targetRect && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ repeat: Infinity, repeatType: 'reverse', duration: 0.8 }}
+            className="absolute z-[201] pointer-events-none"
+            style={{
+              left: targetRect.left + targetRect.width / 2 - 16,
+              top: step.position === 'bottom' ? targetRect.top - 48 : targetRect.bottom + 8,
+            }}
+          >
+            <Target 
+              size={32} 
+              className={`text-purple-400 ${step.position === 'bottom' ? '' : 'rotate-180'}`}
+            />
+          </motion.div>
+        )}
+
+        {/* 内容框 */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+          className="absolute z-[202] w-80"
+          style={{
+            left: step.position === 'center' ? '50%' : contentPosition.x,
+            top: step.position === 'center' ? '50%' : contentPosition.y,
+            transform: step.position === 'center' ? 'translate(-50%, -50%)' : undefined,
+          }}
+        >
+          <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl border border-purple-500/50 shadow-2xl shadow-purple-500/20 overflow-hidden">
+            {/* 头部 */}
+            <div className="bg-purple-900/50 px-4 py-3 flex items-center gap-3 border-b border-purple-500/30">
+              <div className="p-2 bg-purple-500 rounded-lg">
+                <Lightbulb className="w-5 h-5 text-white" />
+              </div>
+              <h3 className="text-lg font-bold text-white flex-1">{step.title}</h3>
+              {onSkip && (
+                <button
+                  onClick={onSkip}
+                  className="p-1 text-slate-400 hover:text-white transition-colors"
+                  title="跳过教程"
+                >
+                  <SkipForward size={18} />
+                </button>
+              )}
             </div>
-            <div>
-              <h3 className="text-xl font-bold text-white">{step.title}</h3>
-              <p className="text-slate-300 text-sm mt-1 leading-relaxed">
+
+            {/* 内容 */}
+            <div className="p-4">
+              <p className="text-slate-200 text-sm leading-relaxed whitespace-pre-line">
                 {step.content}
               </p>
             </div>
-         </div>
 
-         <div className="flex justify-between items-center mt-6">
-            <div className="flex gap-1">
-               {steps.map((_, i) => (
-                 <div key={i} className={`h-1.5 rounded-full transition-all ${i === currentStep ? 'w-6 bg-purple-500' : 'w-2 bg-slate-700'}`} />
-               ))}
+            {/* 底部 */}
+            <div className="px-4 py-3 bg-slate-900/50 flex items-center justify-between border-t border-slate-700/50">
+              {/* 进度条 */}
+              {progress && (
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-1">
+                    {Array.from({ length: progress.total }).map((_, i) => (
+                      <div
+                        key={i}
+                        className={`h-1.5 rounded-full transition-all ${
+                          i < progress.current 
+                            ? 'w-3 bg-purple-500' 
+                            : i === progress.current 
+                              ? 'w-4 bg-purple-400 animate-pulse' 
+                              : 'w-2 bg-slate-600'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-xs text-slate-500">
+                    {progress.current + 1}/{progress.total}
+                  </span>
+                </div>
+              )}
+
+              {/* 下一步按钮 */}
+              <button
+                onClick={onNext}
+                disabled={step.requireAction !== undefined}
+                className={`
+                  flex items-center gap-1 px-4 py-2 rounded-lg font-bold text-sm transition-all
+                  ${step.requireAction 
+                    ? 'bg-slate-700 text-slate-400 cursor-not-allowed' 
+                    : 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg hover:shadow-purple-500/30'
+                  }
+                `}
+              >
+                {step.requireAction ? (
+                  <>
+                    <span>执行操作</span>
+                    <span className="animate-pulse">👆</span>
+                  </>
+                ) : (
+                  <>
+                    <span>继续</span>
+                    <ChevronRight size={16} />
+                  </>
+                )}
+              </button>
             </div>
-            <button className="flex items-center gap-1 text-purple-400 font-bold hover:text-purple-300">
-               {currentStep === steps.length - 1 ? '开始战斗' : '下一步'}
-               <ChevronRight size={18} />
-            </button>
-         </div>
+          </div>
+        </motion.div>
 
-         <button 
-           onClick={(e) => { e.stopPropagation(); onComplete(); }}
-           className="absolute -top-3 -right-3 p-1 bg-slate-800 border-2 border-slate-700 rounded-full text-slate-400 hover:text-white"
+        {/* 底部提示 */}
+        {!step.requireAction && !step.isBlocking && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 text-slate-400 text-xs z-[201]"
           >
-            <X size={16} />
-         </button>
+            点击任意区域继续
+          </motion.div>
+        )}
       </div>
-      
-      {/* Click Hint */}
-      <div className="fixed bottom-10 left-1/2 -translate-x-1/2 text-white/40 text-xs animate-pulse z-[101]">
-        点击任意区域继续
-      </div>
-    </div>
+    </AnimatePresence>
   );
 };
+
+export default TutorialOverlay;
