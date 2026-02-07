@@ -87,7 +87,10 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ onComplete, la
     }
   }, [currentStep, step.targetId]);
 
-  const handleNext = (force: boolean = false) => {
+  const handleNext = (e?: React.MouseEvent | boolean) => {
+    // 如果是 MouseEvent，阻止冒泡；如果是 boolean true 则强制跳过
+    const force = typeof e === 'boolean' ? e : false;
+    
     // [New 6.4] 如果是强制执行步骤，且非强制跳过，则点击背景不跳转
     if (step.isBlocking && !force) return;
 

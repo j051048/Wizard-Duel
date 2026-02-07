@@ -39,14 +39,14 @@ export const PackOpener: React.FC<PackOpenerProps> = ({
   const [revealedIndices, setRevealedIndices] = useState<Set<number>>(new Set());
   const [showParticles, setShowParticles] = useState(false);
 
-  const cardVariants = {
+  const cardVariants: Variants = {
     hidden: { scale: 0, x: 0, y: 0, rotate: 0 },
     delt: (i: number) => ({
       scale: 1,
       x: isMobile ? (i - 2) * 70 : (i - 2) * 140,
       y: 0,
       rotate: (i - 2) * 5,
-      transition: { type: 'spring', damping: 15, delay: i * 0.1 }
+      transition: { type: 'spring' as const, damping: 15, delay: i * 0.1 }
     }),
     grid: (i: number) => {
       if (isMobile) {
@@ -56,7 +56,7 @@ export const PackOpener: React.FC<PackOpenerProps> = ({
               x: (i % 2 === 0 ? -70 : 70),
               y: (Math.floor(i / 2) - 1) * 140,
               rotate: 0,
-              transition: { type: 'spring', bounce: 0.5, duration: 0.8 }
+              transition: { type: 'spring' as const, bounce: 0.5, duration: 0.8 }
           };
       }
       return {
@@ -64,7 +64,7 @@ export const PackOpener: React.FC<PackOpenerProps> = ({
           x: (i - 2) * 165,
           y: 0,
           rotate: 0,
-          transition: { type: 'spring', bounce: 0.5, duration: 0.8 }
+          transition: { type: 'spring' as const, bounce: 0.5, duration: 0.8 }
       };
     }
   };
