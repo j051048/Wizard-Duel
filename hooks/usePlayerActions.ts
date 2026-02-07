@@ -8,7 +8,7 @@
 
 import React, { useCallback } from 'react';
 import { 
-  SpellType, DuelState, GameMode, AIProfile, GameLoopState, GameActionCommand, AIStatus
+  SpellType, DuelState, GameMode, AIProfile, GameActionCommand, AIStatus
 } from '../types';
 import { 
   createInitialDuelState, createTavernDuelState, canAffordSpell
@@ -24,7 +24,7 @@ interface UsePlayerActionsDeps {
   duelStateRef: React.MutableRefObject<DuelState | null>;
   phaseRef: React.MutableRefObject<string>;
   isProcessing: boolean;
-  enqueue: (commands: GameActionCommand[]) => void;
+  enqueue: (commands: GameActionCommand[], actionId?: string) => void;
   showTurnBanner: (type: 'player' | 'opponent') => void;
   setDuelState: (state: DuelState | null) => void;
   setPhase: (phase: any) => void;
@@ -61,7 +61,7 @@ export function usePlayerActions({
     setUiState((prev: any) => ({ ...prev, playerCard: spellId }));
 
     const { newState, commands: engineCommands } = GameRuleEngine.castSpell(state, spellId, 'player');
-    enqueue([...engineCommands]);
+    enqueue([...engineCommands], `play_${spellId}_${Date.now()}`);
     return true;
   }, [duelStateRef, phaseRef, isProcessing, enqueue, setUiState]);
 
@@ -100,12 +100,12 @@ export function usePlayerActions({
     ];
 
     setUiState((prev: any) => ({ ...prev, effectMessages: [] }));
-    enqueue(commands);
+    enqueue(commands, 'mulligan');
   }, [duelStateRef, enqueue, showTurnBanner, setDuelState, setUiState, startNewRound]);
 
   /** 初始化标准对战 */
-  const startDuel = useCallback((deck?: SpellType[], gameMode: GameMode = 'standard') => {
-    const initialState = createInitialDuelState(deck || [], gameMode);
+  const startDuel = useCallback((playerDeck: SpellType[], _opponentDeck: SpellType[], gameMode: GameMode = 'standard') => {
+    const initialState = createInitialDuelState(playerDeck || [], gameMode);
     setDuelState(initialState);
     setPhase('MULLIGAN_PHASE');
     setUiState((prev: any) => ({

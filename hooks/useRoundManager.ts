@@ -10,9 +10,6 @@
 
 import { useCallback } from 'react';
 import { DuelState, GameActionCommand, AIStatus } from '../types';
-import {
-  prepareNextTurn, drawCard, checkGameOver
-} from '../services/gameLogic';
 import { RuleArbiter } from '../services/RuleArbiter';
 import {
   PHASE_TRANSITION_DELAY, BANNER_WAIT_DELAY
@@ -21,7 +18,7 @@ import {
 const initialAIStatus: AIStatus = { emote: null, message: null };
 
 interface UseRoundManagerDeps {
-  enqueue: (commands: GameActionCommand[]) => void;
+  enqueue: (commands: GameActionCommand[], actionId?: string) => void;
   showTurnBanner: (type: 'player' | 'opponent') => void;
 }
 
@@ -75,7 +72,7 @@ export function useRoundManager({ enqueue, showTurnBanner }: UseRoundManagerDeps
       });
     }
 
-    enqueue(commands);
+    enqueue(commands, `round_${newState.roundNumber}`);
   }, [enqueue, showTurnBanner]);
 
   return { startNewRound };

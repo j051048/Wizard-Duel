@@ -7,3 +7,8 @@ export { useIntegration } from './useIntegration';
 export { useDragToPlay } from './useDragToPlay';
 export { useBattleAnimations } from './useBattleAnimations';
 export { useDeckBuilder } from './useDeckBuilder';
+
+// [#5] App.tsx 瘦身 - 新增 Hooks
+export { useAppRouting } from './useAppRouting';
+export { useGameFeedback } from './useGameFeedback';
+export { useGameEndHandler } from './useGameEndHandler';

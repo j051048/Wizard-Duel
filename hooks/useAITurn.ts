@@ -23,7 +23,7 @@ interface UseAITurnDeps {
   duelStateRef: React.MutableRefObject<DuelState | null>;
   phaseRef: React.MutableRefObject<string>;
   isProcessing: boolean;
-  enqueue: (commands: GameActionCommand[]) => void;
+  enqueue: (commands: GameActionCommand[], actionId?: string) => void;
   showTurnBanner: (type: 'player' | 'opponent') => void;
   startNewRound: (state: DuelState) => void;
 }
@@ -142,7 +142,7 @@ export function useAITurn({
       });
     }
 
-    enqueue(commands);
+    enqueue(commands, 'ai_turn');
   }, [duelStateRef, phaseRef, isProcessing, enqueue, showTurnBanner, startNewRound]);
 
   return { passTurn };

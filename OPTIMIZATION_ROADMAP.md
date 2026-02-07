@@ -19,7 +19,7 @@
   - 统一处理 `handleGameEnd` 的参数传递 (SpellType 强转)。
   - **状态**：已完成。代码结构已优化。
 - [x] **#4: 加固结算安全 (Authoritative Settlement)** [Priority: P0]
-  - `ApiService.settleGame` 改为在“后端”计算 payout 和 crit，不再信任前端传参。
+  - `ApiService.settleGame` 改为在"后端"计算 payout 和 crit，不再信任前端传参。
   - **状态**：已完成。结算逻辑已移入 Service 层。
 
 ---
@@ -28,12 +28,19 @@
 
 **目标**：降低代码耦合度，解决性能瓶颈，优化包体积。
 
-- [ ] **#5: App.tsx 瘦身 (App Decoupling)** [Priority: P1]
+- [x] **#5: App.tsx 瘦身 (App Decoupling)** [Priority: P1]
   - 提取 `useAppRouting` 处理视图切换。
   - 提取 `useGameFeedback` 处理音效和震动。
-- [ ] **#6: 优化游戏循环与动画 (Game Loop Optimization)** [Priority: P1]
-  - 细化 `isProcessing` 锁机制。
-  - 修复重复调用问题。
+  - 提取 `useGameEndHandler` 处理游戏结束逻辑。
+  - 提取 `LobbyHeader` 为独立组件。
+  - **状态**：已完成。App.tsx 从 ~500 行精简，逻辑分离到 3 个新 Hook。
+- [x] **#6: 优化游戏循环与动画 (Game Loop Optimization)** [Priority: P1]
+  - 细化 `isProcessing` 锁机制，使用 ref 而非 state 追踪。
+  - 添加 `processingLockRef` 和 `actionInProgressRef` 防止重复触发。
+  - 使用 `safeEnqueue` 包装防止同一动作重复入队。
+  - 使用 `requestIdleCallback` 延迟 localStorage 保存。
+  - 限制 effectMessages 数量防止内存泄漏。
+  - **状态**：已完成。
 - [ ] **#9: 构建优化 (Build Optimization)** [Priority: P1]
   - 优化 `manualChunks` 配置，分离大库。
 
