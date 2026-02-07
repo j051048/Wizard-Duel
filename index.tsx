@@ -11,7 +11,7 @@ import { SettingsProvider } from './context/SettingsContext';
 import './index.css';
 
 // Wagmi Configuration
-const config = createConfig({
+export const config = createConfig({
   chains: [mainnet, sepolia],
   connectors: [injected()],
   transports: {

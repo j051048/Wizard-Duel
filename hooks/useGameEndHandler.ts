@@ -10,14 +10,15 @@
  */
 
 import { useEffect, useCallback, useRef } from 'react';
-import { SpellType } from '../types/card';
 import { DuelState } from '../types/duel';
+import { SpellType } from '../types'; // Corrected import path for SpellType
+import { ApiService } from '../services/api';
+import { supabase, saveBattleResult } from '../services/supabase';
 import { useUserStore } from '../stores/useUserStore';
 import { useUIStore } from '../stores/useUIStore';
-import { ApiService } from '../services/api';
-import { calculatePayout } from '../services/gameLogic';
 import { calculateRankUpdate } from '../services/rankSystem';
 import { QuestManager } from '../services/QuestManager';
+import { calculatePayout } from '../services/gameLogic';
 
 interface GameLoopState {
   isGameOver: boolean;
@@ -82,23 +83,45 @@ export function useGameEndHandler({
       let finalIsCrit = false;
 
       if (user.activeAddress) {
-        const res = await ApiService.settleGame(
-          user.activeAddress,
-          ui.selectedBet,
-          result,
-          playerCard,
-          opponentCard,
-          {
-            finalPlayerHP: 100,
-            finalOpponentHP: opponentHP
-          },
-          newScore,
-          newRank
-        );
-        user.setBalance(res.newBalance);
-        user.loadUserData(user.activeAddress);
-        finalPayout = res.payout;
-        finalIsCrit = res.isCrit;
+        // 保存到 Supabase (如果已通过钱包登录)
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          const mock = calculatePayout(ui.selectedBet, result);
+          await saveBattleResult({
+            user_id: session.user.id,
+            opponent_name: gameLoopState.duelState?.aiProfile?.name || 'Unknown',
+            result: result.toLowerCase() as 'win' | 'loss' | 'draw',
+            turns: gameLoopState.duelState?.roundNumber || 0,
+            gold_earned: mock.payout,
+            xp_earned: result === 'WIN' ? 50 : 10,
+          });
+          
+          finalPayout = mock.payout;
+          finalIsCrit = mock.isCrit;
+          
+          // 重新加载用户数据同步金币
+          user.loadUserData(user.activeAddress);
+        } else {
+          // 回退到现有的 API 结算 (针对游客)
+          const res = await ApiService.settleGame(
+            user.activeAddress,
+            ui.selectedBet,
+            result,
+            playerCard,
+            opponentCard,
+            {
+              finalPlayerHP: 100,
+              finalOpponentHP: opponentHP
+            },
+            newScore,
+            newRank
+          );
+          user.setBalance(res.newBalance);
+          user.loadUserData(user.activeAddress);
+          finalPayout = res.payout;
+          finalIsCrit = res.isCrit;
+        }
       } else {
         const mock = calculatePayout(ui.selectedBet, result);
         finalPayout = mock.payout;

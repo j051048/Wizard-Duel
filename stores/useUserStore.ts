@@ -73,7 +73,7 @@ export const useUserStore = create<UserState>((set, get) => ({
     const { packInventory } = get();
     const newInv = { ...packInventory, [packId]: (packInventory[packId] || 0) + count };
     set({ packInventory: newInv });
-    try { localStorage.setItem('wizard_duel_packs', JSON.stringify(newInv)); } catch(e) {}
+    try { localStorage.setItem('wizard_duel_packs', JSON.stringify(newInv)); } catch {}
   },
   
   consumePack: (packId) => {
@@ -81,7 +81,7 @@ export const useUserStore = create<UserState>((set, get) => ({
     if (!packInventory[packId] || packInventory[packId] <= 0) return false;
     const newInv = { ...packInventory, [packId]: packInventory[packId] - 1 };
     set({ packInventory: newInv });
-    try { localStorage.setItem('wizard_duel_packs', JSON.stringify(newInv)); } catch(e) {}
+    try { localStorage.setItem('wizard_duel_packs', JSON.stringify(newInv)); } catch {}
     return true;
   },
 
@@ -92,7 +92,7 @@ export const useUserStore = create<UserState>((set, get) => ({
       // 这里可以添加 localStorage 持久化
       try {
         localStorage.setItem('wizard_duel_purchases', JSON.stringify([...purchasedBundles, bundleId]));
-      } catch (e) {}
+      } catch {}
     }
   },
   setSelectedDeck: (selectedDeck) => set({ selectedDeck }),
@@ -105,40 +105,41 @@ export const useUserStore = create<UserState>((set, get) => ({
   loadUserData: async (address: string) => {
     set({ isLoading: true });
     try {
-      const profile = await ApiService.getProfile(address);
-      set({
-        balance: profile.balance,
-        userRank: profile.userRank || 'Iron',
-        rankScore: profile.rankScore || 0,
-        winStreak: profile.stats?.winStreak || 0,
-      });
+      // 1. 从 Supabase 获取 Profile (如果已登录)
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        const profile = await getProfile(session.user.id);
+        if (profile) {
+          set({
+            balance: profile.gold || 0,
+            userRank: (profile.level && profile.level > 10 ? 'Gold' : 'Iron') as Rank, // 简化逻辑
+            rankScore: profile.xp || 0,
+            winStreak: profile.win_count || 0,
+          });
+        }
+      } else {
+        // 回退到 Mock 逻辑 (针对未登录游客)
+        const profile = await ApiService.getProfile(address);
+        set({
+          balance: profile.balance,
+          userRank: profile.userRank || 'Iron',
+          rankScore: profile.rankScore || 0,
+          winStreak: profile.stats?.winStreak || 0,
+        });
+      }
 
+      // 获取当前用户的卡组
       const userDecks = await ApiService.getDecks(address);
       set({ decks: userDecks });
       if (userDecks.length > 0 && !get().selectedDeck) {
         set({ selectedDeck: userDecks[0] });
       }
 
-      const hist = await ApiService.getHistory(address);
-      set({ history: hist });
-
-      const inv = await ApiService.getInventory(address);
-      set({ inventory: inv });
-      
-      // 读取本地购买记录
+      // 暂时保留本地存储逻辑用于 PWA 离线体验
       const savedPurchases = localStorage.getItem('wizard_duel_purchases');
       if (savedPurchases) {
-        try {
-          set({ purchasedBundles: JSON.parse(savedPurchases) });
-        } catch (e) {}
-      }
-      
-      // 读取本地卡包库存
-      const savedPacks = localStorage.getItem('wizard_duel_packs');
-      if (savedPacks) {
-        try {
-          set({ packInventory: JSON.parse(savedPacks) });
-        } catch (e) {}
+        try { set({ purchasedBundles: JSON.parse(savedPurchases) }); } catch (e) {}
       }
     } catch (e) {
       console.error('Failed to load user data:', e);

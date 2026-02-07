@@ -5,7 +5,10 @@
 
 import React, { useState, useMemo } from 'react';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
-import { Wallet, User, Sparkles, Shield, ChevronRight, ExternalLink } from 'lucide-react';
+import { signMessage } from '@wagmi/core';
+import { config } from '../index';
+import { Wallet, User, Sparkles, Shield, ChevronRight } from 'lucide-react';
+import { signInWithWallet } from '../services/supabase';
 
 interface LoginScreenProps {
   onLoginComplete: (address: string, isGuest: boolean) => void;
@@ -62,14 +65,27 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginComplete }) => 
     }, 500);
   };
 
-  const handleConnectedContinue = () => {
+  const handleConnectedContinue = async () => {
     if (!agreedToTerms) {
       setShowTerms(true);
       return;
     }
     
     if (address) {
-      onLoginComplete(address, false);
+      setIsLoading(true);
+      try {
+        const message = `Welcome to Wizard Duel!\n\nVerify your wallet to enter the arena.\n\nTimestamp: ${Date.now()}`;
+        const signature = await signMessage(config, { message });
+        
+        if (signature) {
+          await signInWithWallet(address);
+          onLoginComplete(address, false);
+        }
+      } catch (e) {
+        console.error('Signing failed:', e);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 

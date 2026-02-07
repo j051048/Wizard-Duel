@@ -11,11 +11,14 @@ import { TRANSLATIONS } from '../translations';
 import { RulesModal } from './RulesModal';
 import { TutorialModal } from './TutorialModal';
 import { QuestModal } from './lobby/QuestModal';
-import { ShoppingBag, Book } from 'lucide-react';
-import { QuestManager } from '../services/QuestManager';
 import { HapticService } from '../services/haptic';
 import { SoundManager } from '../services/SoundManager';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { GlobalChat } from './GlobalChat';
+import { useUserStore } from '../stores/useUserStore';
+import { ShoppingBag, Book, Swords, MessageCircle } from 'lucide-react';
+import { MatchmakingOverlay } from './MatchmakingOverlay';
+import { QuestManager } from '../services/QuestManager';
 
 // Extracted Components
 import TopBar from './lobby/TopBar';
@@ -82,6 +85,9 @@ export const Lobby: React.FC<LobbyProps> = ({
   const canStart = balance >= selectedBet;
 
   const t = (key: string) => TRANSLATIONS[language][key] || key;
+  const { activeAddress } = useUserStore();
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isMatchmaking, setIsMatchmaking] = useState(false);
   
   // 初始化任务
   useEffect(() => {
@@ -97,7 +103,7 @@ export const Lobby: React.FC<LobbyProps> = ({
               onClaimQuestReward(result.reward);
           }
           HapticService.success();
-          try { SoundManager.play('victory', 0.5); } catch(e) {}
+          try { SoundManager.play('victory', 0.5); } catch {}
       }
   };
   
@@ -179,8 +185,8 @@ export const Lobby: React.FC<LobbyProps> = ({
 
       </div>
 
-            {/* FOOTER: EXTRA MODES */}
-      <div className="relative z-10 p-4 flex justify-center gap-4 pb-8">
+      {/* FOOTER: EXTRA MODES */}
+      <div className="relative z-10 p-4 flex justify-center gap-4 pb-8 flex-wrap">
          {/* 商店入口 */}
          {onOpenShop && (
             <button 
@@ -213,7 +219,52 @@ export const Lobby: React.FC<LobbyProps> = ({
                <span>{t('Visit Tavern')}</span>
             </button>
          )}
+
+         {/* PvP 对战入口 */}
+         <button 
+            onClick={() => setIsMatchmaking(true)}
+            className="flex items-center gap-2 text-xs text-red-400 hover:text-red-300 font-bold uppercase tracking-widest border border-red-500/30 px-4 py-2 rounded-full hover:bg-red-900/20 transition-all bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.2)]"
+         >
+            <Swords size={14} />
+            <span>{t('PvP Mode')}</span>
+         </button>
+
+         {/* 聊天按钮 */}
+         <button 
+            onClick={() => setIsChatOpen(!isChatOpen)}
+            className="flex items-center gap-2 text-xs text-green-400 hover:text-green-300 font-bold uppercase tracking-widest border border-green-500/30 px-4 py-2 rounded-full hover:bg-green-900/20 transition-all bg-green-500/10"
+         >
+            <MessageCircle size={14} />
+            <span>聊天</span>
+         </button>
       </div>
+
+      {/* 实时聊天组件 */}
+      <GlobalChat 
+        userId={activeAddress || 'guest'} 
+        username={activeAddress?.slice(0, 8) || 'Guest'} 
+        isOpen={isChatOpen} 
+        onClose={() => setIsChatOpen(false)} 
+      />
+
+      {/* 匹配遮罩层 */}
+      <MatchmakingOverlay 
+        userId={activeAddress || 'guest'}
+        username={activeAddress?.slice(0, 8) || 'Guest'}
+        isOpen={isMatchmaking}
+        onClose={() => setIsMatchmaking(false)}
+        onMatchFound={(roomId, opponent) => {
+          console.log('Match Found!', roomId, opponent);
+          setIsMatchmaking(false);
+          // 使用类型判断或字符串判断
+          if (typeof opponent === 'string' && opponent === 'AI') {
+            onStartDuel(); // 如果是 AI，直接走原有的单机对战逻辑
+          } else {
+            const opp = opponent as any;
+            alert(`匹配完成！房间号: ${roomId}\n对手: ${opp.username}\n(PvP 战斗模式开发中...)`);
+          }
+        }}
+      />
 
             {/* Global Modals */}
       <RulesModal isOpen={isRulesOpen} onClose={() => setIsRulesOpen(false)} />
