@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { ArrowLeft, Package, Gift, Crown, Sparkles, Star, Zap, Lock, ShoppingBag } from 'lucide-react';
-import { Spell } from '../types';
+import { Spell, SpellType } from '../types';
 import { HapticService } from '../services/haptic';
 import { useToastStore } from '../stores/useToastStore';
 import { PackOpener } from './shop/PackOpener';
@@ -16,7 +16,7 @@ interface ShopScreenProps {
   balance: number;
   onBack: () => void;
   onUpdateBalance: (newBalance: number) => void;
-  onAddCards?: (cards: string[]) => void;
+  onAddCards?: (cards: SpellType[]) => void;
   purchasedBundles?: string[];
   onPurchaseBundle?: (bundleId: string) => void;
   packInventory?: Record<string, number>;

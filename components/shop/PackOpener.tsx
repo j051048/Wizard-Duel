@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { Spell } from '../../types';
 import { SpellCard } from '../SpellCard';
 import { HapticService } from '../../services/haptic';
@@ -13,7 +13,7 @@ interface PackOpenerProps {
   bgGradient?: string;
 }
 
-const variants = {
+const variants: Variants = {
   enter: { scale: 0, opacity: 0, y: 300 },
   idle: { 
      scale: 1, 
@@ -23,10 +23,9 @@ const variants = {
   },
   shake: {
       x: [0, -5, 5, -5, 5, 0],
-      scale: [1, 1.1, 1, 1.1, 1],
-      transition: { duration: 0.5 }
+      transition: { duration: 0.4 }
   },
-  exit: { scale: 1.5, opacity: 0 }
+  exit: { scale: 2, opacity: 0, filter: 'brightness(2)', transition: { duration: 0.5 } }
 };
 
 export const PackOpener: React.FC<PackOpenerProps> = ({ 

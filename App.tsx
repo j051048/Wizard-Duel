@@ -136,6 +136,9 @@ function App() {
     opponentMaxMana: number,
     opponentHP: number
   ) => {
+    const user = useUserStore.getState();
+    const ui = useUIStore.getState();
+
     if (result === 'WIN') {
       audioActions.playSfx('victory');
       HapticService.success();
@@ -202,7 +205,7 @@ function App() {
       console.error('Settlement failed:', e);
       handleResetGame();
     }
-  }, [ui, user, audioActions, handleResetGame]);
+  }, [audioActions, handleResetGame]);
 
   // ============ 初始化与同步 ============
 
@@ -377,10 +380,13 @@ function App() {
         )}
 
                 {ui.gameState === 'MATCHMAKING' && (
-          <MatchmakingAnimation 
+                    <MatchmakingAnimation 
             onComplete={() => {
               const opp = ui.pendingTavernDuel || AI_PROFILES[Math.floor(Math.random() * (AI_PROFILES.length - 1)) + 1];
-              gameLoopActions.startTavernDuel(user.selectedDeck!.cards, opp, ui.gameMode);
+              const isDungeon = !!ui.dungeonRun;
+              const deck = isDungeon ? ui.dungeonRun!.deck.cards : user.selectedDeck!.cards;
+              const mode = isDungeon ? 'wild' as const : ui.gameMode;
+              gameLoopActions.startTavernDuel(deck, opp, mode);
               ui.setPendingTavernDuel(null);
               ui.setGameState('MULLIGAN');
               audioActions.playBgm('battle');
@@ -411,12 +417,11 @@ function App() {
             <DungeonMap 
               runState={ui.dungeonRun} 
               onSelectNode={(node: DungeonNode) => {
-                if (['BATTLE', 'ELITE', 'BOSS'].includes(node.type)) {
+                                if (['BATTLE', 'ELITE', 'BOSS'].includes(node.type)) {
                   const diff = node.type === 'BOSS' ? 'hard' : node.type === 'ELITE' ? 'medium' : 'easy';
                   const opp = AI_PROFILES.find(p => p.difficulty === diff) || AI_PROFILES[0];
-                  gameLoopActions.startTavernDuel(ui.dungeonRun!.deck.cards, opp, 'wild');
-                  ui.setGameState('DUEL');
-                  audioActions.playBgm('battle');
+                  ui.setPendingTavernDuel(opp);
+                  ui.setGameState('MATCHMAKING');
                                 } else if (node.type === 'REST') {
                   const updated = DungeonService.updateHP(ui.dungeonRun!, Math.floor(ui.dungeonRun!.maxHP * 0.3));
                   ui.setDungeonRun(DungeonService.advanceNode(updated));

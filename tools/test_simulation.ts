@@ -126,7 +126,7 @@ async function runSimulation() {
   const check = canAffordSpell(spellId, 5, state.opponentEffects, state.opponentCostMod);
   // Cost 4 + 2 = 6. Mana 5. Should fail.
   assert(check.canAfford === false, "Tangle should make 4-cost spell unaffordable with 5 mana");
-  assert(check.reason?.includes('法力不足'), "Reason should be insufficient mana");
+  assert(check.reason !== undefined && check.reason.includes('法力不足'), "Reason should be insufficient mana");
 
   // ==========================================
   // TEST SUITE 3: DOT & ROUND TRANSITION

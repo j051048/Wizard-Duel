@@ -40,7 +40,7 @@ export const createDeck = (baseCards?: SpellType[]): SpellType[] => {
  */
 export function getCardsForMode(gameMode: GameMode): Spell[] {
   const allowedSets = gameMode === 'standard' ? STANDARD_SETS : WILD_SETS;
-  return SPELLS.filter(spell => allowedSets.includes(spell.cardSet));
+  return SPELLS.filter(spell => allowedSets.includes(spell.cardSet || 'core'));
 }
 
 /**
@@ -51,7 +51,7 @@ export function isCardAvailableInMode(cardId: SpellType, gameMode: GameMode): bo
   if (!card) return false;
   
   const allowedSets = gameMode === 'standard' ? STANDARD_SETS : WILD_SETS;
-  return allowedSets.includes(card.cardSet);
+  return allowedSets.includes(card.cardSet || 'core');
 }
 
 /**

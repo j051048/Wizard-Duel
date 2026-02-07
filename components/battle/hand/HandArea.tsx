@@ -1,12 +1,11 @@
-import React from 'react';
-import { SpellType } from '../../../types';
+import { SpellType, DuelPhase } from '../../../types';
 import BattleHand from '../BattleHand';
 import { TutorialBubble } from '../../ui/TutorialBubble';
 
 interface HandAreaProps {
   hand: SpellType[];
   playableCards: SpellType[];
-  phase: string;
+  phase: DuelPhase;
   isProcessing: boolean;
   isMobile: boolean;
   dragState: any;

@@ -51,7 +51,7 @@ const defineSpell = (s: Partial<Spell> & { id: SpellType; name: string; manaCost
       s.beats = 'fire';
   }
 
-  const spell = { ...defaults, ...s } as Spell;
+  const spell = { ...defaults, ...s, cardSet: s.cardSet || 'core' } as Spell;
   spell.description = generateDescription(spell);
   spell.shortDesc = generateShortDesc(spell);
   return spell;

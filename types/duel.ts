@@ -92,6 +92,7 @@ export interface GameCommand {
   sourceSpell?: SpellType;
   caster: 'player' | 'opponent';
   actions: GameAction[];
+  snapshot?: DuelState; // Intermediate state snapshot for UI and AI optimization
 }
 
 export interface RoundResult {

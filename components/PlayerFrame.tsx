@@ -305,8 +305,7 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
           <div 
             className="relative w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden ring-2 ring-offset-2 ring-offset-slate-900 transition-all duration-300"
             style={{ 
-              ringColor: borderColor,
-              boxShadow: `0 0 20px ${borderColor}40, inset 0 0 20px rgba(0,0,0,0.5)`
+              boxShadow: `0 0 0 2px ${borderColor}, 0 0 20px ${borderColor}40, inset 0 0 20px rgba(0,0,0,0.5)`
             }}
           >
             <img 

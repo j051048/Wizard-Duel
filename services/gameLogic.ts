@@ -328,6 +328,9 @@ export const executeSpell = (
   const cmd: GameCommand = { id: `cast_${spellId}`, sourceSpell: spellId, caster, actions };
   let { state: newState, logs } = GameSequenceExecutor.executeCommand(mutableState, cmd);
   
+  // Attach snapshot for UI/AI optimization
+  cmd.snapshot = newState;
+  
   return { newState, logs, command: cmd };
 };
 

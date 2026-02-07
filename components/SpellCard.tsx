@@ -9,7 +9,8 @@
  */
 
 import React, { useState } from 'react';
-import { Spell } from '../types';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Spell, SpellType } from '../types';
 import { getMechanicName } from '../constants';
 import { Zap, Shield, Flame, Snowflake, Leaf } from 'lucide-react';
 
@@ -20,11 +21,13 @@ interface SpellCardProps {
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
   onPointerDown?: (e: React.PointerEvent) => void;
+  onPointerUp?: () => void;
   disabled?: boolean;
   isSmall?: boolean;
   isFaceDown?: boolean;
   isAffordable?: boolean;
   showMechanic?: boolean;
+  showCost?: boolean;
 }
 
 // 获取机制图标
@@ -38,8 +41,6 @@ const getMechanicIcon = (mechanic?: string) => {
     default: return null;
   }
 };
-
-// ... (imports)
 
 // 根据卡牌ID推断元素类型
 const getElementFromId = (id: string): string => {
@@ -73,6 +74,7 @@ export const SpellCard: React.FC<SpellCardProps> = ({
   onMouseEnter,
   onMouseLeave,
   onPointerDown,
+  onPointerUp,
   disabled, 
   isSmall, 
   isFaceDown,
@@ -86,11 +88,11 @@ export const SpellCard: React.FC<SpellCardProps> = ({
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (disabled || isFaceDown) return;
     const card = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - card.left - card.width / 2;
-    const y = e.clientY - card.top - card.height / 2;
-    // Calculate rotation: max 15 degrees
-    const rotateY = (x / (card.width / 2)) * 10; 
-    const rotateX = -(y / (card.height / 2)) * 10;
+    const xRelative = e.clientX - card.left - card.width / 2;
+    const yRelative = e.clientY - card.top - card.height / 2;
+    // Calculate rotation: max 10 degrees
+    const rotateY = (xRelative / (card.width / 2)) * 10; 
+    const rotateX = -(yRelative / (card.height / 2)) * 10;
     setRotate({ x: rotateX, y: rotateY });
   };
 
@@ -127,7 +129,7 @@ export const SpellCard: React.FC<SpellCardProps> = ({
 
   if (!spell) return null;
 
-    const canPlay = isAffordable && !disabled;
+  const canPlay = isAffordable && !disabled;
   const mechanicIcon = getMechanicIcon(spell.mechanic);
   const frameImage = getFrameImage(getElementFromId(spell.id));
 
@@ -174,159 +176,173 @@ export const SpellCard: React.FC<SpellCardProps> = ({
   };
 
   const rarityStyles = getRarityStyles(spell.rarity);
-
   const { x, y } = rotate;
+  const isDisabled = !canPlay;
 
   return (
-    <div 
-      className={`relative group ${isSmall ? 'w-20 h-28' : 'w-32 h-48 sm:w-36 sm:h-52'} transition-all duration-300 ${!canPlay ? 'opacity-80 grayscale-[0.3]' : ''} touch-pan-y text-start`}
-      style={{ perspective: '1000px', willChange: (isHovered) || isSelected ? 'transform' : 'auto' }}
-      onMouseEnter={handleMouseEnterInternal}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeaveInternal}
-      onClick={canPlay ? onClick : undefined}
-      onPointerDown={canPlay ? onPointerDown : undefined}
-    >
-      <div 
+    <motion.div
+        layoutId={spell.id}
+        id={`card-${spell.id}`}
         className={`
-          relative w-full h-full transition-transform duration-100 ease-out preserve-3d
-          ${isSelected ? 'scale-110 z-20 aura-glow' : ''}
-          ${isHovered && canPlay ? 'scale-110 z-20 aura-glow' : ''}
+          relative select-none
+          ${isSmall ? 'w-16 h-24' : 'w-24 h-36 sm:w-32 sm:h-44 md:w-40 md:h-56'}
+          ${isDisabled ? 'opacity-80 grayscale-[0.3]' : 'cursor-pointer'}
+          ${isSelected ? 'z-50' : 'z-10'}
+          rounded-xl
         `}
-        style={{ 
-          transform: `rotateX(${x}deg) rotateY(${y}deg)`,
-          transformStyle: 'preserve-3d'
-        }}
+        whileHover={!isDisabled ? { 
+          scale: 1.05, 
+          y: -10,
+          rotateY: 5,
+          transition: { type: 'spring', stiffness: 400, damping: 20 }
+        } : {}}
+        onMouseEnter={handleMouseEnterInternal}
+        onMouseLeave={handleMouseLeaveInternal}
+        onPointerDown={onPointerDown}
+        onPointerUp={onPointerUp}
+        onMouseMove={handleMouseMove}
+        onClick={!isDisabled ? onClick : undefined}
       >
-        {/* Layer 0: Shadow/Glow (Behind) */}
         <div 
-           className={`absolute inset-4 bg-black/50 blur-xl transition-all duration-300 -z-20 ${isSelected || isHovered ? 'opacity-100 scale-110' : 'opacity-40'}`}
-           style={{ background: isSelected || isHovered ? spell.shadowColor : undefined }}
-        />
-
-        {/* Layer 1: Base Card Background & Art (Middle) */}
-        <div className={`
-             absolute inset-0 bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center 
-             border-2 md:border-4 ${rarityStyles.borderClass} ${rarityStyles.glowClass}
-             ${canPlay ? 'ring-2 ring-green-500/30 animate-pulse-gentle' : ''}
-        `}>
-            {/* Background Gradient */}
-            <div className={`absolute inset-0 bg-gradient-to-b from-slate-800 to-black ${canPlay ? '' : 'opacity-50'}`} />
-            
-            {/* Element Glow */}
-             <div 
-              className="absolute inset-0 opacity-40 mix-blend-screen"
-              style={{ background: `radial-gradient(circle at center, ${spell.shadowColor}, transparent 80%)` }}
-            />
-             {/* Main Art / Emoji */}
-             <div className="absolute inset-0 z-0 transform transition-transform duration-500 group-hover:scale-110">
-                {!imgError && spell.artSrc ? (
-                   <img 
-                    src={spell.artSrc} 
-                    alt={spell.name} 
-                    loading="eager"
-                    className="w-full h-full object-cover"
-                    onError={() => setImgError(true)}
-                   />
-                ) : (
-                   <div className="flex items-center justify-center h-full text-6xl drop-shadow-2xl grayscale-[0.2] group-hover:grayscale-0 transition-all">{spell.emoji}</div>
-                )}
-             </div>
-        </div>
-
-
-        {/* Layer 3: Stats & Text (Overlay) */}
-        <div className="absolute inset-0 z-20 pointer-events-none flex flex-col justify-between p-3" style={{ transform: 'translateZ(20px)' }}>
-            {/* Top Row: Mana & Damage */}
-            <div className="flex justify-between items-start -mx-1 -mt-1">
-               <div className="relative">
-                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-900 to-blue-600 border border-blue-400 shadow-lg flex items-center justify-center text-white font-black text-sm relative z-10">
-                    {spell.manaCost}
-                 </div>
-                 {/* Mana Glow */}
-                 <div className="absolute inset-0 bg-blue-500 blur-md opacity-60" />
+          className={`
+            relative w-full h-full transition-transform duration-100 ease-out preserve-3d
+            ${isSelected ? 'scale-110 z-20 aura-glow' : ''}
+            ${isHovered && canPlay ? 'scale-110 z-20 aura-glow' : ''}
+          `}
+          style={{ 
+            transform: `rotateX(${x}deg) rotateY(${y}deg)`,
+            transformStyle: 'preserve-3d'
+          }}
+        >
+          {/* Layer 0: Shadow/Glow (Behind) */}
+          <div 
+             className={`absolute inset-4 bg-black/50 blur-xl transition-all duration-300 -z-20 ${isSelected || isHovered ? 'opacity-100 scale-110' : 'opacity-40'}`}
+             style={{ background: isSelected || isHovered ? spell.shadowColor : undefined }}
+          />
+  
+          {/* Layer 1: Base Card Background & Art (Middle) */}
+          <div className={`
+               absolute inset-0 bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center 
+               border-2 md:border-4 ${rarityStyles.borderClass} ${rarityStyles.glowClass}
+               ${canPlay ? 'ring-2 ring-green-500/30 animate-pulse-gentle' : ''}
+          `}>
+              {/* Background Gradient */}
+              <div className={`absolute inset-0 bg-gradient-to-b from-slate-800 to-black ${canPlay ? '' : 'opacity-50'}`} />
+              
+              {/* Element Glow */}
+               <div 
+                className="absolute inset-0 opacity-40 mix-blend-screen"
+                style={{ background: `radial-gradient(circle at center, ${spell.shadowColor}, transparent 80%)` }}
+              />
+               {/* Main Art / Emoji */}
+               <div className="absolute inset-0 z-0 transform transition-transform duration-500 group-hover:scale-110">
+                  {!imgError && spell.artSrc ? (
+                     <img 
+                      src={spell.artSrc} 
+                      alt={spell.name} 
+                      loading="eager"
+                      className="w-full h-full object-cover"
+                      onError={() => setImgError(true)}
+                     />
+                  ) : (
+                     <div className="flex items-center justify-center h-full text-6xl drop-shadow-2xl grayscale-[0.2] group-hover:grayscale-0 transition-all">{spell.emoji}</div>
+                  )}
                </div>
-
-               <div className="relative">
-                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-900 to-red-600 border border-red-400 shadow-lg flex items-center justify-center text-white font-black text-sm relative z-10">
-                    {spell.damage}
+          </div>
+  
+  
+          {/* Layer 3: Stats & Text (Overlay) */}
+          <div className="absolute inset-0 z-20 pointer-events-none flex flex-col justify-between p-3" style={{ transform: 'translateZ(20px)' }}>
+              {/* Top Row: Mana & Damage */}
+              <div className="flex justify-between items-start -mx-1 -mt-1">
+                 <div className="relative">
+                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-900 to-blue-600 border border-blue-400 shadow-lg flex items-center justify-center text-white font-black text-sm relative z-10">
+                      {spell.manaCost}
+                   </div>
+                   {/* Mana Glow */}
+                   <div className="absolute inset-0 bg-blue-500 blur-md opacity-60" />
                  </div>
-                  {/* Damage Glow */}
-                 <div className="absolute inset-0 bg-red-500 blur-md opacity-60" />
-               </div>
+  
+                 <div className="relative">
+                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-900 to-red-600 border border-red-400 shadow-lg flex items-center justify-center text-white font-black text-sm relative z-10">
+                      {spell.damage}
+                   </div>
+                    {/* Damage Glow */}
+                   <div className="absolute inset-0 bg-red-500 blur-md opacity-60" />
+                 </div>
+              </div>
+  
+              {/* Bottom Row: Name & Mechanic */}
+              <div className="mt-auto text-center">
+                 <div className="relative inline-block">
+                    <div className="bg-black/60 backdrop-blur-sm border border-white/10 rounded px-2 py-0.5 text-xs text-white/90 font-serif tracking-widest uppercase shadow-md truncate max-w-[90%] mx-auto">
+                      {spell.name}
+                    </div>
+                 </div>
+                 
+                 {showMechanic && spell.mechanic && (
+                   <div className="flex justify-center mt-1">
+                     <div className="bg-slate-900/80 rounded-full px-2 py-0.5 flex items-center gap-1 border border-white/5 shadow-sm">
+                        {mechanicIcon}
+                        <span className="text-[10px] text-gray-300 uppercase font-bold">{getMechanicName(spell.mechanic)}</span>
+                     </div>
+                   </div>
+                 )}
+              </div>
+          </div>
+  
+        {/* Unaffordable Overlay */}
+        {!isAffordable && (
+          <div className="absolute inset-0  flex flex-col items-center justify-center rounded-xl z-30 pointer-events-none">
+            <div className="bg-black/70 backdrop-blur-[2px] p-2 rounded-lg border border-red-500/50">
+               <span className="text-red-400 text-sm font-bold block text-center">⚡</span>
+               <span className="text-red-400 text-xs font-bold mt-1">法力不足</span>
             </div>
-
-            {/* Bottom Row: Name & Mechanic */}
-            <div className="mt-auto text-center">
-               <div className="relative inline-block">
-                  <div className="bg-black/60 backdrop-blur-sm border border-white/10 rounded px-2 py-0.5 text-xs text-white/90 font-serif tracking-widest uppercase shadow-md truncate max-w-[90%] mx-auto">
-                    {spell.name}
-                  </div>
+          </div>
+        )}
+  
+              {/* Description Tooltip - 智能定位 */}
+        {isHovered && !isFaceDown && !isSmall && (
+          <div className="absolute left-1/2 -translate-x-1/2 bottom-[105%] mb-2 w-52 z-50 pointer-events-none">
+            <div className="bg-slate-900/95 backdrop-blur-md text-white text-xs p-3 rounded-lg border border-white/20 shadow-[0_0_20px_rgba(0,0,0,0.8)]">
+               <div className={`font-bold mb-1.5 text-sm ${spell.color || 'text-amber-400'}`}>{spell.name}</div>
+               
+               {/* 数值信息 */}
+               <div className="flex items-center gap-2 mb-2 text-[10px]">
+                 <span className="flex items-center gap-1">
+                   <span className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">{spell.manaCost}</span>
+                   <span className="text-blue-300">费</span>
+                 </span>
+                 {spell.damage > 0 && (
+                   <span className="flex items-center gap-1">
+                     <span className="w-4 h-4 rounded-full bg-red-600 flex items-center justify-center text-white font-bold">{spell.damage}</span>
+                     <span className="text-red-300">伤害</span>
+                   </span>
+                 )}
+                 {(spell.armorGain || 0) > 0 && (
+                   <span className="flex items-center gap-1">
+                     <span className="w-4 h-4 rounded-full bg-slate-600 flex items-center justify-center text-white font-bold">{spell.armorGain}</span>
+                     <span className="text-slate-300">护甲</span>
+                   </span>
+                 )}
                </div>
                
-               {showMechanic && spell.mechanic && (
-                 <div className="flex justify-center mt-1">
-                   <div className="bg-slate-900/80 rounded-full px-2 py-0.5 flex items-center gap-1 border border-white/5 shadow-sm">
-                      {mechanicIcon}
-                      <span className="text-[10px] text-gray-300 uppercase font-bold">{getMechanicName(spell.mechanic)}</span>
-                   </div>
+               <p className="leading-relaxed text-gray-200 font-sans">{spell.description}</p>
+               
+               {spell.mechanic && spell.mechanic !== 'skip' && (
+                 <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 bg-purple-900/50 rounded-full text-[10px] text-purple-300">
+                   <span>🔮</span>
+                   <span>{getMechanicName(spell.mechanic)}</span>
                  </div>
                )}
             </div>
-        </div>
-
-      {/* Unaffordable Overlay */}
-      {!isAffordable && (
-        <div className="absolute inset-0  flex flex-col items-center justify-center rounded-xl z-30 pointer-events-none">
-          <div className="bg-black/70 backdrop-blur-[2px] p-2 rounded-lg border border-red-500/50">
-             <span className="text-red-400 text-sm font-bold block text-center">⚡</span>
-             <span className="text-red-400 text-xs font-bold mt-1">法力不足</span>
+            {/* Arrow */}
+            <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-slate-900 border-r border-b border-white/20 transform rotate-45"></div>
           </div>
+        )}
+  
         </div>
-      )}
-
-            {/* Description Tooltip - 智能定位 */}
-      {isHovered && !isFaceDown && !isSmall && (
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-[105%] mb-2 w-52 z-50 pointer-events-none">
-          <div className="bg-slate-900/95 backdrop-blur-md text-white text-xs p-3 rounded-lg border border-white/20 shadow-[0_0_20px_rgba(0,0,0,0.8)]">
-             <div className={`font-bold mb-1.5 text-sm ${spell.color || 'text-amber-400'}`}>{spell.name}</div>
-             
-             {/* 数值信息 */}
-             <div className="flex items-center gap-2 mb-2 text-[10px]">
-               <span className="flex items-center gap-1">
-                 <span className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">{spell.manaCost}</span>
-                 <span className="text-blue-300">费</span>
-               </span>
-               {spell.damage > 0 && (
-                 <span className="flex items-center gap-1">
-                   <span className="w-4 h-4 rounded-full bg-red-600 flex items-center justify-center text-white font-bold">{spell.damage}</span>
-                   <span className="text-red-300">伤害</span>
-                 </span>
-               )}
-               {(spell.armorGain || 0) > 0 && (
-                 <span className="flex items-center gap-1">
-                   <span className="w-4 h-4 rounded-full bg-slate-600 flex items-center justify-center text-white font-bold">{spell.armorGain}</span>
-                   <span className="text-slate-300">护甲</span>
-                 </span>
-               )}
-             </div>
-             
-             <p className="leading-relaxed text-gray-200 font-sans">{spell.description}</p>
-             
-             {spell.mechanic && spell.mechanic !== 'skip' && (
-               <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 bg-purple-900/50 rounded-full text-[10px] text-purple-300">
-                 <span>🔮</span>
-                 <span>{getMechanicName(spell.mechanic)}</span>
-               </div>
-             )}
-          </div>
-          {/* Arrow */}
-          <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-slate-900 border-r border-b border-white/20 transform rotate-45"></div>
-        </div>
-      )}
-
-      </div>
-    </div>
+      </motion.div>
   );
 };
 

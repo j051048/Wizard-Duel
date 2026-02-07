@@ -83,9 +83,15 @@ export function useAITurn({
           }
         }
 
-        // 中间状态快照（用于 UI 逐步更新）
-        const singleResult = executeSpell(intermediateState, 'opponent', cmd.sourceSpell);
-        intermediateState = singleResult.newState;
+        // 中间状态快照（优化：优先使用预计算的快照，避免二次执行逻辑）
+        if (cmd.snapshot) {
+            intermediateState = cmd.snapshot;
+        } else {
+            // 回退逻辑：如果快照丢失，则重新计算
+            const singleResult = executeSpell(intermediateState, 'opponent', cmd.sourceSpell);
+            intermediateState = singleResult.newState;
+        }
+
         commands.push({ type: 'UPDATE_STATE', payload: intermediateState });
         commands.push({ type: 'WAIT', payload: null, delay: AI_CARD_PLAY_DELAY });
 

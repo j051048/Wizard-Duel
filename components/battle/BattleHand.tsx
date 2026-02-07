@@ -6,8 +6,8 @@ import { HapticService } from '../../services/haptic';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface BattleHandProps {
-  hand: string[];
-  playableCards: string[];
+  hand: SpellType[];
+  playableCards: SpellType[];
   phase: DuelPhase;
   isProcessing: boolean;
   isMobile: boolean;
@@ -211,11 +211,10 @@ const BattleHand: React.FC<BattleHandProps> = ({
               {/* 卡牌渲染 */}
               <div className={`transition-all duration-300 ${isHovered || isSelectedForAction ? 'drop-shadow-[0_20px_40px_rgba(0,0,0,0.8)]' : 'drop-shadow-[0_5px_15px_rgba(0,0,0,0.5)]'}`}>
                 <SpellCard 
-                  spell={getSpellById(id as SpellType)} 
+                  spell={getSpellById(id)} 
                   onPointerDown={(e) => {
-                    onPointerDownCard(id as SpellType);
                     if (isAffordable && phase === 'PLAYER_TURN' && !isProcessing) {
-                      startDrag(id as SpellType, index, e.clientX, e.clientY);
+                      startDrag(id, index, e.clientX, e.clientY);
                     }
                   }}
                   onPointerUp={onPointerUpCard}

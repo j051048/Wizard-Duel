@@ -68,7 +68,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   setTargeting
 }) => {
   const { 
-    duelState, phase, playerCard, opponentCard, resultText, effectMessages, aiStatus, targetingData 
+    duelState, phase, playerCard, opponentCard, resultText, 
+    effectMessages, aiStatus, targetingData, turnBanner 
   } = gameLoopState;
 
   const isMobile = useIsMobile();
@@ -383,6 +384,12 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
            onClose={() => setDetailSpell(null)} 
          />
       )}
+
+      {/* Turn Transition Banner */}
+      <TurnBanner 
+        type={turnBanner} 
+        roundNumber={duelState?.roundNumber || 0} 
+      />
     </div>
   );
 };

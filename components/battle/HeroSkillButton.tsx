@@ -7,9 +7,10 @@ interface HeroSkillButtonProps {
     canUse: boolean;
     onClick: () => void;
     currentMana: number;
+    compact?: boolean;
 }
 
-export const HeroSkillButton: React.FC<HeroSkillButtonProps> = ({ skill, canUse, onClick, currentMana }) => {
+export const HeroSkillButton: React.FC<HeroSkillButtonProps> = ({ skill, canUse, onClick, currentMana, compact }) => {
     const isAffordable = currentMana >= skill.manaCost;
     const isDisabled = !canUse || !isAffordable;
     const [isHovered, setIsHovered] = useState(false);
@@ -24,10 +25,10 @@ export const HeroSkillButton: React.FC<HeroSkillButtonProps> = ({ skill, canUse,
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
                 className={`
-                    relative w-12 h-12 md:w-14 md:h-14 rounded-full border-2 flex items-center justify-center overflow-hidden transition-all shadow-lg group
+                    relative ${compact ? 'w-10 h-10 md:w-12 md:h-12' : 'w-12 h-12 md:w-14 md:h-14'} rounded-full border-2 flex items-center justify-center overflow-hidden transition-all shadow-lg group
                     ${isDisabled 
                         ? 'opacity-60 grayscale cursor-not-allowed border-gray-600 bg-gray-800' 
-                        : `${skill.borderColor} bg-gradient-to-br from-slate-800 to-slate-900 hover:shadow-[0_0_20px_${skill.shadowColor}]`
+                        : `${skill.borderColor || 'border-amber-500'} bg-gradient-to-br from-slate-800 to-slate-900 hover:shadow-[0_0_20px_${skill.shadowColor || 'rgba(251,191,36,0.4)'}]`
                     }
                 `}
             >
