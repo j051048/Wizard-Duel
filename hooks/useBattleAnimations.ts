@@ -302,10 +302,16 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
     });
     if (!ctx) return;
 
-    // Handle Resize
+    // Handle Resize with DPR support
     const handleResize = () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        const dpr = window.devicePixelRatio || 1;
+        const displayWidth = window.innerWidth;
+        const displayHeight = window.innerHeight;
+        canvas.width = displayWidth * dpr;
+        canvas.height = displayHeight * dpr;
+        canvas.style.width = `${displayWidth}px`;
+        canvas.style.height = `${displayHeight}px`;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     window.addEventListener('resize', handleResize);
     handleResize();

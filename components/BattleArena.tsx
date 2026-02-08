@@ -29,6 +29,8 @@ import CombatFeed from './battle/CombatFeed';
 import TurnBanner from './battle/TurnBanner';
 import { TurnTimer } from './battle/TurnTimer';
 import CardDetailModal from './CardDetailModal';
+import SpellCastEffect from './battle/SpellCastEffect';
+import ElementIndicator from './battle/ElementIndicator';
 
 // New Sub-Components
 // New Sub-Components
@@ -122,7 +124,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     }
   }, [dragState?.isDragging]);
 
-  // Projection Logic
+  // Projection Logic - [P1-20] hover即显示伤害预览
   const projection = useMemo(() => {
     const activeId = dragState?.spellId || hoveredSpellId;
     if (!activeId || !duelState || phase !== 'PLAYER_TURN' || gameLoopState.isProcessing) return null;
@@ -232,18 +234,28 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
             {/* [P0 Fix A-2] 回合横幅 — 统一由 useTurnManager 驱动 */}
       <TurnBanner type={gameLoopState.turnBanner} roundNumber={duelState?.roundNumber || 1} />
       
-      {/* Background */}
+      {/* Background - [P1-18] 低端机降级优化 */}
       <div className="absolute inset-0 z-0 pointer-events-none arena-bg-overlay overflow-hidden">
         <img 
           src="/ui/bg_arena.webp" 
           alt="Arena Background"
-          className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay scale-110 blur-[2px] optimize-gpu animate-bg-breathing"
+          className={`absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay scale-110 optimize-gpu ${isLowQuality ? '' : 'blur-[2px] animate-bg-breathing'}`}
           style={{ objectPosition: 'center 40%' }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-slate-950/80" />
       </div>
 
       <FloatingTextOverlay items={floatingTexts} />
+
+      {/* [P1] Spell Cast Effects */}
+      <SpellCastEffect spellId={playerCard} caster="player" />
+      <SpellCastEffect spellId={opponentCard} caster="opponent" />
+      
+      {/* [P1] Element Counter Indicator */}
+      <ElementIndicator 
+        opponentLastSpell={duelState?.opponentLastSpell || null}
+        isPlayerTurn={phase === 'PLAYER_TURN' && !gameLoopState.isProcessing}
+      />
 
       {/* Opponent Area */}
       <div className="w-full flex justify-center items-start pt-4 md:pt-6 z-20 relative safe-area-top">
@@ -266,9 +278,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       {!isLowQuality && (
           <canvas 
             ref={canvasRef}
-            width={window.innerWidth}
-            height={window.innerHeight}
             className="fixed inset-0 pointer-events-none z-50"
+            style={{ width: '100%', height: '100%' }}
           />
       )}
 
@@ -365,9 +376,9 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         maxHp={GAME_CONFIG.maxHP}
       />
 
-      {/* Mobile Combat Feed */}
-      <div className={`${isMobile ? 'scale-75 origin-top-left absolute top-32 left-4 pointer-events-none z-30' : ''}`}>
-         <CombatFeed messages={effectMessages} />
+      {/* Mobile Combat Feed - [P1-21] 改进移动端可读性 */}
+      <div className={`${isMobile ? 'fixed top-16 left-2 z-30 pointer-events-none max-w-[180px]' : ''}`}>
+         <CombatFeed messages={effectMessages} isMobile={isMobile} />
       </div>
 
             {/* [P0 Fix A-3] 回合计时器 — 统一在 BattleArena 内部渲染，由 useTurnManager 驱动 */}

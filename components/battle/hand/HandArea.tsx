@@ -49,10 +49,10 @@ export const HandArea: React.FC<HandAreaProps> = ({
             <div className="relative w-full">
                 {/* 手牌容器 */}
                 <div id="player-hand-container" className="w-full relative z-40 pointer-events-auto">
-                    {/* 新手引导 */}
+                    {/* 新手引导 - [P1-14] 移动端改为单击确认 */}
                     <TutorialBubble 
                         isVisible={shouldShowTutorial} 
-                        text="👆 滑动选牌，点两下出牌！" 
+                        text="👆 点击选牌，再点确认出牌！" 
                         position="top"
                     />
                     

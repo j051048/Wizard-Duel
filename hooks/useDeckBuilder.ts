@@ -5,6 +5,10 @@ import { HapticService } from '../services/haptic';
 import { useUserStore } from '../stores/useUserStore';
 import { useToastStore } from '../stores/useToastStore';
 
+// [P0 Fix] 统一卡牌复制数量限制
+const MAX_COPIES_LEGENDARY = 1;
+const MAX_COPIES_OTHER = 2;
+
 export const useDeckBuilder = (selectedDeck: Deck | null | undefined, gameMode: GameMode = 'standard') => {
   const [deckName, setDeckName] = useState(selectedDeck?.name || '新牌组');
   const [selectedCards, setSelectedCards] = useState<SpellType[]>(selectedDeck?.cards || []);
@@ -49,9 +53,16 @@ export const useDeckBuilder = (selectedDeck: Deck | null | undefined, gameMode: 
   }, {} as Record<string, number>);
 
   // 获取单张卡牌在牌组中的上限
+  // [P0 Fix] 传说卡最多1张，其他最多2张，兼顾核心卡和收藏卡
   const getCardLimit = (spell: Spell): number => {
-    if (spell.cardSet === 'core') return 4; // 核心卡牌每种最多4张
-    return ownedCounts[spell.id] || 0;
+    // 传说卡最多1张
+    if (spell.rarity === 'legendary') return MAX_COPIES_LEGENDARY;
+    // 其他稀有度最多2张
+    const baseLimit = MAX_COPIES_OTHER;
+    // 核心卡牌默认解锁，上限为 baseLimit
+    if (spell.cardSet === 'core') return baseLimit;
+    // 非核心卡牌受拥有数量限制
+    return Math.min(baseLimit, ownedCounts[spell.id] || 0);
   };
 
   const rawCardPool = getCardsForMode(gameMode).filter(s => {

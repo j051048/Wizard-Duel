@@ -59,7 +59,7 @@ export const TUTORIAL_STEPS: TutorialStepConfig[] = [
   {
     id: 'hand_intro',
     title: '🃏 你的手牌',
-    content: '屏幕下方是你的法术卡牌。\n\n蓝色数字 = 法力消耗\n红色数字 = 伤害值\n\n亮起的卡牌表示你现在能使用！',
+    content: '屏幕下方是你的法术卡牌。\n\n蓝色数字 = 法力消耗\n红色数字 = 伤害值\n\n绿色边框的卡牌表示你现在能使用！',
     targetId: 'player-hand-container',
     highlightSelector: '[id^="card-"]',
     position: 'top',
@@ -72,7 +72,7 @@ export const TUTORIAL_STEPS: TutorialStepConfig[] = [
   {
     id: 'mana_intro',
     title: '💎 法力水晶',
-    content: '左下角显示你的法力值。\n\n每回合开始时，法力会完全恢复，并且上限+1（最高10）。\n\n第1回合你有 1 点法力，规划好你的出牌节奏！',
+    content: '每回合开始时法力完全恢复，上限+1（最高10）。\n\n第1回合你有 1 点法力，只能使用低费卡牌！',
     targetId: 'player-mana-display',
     position: 'right',
     gameState: 'DUEL',
@@ -84,7 +84,7 @@ export const TUTORIAL_STEPS: TutorialStepConfig[] = [
   {
     id: 'play_first_card',
     title: '✨ 释放你的第一个法术！',
-    content: '拖拽一张亮起的卡牌到屏幕中央区域，或者直接点击它来使用。\n\n试试看吧！',
+    content: '📱 手机：点击卡牌选中，再点一次确认出牌\n💻 电脑：拖拽卡牌到战场，或双击出牌\n\n试试看吧！',
     targetId: 'battle-board-area',
     highlightSelector: '.card-playable',
     position: 'center',
@@ -97,7 +97,7 @@ export const TUTORIAL_STEPS: TutorialStepConfig[] = [
   {
     id: 'end_turn_intro',
     title: '⏭️ 结束回合',
-    content: '打出卡牌后，点击「结束回合」按钮把行动权交给对手。\n\n或者你也可以继续出牌（如果法力足够的话）。',
+    content: '出完牌后，点击「结束回合」把行动权交给对手。\n\n💡 你也可以连续出多张牌（如果法力够的话）！',
     targetId: 'end-turn-btn-desktop',
     position: 'left',
     gameState: 'DUEL',
@@ -111,7 +111,7 @@ export const TUTORIAL_STEPS: TutorialStepConfig[] = [
   {
     id: 'element_intro',
     title: '🔥❄️⚡ 五元素相克',
-    content: '记住这个克制链：\n\n🔥火 → 🌿藤 → ❄️冰 → ⚡雷 → 🪨石 → 🔥火\n\n克制对手上一张牌的元素会造成 150% 暴击伤害！',
+    content: '记住克制链：\n\n🔥火 → 🌿藤 → ❄️冰 → ⚡雷 → 🪨石 → 🔥火\n\n克制对手上一张牌会造成 150% 暴击！\n\n💡 屏幕右侧会显示克制提示',
     position: 'center',
     gameState: 'DUEL',
     triggerPhase: 'PLAYER_TURN',
@@ -119,9 +119,9 @@ export const TUTORIAL_STEPS: TutorialStepConfig[] = [
     isBlocking: true
   },
   {
-    id: 'opponent_last_spell',
-    title: '👁️ 观察对手',
-    content: '屏幕上方显示对手上一回合使用的卡牌。\n\n思考一下：你手里有什么能克制它的法术吗？',
+    id: 'opponent_info',
+    title: '👁️ 知己知彼',
+    content: '顶部显示对手的血量、法力和手牌数。\n\n观察对手手牌数量，判断他的资源是否充裕！',
     targetId: 'opponent-last-spell',
     position: 'bottom',
     gameState: 'DUEL',
@@ -133,7 +133,7 @@ export const TUTORIAL_STEPS: TutorialStepConfig[] = [
   {
     id: 'try_counter',
     title: '🎯 尝试克制！',
-    content: '现在轮到你了。选择一张能克制对手的卡牌，体验暴击的快感！',
+    content: '选一张能克制对手的卡牌，体验暴击快感！',
     position: 'center',
     gameState: 'DUEL',
     triggerPhase: 'PLAYER_TURN',
@@ -144,8 +144,8 @@ export const TUTORIAL_STEPS: TutorialStepConfig[] = [
   // ============ 阶段3: 第三回合 - 进阶机制 ============
   {
     id: 'mechanic_intro',
-    title: '🔮 特殊机制',
-    content: '每张卡牌都有独特的机制效果：\n\n🔥 灼烧 - 持续伤害\n❄️ 冻结 - 跳过行动\n🌿 缠绕 - 增加费用\n⚡ 充能 - 连击加成\n🪨 坚韧 - 获得护甲',
+    title: '🔮 卡牌特殊效果',
+    content: '每张卡都有独特机制：\n\n🔥 灼烧 - 回合末持续伤害\n❄️ 冻结 - 对手跳过行动\n🌿 缠绕 - 增加对手出牌费用\n⚡ 充能 - 连续出雷系伤害翻倍\n🪨 坚韧 - 获得护甲（先于血量承伤）',
     position: 'center',
     gameState: 'DUEL',
     triggerPhase: 'PLAYER_TURN',
@@ -153,10 +153,10 @@ export const TUTORIAL_STEPS: TutorialStepConfig[] = [
     isBlocking: true
   },
   {
-    id: 'hp_armor_intro',
-    title: '❤️ 生命与护甲',
-    content: '注意你和对手的生命值！\n\n灰色数字是护甲 - 护甲会先于生命值承受伤害。\n\n当任意一方生命值归0时，游戏结束！',
-    targetId: 'player-hp-display',
+    id: 'hero_skill_intro',
+    title: '⭐ 英雄技能',
+    content: '左下角有英雄技能，每回合可使用一次。\n\n花2法力获得额外效果，善用它们！',
+    targetId: 'hero-skills-container',
     position: 'right',
     gameState: 'DUEL',
     triggerPhase: 'PLAYER_TURN',
@@ -167,7 +167,7 @@ export const TUTORIAL_STEPS: TutorialStepConfig[] = [
   {
     id: 'tutorial_complete',
     title: '🎉 教程完成！',
-    content: '你已经掌握了基本战斗技巧！\n\n接下来的战斗就靠你自己了。\n\n祝你好运，法师！🧙‍♂️',
+    content: '你已经掌握了基本战斗技巧！\n\n记住：\n• 管理法力，合理出牌\n• 利用元素克制造成暴击\n• 善用英雄技能\n\n祝你好运，法师！🧙‍♂️',
     position: 'center',
     gameState: 'DUEL',
     triggerPhase: 'PLAYER_TURN',

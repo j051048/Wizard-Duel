@@ -52,9 +52,14 @@ export const calculateSpellProjection = (
   const targetLastSpell = targetLastSpellId ? getSpellById(targetLastSpellId) : null;
 
   if (targetLastSpell) {
-    if (targetLastSpell.beats === spell.id) {
+    // [P0 Fix] 使用元素类型判定
+    const { getElementType, doesElementBeat } = require('../services/combat/elementSystem');
+    const spellElement = getElementType(spellId);
+    const targetElement = getElementType(targetLastSpellId);
+    
+    if (doesElementBeat(targetElement, spellElement)) {
         result.isCountered = true;
-    } else if (!result.isCountered && spell.beats === targetLastSpellId) {
+    } else if (!result.isCountered && doesElementBeat(spellElement, targetElement)) {
         result.isCrit = true;
     }
   }

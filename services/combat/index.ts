@@ -9,8 +9,14 @@ export {
   isElementCounter,
   isElementWeak,
   getSpellById,
-  evaluateElementInteraction
+  evaluateElementInteraction,
+  getElementType,
+  doesElementBeat,
+  getCounterElement,
+  getBeatenElement
 } from './elementSystem';
+
+export type { ElementType } from './elementSystem';
 
 // 伤害计算
 export {

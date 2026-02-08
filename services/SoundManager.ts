@@ -2,10 +2,12 @@
  * SoundManager - 游戏音效管理服务
  * 
  * 提供游戏中的音效播放功能
+ * [P1-22] 新增回合结束音效
  */
 
 type SoundKey = 
   | 'turn_start'
+  | 'turn_end'
   | 'card_play'
   | 'card_draw'
   | 'damage'
@@ -14,16 +16,17 @@ type SoundKey =
   | 'defeat'
   | 'button_click';
 
-// 音效文件映射
+// 音效文件映射 - 映射到实际存在的音频文件
 const SOUND_MAP: Record<SoundKey, string> = {
-  turn_start: '/sounds/turn_start.mp3',
-  card_play: '/sounds/card_play.mp3',
-  card_draw: '/sounds/card_draw.mp3',
-  damage: '/sounds/damage.mp3',
-  heal: '/sounds/heal.mp3',
-  victory: '/sounds/victory.mp3',
-  defeat: '/sounds/defeat.mp3',
-  button_click: '/sounds/button_click.mp3'
+  turn_start: '/audio/sfx-card-play.mp3',
+  turn_end: '/audio/sfx-block.mp3',
+  card_play: '/audio/sfx-card-play.mp3',
+  card_draw: '/audio/sfx-card-play.mp3',
+  damage: '/audio/sfx-hit.mp3',
+  heal: '/audio/sfx-block.mp3',
+  victory: '/audio/sfx-victory.mp3',
+  defeat: '/audio/sfx-defeat.mp3',
+  button_click: '/audio/sfx-card-play.mp3'
 };
 
 // 音效缓存

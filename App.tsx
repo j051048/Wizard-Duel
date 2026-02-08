@@ -44,6 +44,7 @@ const TavernMode = React.lazy(() => import('./components/TavernMode'));
 const ShopScreen = React.lazy(() => import('./components/ShopScreen'));
 const CollectionBook = React.lazy(() => import('./components/CollectionBook'));
 const UserProfilePage = React.lazy(() => import('./components/UserProfilePage'));
+const BattlePassPage = React.lazy(() => import('./components/shop/BattlePassPage'));
 
 // Immediate Components
 import { LoadingScreen } from './components/LoadingScreen';
@@ -297,6 +298,17 @@ function App() {
                 toast.success('昵称已更新', name);
               }}
               displayName={localStorage.getItem('wizard_display_name') || (user.activeAddress ? `Wizard_${user.activeAddress.slice(0, 6)}` : '游客法师')}
+            />
+          )}
+
+          {/* Battle Pass */}
+          {ui.gameState === 'BATTLE_PASS' && (
+            <BattlePassPage
+              onBack={() => ui.setGameState('LOBBY')}
+              onPurchasePremium={() => {
+                toast.info('即将推出', '高级通行证即将上线！');
+              }}
+              balance={user.balance}
             />
           )}
 

@@ -389,11 +389,15 @@ export const determineWinner = (p: SpellType, o: SpellType): 'WIN' | 'LOSS' | 'D
   const playerSpell = getSpellById(p);
   const opponentSpell = getSpellById(o);
   
-  // 检查克制关系
-  if (playerSpell.beats === opponentSpell.id) {
+  // [P0 Fix] 使用元素类型判定克制关系
+  const { getElementType, doesElementBeat } = require('./combat/elementSystem');
+  const playerElement = getElementType(p);
+  const opponentElement = getElementType(o);
+  
+  if (doesElementBeat(playerElement, opponentElement)) {
     return 'WIN';
   }
-  if (opponentSpell.beats === playerSpell.id) {
+  if (doesElementBeat(opponentElement, playerElement)) {
     return 'LOSS';
   }
   
@@ -541,35 +545,94 @@ export const createTavernDuelState = (playerDeck: SpellType[], aiProfile: AIProf
 };
 
 const generateTavernAIDeck = (aiProfile: AIProfile, gameMode: GameMode = 'standard'): SpellType[] => {
-  // 根据游戏模式获取可用卡牌
+  // [P1-23] AI 牌组构建策略优化
   const availableSpells = getCardsForMode(gameMode);
-  const baseCards = availableSpells.map(s => s.id);
+  const baseCards = availableSpells.filter(s => s.id !== 'skip' && !s.id.startsWith('hero_'));
   const deckSize = 20;
+
+  // 构建策略：基于费用曲线 + 元素平衡
+  const buildBalancedDeck = (cardPool: typeof baseCards, aggressiveness: number): SpellType[] => {
+    const deck: SpellType[] = [];
+    
+    // 费用曲线目标分布：低费多、高费少
+    const costCurve: Record<number, number> = {
+      0: 2,   // 0费 2张
+      1: 4,   // 1费 4张
+      2: 4,   // 2费 4张
+      3: 3,   // 3费 3张
+      4: 3,   // 4费 3张
+      5: 2,   // 5费 2张
+      6: 1,   // 6费 1张
+      7: 1,   // 7+费 1张
+    };
+    
+    // 根据难度调整
+    if (aiProfile.strategy === 'aggressive') {
+      costCurve[1] = 5;
+      costCurve[2] = 5;
+      costCurve[5] = 1;
+      costCurve[6] = 0;
+    } else if (aiProfile.strategy === 'defensive') {
+      costCurve[2] = 5;
+      costCurve[3] = 4;
+      costCurve[4] = 3;
+    }
+    
+    // 按费用分组
+    const cardsByCost: Record<number, typeof baseCards> = {};
+    cardPool.forEach(card => {
+      const costKey = Math.min(card.manaCost, 7);
+      if (!cardsByCost[costKey]) cardsByCost[costKey] = [];
+      cardsByCost[costKey].push(card);
+    });
+    
+    // 填充牌组
+    for (const [costStr, count] of Object.entries(costCurve)) {
+      const cost = parseInt(costStr);
+      const pool = cardsByCost[cost] || [];
+      if (pool.length === 0) continue;
+      
+      for (let i = 0; i < count && deck.length < deckSize; i++) {
+        const card = pool[Math.floor(Math.random() * pool.length)];
+        // 限制同一张卡牌最多2张（传说1张）
+        const currentCount = deck.filter(id => id === card.id).length;
+        const maxCopies = card.rarity === 'legendary' ? 1 : 2;
+        if (currentCount < maxCopies) {
+          deck.push(card.id);
+        } else {
+          // 选另一张
+          const alt = pool.find(c => deck.filter(id => id === c.id).length < (c.rarity === 'legendary' ? 1 : 2));
+          if (alt) deck.push(alt.id);
+        }
+      }
+    }
+    
+    // 补满到 deckSize
+    while (deck.length < deckSize) {
+      const card = cardPool[Math.floor(Math.random() * cardPool.length)];
+      const currentCount = deck.filter(id => id === card.id).length;
+      if (currentCount < 2) {
+        deck.push(card.id);
+      }
+    }
+    
+    return deck.slice(0, deckSize);
+  };
 
   switch (aiProfile.difficulty) {
     case 'easy':
-      // 新手AI：随机选择基础卡牌
-      return Array.from({ length: deckSize }, () =>
-        baseCards[Math.floor(Math.random() * Math.min(baseCards.length, 10))]
-      );
+      // 新手AI：只用基础便宜卡牌
+      return buildBalancedDeck(baseCards.filter(c => c.manaCost <= 4 && c.rarity !== 'legendary'), 0.3);
 
     case 'medium':
-      // 中等AI：包含一些强力卡牌
-      const mediumCards = baseCards.slice(0, Math.min(baseCards.length, 25));
-      return Array.from({ length: deckSize }, () =>
-        mediumCards[Math.floor(Math.random() * mediumCards.length)]
-      );
+      // 中等AI：均衡牌组
+      return buildBalancedDeck(baseCards.filter(c => c.rarity !== 'legendary' || Math.random() < 0.3), 0.5);
 
     case 'hard':
-      // 困难AI：使用最强卡牌
-      const hardCards = baseCards.slice(0, 30);
-      return Array.from({ length: deckSize }, () =>
-        hardCards[Math.floor(Math.random() * hardCards.length)]
-      );
+      // 困难AI：使用最强组合
+      return buildBalancedDeck(baseCards, 0.8);
 
     default:
-      return Array.from({ length: deckSize }, () =>
-        baseCards[Math.floor(Math.random() * baseCards.length)]
-      );
+      return buildBalancedDeck(baseCards, 0.5);
   }
 };

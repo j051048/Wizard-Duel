@@ -28,10 +28,31 @@ export const pickBestSpellForAI = (
   );
   
   // 1. 优先英雄技能 (如果还没用过)
-  if (!state.opponentHeroSkillUsed && !excludeSpells.has('hero_fire')) {
-    const heroSkillId: SpellType = 'hero_fire'; 
-    if (canAffordSpell(heroSkillId, state.opponentMana, state.opponentEffects, state.opponentCostMod).canAfford) {
-      return heroSkillId;
+  // [P0 Fix] 动态选择英雄技能，不再硬编码 hero_fire
+  if (!state.opponentHeroSkillUsed) {
+    // 根据AI牌组元素分布推断最佳英雄技能
+    const heroSkills: SpellType[] = ['hero_fire', 'hero_vine', 'hero_ice', 'hero_thunder', 'hero_rock'];
+    
+    // 统计对手手牌中各元素数量，选择匹配最多的英雄技能
+    const elementCounts: Record<string, number> = {};
+    state.opponentHand.forEach(cardId => {
+      const el = cardId.split(/\d/)[0]; // fire, vine, ice, thunder, rock
+      elementCounts[el] = (elementCounts[el] || 0) + 1;
+    });
+    
+    // 按手牌元素匹配度排序英雄技能
+    const sortedHeroSkills = heroSkills
+      .filter(h => !excludeSpells.has(h))
+      .sort((a, b) => {
+        const elA = a.replace('hero_', '');
+        const elB = b.replace('hero_', '');
+        return (elementCounts[elB] || 0) - (elementCounts[elA] || 0);
+      });
+    
+    for (const heroSkillId of sortedHeroSkills) {
+      if (canAffordSpell(heroSkillId, state.opponentMana, state.opponentEffects, state.opponentCostMod).canAfford) {
+        return heroSkillId;
+      }
     }
   }
 
@@ -65,8 +86,14 @@ export const pickBestSpellForAI = (
   
   // 5. 元素克制：如果知道玩家上次用了什么，尝试克制
   if (state.playerLastSpell) {
-    const counterSpell = affordable.find(s => getSpellById(s).beats === state.playerLastSpell);
-    if (counterSpell && getSpellById(counterSpell).damage > 0) {
+    // [P0 Fix] 使用元素类型判定，而非直接比较 beats === playerLastSpell
+    const { getElementType, doesElementBeat } = require('./combat/elementSystem');
+    const targetElement = getElementType(state.playerLastSpell);
+    const counterSpell = affordable.find(s => {
+      const attackerElement = getElementType(s);
+      return doesElementBeat(attackerElement, targetElement) && getSpellById(s).damage > 0;
+    });
+    if (counterSpell) {
       return counterSpell;
     }
   }

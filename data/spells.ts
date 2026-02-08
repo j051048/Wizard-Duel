@@ -142,7 +142,7 @@ export const SPELLS: Spell[] = [
     artSrc: '/cards/thunder-shock.webp'
   }),
   defineSpell({
-    id: 'rock4', name: '小石子', manaCost: 0, armorGain: 3, rarity: 'common', mechanic: 'fortify',
+    id: 'rock4', name: '小石子', manaCost: 1, armorGain: 2, rarity: 'common', mechanic: 'fortify',
     artSrc: '/cards/rock-pebble.webp'
   }),
 
@@ -165,8 +165,8 @@ export const SPELLS: Spell[] = [
     artSrc: '/cards/ice-bite.webp'  // 1费1伤+冻结，快速控制
   }),
   defineSpell({
-    id: 'thunder6', name: '电火花', manaCost: 1, damage: 3, rarity: 'common', mechanic: 'charge',
-    artSrc: '/cards/thunder-shock.webp'  // 1费3伤，高性价比但无机制
+    id: 'thunder6', name: '电火花', manaCost: 1, damage: 2, rarity: 'common', mechanic: 'charge',
+    artSrc: '/cards/thunder-shock.webp'  // 1费2伤，合理性价比
   }),
   defineSpell({
     id: 'rock7', name: '碎石甲', manaCost: 1, damage: 1, armorGain: 2, rarity: 'common', mechanic: 'fortify',
@@ -186,7 +186,7 @@ export const SPELLS: Spell[] = [
   }),
   defineSpell({
       // New: 4 Mana Tangle
-      id: 'vine5', name: '疯狂生长', manaCost: 4, damage: 4, rarity: 'uncommon' as any, mechanic: 'tangle', // Cast as any due to rarity strictness or just fix type
+      id: 'vine5', name: '疯狂生长', manaCost: 4, damage: 4, rarity: 'rare', mechanic: 'tangle',
       artSrc: '/cards/vine-growth.webp'
   }),
 
@@ -309,12 +309,15 @@ export const PRESET_DECKS: { name: string; cards: SpellType[]; description: stri
     style: 'aggro',
     description: '极致进攻，利用火焰的高额伤害和持久灼烧快速终结对手。',
     cards: [
-      'fire', 'fire', 'fire', 'fire', 
-      'fire2', 'fire2', 'fire2', 'fire2', 
-      'fire4', 'fire4', 'fire4', 'fire4', 
+      'fire', 'fire', 
+      'fire2', 'fire2', 
+      'fire4', 'fire4', 
+      'fire5', 'fire5',
+      'fire7', 'fire7',
       'aoe', 'aoe', 
       'draw', 'draw', 
       'thunder', 'thunder', 
+      'thunder4', 'thunder4',
       'rock', 'rock' 
     ]
   },
@@ -323,13 +326,16 @@ export const PRESET_DECKS: { name: string; cards: SpellType[]; description: stri
     style: 'control',
     description: '缜密防守，通过冰冻限制对手行动，并在防守中寻找反击机会。',
     cards: [
-      'ice', 'ice', 'ice', 'ice', 
-      'ice2', 'ice2', 'ice2', 'ice2', 
+      'ice', 'ice', 
+      'ice2', 'ice2', 
+      'ice3', 'ice3',
+      'ice4', 'ice4',
       'rock3', 'rock3', 
       'rock2', 'rock2', 
-      'healing', 'healing', 'healing', 'healing', 
+      'healing', 'healing', 
       'vine2', 'vine2', 
-      'draw', 'draw' 
+      'draw', 'draw' ,
+      'rock', 'rock'
     ]
   },
   {
@@ -337,12 +343,16 @@ export const PRESET_DECKS: { name: string; cards: SpellType[]; description: stri
     style: 'combo',
     description: '资源掌控，利用雷电连击和藤蔓控费，掌握战斗节奏。',
     cards: [
-      'thunder', 'thunder', 'thunder', 'thunder', 
-      'thunder2', 'thunder2', 'thunder2', 'thunder2', 
-      'vine', 'vine', 'vine', 'vine', 
-      'vine2', 'vine2', 'vine2', 'vine2', 
+      'thunder', 'thunder', 
+      'thunder2', 'thunder2', 
+      'thunder4', 'thunder4',
+      'thunder6', 'thunder6',
+      'vine', 'vine', 
+      'vine2', 'vine2', 
+      'vine4', 'vine4',
       'draw', 'draw', 
-      'ice4', 'ice4' 
+      'ice4', 'ice4',
+      'rock', 'rock'
     ]
   }
 ];
