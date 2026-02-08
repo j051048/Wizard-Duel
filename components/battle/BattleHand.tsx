@@ -20,22 +20,6 @@ interface BattleHandProps {
   onDoubleClickCard?: (spellId: SpellType) => void;
 }
 
-const calculateHandLayout = (count: number, isMobile: boolean, screenWidth: number) => {
-    // [UI Polish] 移动端：激进的扇形参数，模仿炉石传说
-    const baseAngle = isMobile ? (screenWidth < 380 ? 10 : 8) : 3; // 增加基础角度
-    const maxTotalAngle = isMobile ? 80 : 35; // 允许更大的总扇面
-    const angleStep = Math.min(baseAngle, maxTotalAngle / (count - 1 || 1));
-    
-    // [UI Polish] 移动端：极度紧凑的间距，强制堆叠
-    // 假设卡牌宽度 ~100px。为了堆叠，间距应小于 50px。
-    const baseSpacing = isMobile ? (screenWidth < 380 ? 30 : 40) : 70;
-    // 随着卡牌数量增加，间距迅速减小，挤在一起
-    let xSpacing = Math.max(isMobile ? 15 : 25, baseSpacing - (count * (isMobile ? 2.5 : 2)));
-    
-    // 动态压缩：如果卡牌多，强制限制总宽度不超过屏幕宽度的 85% (留给按钮)
-    return { angleStep, xSpacing };
-};
-
 const BattleHand: React.FC<BattleHandProps> = ({
   hand,
   playableCards,
@@ -77,22 +61,112 @@ const BattleHand: React.FC<BattleHandProps> = ({
     }, 2500);
   };
 
-  const layoutConfig = useMemo(() => 
-    calculateHandLayout(hand.length, isMobile, window.innerWidth),
-    [hand.length, isMobile]
-  );
+  if (isMobile) {
+    /* ====== 移动端：横向滚动列表 (非堆叠) ====== */
+    return (
+      <div 
+        ref={containerRef}
+        className="flex gap-2 px-3 pb-2 overflow-x-auto overflow-y-visible scrollbar-hide snap-x snap-mandatory"
+        style={{ 
+          WebkitOverflowScrolling: 'touch',
+          scrollPaddingLeft: '12px',
+          scrollPaddingRight: '12px',
+        }}
+      >
+        <AnimatePresence>
+          {hand.map((id, index) => {
+            const isAffordable = playableCards.includes(id);
+            const isBeingDragged = dragState?.index === index;
+            const isSelectedForAction = selectedCardId === id;
 
-  // [UI Polish] 移动端扇形布局
+            return (
+              <motion.div 
+                key={`${id}-${index}`}
+                layoutId={`mobile-${id}-${index}`}
+                initial={{ opacity: 0, scale: 0.8, y: 30 }}
+                animate={{ 
+                  opacity: isBeingDragged ? 0 : 1,
+                  scale: isSelectedForAction ? 1.1 : 1,
+                  y: isSelectedForAction ? -20 : 0,
+                  zIndex: isSelectedForAction ? 100 : index
+                }}
+                exit={{ opacity: 0, scale: 0.5, y: 50 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                className="flex-shrink-0 snap-center relative"
+                onClick={() => handleCardClick(id as SpellType, isAffordable)}
+              >
+                {/* 选中提示气泡 */}
+                <AnimatePresence>
+                  {isSelectedForAction && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.5 }}
+                      className="absolute -top-10 left-1/2 -translate-x-1/2 bg-amber-500 text-black text-[10px] font-bold px-2 py-1 rounded-full shadow-lg whitespace-nowrap z-[250]"
+                    >
+                      👆 再点打出
+                      <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-amber-500 rotate-45" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* 选中高亮框 */}
+                {isSelectedForAction && (
+                  <div className="absolute -inset-1 rounded-xl border-2 border-amber-400 animate-pulse pointer-events-none z-50 shadow-[0_0_15px_rgba(251,191,36,0.5)]" />
+                )}
+                
+                {/* 可打出指示 */}
+                {isAffordable && phase === 'PLAYER_TURN' && !isProcessing && !isSelectedForAction && (
+                  <div className="absolute -inset-0.5 rounded-lg border border-green-400/50 pointer-events-none" />
+                )}
+
+                {/* 卡牌 */}
+                <div className={`
+                  transition-all duration-200
+                  ${isSelectedForAction ? 'drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)]' : 'drop-shadow-md'}
+                `}>
+                  <SpellCard 
+                    spell={getSpellById(id)} 
+                    onPointerDown={(e) => {
+                      if (isAffordable && phase === 'PLAYER_TURN' && !isProcessing) {
+                        startDrag(id, index, e.clientX, e.clientY);
+                      }
+                    }}
+                    onPointerUp={onPointerUpCard}
+                    isAffordable={isAffordable}
+                    disabled={!isAffordable || phase !== 'PLAYER_TURN' || isProcessing}
+                    isSmall={true}
+                    isSelected={isSelectedForAction}
+                    showCost={true}
+                  />
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+        
+        {/* 右侧留白 - 让最后一张卡可以滚动到中间 */}
+        <div className="flex-shrink-0 w-8" />
+      </div>
+    );
+  }
+
+  /* ====== 桌面端：扇形布局 ====== */
+  const calculateHandLayout = (count: number) => {
+    const baseAngle = 3;
+    const maxTotalAngle = 35;
+    const angleStep = Math.min(baseAngle, maxTotalAngle / (count - 1 || 1));
+    const baseSpacing = 70;
+    let xSpacing = Math.max(25, baseSpacing - (count * 2));
+    return { angleStep, xSpacing };
+  };
+
+  const layoutConfig = useMemo(() => calculateHandLayout(hand.length), [hand.length]);
+
   return (
     <div 
-      className={`flex justify-center items-end relative pointer-events-auto ${isMobile ? 'h-36 mb-6' : 'h-40 md:h-48'}`} 
-      style={{ 
-        width: '100%', 
-        maxWidth: isMobile ? '100%' : '900px',
-        // [Safety Zone] Padding for mobile left/right UI elements
-        paddingLeft: isMobile ? '80px' : '0',
-        paddingRight: isMobile ? '80px' : '0' 
-      }}
+      className="flex justify-center items-end relative pointer-events-auto h-40 md:h-48"
+      style={{ maxWidth: '900px' }}
     >
       <AnimatePresence>
         {hand.map((id, index) => {
@@ -107,27 +181,14 @@ const BattleHand: React.FC<BattleHandProps> = ({
           const offsetIndex = index - centerIndex;
           
           const rotate = isHovered ? 0 : offsetIndex * angleStep;
+          const archFactor = 6;
+          const baseY = Math.abs(offsetIndex) * archFactor;
           
-          // [UI Polish] 拱形幅度：中间高，两边低。移动端幅度更大
-          const archFactor = isMobile ? 12 : 6; 
-          const baseY = Math.abs(offsetIndex) * archFactor; 
-          
-          // 移动端默认放大卡牌，增强视觉冲击力
-          const baseScale = isMobile ? 1.15 : 1;
-
-          // 选中上浮逻辑
           let translateY = isBeingDragged ? -80 : (isSelectedForAction ? -70 : (isHovered ? -60 : baseY));
-          // 移动端整体位置微调
-          if (isMobile) translateY += 10; 
-
           const translateX = offsetIndex * xSpacing;
           
-          // 状态缩放
           const activeScale = isSelectedForAction ? 1.25 : (isHovered ? 1.25 : 1);
-          const finalScale = baseScale * activeScale;
-
-          // 移动端不需要 z-index 阴影动画以节省性能
-          const enableShadowAnim = !isMobile && isAffordable && phase === 'PLAYER_TURN' && !isProcessing && !isHovered && !isSelectedForAction;
+          const enableShadowAnim = isAffordable && phase === 'PLAYER_TURN' && !isProcessing && !isHovered && !isSelectedForAction;
 
           return (
             <motion.div 
@@ -139,8 +200,7 @@ const BattleHand: React.FC<BattleHandProps> = ({
                 x: translateX,
                 y: translateY,
                 rotate: rotate,
-                scale: finalScale,
-                // [UI Polish] 选中时 Z轴 极大提升，防止被遮挡
+                scale: activeScale,
                 zIndex: isSelectedForAction ? 200 : (isHovered ? 100 : index + 1),
                 boxShadow: enableShadowAnim
                   ? [
@@ -166,24 +226,20 @@ const BattleHand: React.FC<BattleHandProps> = ({
                 } : undefined
               }}
               className="absolute origin-bottom cursor-pointer"
-              style={{ bottom: isMobile ? '30px' : '10px' }} // 底部距离提升 (Elevated)
+              style={{ bottom: '10px' }}
               id={`player-card-${index}`}
               onMouseEnter={() => {
-                if (!isMobile) {
-                    setHoveredIndex(index);
-                    onMouseEnterCard(id as SpellType);
-                    HapticService.light();
-                }
+                setHoveredIndex(index);
+                onMouseEnterCard(id as SpellType);
+                HapticService.light();
               }}
               onMouseLeave={() => {
-                if (!isMobile) {
-                    setHoveredIndex(null);
-                    onMouseLeaveCard();
-                }
+                setHoveredIndex(null);
+                onMouseLeaveCard();
               }}
               onClick={() => handleCardClick(id as SpellType, isAffordable)}
             >
-              {/* 选中时的"再点一次"提示气泡 */}
+              {/* 选中时的提示气泡 */}
               <AnimatePresence>
                 {isSelectedForAction && (
                   <motion.div
@@ -220,7 +276,7 @@ const BattleHand: React.FC<BattleHandProps> = ({
                   onPointerUp={onPointerUpCard}
                   isAffordable={isAffordable}
                   disabled={!isAffordable || phase !== 'PLAYER_TURN' || isProcessing}
-                  isSmall={false} // 扇形模式下不使用 Small 变体，保持细节，通过 transform scale 控制大小
+                  isSmall={false}
                   isSelected={isHovered || isSelectedForAction}
                   showCost={true}
                 />

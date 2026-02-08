@@ -4,7 +4,7 @@ import { GAME_CONFIG } from '../../../constants';
 import { PlayerFrame } from '../../PlayerFrame';
 import AIEmoteBubble from '../AIEmoteBubble';
 import { SpellCard } from '../../SpellCard';
-import { ScrollText, VolumeX, Volume2, Flag } from 'lucide-react';
+import { ScrollText, VolumeX, Volume2, Flag, MoreHorizontal } from 'lucide-react';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 
 interface OpponentHUDProps {
@@ -34,98 +34,121 @@ export const OpponentHUD: React.FC<OpponentHUDProps> = ({
   setIsLogOpen
 }) => {
   const isMobile = useIsMobile();
+  const [showMenu, setShowMenu] = React.useState(false);
 
   if (isMobile) {
-    /* ====== 移动端：暴雪极简风格对手栏 (Top HUD) ====== */
+    /* ====== 移动端：超极简顶部条 (占用最少空间) ====== */
     return (
-      <div className="mobile-opponent-bar w-full px-4 flex justify-between items-start pointer-events-none z-30">
-        {/* 左侧：对手头像与血量 (浮空设计) */}
-        <div className="flex items-center gap-3 pointer-events-auto">
-           <div className="relative">
-             {/* 头像 */}
-             <div className="w-10 h-10 rounded-full border-2 border-red-500/60 shadow-[0_0_10px_rgba(239,68,68,0.4)] overflow-hidden bg-slate-900">
+      <>
+        {/* 顶部极简条 - 只有最关键信息 */}
+        <div className="mobile-opponent-bar w-full px-2 pt-1 flex justify-between items-center pointer-events-none z-30"
+             style={{ paddingTop: 'max(env(safe-area-inset-top), 4px)' }}>
+          
+          {/* 左侧：对手信息 - 横向极简 */}
+          <div className="flex items-center gap-2 pointer-events-auto">
+            {/* 迷你头像 */}
+            <div className="relative">
+              <div className="w-8 h-8 rounded-full border border-red-500/50 overflow-hidden bg-slate-900 shadow-lg">
                 <img 
                   src={duelState.aiProfile?.avatar || '/avatars/dark_mage.webp'} 
                   alt="Opponent"
                   className="w-full h-full object-cover"
                 />
-             </div>
-             {/* 意图气泡 (Intent) - 挂在头像右下角 */}
-             {opponentCard && (
-                <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-slate-900 rounded-full border border-purple-400 flex items-center justify-center z-10 animate-pulse">
-                   <span className="text-xs">🔮</span>
-                </div>
-             )}
-           </div>
+              </div>
+              {/* 思考指示器 */}
+              {(aiStatus.emote === 'thinking' || aiStatus.emote === 'thinking_fast') && (
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-amber-500 rounded-full animate-pulse border border-black" />
+              )}
+            </div>
 
-           {/* 信息列 */}
-           <div className="flex flex-col">
-              {/* 名字 & 血量 */}
-              <div className="flex items-baseline gap-2 filter drop-shadow-md">
-                <span className="text-white font-bold text-shadow text-sm">
-                  {duelState.aiProfile?.name || "对手"}
-                </span>
-                <span className="text-red-400 font-mono font-bold text-base">
-                  {duelState.opponentHP}
-                </span>
+            {/* 核心数值 - 一行显示 */}
+            <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-sm rounded-full px-2 py-1">
+              {/* HP */}
+              <div className="flex items-center gap-0.5">
+                <span className="text-red-400 text-xs">❤️</span>
+                <span className="text-white font-bold text-sm tabular-nums">{duelState.opponentHP}</span>
               </div>
-              {/* 资源条 (Mana & Hand) */}
-              <div className="flex items-center gap-3 text-xs opacity-90">
-                 <div className="flex items-center gap-1 text-blue-300">
-                   <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_5px_blue]"></div>
-                   {duelState.opponentMana}
-                 </div>
-                 <div className="flex items-center gap-1 text-amber-100">
-                   <span className="text-[10px]">🃏</span>
-                   {duelState.opponentHandSize}
-                 </div>
+              {/* 分隔 */}
+              <div className="w-px h-3 bg-white/20" />
+              {/* Mana */}
+              <div className="flex items-center gap-0.5">
+                <span className="text-blue-400 text-xs">💎</span>
+                <span className="text-blue-300 font-bold text-sm tabular-nums">{duelState.opponentMana}</span>
               </div>
-           </div>
+              {/* 手牌数 */}
+              <div className="flex items-center gap-0.5">
+                <span className="text-amber-300 text-xs">🃏</span>
+                <span className="text-amber-200 text-sm tabular-nums">{duelState.opponentHandSize}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 中间：回合信息 */}
+          <div className="absolute left-1/2 -translate-x-1/2 bg-slate-800/80 backdrop-blur px-3 py-0.5 rounded-full border border-slate-600/50">
+            <span className="text-slate-300 text-xs font-medium">回合 {duelState.roundNumber}</span>
+          </div>
+
+          {/* 右侧：折叠菜单按钮 */}
+          <div className="pointer-events-auto relative">
+            <button 
+              onClick={() => setShowMenu(!showMenu)}
+              className="w-8 h-8 rounded-full bg-black/50 backdrop-blur border border-white/20 flex items-center justify-center text-white/70 active:scale-90 transition-transform"
+            >
+              <MoreHorizontal size={18} />
+            </button>
+
+            {/* 展开菜单 */}
+            {showMenu && (
+              <div className="absolute right-0 top-10 bg-slate-900/95 backdrop-blur-md rounded-xl border border-white/10 shadow-2xl p-2 flex flex-col gap-1.5 min-w-[120px] z-50">
+                <button 
+                  onClick={() => { setIsLogOpen(!isLogOpen); setShowMenu(false); }}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-white/80 text-sm"
+                >
+                  <ScrollText size={16} />
+                  <span>战斗日志</span>
+                </button>
+                <button 
+                  onClick={() => { onToggleMute(); setShowMenu(false); }}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-white/80 text-sm"
+                >
+                  {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                  <span>{isMuted ? '开启音效' : '静音'}</span>
+                </button>
+                <div className="h-px bg-white/10 my-1" />
+                <button 
+                  onClick={() => { onSurrender(); setShowMenu(false); }}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-900/30 text-red-400 text-sm"
+                >
+                  <Flag size={16} />
+                  <span>投降</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* 右侧：整合后的按钮组 + AI思考状态 */}
-        <div className="flex flex-col items-end gap-2 pointer-events-auto z-50">
-           {/* Mobile Controls - Integrated to prevent overlap */}
-           <div className="flex gap-1">
-              <button 
-                 onClick={() => setIsLogOpen(!isLogOpen)}
-                 className="w-8 h-8 rounded-full bg-black/40 backdrop-blur border border-white/20 flex items-center justify-center text-white/70 active:scale-90 transition-transform"
-              >
-                 <ScrollText size={16} />
-              </button>
-              <button 
-                onClick={onToggleMute}
-                className="w-8 h-8 rounded-full bg-black/40 backdrop-blur border border-white/20 flex items-center justify-center text-white/70 active:scale-90 transition-transform"
-              >
-                {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-              </button>
-              <button 
-                onClick={onSurrender}
-                className="w-8 h-8 rounded-full bg-red-900/40 backdrop-blur border border-red-500/30 flex items-center justify-center text-red-500/70 active:scale-90 transition-transform"
-              >
-                <Flag size={16} />
-              </button>
-           </div>
-
-                      {/* AI Status Bubble - 显示 AI 思考进度 */}
-           {(aiStatus.emote === 'thinking' || aiStatus.emote === 'thinking_fast') && (
-              <div className="bg-black/70 backdrop-blur px-3 py-1.5 rounded-xl border border-amber-500/30 flex items-center gap-2 shadow-lg">
-                 <div className="flex items-center gap-1.5">
-                   <span className="text-xs text-amber-300 font-bold">思考中</span>
-                   <div className="flex gap-0.5">
-                     <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                     <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                     <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                   </div>
-                 </div>
-                 {/* 进度条 */}
-                 <div className="w-12 h-1.5 bg-amber-900/50 rounded-full overflow-hidden">
-                   <div className="h-full bg-gradient-to-r from-amber-500 to-amber-400 rounded-full animate-progress-grow" />
-                 </div>
+        {/* AI思考状态浮动提示 - 独立显示 */}
+        {(aiStatus.emote === 'thinking' || aiStatus.emote === 'thinking_fast') && (
+          <div className="absolute top-14 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+            <div className="bg-black/80 backdrop-blur px-3 py-1.5 rounded-xl border border-amber-500/40 flex items-center gap-2 shadow-lg">
+              <span className="text-xs text-amber-300 font-bold">对手思考中</span>
+              <div className="flex gap-0.5">
+                <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
-           )}
-        </div>
-      </div>
+            </div>
+          </div>
+        )}
+
+        {/* 点击外部关闭菜单 */}
+        {showMenu && (
+          <div 
+            className="fixed inset-0 z-40" 
+            onClick={() => setShowMenu(false)}
+          />
+        )}
+      </>
     );
   }
 

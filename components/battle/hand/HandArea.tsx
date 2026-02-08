@@ -3,12 +3,12 @@ import BattleHand from '../BattleHand';
 import { TutorialBubble } from '../../ui/TutorialBubble';
 
 /**
- * HandArea - 手牌区域组件 (v2.0)
+ * HandArea - 手牌区域组件 (v3.0 - Mobile Optimized)
  * 
- * [P0 UX] 移动端优化:
- * - 安全区域适配
- * - 触控热区扩大
- * - 小屏幕滚动支持
+ * 移动端优化:
+ * - 横向滚动代替堆叠
+ * - 更大的触控区域
+ * - 紧凑布局节省空间
  */
 
 interface HandAreaProps {
@@ -42,42 +42,39 @@ export const HandArea: React.FC<HandAreaProps> = ({
 }) => {
 
   if (isMobile) {
-      /* ====== 移动端底部布局：横向滚动卡牌 ====== */
+      /* ====== 移动端：紧凑底部手牌区 ====== */
       return (
         <div className="absolute bottom-0 left-0 right-0 z-30 pointer-events-none" 
-             style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
-            <div className="relative w-full flex flex-col justify-end">
+             style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
+            <div className="relative w-full">
+                {/* 手牌容器 */}
                 <div id="player-hand-container" className="w-full relative z-40 pointer-events-auto">
+                    {/* 新手引导 */}
                     <TutorialBubble 
                         isVisible={shouldShowTutorial} 
-                        text="👆 拖动或点击出牌！" 
+                        text="👆 滑动选牌，点两下出牌！" 
                         position="top"
                     />
-                    {/* [P0 UX] 横向滚动容器 - 支持多卡牌 */}
-                    <div className="overflow-x-auto overflow-y-hidden scrollbar-hide px-2">
-                        <BattleHand 
-                            hand={hand}
-                            playableCards={playableCards}
-                            phase={phase}
-                            isProcessing={isProcessing}
-                            isMobile={true}
-                            dragState={dragState}
-                            startDrag={startDrag}
-                            onPointerDownCard={onCardPressStart}
-                            onPointerUpCard={onCardPressEnd}
-                            onMouseEnterCard={setHoveredSpellId}
-                            onMouseLeaveCard={() => setHoveredSpellId(null)}
-                            onDoubleClickCard={(spellId) => handlePlayCard(spellId, true)}
-                        />
-                    </div>
                     
-                    {/* [UI Polish] 底部纹理条 - 视觉装饰 */}
-                    <div className="absolute bottom-0 left-0 right-0 h-3 bg-[#0a0502] border-t border-[#3d2e1e] z-0 opacity-80 pointer-events-none">
-                        <div className="w-full h-full opacity-30 bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')] bg-repeat-x"></div>
-                        {/* Center Handle Graphic */}
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-1 rounded-full bg-[#5c4a35]"></div>
-                    </div>
+                    {/* 横向滚动手牌 */}
+                    <BattleHand 
+                        hand={hand}
+                        playableCards={playableCards}
+                        phase={phase}
+                        isProcessing={isProcessing}
+                        isMobile={true}
+                        dragState={dragState}
+                        startDrag={startDrag}
+                        onPointerDownCard={onCardPressStart}
+                        onPointerUpCard={onCardPressEnd}
+                        onMouseEnterCard={setHoveredSpellId}
+                        onMouseLeaveCard={() => setHoveredSpellId(null)}
+                        onDoubleClickCard={(spellId) => handlePlayCard(spellId, true)}
+                    />
                 </div>
+                
+                {/* 底部装饰条 - 更细 */}
+                <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-t from-[#0a0502] to-transparent pointer-events-none z-0" />
             </div>
         </div>
       );
@@ -87,7 +84,6 @@ export const HandArea: React.FC<HandAreaProps> = ({
   return (
     <div id="player-hand-container" className="absolute bottom-0 left-0 right-0 z-30 pointer-events-none flex justify-center pb-4 md:pb-6 safe-area-bottom">
         <div className="relative pointer-events-auto">
-             {/* [P0 新手引导] 首次出牌气泡 */}
              <TutorialBubble 
                 isVisible={shouldShowTutorial} 
                 text="👆 拖动或双击卡牌打出！" 
