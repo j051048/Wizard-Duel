@@ -297,7 +297,7 @@ export const executeSpell = (
 
   // 4. 基础伤害与连击计算
   let dmg = spell.damage;
-  if (crit) dmg = Math.floor(dmg * 1.5);
+  const critMultiplier = crit ? 1.5 : 1.0;
   if (countered) dmg = 0;
 
   // 连击 (Charge) - 使用 combat 模块
@@ -306,9 +306,8 @@ export const executeSpell = (
     if (comboResult.comboMessage) {
       actions.push({ type: 'MESSAGE', target: 'system', description: comboResult.comboMessage });
     }
-    if (comboResult.multiplier > 1.0) {
-      dmg = Math.floor(spell.damage * comboResult.multiplier);
-    }
+    // [Fix 1.5] 暴击 + 连击叠加：dmg = spell.damage * critMultiplier * comboMultiplier
+    dmg = Math.floor(spell.damage * critMultiplier * comboResult.multiplier);
     // 更新连击状态
     const updatedState = updateComboState(mutableState, caster, spellId, comboResult.newComboCount);
     Object.assign(mutableState, updatedState);

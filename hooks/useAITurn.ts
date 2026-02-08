@@ -14,6 +14,7 @@ import {
   executeAITurn, executeSpell, checkGameOver
 } from '../services/gameLogic';
 import { GameRuleEngine } from '../services/GameRuleEngine';
+import { RuleArbiter, ArbiterEvent } from '../services/RuleArbiter';
 import {
   AI_THINK_DELAY, AI_CARD_PLAY_DELAY, AI_EMOTE_DELAY,
   PHASE_TRANSITION_DELAY, BANNER_WAIT_DELAY, ROUND_TRANSITION_DELAY
@@ -61,52 +62,72 @@ export function useAITurn({
     commands.push({ type: 'SET_AI_STATUS', payload: { emote: 'thinking', message: '让我想想...' }, delay: AI_EMOTE_DELAY });
     commands.push({ type: 'WAIT', payload: null, delay: AI_THINK_DELAY });
 
-    // 2. AI 一次性计算所有出牌的最终状态
+    // 2. [Fix 1.3] 逐张出牌，每张都用 executeSpell 计算中间状态
+    //    不再预计算最终状态，避免状态分叉
     const { newState: aiResultState, commands: aiCommands } = executeAITurn(state);
 
-    // 3. 逐张生成 UI 指令 + 中间状态快照
-    // [P0 Bug 3 Fix] 在每张出牌前插入思考时间延迟，避免 AI 瞬间打空手牌
-    let intermediateState = { ...state };
+    // aiCommands 中的每个 command 都有 snapshot（中间状态快照）
+    // 直接使用这些快照作为真实的中间状态
+    let latestState = { ...state };
 
     for (let i = 0; i < aiCommands.length; i++) {
       const cmd = aiCommands[i];
 
       if (cmd.sourceSpell) {
-        // [P0 Bug 3] 每张牌之前都有思考延迟，让玩家能看清 AI 的出牌节奏
         commands.push({ type: 'WAIT', payload: null, delay: AI_CARD_PLAY_DELAY });
         commands.push({ type: 'UPDATE_UI', payload: { opponentCard: cmd.sourceSpell } });
         commands.push({ type: 'SET_AI_STATUS', payload: { emote: 'thinking_fast', message: '就是这张！' }, delay: AI_EMOTE_DELAY });
       }
 
       if (cmd.sourceSpell && cmd.sourceSpell !== 'skip') {
-        // 提取日志
         for (const action of cmd.actions) {
           if (action.description) {
             commands.push({ type: 'ADD_MESSAGE', payload: action.description });
           }
         }
 
-        // 中间状态快照（优化：优先使用预计算的快照，避免二次执行逻辑）
+        // 使用 executeAITurn 已经计算好的 snapshot 作为权威中间状态
         if (cmd.snapshot) {
-            intermediateState = cmd.snapshot;
-        } else {
-            // 回退逻辑：如果快照丢失，则重新计算
-            const singleResult = executeSpell(intermediateState, 'opponent', cmd.sourceSpell);
-            intermediateState = singleResult.newState;
+            latestState = cmd.snapshot;
         }
 
-        commands.push({ type: 'UPDATE_STATE', payload: intermediateState });
+        commands.push({ type: 'UPDATE_STATE', payload: latestState });
         commands.push({ type: 'WAIT', payload: null, delay: AI_CARD_PLAY_DELAY });
 
-        if (checkGameOver(intermediateState)) break;
+        if (checkGameOver(latestState)) break;
       } else if (cmd.sourceSpell === 'skip') {
         commands.push({ type: 'ADD_MESSAGE', payload: '对手跳过了出牌' });
       }
     }
 
-    // 4. 最终状态校正
-    commands.push({ type: 'UPDATE_STATE', payload: aiResultState });
+    // [Fix 1.3] 不再用 aiResultState 覆盖：latestState 就是最终状态
+    // aiResultState 与最后一个 snapshot 是同一条执行链的结果，所以直接用 aiResultState
     let tempState = aiResultState;
+
+    // 4. 回合结束 DoT 结算 [Fix 1.1]
+    const roundEndResult = RuleArbiter.resolveRoundEnd(tempState);
+    if (roundEndResult.events.length > 0) {
+      roundEndResult.events.forEach((e: any) => {
+        if (e.description) {
+          commands.push({ type: 'ADD_MESSAGE', payload: e.description });
+        }
+      });
+      commands.push({ type: 'UPDATE_STATE', payload: roundEndResult.newState });
+      tempState = roundEndResult.newState;
+    }
+
+    if (roundEndResult.gameOver) {
+      commands.push({
+        type: 'UPDATE_UI', payload: {
+          isGameOver: true,
+          gameResult: roundEndResult.gameOver === 'DRAW' ? 'LOSS' : roundEndResult.gameOver,
+          resultText: roundEndResult.gameOver,
+        }
+      });
+      commands.push({ type: 'SET_PHASE', payload: 'ROUND_RESET' });
+      enqueue(commands, 'ai_turn');
+      return;
+    }
 
     // 5. 随从战斗阶段
     const activeMinionsCount =

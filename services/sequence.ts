@@ -1,6 +1,8 @@
 import { DuelState, GameAction, GameCommand, ActionType, TriggerTiming } from '../types';
 import { GAME_CONFIG } from '../constants';
 
+const MAX_TRIGGER_DEPTH = 16;
+
 /**
  * GameSequenceExecutor - 核心规则执行引擎
  * 负责解析并执行 Command 中的 Actions
@@ -9,7 +11,7 @@ export class GameSequenceExecutor {
   /**
    * 执行单个 Action 并返回新的状态
    */
-  static applyAction(state: DuelState, action: GameAction): { state: DuelState; log?: string } {
+  static applyAction(state: DuelState, action: GameAction, triggerDepth: number = 0): { state: DuelState; log?: string } {
     const newState = { ...state };
     let log: string | undefined = action.description;
 
@@ -68,10 +70,17 @@ export class GameSequenceExecutor {
         const effects = target === 'player' ? [...newState.playerEffects] : [...newState.opponentEffects];
         const newEffect = action.value;
         
-        // 刷新机制: 如果已有同类型效果，替换之
+        // [Fix 1.6] 同类效果比较强弱：新效果更强才替换，否则保留旧效果
         const idx = effects.findIndex(e => e.type === newEffect.type);
         if (idx >= 0) {
-            effects[idx] = newEffect;
+            const existingEffect = effects[idx];
+            const existingValue = existingEffect.value || 0;
+            const newValue = newEffect.value || 0;
+            // 新效果更强（value 更大或 value 相等但 duration 更长）则替换
+            if (newValue > existingValue || (newValue === existingValue && newEffect.duration > existingEffect.duration)) {
+                effects[idx] = newEffect;
+            }
+            // 否则保留旧效果，不做任何修改
         } else {
             effects.push(newEffect);
         }
@@ -164,32 +173,53 @@ export class GameSequenceExecutor {
           break;
       }
       case 'MINION_ATTACK': {
-          // 简化逻辑：随从攻击对位随从，若无则攻脸
+          // [Fix 1.2] 使用 instanceId 标识随从，避免 splice 后索引错位
           const isPlayer = action.target === 'player';
-          const attackerSide = isPlayer ? newState.playerMinions : newState.opponentMinions;
-          const defenderSide = isPlayer ? newState.opponentMinions : newState.playerMinions;
-          const attackerIdx = action.value;
+          const attackerSide = isPlayer ? [...newState.playerMinions] : [...newState.opponentMinions];
+          const defenderSide = isPlayer ? [...newState.opponentMinions] : [...newState.playerMinions];
 
-          if (attackerSide[attackerIdx]) {
+          // action.value 支持 instanceId (string) 或传统索引 (number)
+          let attackerIdx: number;
+          if (typeof action.value === 'string') {
+              attackerIdx = attackerSide.findIndex(m => m.instanceId === action.value);
+          } else {
+              attackerIdx = action.value;
+          }
+
+          if (attackerIdx >= 0 && attackerSide[attackerIdx]) {
               const attacker = { ...attackerSide[attackerIdx] };
-              const defender = defenderSide[attackerIdx] ? { ...defenderSide[attackerIdx] } : null;
 
-              if (defender) {
+              // 选择防御目标：有嘲讽优先 → 存活的随从 → 英雄
+              const aliveDefenders = defenderSide.filter(m => m.hp > 0);
+              // 嘲讽随从优先（如果有 taunt 属性）
+              const tauntDefenders = aliveDefenders.filter(m => (m as any).taunt);
+              let defender: typeof attacker | null = null;
+              let defenderIdx = -1;
+
+              if (tauntDefenders.length > 0) {
+                  defender = { ...tauntDefenders[0] };
+                  defenderIdx = defenderSide.findIndex(m => m.instanceId === tauntDefenders[0].instanceId);
+              } else if (aliveDefenders.length > 0) {
+                  defender = { ...aliveDefenders[0] };
+                  defenderIdx = defenderSide.findIndex(m => m.instanceId === aliveDefenders[0].instanceId);
+              }
+
+              if (defender && defenderIdx >= 0) {
                   // 交换伤害
                   defender.hp -= attacker.atk;
                   attacker.hp -= defender.atk;
                   
-                  // 更新防御方
-                  const newDefenders = [...defenderSide];
-                  if (defender.hp <= 0) newDefenders.splice(attackerIdx, 1);
-                  else newDefenders[attackerIdx] = defender;
+                  // 更新防御方 - 用 filter 替代 splice，避免索引问题
+                  const newDefenders = defenderSide.map((m, i) =>
+                      i === defenderIdx ? defender! : m
+                  ).filter(m => m.hp > 0);
                   
                   if (isPlayer) newState.opponentMinions = newDefenders;
                   else newState.playerMinions = newDefenders;
                   
                   log = `⚔️ ${attacker.name} 攻击了 ${defender.name}`;
               } else {
-                  // 直接攻脸
+                  // 没有可攻击的随从，直接攻脸
                   const dmg = attacker.atk;
                   if (isPlayer) {
                       newState.opponentHP = Math.max(0, newState.opponentHP - dmg);
@@ -200,13 +230,11 @@ export class GameSequenceExecutor {
                   }
               }
 
-              // 更新攻击方状态
-              const newAttackers = [...attackerSide];
-              if (attacker.hp <= 0) newAttackers.splice(attackerIdx, 1);
-              else {
-                  attacker.exhausted = true;
-                  newAttackers[attackerIdx] = attacker;
-              }
+              // 更新攻击方状态 - 用 filter 替代 splice
+              attacker.exhausted = true;
+              const newAttackers = attackerSide.map((m, i) =>
+                  i === attackerIdx ? attacker : m
+              ).filter(m => m.hp > 0);
               
               if (isPlayer) newState.playerMinions = newAttackers;
               else newState.opponentMinions = newAttackers;
@@ -216,7 +244,7 @@ export class GameSequenceExecutor {
     }
 
         // [P0 Fix 3.1] 触发检查 - 使用返回值而非直接修改
-    const postTriggerState = this.resolveTriggers(newState, action.type === 'HP_CHANGE' && action.value < 0 ? 'ON_DAMAGE' : 'ON_CAST', action);
+    const postTriggerState = this.resolveTriggers(newState, action.type === 'HP_CHANGE' && action.value < 0 ? 'ON_DAMAGE' : 'ON_CAST', action, triggerDepth);
 
     return { state: postTriggerState, log };
   }
@@ -224,8 +252,14 @@ export class GameSequenceExecutor {
     /**
    * 触发器解析逻辑 (增强实现)
    * [P0 Fix 3.1] 不再直接修改传入的 state，返回新的状态对象
+   * [Fix 1.4] 添加递归深度限制
    */
-  static resolveTriggers(state: DuelState, timing: TriggerTiming, context?: any): DuelState {
+  static resolveTriggers(state: DuelState, timing: TriggerTiming, context?: any, depth: number = 0): DuelState {
+      if (depth >= MAX_TRIGGER_DEPTH) {
+          console.warn(`[resolveTriggers] 递归深度超过上限 (${MAX_TRIGGER_DEPTH})，停止递归。timing=${timing}`);
+          return state;
+      }
+
       let currentState: DuelState = { ...state };
       const allTriggers = [...currentState.playerTriggers, ...currentState.opponentTriggers];
       const matchingTriggers = allTriggers.filter(t => t.timing === timing);
@@ -235,7 +269,7 @@ export class GameSequenceExecutor {
               const actions = trigger.action(currentState, context);
               for (const act of actions) {
                   // 递归执行触发产生的动作，返回新状态
-                  const result = this.applyAction(currentState, act);
+                  const result = this.applyAction(currentState, act, depth + 1);
                   currentState = result.state;
               }
               if (trigger.isOnce) {

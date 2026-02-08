@@ -16,6 +16,8 @@ import { getSpellById } from './elementSystem';
  * @param crit - 是否暴击
  * @param comboMultiplier - 连击加成倍数 (默认1.0)
  * @returns 最终伤害值
+ * 
+ * [Fix 1.5] 暴击与连击叠加计算：damage = base * critMultiplier * comboMultiplier
  */
 export const calculateSpellDamage = (
   spell: Spell,
@@ -27,15 +29,9 @@ export const calculateSpellDamage = (
   
   let damage = spell.damage;
   
-  // 暴击加成 (1.5倍)
-  if (crit) {
-    damage = Math.floor(damage * 1.5);
-  }
-  
-  // 连击加成
-  if (comboMultiplier > 1.0) {
-    damage = Math.floor(damage * comboMultiplier);
-  }
+  // [Fix 1.5] 暴击和连击叠加：damage = base * critMult * comboMult
+  const critMultiplier = crit ? 1.5 : 1.0;
+  damage = Math.floor(damage * critMultiplier * comboMultiplier);
   
   return damage;
 };

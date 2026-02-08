@@ -150,8 +150,8 @@ export class GameRuleEngine {
 
            commands.push({ type: 'EXECUTE_LOGIC', payload: () => {}, delay: MINION_ATTACK_DELAY });
 
-           // target='player' means Player is the Attacker source (Legacy convention)
-           const action = { type: 'MINION_ATTACK', target: 'player', value: idx } as any;
+           // [Fix 1.2] Pass instanceId instead of index to avoid index shifting issues
+           const action = { type: 'MINION_ATTACK', target: 'player', value: id } as any;
            const result = GameSequenceExecutor.applyAction(currentState, action);
            
            currentState = result.state;
@@ -169,8 +169,8 @@ export class GameRuleEngine {
 
            commands.push({ type: 'WAIT', payload: null, delay: MINION_ATTACK_DELAY });
 
-           // target='opponent' means Opponent is the Attacker source
-           const action = { type: 'MINION_ATTACK', target: 'opponent', value: idx } as any;
+           // [Fix 1.2] Pass instanceId instead of index to avoid index shifting issues
+           const action = { type: 'MINION_ATTACK', target: 'opponent', value: id } as any;
            const result = GameSequenceExecutor.applyAction(currentState, action);
            
            currentState = result.state;
