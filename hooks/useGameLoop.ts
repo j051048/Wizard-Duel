@@ -193,13 +193,25 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
   passTurnRef.current = passTurn;
   
   // ============ Persistence ============
+  // [P0 Bug 4 Fix] 完整保存战斗状态，包括回合数、状态效果剩余回合等
   useEffect(() => {
     if (duelState && phase !== 'DRAFT_PHASE' && !uiState.isGameOver) {
       // [#6] 使用 requestIdleCallback 延迟保存，避免阻塞主线程
+      // [P0 Bug 4] 完整保存 duelState，确保断线重连时能恢复：
+      // - roundNumber (当前回合数)
+      // - playerEffects/opponentEffects (状态效果及剩余回合数)
+      // - playerFatigue/opponentFatigue (疲劳计数)
+      // - heroSkillsUsed/opponentHeroSkillUsed (英雄技能使用状态)
       const saveData = {
-        duelState,
+        duelState: {
+          ...duelState,
+          // 确保状态效果完整保存（包括 duration）
+          playerEffects: duelState.playerEffects.map(e => ({ ...e })),
+          opponentEffects: duelState.opponentEffects.map(e => ({ ...e })),
+        },
         phase,
-        effectMessages: uiState.effectMessages.slice(-20) // 只保存最近20条
+        effectMessages: uiState.effectMessages.slice(-20), // 只保存最近20条
+        savedAt: Date.now(), // 记录保存时间，用于调试
       };
       
       if ('requestIdleCallback' in window) {
@@ -215,14 +227,34 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
   }, [duelState, phase, uiState.isGameOver, uiState.effectMessages]);
   
   // Restore saved game on mount
+  // [P0 Bug 4 Fix] 完整恢复战斗状态
   useEffect(() => {
     const saved = localStorage.getItem('wizard_duel_save');
     if (saved && !duelState) {
       try {
         const parsed = JSON.parse(saved);
-        setDuelState(parsed.duelState);
-        setPhase(parsed.phase);
-        setUiState(prev => ({ ...prev, effectMessages: parsed.effectMessages || [] }));
+        // [P0 Bug 4] 验证保存数据的完整性
+        if (parsed.duelState && 
+            typeof parsed.duelState.roundNumber === 'number' &&
+            Array.isArray(parsed.duelState.playerEffects) &&
+            Array.isArray(parsed.duelState.opponentEffects)) {
+          // 恢复完整的 duelState
+          setDuelState(parsed.duelState);
+          setPhase(parsed.phase);
+          setUiState(prev => ({ 
+            ...prev, 
+            effectMessages: parsed.effectMessages || [],
+          }));
+          console.log('[GameLoop] 战斗状态已恢复', {
+            roundNumber: parsed.duelState.roundNumber,
+            playerEffects: parsed.duelState.playerEffects.length,
+            opponentEffects: parsed.duelState.opponentEffects.length,
+            savedAt: parsed.savedAt ? new Date(parsed.savedAt).toISOString() : 'unknown'
+          });
+        } else {
+          console.warn('[GameLoop] 保存数据不完整，清除旧存档');
+          localStorage.removeItem('wizard_duel_save');
+        }
       } catch (e) {
         console.error('Failed to restore game:', e);
         localStorage.removeItem('wizard_duel_save');

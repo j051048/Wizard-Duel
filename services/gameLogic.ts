@@ -186,21 +186,21 @@ export const executeSpell = (
   const isPlayer = caster === 'player';
   const target = isPlayer ? 'opponent' : 'player';
   
-  const actions: GameAction[] = [];
-  
-  // [P0 Fix] 深拷贝状态，避免直接修改传入的 state（状态不可变性）
-  const mutableState: DuelState = cloneDuelState(state);
-
-  
-  // 1. 冻结检查 (Move to top)
-  const effects = isPlayer ? state.playerEffects : state.opponentEffects;
-  if (effects.some(e => e.type === 'frozen')) {
+  // [P0 Bug 2 Fix] 冻结检查移至最顶层 — 在任何状态拷贝和逻辑之前
+  // 确保英雄技能、普通卡牌、skip 以外的所有行为都无法绕过冻结
+  const casterEffects = isPlayer ? state.playerEffects : state.opponentEffects;
+  if (casterEffects.some(e => e.type === 'frozen') && spellId !== 'skip') {
     return { 
         newState: state as DuelState, 
         logs: [`❄️ ${isPlayer ? '你' : '对手'}被冻结，无法行动！`], 
         command: { id: 'frozen', caster, actions: [] } 
     };
   }
+
+  const actions: GameAction[] = [];
+  
+  // [P0 Fix] 深拷贝状态，避免直接修改传入的 state（状态不可变性）
+  const mutableState: DuelState = cloneDuelState(state);
 
   // 2. 英雄技能占用逻辑
   if (spellId.startsWith('hero_')) {

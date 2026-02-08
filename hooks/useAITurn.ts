@@ -65,12 +65,15 @@ export function useAITurn({
     const { newState: aiResultState, commands: aiCommands } = executeAITurn(state);
 
     // 3. 逐张生成 UI 指令 + 中间状态快照
+    // [P0 Bug 3 Fix] 在每张出牌前插入思考时间延迟，避免 AI 瞬间打空手牌
     let intermediateState = { ...state };
 
     for (let i = 0; i < aiCommands.length; i++) {
       const cmd = aiCommands[i];
 
       if (cmd.sourceSpell) {
+        // [P0 Bug 3] 每张牌之前都有思考延迟，让玩家能看清 AI 的出牌节奏
+        commands.push({ type: 'WAIT', payload: null, delay: AI_CARD_PLAY_DELAY });
         commands.push({ type: 'UPDATE_UI', payload: { opponentCard: cmd.sourceSpell } });
         commands.push({ type: 'SET_AI_STATUS', payload: { emote: 'thinking_fast', message: '就是这张！' }, delay: AI_EMOTE_DELAY });
       }

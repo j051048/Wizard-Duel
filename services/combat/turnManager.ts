@@ -13,9 +13,13 @@ import { GAME_CONFIG } from '../../constants';
  * 准备下一回合
  * - 回合数+1
  * - 状态效果递减
- * - DoT伤害结算
+ * - DoT伤害结算 → 💀 死亡检查
  * - 法力成长与恢复
+ * - 抽牌 → 💀 死亡检查
  * - 随从状态重置
+ * 
+ * [P0 Bug 1 Fix] 在每个关键步骤（DoT结算、抽牌后）插入死亡检查，
+ * 确保 DoT 伤害导致死亡后不会继续执行回血或抽牌逻辑。
  */
 export const prepareNextTurn = (state: DuelState): DuelState => {
   const newState = { 
@@ -26,6 +30,7 @@ export const prepareNextTurn = (state: DuelState): DuelState => {
     opponentEffects: [...state.opponentEffects],
     playerHand: [...state.playerHand],
     playerDeck: [...state.playerDeck],
+    opponentHand: state.opponentHand ? [...state.opponentHand] : [],
     opponentDeck: [...state.opponentDeck],
   };
 
@@ -53,27 +58,52 @@ export const prepareNextTurn = (state: DuelState): DuelState => {
   newState.opponentEffects = newOpponentEffects;
   if (oppBurnDmg > 0) newState.opponentHP -= oppBurnDmg;
 
-  // 3. 检查死亡 - 如果死于DoT，直接返回状态
+  // 💀 死亡检查点 1: DoT 致死 — 不继续执行法力恢复或抽牌
   if (checkGameOver(newState) !== null) {
     return newState;
   }
 
-  // 4. 法力成长与恢复
+  // 3. 法力成长与恢复
   newState.playerMaxMana = Math.min(GAME_CONFIG.maxMana, state.playerMaxMana + 1);
   newState.opponentMaxMana = Math.min(GAME_CONFIG.maxMana, state.opponentMaxMana + 1);
   newState.playerMana = newState.playerMaxMana;
   newState.opponentMana = newState.opponentMaxMana;
 
-  // 5. 计算费用修正 (Tangle)
+  // 4. 计算费用修正 (Tangle)
   const playerTangle = newState.playerEffects.find(e => e.type === 'tangle');
   newState.playerCostMod = playerTangle ? (playerTangle.value || 0) : 0;
   
   const oppTangle = newState.opponentEffects.find(e => e.type === 'tangle');
   newState.opponentCostMod = oppTangle ? (oppTangle.value || 0) : 0;
 
-  // 6. 随从状态重置
+  // 5. 随从状态重置
   newState.playerMinions = newState.playerMinions.map(m => ({ ...m, exhausted: false }));
   newState.opponentMinions = newState.opponentMinions.map(m => ({ ...m, exhausted: false }));
+
+  // 6. 抽牌阶段 (疲劳伤害)
+  if (newState.playerDeck.length > 0) {
+    const drawnCard = newState.playerDeck[0];
+    newState.playerDeck = newState.playerDeck.slice(1);
+    newState.playerHand = [...newState.playerHand, drawnCard].slice(0, 10);
+  } else {
+    newState.playerFatigue = (newState.playerFatigue || 0) + 1;
+    newState.playerHP -= newState.playerFatigue;
+  }
+
+  if (newState.opponentDeck.length > 0) {
+    const drawnCard = newState.opponentDeck[0];
+    newState.opponentDeck = newState.opponentDeck.slice(1);
+    newState.opponentHand = [...newState.opponentHand, drawnCard].slice(0, 10);
+    newState.opponentHandSize = newState.opponentHand.length;
+  } else {
+    newState.opponentFatigue = (newState.opponentFatigue || 0) + 1;
+    newState.opponentHP -= newState.opponentFatigue;
+  }
+
+  // 💀 死亡检查点 2: 疲劳致死 — 不继续后续逻辑
+  if (checkGameOver(newState) !== null) {
+    return newState;
+  }
 
   return newState;
 };
