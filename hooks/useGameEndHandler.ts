@@ -84,14 +84,22 @@ export function useGameEndHandler({
             if (user.activeAddress) {
         // 尝试保存到 Supabase（可选，失败则回退）
         let supabaseSaved = false;
+        const supabaseUid = user.supabaseUserId;
+
         try {
-          const { supabase, saveBattleResult } = await import('../services/supabase');
-          const { data: { session } } = await supabase.auth.getSession();
+          const { supabase, isSupabaseConfigured, saveBattleResult } = await import('../services/supabase');
           
-                    if (session) {
+          // 使用 store 中缓存的 supabaseUserId，或者回退到 session 查询
+          let sessionUserId = supabaseUid;
+          if (!sessionUserId && isSupabaseConfigured) {
+            const { data: { session } } = await supabase.auth.getSession();
+            sessionUserId = session?.user?.id ?? null;
+          }
+          
+          if (sessionUserId && isSupabaseConfigured) {
             const mock = calculatePayout(ui.selectedBet, result);
             await saveBattleResult({
-              user_id: session.user.id,
+              user_id: sessionUserId,
               opponent_name: gameLoopState.duelState?.aiProfile?.name || 'Unknown',
               result: result.toLowerCase() as 'win' | 'loss' | 'draw',
               turns: gameLoopState.duelState?.roundNumber || 0,
@@ -99,15 +107,17 @@ export function useGameEndHandler({
               xp_earned: result === 'WIN' ? 50 : 10,
             });
 
-            // 同步 rankScore 到 Supabase profiles.xp
+            // 同步 rankScore + 金币余额到 Supabase
+            // saveBattleResult 已经更新了 gold/xp/win_count，但 rankScore 需要额外同步
             await supabase.from('profiles').update({
               xp: newScore,
-            }).eq('id', session.user.id);
+            }).eq('id', sessionUserId);
             
             finalPayout = mock.payout;
             finalIsCrit = mock.isCrit;
             supabaseSaved = true;
             
+            // 重新从 Supabase 加载最新数据
             user.loadUserData(user.activeAddress!);
           }
         } catch (supabaseErr) {
@@ -115,7 +125,7 @@ export function useGameEndHandler({
         }
 
         if (!supabaseSaved) {
-          // 回退到现有的 API 结算
+          // 回退到现有的 API 结算（localStorage mock）
           const res = await ApiService.settleGame(
             user.activeAddress,
             ui.selectedBet,

@@ -4,6 +4,8 @@ import { ApiService } from '../services/api';
 
 interface UserState {
   activeAddress: string | null;
+  /** Supabase user id (available after wallet login with Supabase) */
+  supabaseUserId: string | null;
   balance: number;
   userRank: Rank;
   rankScore: number;
@@ -21,6 +23,7 @@ interface UserState {
 
   // Actions
   setActiveAddress: (address: string | null) => void;
+  setSupabaseUserId: (id: string | null) => void;
   setBalance: (balance: number) => void;
   setUserRank: (rank: Rank) => void;
   setRankScore: (score: number) => void;
@@ -48,6 +51,7 @@ interface UserState {
 
 export const useUserStore = create<UserState>((set, get) => ({
   activeAddress: null,
+  supabaseUserId: null,
   balance: 0,
   userRank: 'Iron',
   rankScore: 0,
@@ -63,7 +67,19 @@ export const useUserStore = create<UserState>((set, get) => ({
   hasCompletedTutorial: false,
 
   setActiveAddress: (activeAddress) => set({ activeAddress }),
-  setBalance: (balance) => set({ balance }),
+  setSupabaseUserId: (supabaseUserId) => set({ supabaseUserId }),
+  setBalance: (balance) => {
+    set({ balance });
+    // 异步同步金币到 Supabase（fire-and-forget）
+    const { supabaseUserId } = get();
+    if (supabaseUserId) {
+      import('../services/supabase').then(({ updateGold }) => {
+        updateGold(supabaseUserId, balance).catch(err =>
+          console.warn('Supabase gold sync failed:', err)
+        );
+      }).catch(() => {});
+    }
+  },
   setUserRank: (userRank) => set({ userRank }),
   setRankScore: (rankScore) => set({ rankScore }),
   setWinStreak: (winStreak) => set({ winStreak }),
@@ -71,29 +87,45 @@ export const useUserStore = create<UserState>((set, get) => ({
   setPurchasedBundles: (purchasedBundles) => set({ purchasedBundles }),
   
   addPacks: (packId, count) => {
-    const { packInventory } = get();
+    const { packInventory, supabaseUserId } = get();
     const newInv = { ...packInventory, [packId]: (packInventory[packId] || 0) + count };
     set({ packInventory: newInv });
+    // 本地备份
     try { localStorage.setItem('wizard_duel_packs', JSON.stringify(newInv)); } catch {}
+    // 同步到 Supabase
+    if (supabaseUserId) {
+      import('../services/supabase').then(({ addUserPacks }) => {
+        addUserPacks(supabaseUserId, packId, count).catch(err =>
+          console.warn('Supabase pack add failed:', err)
+        );
+      }).catch(() => {});
+    }
   },
   
   consumePack: (packId) => {
-    const { packInventory } = get();
+    const { packInventory, supabaseUserId } = get();
     if (!packInventory[packId] || packInventory[packId] <= 0) return false;
     const newInv = { ...packInventory, [packId]: packInventory[packId] - 1 };
     set({ packInventory: newInv });
+    // 本地备份
     try { localStorage.setItem('wizard_duel_packs', JSON.stringify(newInv)); } catch {}
+    // 同步到 Supabase
+    if (supabaseUserId) {
+      import('../services/supabase').then(({ consumeUserPack }) => {
+        consumeUserPack(supabaseUserId, packId).catch(err =>
+          console.warn('Supabase pack consume failed:', err)
+        );
+      }).catch(() => {});
+    }
     return true;
   },
 
   purchaseBundle: (bundleId) => {
     const { purchasedBundles } = get();
     if (!purchasedBundles.includes(bundleId)) {
-      set({ purchasedBundles: [...purchasedBundles, bundleId] });
-      // 这里可以添加 localStorage 持久化
-      try {
-        localStorage.setItem('wizard_duel_purchases', JSON.stringify([...purchasedBundles, bundleId]));
-      } catch {}
+      const updated = [...purchasedBundles, bundleId];
+      set({ purchasedBundles: updated });
+      try { localStorage.setItem('wizard_duel_purchases', JSON.stringify(updated)); } catch {}
     }
   },
   setSelectedDeck: (selectedDeck) => set({ selectedDeck }),
@@ -103,17 +135,30 @@ export const useUserStore = create<UserState>((set, get) => ({
   setIsLoading: (isLoading) => set({ isLoading }),
   setHasCompletedTutorial: (hasCompletedTutorial) => set({ hasCompletedTutorial }),
 
+  /**
+   * 加载用户数据 — 优先从 Supabase，回退到 localStorage/Mock
+   */
   loadUserData: async (address: string) => {
     set({ isLoading: true });
     try {
-            // 1. 尝试从 Supabase 获取 Profile（可选，失败则回退）
+      // ========== 1. 尝试从 Supabase 加载全部数据 ==========
       let supabaseLoaded = false;
       try {
-        const { supabase, getProfile } = await import('../services/supabase');
+        const {
+          supabase, isSupabaseConfigured, getProfile,
+          getUserCards, getUserDecks, getUserPacks
+        } = await import('../services/supabase');
+
+        if (!isSupabaseConfigured) throw new Error('Supabase not configured');
+
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session) {
-          const profile = await getProfile(session.user.id);
+          const userId = session.user.id;
+          set({ supabaseUserId: userId });
+
+          // -- Profile（金币、经验、胜负）
+          const profile = await getProfile(userId);
           if (profile) {
             set({
               balance: profile.gold || 0,
@@ -121,14 +166,33 @@ export const useUserStore = create<UserState>((set, get) => ({
               rankScore: profile.xp || 0,
               winStreak: profile.win_count || 0,
             });
-            supabaseLoaded = true;
           }
+
+          // -- 卡牌收藏（从 user_cards 表）
+          const cards = await getUserCards(userId);
+          set({ inventory: cards });
+
+          // -- 卡组（从 decks 表）
+          const decks = await getUserDecks(userId);
+          set({ decks });
+          if (decks.length > 0 && !get().selectedDeck) {
+            set({ selectedDeck: decks[0] });
+          }
+
+          // -- 卡包库存（从 user_packs 表）
+          const packs = await getUserPacks(userId);
+          set({ packInventory: packs });
+          // 同步写入 localStorage 作为离线备份
+          try { localStorage.setItem('wizard_duel_packs', JSON.stringify(packs)); } catch {}
+
+          supabaseLoaded = true;
+          console.log('[UserStore] Loaded all data from Supabase ✅');
         }
       } catch (supabaseErr) {
-        console.warn('Supabase unavailable, using local/mock data:', supabaseErr);
+        console.warn('Supabase unavailable, falling back to local/mock:', supabaseErr);
       }
 
-      // 2. 回退到 Mock/本地逻辑
+      // ========== 2. 回退到 Mock/本地逻辑 ==========
       if (!supabaseLoaded) {
         const profile = await ApiService.getProfile(address);
         set({
@@ -137,19 +201,27 @@ export const useUserStore = create<UserState>((set, get) => ({
           rankScore: profile.rankScore || 0,
           winStreak: profile.stats?.winStreak || 0,
         });
+
+        // 卡组（localStorage mock）
+        const userDecks = await ApiService.getDecks(address);
+        set({ decks: userDecks });
+        if (userDecks.length > 0 && !get().selectedDeck) {
+          set({ selectedDeck: userDecks[0] });
+        }
+
+        // 卡牌收藏（localStorage mock）
+        const inventory = await ApiService.getInventory(address);
+        set({ inventory });
       }
 
-      // 获取当前用户的卡组
-      const userDecks = await ApiService.getDecks(address);
-      set({ decks: userDecks });
-      if (userDecks.length > 0 && !get().selectedDeck) {
-        set({ selectedDeck: userDecks[0] });
-      }
-
-      // 暂时保留本地存储逻辑用于 PWA 离线体验
+      // ========== 3. 本地补充数据（PWA 离线兼容） ==========
       const savedPurchases = localStorage.getItem('wizard_duel_purchases');
       if (savedPurchases) {
-        try { set({ purchasedBundles: JSON.parse(savedPurchases) }); } catch (e) {}
+        try { set({ purchasedBundles: JSON.parse(savedPurchases) }); } catch {}
+      }
+      const savedPacks = localStorage.getItem('wizard_duel_packs');
+      if (savedPacks) {
+        try { set({ packInventory: JSON.parse(savedPacks) }); } catch {}
       }
     } catch (e) {
       console.error('Failed to load user data:', e);
@@ -167,8 +239,11 @@ export const useUserStore = create<UserState>((set, get) => ({
     }
   },
 
+  /**
+   * 保存卡组 — 同时写入 Supabase + localStorage
+   */
   saveDeck: async (deck: Deck) => {
-    const { activeAddress, decks } = get();
+    const { activeAddress, decks, supabaseUserId } = get();
     
     // 限制最多 3 套卡组
     let newDecks = [...decks];
@@ -178,36 +253,66 @@ export const useUserStore = create<UserState>((set, get) => ({
       newDecks[existingIndex] = deck;
     } else {
       if (newDecks.length >= 3) {
-        // 如果已经有 3 套，且是新增，则替换最久没用的或者提示错误。
-        // 这里采用简单的 logic：如果满 3 套且试图新增，则不操作或返回。
-        // 在 UI 层我们会控制用户只能编辑已有的槽位。
         return;
       }
       newDecks.push(deck);
     }
 
+    set({ decks: newDecks, selectedDeck: deck });
+
+    // 写入 Supabase（优先）
+    if (supabaseUserId) {
+      try {
+        const { saveUserDeck } = await import('../services/supabase');
+        await saveUserDeck(supabaseUserId, deck);
+        console.log('[UserStore] Deck saved to Supabase ✅');
+      } catch (err) {
+        console.warn('Supabase deck save failed, falling back to local:', err);
+      }
+    }
+
+    // 本地备份（始终执行）
     if (activeAddress) {
       await ApiService.saveDeck(activeAddress, deck);
     }
-
-    set({ decks: newDecks, selectedDeck: deck });
   },
 
   updateBalance: (newBalance) => set({ balance: newBalance }),
 
+  /**
+   * 添加卡牌到收藏 — 同时写入 Supabase + localStorage
+   */
   addCardsToInventory: async (cards) => {
-    const { activeAddress, inventory } = get();
+    const { activeAddress, inventory, supabaseUserId } = get();
     const newInventory = [...inventory, ...cards];
     
     set({ inventory: newInventory });
     
+    // 写入 Supabase（优先）
+    if (supabaseUserId) {
+      try {
+        const { addUserCards } = await import('../services/supabase');
+        await addUserCards(supabaseUserId, cards);
+        console.log('[UserStore] Cards saved to Supabase ✅');
+      } catch (err) {
+        console.warn('Supabase card save failed, falling back to local:', err);
+      }
+    }
+
+    // 本地备份（始终执行）
     if (activeAddress) {
       await ApiService.saveInventory(activeAddress, newInventory);
     }
   },
 
+  /**
+   * 登录 — 设置地址并加载全部用户数据
+   */
   login: async (address, isGuest) => {
     get().setActiveAddress(address);
+    if (isGuest) {
+      get().setSupabaseUserId(null);
+    }
     await get().loadUserData(address);
   }
 }));
