@@ -49,7 +49,7 @@ export function useAITurn({
    */
   const passTurn = useCallback(() => {
     const state = duelStateRef.current;
-    if (!state || phaseRef.current !== 'PLAYER_TURN' || isProcessing) return;
+    if (!state || phaseRef.current !== 'PLAYER_TURN') return;
 
     const commands: GameActionCommand[] = [];
 
@@ -167,7 +167,7 @@ export function useAITurn({
     }
 
     enqueue(commands, 'ai_turn');
-  }, [duelStateRef, phaseRef, isProcessing, enqueue, showTurnBanner, startNewRound]);
+  }, [duelStateRef, phaseRef, enqueue, showTurnBanner, startNewRound]);
 
   return { passTurn };
 }
