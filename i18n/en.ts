@@ -53,4 +53,11 @@ export const en = {
   'Win 3 Duels': 'Win 3 Duels',
   'Total Destruction': 'Total Destruction',
   'Deal 200 Damage': 'Deal 200 Damage',
+  'DISTANCE_TO_NEXT_RANK': 'Next Rank in',
+  'Iron': 'Iron',
+  'Bronze': 'Bronze',
+  'Silver': 'Silver',
+  'Gold': 'Gold',
+  'Diamond': 'Diamond',
+  'Legend': 'Legend',
 };

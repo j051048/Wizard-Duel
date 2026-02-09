@@ -18,6 +18,8 @@ import { Sparkles, Settings, CheckCircle } from 'lucide-react';
 // Types
 import { SpellType } from './types/card';
 import { DungeonNode } from './types/dungeon';
+import { TRANSLATIONS } from './translations';
+import { Language } from './types';
 
 // Hooks
 import { usePreloader } from './hooks/usePreloader';
@@ -147,6 +149,7 @@ function App() {
           isLoading={user.isLoading}
           showSettings={ui.showSettings}
           setShowSettings={ui.setShowSettings}
+          language={ui.language}
         />
       )}
 
@@ -427,6 +430,7 @@ interface LobbyHeaderProps {
   isLoading: boolean;
   showSettings: boolean;
   setShowSettings: (v: boolean) => void;
+  language: Language;
 }
 
 const LobbyHeader: React.FC<LobbyHeaderProps> = ({
@@ -437,6 +441,7 @@ const LobbyHeader: React.FC<LobbyHeaderProps> = ({
   isLoading,
   showSettings,
   setShowSettings,
+  language,
 }) => (
   <header className="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-md border-b border-white/10 px-4 py-3 flex justify-between items-center safe-area-top">
     <div className="flex items-center gap-2">
@@ -458,7 +463,7 @@ const LobbyHeader: React.FC<LobbyHeaderProps> = ({
         </span>
       )}
       <div className="bg-black/60 border border-purple-500/30 rounded-xl px-4 py-2 flex items-center gap-2">
-        <span className="text-purple-400 text-xs uppercase font-bold text-nowrap">法力</span>
+        <span className="text-purple-400 text-xs uppercase font-bold text-nowrap">{TRANSLATIONS[language]?.['GOLD'] || '钻石'}</span>
         <span className="font-mono font-bold text-white">{isLoading ? '...' : balance}</span>
       </div>
     </div>

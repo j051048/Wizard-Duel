@@ -5,6 +5,8 @@
 import React, { useState } from 'react';
 import { Edit3, Check, X, Crown } from 'lucide-react';
 import { Rank } from '../../types';
+import { useUIStore } from '../../stores/useUIStore';
+import { TRANSLATIONS } from '../../translations';
 
 interface ProfileHeaderProps {
   displayName: string;
@@ -29,6 +31,9 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(displayName);
+
+  const { language } = useUIStore();
+  const t = (key: string) => TRANSLATIONS[language][key] || key;
 
   const handleSaveName = () => {
     const trimmed = nameInput.trim();
@@ -89,9 +94,9 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           {/* 段位 */}
           <div className="flex items-center gap-2 mb-2">
             <Crown size={14} className={rankStyle.text} />
-            <span className={`font-bold text-sm ${rankStyle.text}`}>{userRank}</span>
+            <span className={`font-bold text-sm ${rankStyle.text}`}>{t(userRank)}</span>
             <span className="text-gray-500 text-xs">|</span>
-            <span className="text-gray-400 text-xs font-mono">{rankScore} PTS</span>
+            <span className="text-gray-400 text-xs font-mono">{rankScore} {t('PTS')}</span>
           </div>
 
           {/* 地址 */}

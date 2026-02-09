@@ -5,6 +5,8 @@
 import React from 'react';
 import { Crown, Target } from 'lucide-react';
 import { Rank } from '../../types';
+import { useUIStore } from '../../stores/useUIStore';
+import { TRANSLATIONS } from '../../translations';
 
 interface RankProgressProps {
   userRank: Rank;
@@ -32,6 +34,8 @@ function getRankGradient(rank: string): string {
 }
 
 export const RankProgress: React.FC<RankProgressProps> = ({ userRank, rankScore, rankStyle }) => {
+  const { language } = useUIStore();
+  const t = (key: string) => TRANSLATIONS[language][key] || key;
   return (
     <div className="bg-black/30 border border-white/5 rounded-2xl p-5 space-y-3">
       <h3 className="font-bold text-white flex items-center gap-2">
@@ -45,8 +49,8 @@ export const RankProgress: React.FC<RankProgressProps> = ({ userRank, rankScore,
         </div>
         <div className="flex-1">
           <div className="flex items-center justify-between mb-1">
-            <span className={`font-bold ${rankStyle.text}`}>{userRank}</span>
-            <span className="text-xs text-gray-500 font-mono">{rankScore} / {getNextRankThreshold(userRank)} PTS</span>
+            <span className={`font-bold ${rankStyle.text}`}>{t(userRank)}</span>
+            <span className="text-xs text-gray-500 font-mono">{rankScore} / {getNextRankThreshold(userRank)} {t('PTS')}</span>
           </div>
           <div className="h-2.5 bg-slate-800 rounded-full overflow-hidden">
             <div
@@ -55,7 +59,7 @@ export const RankProgress: React.FC<RankProgressProps> = ({ userRank, rankScore,
             />
           </div>
           <div className="text-[10px] text-gray-600 mt-1">
-            距离下一段位还需 {Math.max(0, getNextRankThreshold(userRank) - rankScore)} 分
+            {t('DISTANCE_TO_NEXT_RANK')} {Math.max(0, getNextRankThreshold(userRank) - rankScore)} {t('PTS')}
           </div>
         </div>
       </div>

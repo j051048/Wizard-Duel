@@ -53,4 +53,12 @@ export const zh = {
   'Win 3 Duels': '赢得 3 场决斗',
   'Total Destruction': '毁灭打击',
   'Deal 200 Damage': '造成 200 点伤害',
+
+  'DISTANCE_TO_NEXT_RANK': '距离下一段位还需',
+  'Iron': '黑铁',
+  'Bronze': '青铜',
+  'Silver': '白银',
+  'Gold': '黄金',
+  'Diamond': '钻石',
+  'Legend': '传说',
 };
