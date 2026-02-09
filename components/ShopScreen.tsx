@@ -51,7 +51,7 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
     const historyMap = purchasedBundles.reduce((acc, id) => ({...acc, [id]: 1}), {}); 
     
     if (balance < product.price) {
-        toast.error('余额不足', `还需要 ${product.price - balance} 法力值`);
+        toast.error('余额不足', `还需要 ${product.price - balance} 钻石`);
         HapticService.failure();
         return;
     }
@@ -258,7 +258,7 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
                         {bundle.items.map((item, i) => (
                             <li key={i} className="flex items-center gap-2">
                                 <CheckCircle size={14} className="text-green-500" />
-                                {item.type === 'pack' ? `${item.count}个卡包` : item.type === 'mana' ? `${item.count}法力` : '稀有卡牌'}
+                                {item.type === 'pack' ? `${item.count}个卡包` : item.type === 'mana' ? `${item.count}钻石` : '稀有卡牌'}
                             </li>
                         ))}
                     </ul>

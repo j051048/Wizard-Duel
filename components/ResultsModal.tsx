@@ -134,7 +134,7 @@ export const ResultsModal: React.FC<ResultsModalProps> = ({
                 <div>
                    <p className="text-[9px] md:text-[10px] text-slate-500 font-black uppercase tracking-wider mb-1">Total Payout</p>
                    <p className="text-2xl md:text-3xl font-mono font-black text-white tracking-tighter">
-                      {payout} <span className="text-xs text-purple-400 ml-1">PTS</span>
+                      {payout} <span className="text-xs text-purple-400 ml-1">💎</span>
                    </p>
                 </div>
                 <div className="text-right">

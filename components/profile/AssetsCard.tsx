@@ -24,7 +24,7 @@ export const AssetsCard: React.FC<AssetsCardProps> = ({
       <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 border border-purple-500/20 rounded-xl p-4">
         <div className="flex items-center gap-2 mb-2">
           <Gem size={16} className="text-purple-400" />
-          <span className="text-xs text-purple-300 font-bold uppercase">钻石(法力)</span>
+          <span className="text-xs text-purple-300 font-bold uppercase">钻石</span>
         </div>
         <div className="text-2xl font-mono font-black text-white">{balance.toLocaleString()}</div>
         <button

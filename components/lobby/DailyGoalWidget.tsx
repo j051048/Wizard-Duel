@@ -121,11 +121,11 @@ export const DailyGoalWidget: React.FC<DailyGoalWidgetProps> = ({ quests, onClai
                                              onClick={(e) => { e.stopPropagation(); onClaim(quest.id); }}
                                              className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white text-[10px] font-bold rounded-lg shadow-lg shadow-green-600/30 animate-pulse"
                                            >
-                                               {t('CLAIM')} {quest.rewardGold} G
+                                               {t('CLAIM')} {quest.rewardGold} 💎
                                            </button>
                                        ) : (
                                            <div className="px-2 py-1 bg-white/5 text-[10px] text-gray-500 rounded border border-white/5">
-                                               {quest.rewardGold} G
+                                               {quest.rewardGold} 💎
                                            </div>
                                        )}
                                    </div>

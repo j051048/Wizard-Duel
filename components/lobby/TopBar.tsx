@@ -60,7 +60,7 @@ const TopBar: React.FC<TopBarProps> = ({
            </div>
            <div className={`flex items-center gap-1 ${isMobile ? 'text-[9px]' : 'text-xs'} font-tech text-gray-400 bg-black/40 px-2 py-0.5 rounded-full border border-white/5`}>
               <Crown size={isMobile ? 10 : 12} className="text-amber-500" />
-              <span>{rankScore} PTS</span>
+              <span>{rankScore} {t('PTS')}</span>
            </div>
          </div>
       </div>
