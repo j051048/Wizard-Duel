@@ -1,6 +1,6 @@
-import { DuelState, SpellType, Spell } from '../types';
-import { SPELLS, GAME_CONFIG } from '../constants';
-import { getSpellById, recalculateCostMod } from './gameLogic';
+import { DuelState, SpellType } from '../types';
+import { GAME_CONFIG } from '../constants';
+import { getSpellById } from './gameLogic';
 
 export interface SpellProjection {
   damage: number;       // Projected damage to TARGET (after multipliers, before armor)
@@ -13,6 +13,8 @@ export interface SpellProjection {
   netArmorChange: number;  // Actual Armor change for target
   target: 'player' | 'opponent';
 }
+
+import { getElementType, doesElementBeat } from './combat/elementSystem';
 
 export const calculateSpellProjection = (
   state: DuelState,
@@ -53,7 +55,6 @@ export const calculateSpellProjection = (
 
   if (targetLastSpell) {
     // [P0 Fix] 使用元素类型判定
-    const { getElementType, doesElementBeat } = require('../services/combat/elementSystem');
     const spellElement = getElementType(spellId);
     const targetElement = getElementType(targetLastSpellId);
     
@@ -94,9 +95,6 @@ export const calculateSpellProjection = (
   // If target is opponent (standard attack)
   if (result.target === 'opponent') {
       let finalDamage = damage;
-      let armorDamage = 0;
-      
-      // Calculate Armor Interaction
       const currentArmor = state.opponentArmor;
       const absorb = Math.min(currentArmor, finalDamage);
       const hpDamage = finalDamage - absorb;
