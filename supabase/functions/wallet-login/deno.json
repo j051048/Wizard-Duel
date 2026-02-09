@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "wallet-login": {
+      "verify_jwt": false
+    }
+  },
+  "imports": {
+    "viem": "npm:viem@^2.0.0"
+  }
+}

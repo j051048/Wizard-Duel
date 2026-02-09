@@ -44,8 +44,47 @@ export const getCurrentUserId = async (): Promise<string | null> => {
  * 1. 检查或创建 profile
  * 2. 使用钱包地址作为主标识
  */
-export const signInWithWallet = async (address: string) => {
+export const signInWithWallet = async (address: string, signature: string, message: string) => {
   if (!isSupabaseConfigured) throw new Error('Supabase not configured');
+  
+  // Call Edge Function to handle secure login
+  const { data, error } = await supabase.functions.invoke('wallet-login', {
+    body: { address, signature, message }
+  });
+
+  if (error) {
+    console.error('Edge function error:', error);
+    // Fallback: If edge function fails (e.g. not deployed), try anonymous login but warn user
+    console.warn('Falling back to anonymous login (Data will NOT be persistent across sessions!)');
+    return signInWithWalletLegacy(address);
+  }
+
+  if (!data.session) {
+    throw new Error('Failed to retrieve session from login function');
+  }
+
+  // Set the session
+  const { error: sessionError } = await supabase.auth.setSession(data.session);
+  if (sessionError) throw sessionError;
+
+  const user = data.user;
+
+  // Retrieve Profile
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  if (profileError) console.error('Error fetching profile:', profileError);
+
+  return { user, profile };
+};
+
+/**
+ * Legacy anonymous login (Backup)
+ */
+const signInWithWalletLegacy = async (address: string) => {
   const { data: { user }, error: authError } = await supabase.auth.signInAnonymously({
     options: {
       data: {
@@ -57,7 +96,7 @@ export const signInWithWallet = async (address: string) => {
   if (authError) throw authError;
   if (!user) throw new Error('Failed to create anonymous user');
 
-  // 检查/更新 Profile
+  // Check/Update Profile
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('*')
@@ -65,7 +104,7 @@ export const signInWithWallet = async (address: string) => {
     .single();
 
   if (profileError && profileError.code === 'PGRST116') {
-    // 创建新 Profile
+    // Create new Profile
     const { error: insertError } = await supabase
       .from('profiles')
       .insert({

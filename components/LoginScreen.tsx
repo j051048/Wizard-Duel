@@ -8,7 +8,7 @@ import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { signMessage } from '@wagmi/core';
 import { config } from '../index';
 import { Wallet, User, Sparkles, Shield, ChevronRight } from 'lucide-react';
-import { useUserStore } from '../stores/useUserStore';
+
 
 interface LoginScreenProps {
   onLoginComplete: (address: string, isGuest: boolean) => void;
@@ -82,7 +82,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginComplete }) => 
           // 2. 尝试 Supabase 登录（可选，失败不阻塞）
           try {
             const { signInWithWallet } = await import('../services/supabase');
-            await signInWithWallet(address);
+            await signInWithWallet(address, signature, message);
           } catch (supabaseErr) {
             console.warn('Supabase login skipped (not configured or unavailable):', supabaseErr);
           }
