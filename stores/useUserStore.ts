@@ -18,7 +18,7 @@ interface UserState {
   isLoading: boolean;
   hasCompletedTutorial: boolean;
 
-  purchasedBundles: string[];
+  purchasedBundles: Record<string, number>; // productId -> purchase timestamp
   packInventory: Record<string, number>;
 
   // Actions
@@ -30,7 +30,7 @@ interface UserState {
   setRankScore: (score: number) => void;
   setWinStreak: (streak: number) => void;
   setDecks: (decks: Deck[]) => void;
-  setPurchasedBundles: (ids: string[]) => void;
+  setPurchasedBundles: (bundles: Record<string, number>) => void;
   addPacks: (packId: string, count: number) => void;
   consumePack: (packId: string) => boolean;
   purchaseBundle: (bundleId: string) => void;
@@ -59,7 +59,7 @@ export const useUserStore = create<UserState>((set, get) => ({
   rankScore: 0,
   winStreak: 0,
   decks: [],
-  purchasedBundles: [],
+  purchasedBundles: {},
   packInventory: {},
   selectedDeck: null,
   history: [],
@@ -136,11 +136,10 @@ export const useUserStore = create<UserState>((set, get) => ({
 
   purchaseBundle: (bundleId) => {
     const { purchasedBundles } = get();
-    if (!purchasedBundles.includes(bundleId)) {
-      const updated = [...purchasedBundles, bundleId];
-      set({ purchasedBundles: updated });
-      try { localStorage.setItem('wizard_duel_purchases', JSON.stringify(updated)); } catch { /* ignore */ }
-    }
+    // 存储购买时间戳
+    const updated = { ...purchasedBundles, [bundleId]: Date.now() };
+    set({ purchasedBundles: updated });
+    try { localStorage.setItem('wizard_duel_purchases', JSON.stringify(updated)); } catch { /* ignore */ }
   },
   setSelectedDeck: (selectedDeck) => set({ selectedDeck }),
   setHistory: (history) => set({ history }),

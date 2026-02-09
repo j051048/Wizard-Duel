@@ -20,7 +20,7 @@ interface ShopScreenProps {
   onBack: () => void;
   onUpdateBalance: (newBalance: number) => void;
   onAddCards?: (cards: SpellType[]) => void;
-  purchasedBundles?: string[];
+  purchasedBundles?: Record<string, number>; // productId -> timestamp
   onPurchaseBundle?: (bundleId: string) => void;
   packInventory?: Record<string, number>;
   onAddPacks?: (packId: string, count: number) => void;
@@ -32,7 +32,7 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
   onBack,
   onUpdateBalance,
   onAddCards,
-  purchasedBundles = [],
+  purchasedBundles = {},
   onPurchaseBundle,
   packInventory = {},
   onAddPacks,
@@ -72,9 +72,8 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
         return;
     }
 
-    // 2. Validate Limits
-    const historyMap = purchasedBundles.reduce((acc, id) => ({...acc, [id]: 1}), {}); 
-    const purchaseRes = ShopService.processPurchase(balance, product.id, historyMap);
+    // 2. Validate Limits (now using timestamp-based history)
+    const purchaseRes = ShopService.processPurchase(balance, product.id, purchasedBundles);
     if (!purchaseRes.success) {
         toast.error('购买失败', purchaseRes.error || '未知错误');
         return;
@@ -328,7 +327,9 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
 
         {/* Bundles */}
         {activeTab === 'bundles' && products.map(bundle => {
-             const isPurchased = purchasedBundles.includes(bundle.id);
+             // 使用 checkPurchaseLimit 判断是否可购买（支持周期刷新）
+             const canPurchase = ShopService.checkPurchaseLimit(bundle.id, purchasedBundles);
+             const isPurchased = !canPurchase;
              return (
                 <div key={bundle.id} className={`bg-slate-900 border border-white/10 rounded-2xl p-6 flex flex-col gap-4 relative overflow-hidden ${isPurchased ? 'opacity-50 grayscale' : ''}`}>
                     {bundle.badge && !isPurchased && (

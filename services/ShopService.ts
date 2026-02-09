@@ -1,5 +1,4 @@
-import { SPELLS } from '../data/spells';
-import { Spell, SpellType } from '../types';
+// ShopService - 商店服务
 
 export type ProductType = 'pack' | 'bundle' | 'currency';
 
@@ -22,6 +21,7 @@ export interface Product {
     badgeColor?: string;
     expiresAt?: number; // 限时礼包过期时间戳
     isFirstPurchase?: boolean; // 是否是首充礼包
+    resetPeriod?: 'weekly' | 'daily'; // 购买限制重置周期
 }
 
 export const SHOP_CATALOG: Product[] = [
@@ -111,7 +111,9 @@ export const SHOP_CATALOG: Product[] = [
             { type: 'pack', id: 'premium', count: 2 },
             { type: 'mana', count: 100 }
         ],
-        badge: '超值',
+        limit: 1,
+        resetPeriod: 'weekly', // 每周重置购买次数
+        badge: '每周限购',
         badgeColor: 'bg-orange-500'
     },
     {
@@ -203,12 +205,55 @@ export class ShopService {
         return SHOP_CATALOG.find(p => p.id === id);
     }
 
+    /**
+     * 检查购买限制
+     * purchasedHistory 格式：{ productId: timestamp } 或 { productId: count }
+     * 对于有 resetPeriod 的商品，检查时间戳是否在当前周期内
+     */
     static checkPurchaseLimit(productId: string, purchasedHistory: Record<string, number>): boolean {
         const product = this.getProductById(productId);
         if (!product || !product.limit) return true;
         
-        const bought = purchasedHistory[productId] || 0;
-        return bought < product.limit;
+        const purchaseRecord = purchasedHistory[productId];
+        if (!purchaseRecord) return true; // 从未购买过
+        
+        // 如果有重置周期，检查是否已过重置时间
+        if (product.resetPeriod) {
+            const purchaseTime = purchaseRecord; // 存储的是时间戳
+            const now = Date.now();
+            
+            if (product.resetPeriod === 'weekly') {
+                // 获取本周一 00:00 的时间戳
+                const weekStart = this.getWeekStartTimestamp();
+                // 如果上次购买在本周之前，则可以重新购买
+                if (purchaseTime < weekStart) return true;
+            } else if (product.resetPeriod === 'daily') {
+                // 获取今天 00:00 的时间戳
+                const dayStart = this.getDayStartTimestamp();
+                if (purchaseTime < dayStart) return true;
+            }
+        }
+        
+        // 无重置周期或在周期内已购买
+        return false;
+    }
+    
+    // 获取本周一 00:00 的时间戳
+    static getWeekStartTimestamp(): number {
+        const now = new Date();
+        const dayOfWeek = now.getDay();
+        const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 周一为起始
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - diff);
+        monday.setHours(0, 0, 0, 0);
+        return monday.getTime();
+    }
+    
+    // 获取今天 00:00 的时间戳
+    static getDayStartTimestamp(): number {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        return now.getTime();
     }
 
     static processPurchase(
