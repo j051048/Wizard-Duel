@@ -152,25 +152,25 @@ export const SPELLS: Spell[] = [
   // 0费卡牌 - 灵活过渡
   defineSpell({
     id: 'fire7', name: '余烬', manaCost: 0, damage: 1, rarity: 'common', mechanic: 'burn',
-    artSrc: '/cards/fire-spark.webp', value: 1  // 0费1伤+1灼烧，弱但免费
+    artSrc: '/cards/fire-embers.webp', value: 1  // 0费1伤+1灼烧，弱但免费
   }),
   defineSpell({
     id: 'vine7', name: '嫩芽', manaCost: 0, damage: 0, rarity: 'common', mechanic: 'tangle',
-    artSrc: '/cards/vine-lash.webp', value: 1  // 0费纯控制
+    artSrc: '/cards/vine-sprout.webp', value: 1  // 0费纯控制
   }),
   
   // 1费卡牌 - 补充
   defineSpell({
     id: 'ice5', name: '寒霜箭', manaCost: 1, damage: 1, rarity: 'common', mechanic: 'freeze',
-    artSrc: '/cards/ice-bite.webp'  // 1费1伤+冻结，快速控制
+    artSrc: '/cards/ice-frost-bolt.webp'  // 1费1伤+冻结，快速控制
   }),
   defineSpell({
     id: 'thunder6', name: '电火花', manaCost: 1, damage: 2, rarity: 'common', mechanic: 'charge',
-    artSrc: '/cards/thunder-shock.webp'  // 1费2伤，合理性价比
+    artSrc: '/cards/thunder-spark.webp'  // 1费2伤，合理性价比
   }),
   defineSpell({
     id: 'rock7', name: '碎石甲', manaCost: 1, damage: 1, armorGain: 2, rarity: 'common', mechanic: 'fortify',
-    artSrc: '/cards/rock-pebble.webp'  // 1费攻防兼备
+    artSrc: '/cards/rock-gravel-armor.webp'  // 1费攻防兼备
   }),
 
   // ============ Mid Cost Fillers (C-6) ============
@@ -206,7 +206,7 @@ export const SPELLS: Spell[] = [
   }),
   defineSpell({
      id: 'thunder5', name: '雷神之怒', manaCost: 5, damage: 5, rarity: 'mythic', mechanic: 'charge', cardSet: 'tournament',
-     artSrc: '/cards/thunder-storm.webp'
+     artSrc: '/cards/thunder-wrath.webp'
   }),
   defineSpell({
      id: 'vine6', name: '森林之握', manaCost: 4, damage: 4, rarity: 'rare', mechanic: 'tangle', cardSet: 'tournament',
