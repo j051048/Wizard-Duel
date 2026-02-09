@@ -10,7 +10,10 @@ import { HapticService } from '../services/haptic';
 import { useToastStore } from '../stores/useToastStore';
 import { PackOpener } from './shop/PackOpener';
 import { ShopService, Product } from '../services/ShopService';
-import { openPack, SPELLS } from '../constants'; 
+import { openPack } from '../constants'; // Legacy import, kept for Guest fallback if needed
+import { SecureGameService } from '../services/SecureGameService';
+import { useUserStore } from '../stores/useUserStore';
+import { SPELLS } from '../data/spells';
 
 interface ShopScreenProps {
   balance: number;
@@ -44,77 +47,170 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
   const [pityCounter, setPityCounter] = useState({ rare: 0, mythic: 0, legendary: 0 });
   
   const toast = useToastStore();
+  const user = useUserStore();
+
+  // Helper to pick a random card of a specific rarity
+  const pickCardOfRarity = (rarity: string): Spell => {
+      const availableCards = SPELLS.filter(s => 
+          s.rarity === rarity && 
+          !s.id.startsWith('hero_') && 
+          s.id !== 'skip'
+      );
+      if (availableCards.length === 0) {
+          // Fallback
+          return SPELLS.find(s => s.rarity === 'common' && s.id !== 'skip') || SPELLS[0];
+      }
+      return availableCards[Math.floor(Math.random() * availableCards.length)];
+  };
 
   // === Transaction Logic ===
-  const handlePurchase = (product: Product) => {
-    // 1. Validate
-    const historyMap = purchasedBundles.reduce((acc, id) => ({...acc, [id]: 1}), {}); 
-    
+  const handlePurchase = async (product: Product) => {
+    // 1. Validate Balance
     if (balance < product.price) {
         toast.error('余额不足', `还需要 ${product.price - balance} 钻石`);
         HapticService.failure();
         return;
     }
 
-    const result = ShopService.processPurchase(balance, product.id, historyMap);
-    
-    if (!result.success) {
-        toast.error('购买失败', result.error || '未知错误');
+    // 2. Validate Limits
+    const historyMap = purchasedBundles.reduce((acc, id) => ({...acc, [id]: 1}), {}); 
+    const purchaseRes = ShopService.processPurchase(balance, product.id, historyMap);
+    if (!purchaseRes.success) {
+        toast.error('购买失败', purchaseRes.error || '未知错误');
         return;
     }
 
-    // 2. Execute Cost
-    onUpdateBalance(balance - result.cost);
-    HapticService.medium();
-    
-    // 3. Process Rewards
-    let cardsOpened: Spell[] = [];
-    let packsToAdd: {id: string, count: number}[] = [];
-    
-    result.rewards.forEach(reward => {
-        if (reward.type === 'pack') {
-            if (product.type === 'pack') {
-                // Direct open
-                const { cards, newPity } = openPack(pityCounter);
-                setPityCounter(newPity);
-                cardsOpened = cards;
-            } else {
-                packsToAdd.push({ id: reward.id || 'standard', count: reward.count });
-            }
-        } else if (reward.type === 'mana') {
-            onUpdateBalance(balance - result.cost + reward.count); 
-        } else if (reward.type === 'card') {
-             const spell = SPELLS.find(s => s.id === reward.id);
-             if (spell) cardsOpened.push(spell);
+    // 3. Execution (Secure)
+    try {
+        // Securely deduct gold
+        if (user.supabaseUserId) {
+             const goldRes = await SecureGameService.adjustGold(user.supabaseUserId, -product.price, 'buy_' + product.id);
+             if (!goldRes.success) {
+                 toast.error('交易失败', goldRes.error);
+                 return;
+             }
+             onUpdateBalance(goldRes.newBalance);
+        } else {
+             // Guest/Offline fallback
+             onUpdateBalance(balance - product.price);
         }
-    });
-
-    // 4. Finalize
-    if (product.type === 'bundle') {
-        onPurchaseBundle?.(product.id);
-        packsToAdd.forEach(p => onAddPacks?.(p.id, p.count));
         
+        HapticService.medium();
+
+        // 4. Process Rewards
+        let cardsOpened: Spell[] = [];
+        const packsToAdd: {id: string, count: number}[] = [];
+
+        // Handle Pack (Direct Open) vs Inventory
+        if (product.type === 'pack') {
+             // For direct open, we first Add to inventory (Secure), then Open (Secure)
+             // Pack ID logic:
+             const packItem = product.items.find(i => i.type === 'pack');
+             const packId = packItem?.id || 'standard';
+             const packType = packId as 'standard' | 'premium' | 'legendary';
+
+             if (user.supabaseUserId) {
+                 // Add pack to DB first
+                 const { addUserPacks } = await import('../services/supabase');
+                 await addUserPacks(user.supabaseUserId, packId, 1);
+                 
+                 // Open pack via Secure RPC
+                 const openRes = await SecureGameService.openPack(user.supabaseUserId, packId, packType);
+                 
+                 if (openRes.success) {
+                     // Convert Rarity results to Cards
+                     cardsOpened = openRes.cards.map(c => pickCardOfRarity(c.rarity));
+                     
+                     // Sync Pity
+                     // Note: RPC handled pity update on server, we can refresh it later
+                 } else {
+                     toast.error('开包失败', openRes.error);
+                     return;
+                 }
+             } else {
+                 // Guest: Use local openPack (Legacy)
+                 const { cards, newPity } = openPack(pityCounter);
+                 setPityCounter(newPity);
+                 cardsOpened = cards;
+             }
+        } else {
+             // Bundle / Other items
+             purchaseRes.rewards.forEach(reward => {
+                 if (reward.type === 'pack') {
+                     packsToAdd.push({ id: reward.id || 'standard', count: reward.count });
+                 } else if (reward.type === 'mana') {
+                     // Mana reward (add back)
+                     if (user.supabaseUserId) {
+                         SecureGameService.adjustGold(user.supabaseUserId, reward.count, 'bundle_reward');
+                         onUpdateBalance(balance - product.price + reward.count);
+                     } else {
+                         onUpdateBalance(balance - product.price + reward.count);
+                     }
+                 } else if (reward.type === 'card') {
+                      const spell = SPELLS.find(s => s.id === reward.id);
+                      if (spell) cardsOpened.push(spell);
+                 }
+             });
+        }
+
+        // 5. Finalize (Add to Inventory)
+        if (packsToAdd.length > 0) {
+             packsToAdd.forEach(p => onAddPacks?.(p.id, p.count));
+        }
         if (cardsOpened.length > 0) {
              onAddCards?.(cardsOpened.map(c => c.id));
              setRevealedCards(cardsOpened);
              setOpeningProduct(product); 
-        } else {
-             toast.success('购买成功', `所有的物品已放入库存`);
+        } else if (packsToAdd.length > 0) {
+             toast.success('购买成功', '物品已放入库存');
         }
-    } else if (product.type === 'pack') {
-        onAddCards?.(cardsOpened.map(c => c.id));
-        setRevealedCards(cardsOpened);
-        setOpeningProduct(product);
+
+        if (product.type === 'bundle') {
+             onPurchaseBundle?.(product.id);
+        }
+
+    } catch (err: any) {
+        console.error('Purchase error:', err);
+        toast.error('购买出错', err.message);
     }
   };
 
-  const handleOpenInventory = (packId: string) => {
-      if (onConsumePack?.(packId)) {
-        const { cards, newPity } = openPack(pityCounter);
-        setPityCounter(newPity);
-        setRevealedCards(cards);
-        onAddCards?.(cards.map(c => c.id));
-        setInventoryPackOpening(packId); 
+  const handleOpenInventory = async (packId: string) => {
+      // Secure Open from Inventory
+      const packType = packId as 'standard' | 'premium' | 'legendary';
+      
+      try {
+          if (user.supabaseUserId) {
+              const openRes = await SecureGameService.openPack(user.supabaseUserId, packId, packType);
+              if (openRes.success) {
+                  // RPC consumes pack automatically
+                  // Update UI to reflect consumption
+                  
+                  // Convert results
+                  const cards = openRes.cards.map(c => pickCardOfRarity(c.rarity));
+                  
+                  setRevealedCards(cards);
+                  onAddCards?.(cards.map(c => c.id));
+                  setInventoryPackOpening(packId); 
+                  
+                  // Update UI inventory count locally
+                  // Use onConsumePack to update local UI state
+                  onConsumePack?.(packId); 
+              } else {
+                  toast.error('开启失败', openRes.error);
+              }
+          } else {
+              // Guest
+              if (onConsumePack?.(packId)) {
+                const { cards, newPity } = openPack(pityCounter);
+                setPityCounter(newPity);
+                setRevealedCards(cards);
+                onAddCards?.(cards.map(c => c.id));
+                setInventoryPackOpening(packId); 
+              }
+          }
+      } catch (err) {
+          console.error('Open inventory error:', err);
       }
   };
 

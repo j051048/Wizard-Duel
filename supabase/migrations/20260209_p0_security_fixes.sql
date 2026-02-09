@@ -167,7 +167,11 @@ v_mythic_rate := v_mythic_rate + 0.05;
 v_legendary_rate := v_legendary_rate + 0.03;
 END IF;
 -- 生成卡牌
+-- 生成卡牌
 FOR i IN 1..v_card_count LOOP v_roll := random();
+v_rarity := 'common';
+-- Default
+-- Pity Check
 IF v_pity.legendary_pity >= v_legendary_pity_threshold THEN v_rarity := 'legendary';
 v_pity.legendary_pity := 0;
 v_pity.mythic_pity := 0;
@@ -183,22 +187,35 @@ v_pity.rare_pity := 0;
 v_pity.mythic_pity := v_pity.mythic_pity + 1;
 v_pity.legendary_pity := v_pity.legendary_pity + 1;
 v_pity_triggered := TRUE;
-ELSIF v_roll < v_legendary_rate THEN v_rarity := 'legendary';
-v_pity.legendary_pity := 0;
+ELSE -- Normal Roll
+IF v_roll < v_legendary_rate THEN v_rarity := 'legendary';
+ELSIF v_roll < v_legendary_rate + v_mythic_rate THEN v_rarity := 'mythic';
+ELSIF v_roll < v_legendary_rate + v_mythic_rate + v_rare_rate THEN v_rarity := 'rare';
+ELSE v_rarity := 'common';
+END IF;
+-- [Fix] Guarantee Logic for Special Packs (First Card Only)
+IF i = 1 THEN IF p_pack_type = 'legendary' THEN v_rarity := 'legendary';
+-- Force Legendary
+ELSIF p_pack_type = 'premium'
+AND v_rarity = 'common' THEN v_rarity := 'rare';
+-- Upgrade Common to Rare
+END IF;
+END IF;
+-- Update Pity Counters based on Result
+IF v_rarity = 'legendary' THEN v_pity.legendary_pity := 0;
 v_pity.mythic_pity := 0;
 v_pity.rare_pity := 0;
-ELSIF v_roll < v_legendary_rate + v_mythic_rate THEN v_rarity := 'mythic';
-v_pity.mythic_pity := 0;
+ELSIF v_rarity = 'mythic' THEN v_pity.mythic_pity := 0;
 v_pity.rare_pity := 0;
 v_pity.legendary_pity := v_pity.legendary_pity + 1;
-ELSIF v_roll < v_legendary_rate + v_mythic_rate + v_rare_rate THEN v_rarity := 'rare';
-v_pity.rare_pity := 0;
+ELSIF v_rarity = 'rare' THEN v_pity.rare_pity := 0;
 v_pity.mythic_pity := v_pity.mythic_pity + 1;
 v_pity.legendary_pity := v_pity.legendary_pity + 1;
-ELSE v_rarity := 'common';
+ELSE -- common
 v_pity.rare_pity := v_pity.rare_pity + 1;
 v_pity.mythic_pity := v_pity.mythic_pity + 1;
 v_pity.legendary_pity := v_pity.legendary_pity + 1;
+END IF;
 END IF;
 v_results := v_results || jsonb_build_object('rarity', v_rarity, 'index', i);
 END LOOP;
