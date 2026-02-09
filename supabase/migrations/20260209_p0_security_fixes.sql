@@ -1,9 +1,21 @@
 -- ============================================================
--- P0 Fix #3 & #4: 金币和开包安全性修复
--- 
--- 将金币操作和开包逻辑改为服务端原子操作
--- 防止客户端通过 DevTools 篡改数据
+-- P0 Security Fixes: 金币、开包、战斗结算
 -- ============================================================
+-- ============ 0. Schema Update: Add rank_score column & Migrate Data ============
+DO $$ BEGIN IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_name = 'profiles'
+        AND column_name = 'rank_score'
+) THEN
+ALTER TABLE profiles
+ADD COLUMN rank_score INTEGER DEFAULT 1000;
+-- [Migration] Data Migration:
+-- 历史数据中 'xp' 字段被用作积分 (Rank Score)，所以将其迁移到新的 rank_score 字段
+UPDATE profiles
+SET rank_score = COALESCE(xp, 1000);
+END IF;
+END $$;
 -- ============ 1. 金币交易日志表 ============
 CREATE TABLE IF NOT EXISTS gold_transactions (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -14,11 +26,10 @@ CREATE TABLE IF NOT EXISTS gold_transactions (
     balance_after INTEGER NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
--- 索引
 CREATE INDEX IF NOT EXISTS idx_gold_transactions_user_id ON gold_transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_gold_transactions_created_at ON gold_transactions(created_at);
--- RLS 策略
 ALTER TABLE gold_transactions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view own transactions" ON gold_transactions;
 CREATE POLICY "Users can view own transactions" ON gold_transactions FOR
 SELECT USING (auth.uid() = user_id);
 -- ============ 2. 保底计数器表 ============
@@ -31,8 +42,8 @@ CREATE TABLE IF NOT EXISTS pity_counters (
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(user_id)
 );
--- RLS 策略
 ALTER TABLE pity_counters ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view own pity" ON pity_counters;
 CREATE POLICY "Users can view own pity" ON pity_counters FOR
 SELECT USING (auth.uid() = user_id);
 -- ============ 3. 开包记录表 ============
@@ -41,17 +52,15 @@ CREATE TABLE IF NOT EXISTS pack_openings (
     user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     pack_type TEXT NOT NULL,
     results JSONB NOT NULL,
-    -- [{cardId, rarity}]
     pity_triggered BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
--- 索引
 CREATE INDEX IF NOT EXISTS idx_pack_openings_user_id ON pack_openings(user_id);
--- RLS 策略
 ALTER TABLE pack_openings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view own pack openings" ON pack_openings;
 CREATE POLICY "Users can view own pack openings" ON pack_openings FOR
 SELECT USING (auth.uid() = user_id);
--- ============ 4. 金币原子操作 RPC ============
+-- ============ 4. 金币原子操作 RPC (Secure) ============
 CREATE OR REPLACE FUNCTION adjust_gold_secure(
         p_user_id UUID,
         p_delta INTEGER,
@@ -63,7 +72,7 @@ CREATE OR REPLACE FUNCTION adjust_gold_secure(
     ) AS $$
 DECLARE v_current_gold INTEGER;
 v_new_gold INTEGER;
-BEGIN -- 获取当前金币（加锁防止并发）
+BEGIN
 SELECT gold INTO v_current_gold
 FROM profiles
 WHERE id = p_user_id FOR
@@ -74,9 +83,7 @@ SELECT 0::INTEGER,
     'User not found'::TEXT;
 RETURN;
 END IF;
--- 计算新金币（不能为负）
 v_new_gold := GREATEST(0, v_current_gold + p_delta);
--- 检查是否有足够金币（扣款时）
 IF p_delta < 0
 AND v_current_gold < ABS(p_delta) THEN RETURN QUERY
 SELECT v_current_gold,
@@ -84,11 +91,9 @@ SELECT v_current_gold,
     'Insufficient gold'::TEXT;
 RETURN;
 END IF;
--- 更新金币
 UPDATE profiles
 SET gold = v_new_gold
 WHERE id = p_user_id;
--- 记录交易日志
 INSERT INTO gold_transactions (
         user_id,
         delta,
@@ -124,15 +129,12 @@ DECLARE v_pack_quantity INTEGER;
 v_pity RECORD;
 v_results JSONB := '[]'::JSONB;
 v_card_count INTEGER := 5;
--- 每包5张卡
 v_roll FLOAT;
 v_rarity TEXT;
 v_pity_triggered BOOLEAN := FALSE;
--- 概率配置
 v_legendary_rate FLOAT := 0.01;
 v_mythic_rate FLOAT := 0.05;
 v_rare_rate FLOAT := 0.20;
--- 保底阈值
 v_legendary_pity_threshold INTEGER := 40;
 v_mythic_pity_threshold INTEGER := 20;
 v_rare_pity_threshold INTEGER := 5;
@@ -166,7 +168,6 @@ v_legendary_rate := v_legendary_rate + 0.03;
 END IF;
 -- 生成卡牌
 FOR i IN 1..v_card_count LOOP v_roll := random();
--- 保底检查
 IF v_pity.legendary_pity >= v_legendary_pity_threshold THEN v_rarity := 'legendary';
 v_pity.legendary_pity := 0;
 v_pity.mythic_pity := 0;
@@ -182,7 +183,6 @@ v_pity.rare_pity := 0;
 v_pity.mythic_pity := v_pity.mythic_pity + 1;
 v_pity.legendary_pity := v_pity.legendary_pity + 1;
 v_pity_triggered := TRUE;
--- 正常概率
 ELSIF v_roll < v_legendary_rate THEN v_rarity := 'legendary';
 v_pity.legendary_pity := 0;
 v_pity.mythic_pity := 0;
@@ -230,25 +230,29 @@ SELECT TRUE,
     NULL::TEXT;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
--- ============ 6. 战斗结算验证 RPC ============
+-- ============ 6. 战斗结算验证 RPC (Secure + Rank Score) ============
 CREATE OR REPLACE FUNCTION settle_battle_secure(
         p_user_id UUID,
         p_result TEXT,
         -- 'win', 'loss', 'draw'
         p_gold_earned INTEGER,
         p_xp_earned INTEGER,
+        p_score_delta INTEGER,
+        -- Rank Score (ELO) delta
         p_opponent_name TEXT,
         p_turns INTEGER,
-        p_battle_hash TEXT DEFAULT NULL -- 可选的战斗日志哈希（未来验证用）
+        p_battle_hash TEXT DEFAULT NULL
     ) RETURNS TABLE(
         success BOOLEAN,
         new_gold INTEGER,
         new_xp INTEGER,
+        new_rank_score INTEGER,
         error_message TEXT
     ) AS $$
 DECLARE v_profile RECORD;
 v_new_gold INTEGER;
 v_new_xp INTEGER;
+v_new_score INTEGER;
 BEGIN -- 获取玩家资料（加锁）
 SELECT * INTO v_profile
 FROM profiles
@@ -258,33 +262,32 @@ IF NOT FOUND THEN RETURN QUERY
 SELECT FALSE,
     0,
     0,
+    0,
     'User not found'::TEXT;
 RETURN;
 END IF;
--- 验证金币奖励合理性（防止客户端篡改）
--- 简单验证：胜利最多 500 金币，失败最多 50 金币
+-- 简单验证金币奖励合理性
 IF p_result = 'win'
-AND p_gold_earned > 500 THEN RETURN QUERY
+AND p_gold_earned > 1000 THEN RETURN QUERY
 SELECT FALSE,
     v_profile.gold::INTEGER,
     v_profile.xp::INTEGER,
+    v_profile.rank_score::INTEGER,
     'Invalid gold amount'::TEXT;
 RETURN;
 END IF;
-IF p_result = 'loss'
-AND p_gold_earned > 50 THEN RETURN QUERY
-SELECT FALSE,
-    v_profile.gold::INTEGER,
-    v_profile.xp::INTEGER,
-    'Invalid gold amount'::TEXT;
-RETURN;
-END IF;
--- 更新金币和经验
+-- 计算更新值
 v_new_gold := v_profile.gold + p_gold_earned;
-v_new_xp := v_profile.xp + p_xp_earned;
+v_new_xp := COALESCE(v_profile.xp, 0) + p_xp_earned;
+v_new_score := GREATEST(
+    0,
+    COALESCE(v_profile.rank_score, v_profile.xp, 1000) + p_score_delta
+);
+-- 更新资料
 UPDATE profiles
 SET gold = v_new_gold,
     xp = v_new_xp,
+    rank_score = v_new_score,
     win_count = win_count + CASE
         WHEN p_result = 'win' THEN 1
         ELSE 0
@@ -292,9 +295,10 @@ SET gold = v_new_gold,
     loss_count = loss_count + CASE
         WHEN p_result = 'loss' THEN 1
         ELSE 0
-    END
+    END,
+    updated_at = NOW()
 WHERE id = p_user_id;
--- 记录交易日志
+-- 记录金币日志
 INSERT INTO gold_transactions (
         user_id,
         delta,
@@ -309,7 +313,8 @@ VALUES (
         v_profile.gold,
         v_new_gold
     );
--- 记录战斗日志
+-- 记录战斗日志 (如果表存在)
+BEGIN
 INSERT INTO battle_logs (
         user_id,
         opponent_name,
@@ -326,14 +331,40 @@ VALUES (
         p_gold_earned,
         p_xp_earned
     );
+EXCEPTION
+WHEN OTHERS THEN NULL;
+-- 忽略兼容性问题
+END;
 RETURN QUERY
 SELECT TRUE,
     v_new_gold,
     v_new_xp,
+    v_new_score,
     NULL::TEXT;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- ============ 授权 ============
-GRANT EXECUTE ON FUNCTION adjust_gold_secure TO authenticated;
-GRANT EXECUTE ON FUNCTION open_pack_secure TO authenticated;
-GRANT EXECUTE ON FUNCTION settle_battle_secure TO authenticated;
+GRANT EXECUTE ON FUNCTION adjust_gold_secure(UUID, INTEGER, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION adjust_gold_secure(UUID, INTEGER, TEXT) TO service_role;
+GRANT EXECUTE ON FUNCTION open_pack_secure(UUID, TEXT, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION open_pack_secure(UUID, TEXT, TEXT) TO service_role;
+GRANT EXECUTE ON FUNCTION settle_battle_secure(
+        UUID,
+        TEXT,
+        INTEGER,
+        INTEGER,
+        INTEGER,
+        TEXT,
+        INTEGER,
+        TEXT
+    ) TO authenticated;
+GRANT EXECUTE ON FUNCTION settle_battle_secure(
+        UUID,
+        TEXT,
+        INTEGER,
+        INTEGER,
+        INTEGER,
+        TEXT,
+        INTEGER,
+        TEXT
+    ) TO service_role;

@@ -94,7 +94,7 @@ export const getProfile = async (userId: string) => {
   return data;
 };
 
-/** 更新 profile 中的金币 */
+/** 更新 profile 中的金币 (不安全，仅用于测试或初始化) */
 export const updateGold = async (userId: string, gold: number) => {
   if (!isSupabaseConfigured) throw new Error('Supabase not configured');
   const { error } = await supabase
@@ -104,19 +104,34 @@ export const updateGold = async (userId: string, gold: number) => {
   if (error) throw error;
 };
 
-/** 增减金币（原子操作风格：先读后写） */
-export const adjustGold = async (userId: string, delta: number) => {
+/** 
+ * 安全调整用户金币 (调用 RPC)
+ * [P0 Fix #3] 使用 RPC 确保金币增减原子性和安全性 
+ */
+export const adjustGold = async (userId: string, delta: number, reason: string = 'game') => {
   if (!isSupabaseConfigured) throw new Error('Supabase not configured');
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('gold')
-    .eq('id', userId)
-    .single();
-  const currentGold = profile?.gold ?? 0;
-  const newGold = Math.max(0, currentGold + delta);
-  await updateGold(userId, newGold);
-  return newGold;
+  
+  const { data, error } = await supabase.rpc('adjust_gold_secure', {
+    p_user_id: userId,
+    p_delta: delta,
+    p_reason: reason
+  });
+  
+  if (error) {
+    console.error('RPC adjust_gold_secure failed:', error);
+    throw error;
+  }
+  
+  // adjust_gold_secure returns TABLE
+  const rows = data as any[];
+  if (!rows?.[0]?.success) {
+    throw new Error(rows?.[0]?.error_message || 'adjust_gold_secure failed');
+  }
+
+  return rows[0].new_balance as number;
 };
+
+
 
 // ============ 战斗记录 ============
 
@@ -127,33 +142,29 @@ export const saveBattleResult = async (result: {
   turns: number;
   gold_earned: number;
   xp_earned: number;
+  score_delta: number; // [P0 Fix #3] 新增积分变化字段
 }) => {
   if (!isSupabaseConfigured) throw new Error('Supabase not configured');
-  const { error: logError } = await supabase
-    .from('battle_logs')
-    .insert(result);
 
-  if (logError) throw logError;
+  // [P0 Fix #3] 使用 RPC (Secure) 原子操作
+  const { data, error } = await supabase.rpc('settle_battle_secure', {
+    p_user_id: result.user_id,
+    p_result: result.result, // p_outcome -> p_result
+    p_gold_earned: result.gold_earned,
+    p_xp_earned: result.xp_earned,
+    p_score_delta: result.score_delta,
+    p_turns: result.turns,
+    p_opponent_name: result.opponent_name
+  });
 
-  // 更新 Profile (增加金币和经验)
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('gold, xp, level, win_count, loss_count')
-    .eq('id', result.user_id)
-    .single();
-
-  if (profile) {
-    const newGold = (profile.gold || 0) + result.gold_earned;
-    const newXp = (profile.xp || 0) + result.xp_earned;
-    const isWin = result.result === 'win';
-    
-    await supabase.from('profiles').update({
-      gold: newGold,
-      xp: newXp,
-      win_count: (profile.win_count || 0) + (isWin ? 1 : 0),
-      loss_count: (profile.loss_count || 0) + (isWin ? 0 : 1),
-    }).eq('id', result.user_id);
+  if (error) {
+    console.error('RPC settle_battle_secure failed:', error);
+    // 可选：如果 RPC 不存在（迁移未运行），尝试回退到旧逻辑？
+    // 但为了安全性，建议直接抛出错误或提示维护
+    throw error;
   }
+  
+  return (data as any)?.[0];
 };
 
 /** 获取用户战斗记录 */

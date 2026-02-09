@@ -98,6 +98,9 @@ export function useGameEndHandler({
           
           if (sessionUserId && isSupabaseConfigured) {
             const mock = calculatePayout(ui.selectedBet, result);
+            
+            // [P0 Fix #3] 调用原子化 settlement RPC
+            // 包含：金币结算、经验增加、积分变动、战绩记录
             await saveBattleResult({
               user_id: sessionUserId,
               opponent_name: gameLoopState.duelState?.aiProfile?.name || 'Unknown',
@@ -105,19 +108,17 @@ export function useGameEndHandler({
               turns: gameLoopState.duelState?.roundNumber || 0,
               gold_earned: mock.payout,
               xp_earned: result === 'WIN' ? 50 : 10,
+              score_delta: scoreDelta // 传递客户端计算的 ELO 变化
             });
 
-            // 同步 rankScore + 金币余额到 Supabase
-            // saveBattleResult 已经更新了 gold/xp/win_count，但 rankScore 需要额外同步
-            await supabase.from('profiles').update({
-              xp: newScore,
-            }).eq('id', sessionUserId);
+            // 移除旧的 redundant update({ xp: newScore }) 调用
+            // RPC 内部已处理 rank_score 更新
             
             finalPayout = mock.payout;
             finalIsCrit = mock.isCrit;
             supabaseSaved = true;
             
-            // 重新从 Supabase 加载最新数据
+            // 重新从 Supabase 加载最新数据 (确保一致性)
             user.loadUserData(user.activeAddress!);
           }
         } catch (supabaseErr) {
@@ -139,7 +140,7 @@ export function useGameEndHandler({
             newScore,
             newRank
           );
-          user.setBalance(res.newBalance);
+          user.setBalance(res.newBalance); // 本地模式直接设置
           user.loadUserData(user.activeAddress!);
           finalPayout = res.payout;
           finalIsCrit = res.isCrit;

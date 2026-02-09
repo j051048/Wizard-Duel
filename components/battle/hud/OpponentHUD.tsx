@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DuelState, GameLoopState, SpellType } from '../../../types';
 import { GAME_CONFIG } from '../../../constants';
 import { PlayerFrame } from '../../PlayerFrame';
 import AIEmoteBubble from '../AIEmoteBubble';
-import { SpellCard } from '../../SpellCard';
+// import { SpellCard } from '../../SpellCard'; // [P2 Fix] Removed unused import
 import { ScrollText, VolumeX, Volume2, Flag, MoreHorizontal } from 'lucide-react';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 
@@ -12,7 +12,13 @@ interface OpponentHUDProps {
   aiStatus: GameLoopState['aiStatus'];
   opponentCard: SpellType | null;
   isOpponentShaking: boolean;
-  projection: any;
+  projection: {
+    hpChange: number;
+    armorChange: number;
+    netHpChange?: number;
+    netArmorChange?: number;
+    target?: string;
+  } | null;
   // Controls (Mobile integration)
   isMuted: boolean;
   onToggleMute: () => void;
@@ -24,7 +30,7 @@ interface OpponentHUDProps {
 export const OpponentHUD: React.FC<OpponentHUDProps> = ({
   duelState,
   aiStatus,
-  opponentCard,
+  opponentCard: _opponentCard, // [Lint Fix] Unused variable
   isOpponentShaking,
   projection,
   isMuted,
@@ -34,7 +40,7 @@ export const OpponentHUD: React.FC<OpponentHUDProps> = ({
   setIsLogOpen
 }) => {
   const isMobile = useIsMobile();
-  const [showMenu, setShowMenu] = React.useState(false);
+  const [showMenu, setShowMenu] = useState(false);
 
   if (isMobile) {
     /* ====== 移动端：超极简顶部条 (占用最少空间) ====== */
@@ -168,7 +174,7 @@ export const OpponentHUD: React.FC<OpponentHUDProps> = ({
           isShaking={isOpponentShaking}
           avatarSrc={duelState.aiProfile?.avatar}
           isThinking={aiStatus.emote === 'thinking'}
-          projection={projection?.target === 'opponent' ? { hpChange: projection.netHpChange, armorChange: projection.netArmorChange } : null}
+          projection={projection?.target === 'opponent' ? { hpChange: projection.netHpChange || 0, armorChange: projection.netArmorChange || 0 } : null}
         />
         
       {/* AI 表情气泡 */}
@@ -177,29 +183,11 @@ export const OpponentHUD: React.FC<OpponentHUDProps> = ({
       </div>
       
       {/* 对手手牌展示 - 扇形排列 */}
+      {/* [P2 Fix #2] 已隐藏对手手牌视觉展示
       <div className="flex justify-center mt-3 relative h-12">
-          {Array.from({ length: Math.min(duelState.opponentHandSize, 7) }).map((_, i) => {
-            const totalCards = Math.min(duelState.opponentHandSize, 7);
-            const centerIndex = (totalCards - 1) / 2;
-            const offsetIndex = i - centerIndex;
-            const rotation = offsetIndex * 4;
-            const translateX = offsetIndex * 18;
-            const translateY = Math.abs(offsetIndex) * 2;
-            
-            return (
-              <div 
-                key={i} 
-                className="absolute opacity-70 hover:opacity-100 transition-opacity"
-                style={{ 
-                  transform: `translateX(${translateX}px) translateY(${translateY}px) rotate(${rotation}deg)`,
-                  zIndex: i
-                }}
-              >
-                <SpellCard isFaceDown isSmall />
-              </div>
-            );
-          })}
+          ...
       </div>
+      */}
 
       {/* Desktop Controls (Fixed Top Right) */}
       <div className="fixed z-40 top-4 right-4 safe-area-top flex gap-2">

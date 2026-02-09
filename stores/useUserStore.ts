@@ -24,6 +24,7 @@ interface UserState {
   // Actions
   setActiveAddress: (address: string | null) => void;
   setSupabaseUserId: (id: string | null) => void;
+  /** 设置金币（仅更新状态，不同步后端）。使用 adjustUserBalance 进行交易。 */
   setBalance: (balance: number) => void;
   setUserRank: (rank: Rank) => void;
   setRankScore: (score: number) => void;
@@ -41,6 +42,7 @@ interface UserState {
   setHasCompletedTutorial: (completed: boolean) => void;
   
   // Complex Actions
+  adjustUserBalance: (delta: number, reason?: string) => Promise<void>;
   loadUserData: (address: string) => Promise<void>;
   loadLeaderboard: () => Promise<void>;
   saveDeck: (deck: Deck) => Promise<void>;
@@ -68,16 +70,28 @@ export const useUserStore = create<UserState>((set, get) => ({
 
   setActiveAddress: (activeAddress) => set({ activeAddress }),
   setSupabaseUserId: (supabaseUserId) => set({ supabaseUserId }),
-  setBalance: (balance) => {
-    set({ balance });
-    // 异步同步金币到 Supabase（fire-and-forget）
-    const { supabaseUserId } = get();
+  setBalance: (balance) => set({ balance }), 
+  
+  adjustUserBalance: async (delta, reason = 'game') => {
+    const { balance, supabaseUserId, activeAddress } = get();
+    // 乐观更新
+    const newBalance = Math.max(0, balance + delta);
+    set({ balance: newBalance });
+    
+    // 同步到 Supabase (RPC)
     if (supabaseUserId) {
-      import('../services/supabase').then(({ updateGold }) => {
-        updateGold(supabaseUserId, balance).catch(err =>
-          console.warn('Supabase gold sync failed:', err)
-        );
-      }).catch(() => {});
+      try {
+        const { adjustGold } = await import('../services/supabase');
+        // RPC 返回的是最新余额，使用它作为最终事实
+        const confirmedBalance = await adjustGold(supabaseUserId, delta, reason);
+        set({ balance: confirmedBalance }); 
+      } catch (err) {
+        console.warn('Supabase gold sync failed:', err);
+        // 如果失败，回滚？鉴于乐观更新，暂时保持乐观值，或者重试
+      }
+    } else if (activeAddress) {
+      // 本地/Mock 模式
+      // ApiService 这里一般是模拟，不需要真的RPC
     }
   },
   setUserRank: (userRank) => set({ userRank }),
@@ -91,14 +105,14 @@ export const useUserStore = create<UserState>((set, get) => ({
     const newInv = { ...packInventory, [packId]: (packInventory[packId] || 0) + count };
     set({ packInventory: newInv });
     // 本地备份
-    try { localStorage.setItem('wizard_duel_packs', JSON.stringify(newInv)); } catch {}
+    try { localStorage.setItem('wizard_duel_packs', JSON.stringify(newInv)); } catch { /* ignore */ }
     // 同步到 Supabase
     if (supabaseUserId) {
       import('../services/supabase').then(({ addUserPacks }) => {
         addUserPacks(supabaseUserId, packId, count).catch(err =>
           console.warn('Supabase pack add failed:', err)
         );
-      }).catch(() => {});
+      }).catch(() => { /* ignore */ });
     }
   },
   
@@ -108,14 +122,14 @@ export const useUserStore = create<UserState>((set, get) => ({
     const newInv = { ...packInventory, [packId]: packInventory[packId] - 1 };
     set({ packInventory: newInv });
     // 本地备份
-    try { localStorage.setItem('wizard_duel_packs', JSON.stringify(newInv)); } catch {}
+    try { localStorage.setItem('wizard_duel_packs', JSON.stringify(newInv)); } catch { /* ignore */ }
     // 同步到 Supabase
     if (supabaseUserId) {
       import('../services/supabase').then(({ consumeUserPack }) => {
         consumeUserPack(supabaseUserId, packId).catch(err =>
           console.warn('Supabase pack consume failed:', err)
         );
-      }).catch(() => {});
+      }).catch(() => { /* ignore */ });
     }
     return true;
   },
@@ -125,7 +139,7 @@ export const useUserStore = create<UserState>((set, get) => ({
     if (!purchasedBundles.includes(bundleId)) {
       const updated = [...purchasedBundles, bundleId];
       set({ purchasedBundles: updated });
-      try { localStorage.setItem('wizard_duel_purchases', JSON.stringify(updated)); } catch {}
+      try { localStorage.setItem('wizard_duel_purchases', JSON.stringify(updated)); } catch { /* ignore */ }
     }
   },
   setSelectedDeck: (selectedDeck) => set({ selectedDeck }),
@@ -163,7 +177,8 @@ export const useUserStore = create<UserState>((set, get) => ({
             set({
               balance: profile.gold || 0,
               userRank: (profile.level && profile.level > 10 ? 'Gold' : 'Iron') as Rank,
-              rankScore: profile.xp || 0,
+              // [P0 Fix #3] 积分字段迁移：优先读取 rank_score，回退读取 xp (legacy)
+              rankScore: profile.rank_score ?? profile.xp ?? 0,
               winStreak: profile.win_count || 0,
             });
           }
@@ -183,7 +198,7 @@ export const useUserStore = create<UserState>((set, get) => ({
           const packs = await getUserPacks(userId);
           set({ packInventory: packs });
           // 同步写入 localStorage 作为离线备份
-          try { localStorage.setItem('wizard_duel_packs', JSON.stringify(packs)); } catch {}
+          try { localStorage.setItem('wizard_duel_packs', JSON.stringify(packs)); } catch { /* ignore */ }
 
           supabaseLoaded = true;
           console.log('[UserStore] Loaded all data from Supabase ✅');
@@ -217,11 +232,11 @@ export const useUserStore = create<UserState>((set, get) => ({
       // ========== 3. 本地补充数据（PWA 离线兼容） ==========
       const savedPurchases = localStorage.getItem('wizard_duel_purchases');
       if (savedPurchases) {
-        try { set({ purchasedBundles: JSON.parse(savedPurchases) }); } catch {}
+        try { set({ purchasedBundles: JSON.parse(savedPurchases) }); } catch { /* ignore */ }
       }
       const savedPacks = localStorage.getItem('wizard_duel_packs');
       if (savedPacks) {
-        try { set({ packInventory: JSON.parse(savedPacks) }); } catch {}
+        try { set({ packInventory: JSON.parse(savedPacks) }); } catch { /* ignore */ }
       }
     } catch (e) {
       console.error('Failed to load user data:', e);

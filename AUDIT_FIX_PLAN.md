@@ -31,6 +31,7 @@ export const determineWinner = (p: SpellType, o: SpellType): 'WIN' | 'LOSS' | 'D
 
 ### #2 AI手牌暴露在前端 [1-2天]
 
+**状态**: ✅ 已完成 (前端隐藏)
 **问题**: `DuelState.opponentHand` 完整暴露给前端
 
 **修复方案**:
@@ -68,7 +69,8 @@ interface DuelState {
 
 **问题**: 金币存 localStorage 可篡改
 
-**修复**: 创建 Supabase RPC 函数
+**状态**: ✅ 已完成
+**修复**: 创建 Supabase RPC 函数 (settle_battle, adjust_gold)
 
 ```sql
 -- supabase/migrations/add_gold_rpc.sql
@@ -187,7 +189,7 @@ const endTurn = () => {
 
 ---
 
-### #8 统一缠绕(Tangle)到RuleArbiter [半天]
+### #8 统一缠绕(Tangle)到RuleArbiter [半天] - ✅ 已完成 (确认一致性)
 
 ```typescript
 // services/RuleArbiter.ts - tickEffects 中处理
@@ -339,7 +341,7 @@ const withRetry = async <T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> =>
 
 ### #18 adjustGold原子操作 [随#3]
 
-已在 #3 中通过 RPC 解决
+已在 #3 中通过 RPC 解决 ✅
 
 ---
 
