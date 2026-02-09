@@ -31,6 +31,7 @@ interface UserState {
   setWinStreak: (streak: number) => void;
   setDecks: (decks: Deck[]) => void;
   setPurchasedBundles: (bundles: Record<string, number>) => void;
+  setPackInventory: (inventory: Record<string, number>) => void;
   addPacks: (packId: string, count: number) => void;
   consumePack: (packId: string) => boolean;
   purchaseBundle: (bundleId: string) => void;
@@ -99,6 +100,12 @@ export const useUserStore = create<UserState>((set, get) => ({
   setWinStreak: (winStreak) => set({ winStreak }),
   setDecks: (decks) => set({ decks }),
   setPurchasedBundles: (purchasedBundles) => set({ purchasedBundles }),
+  
+  setPackInventory: (packInventory) => {
+    set({ packInventory });
+    // 同步更新 localStorage
+    try { localStorage.setItem('wizard_duel_packs', JSON.stringify(packInventory)); } catch { /* ignore */ }
+  },
   
   addPacks: (packId, count) => {
     const { packInventory, supabaseUserId } = get();

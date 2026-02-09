@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { ArrowLeft, Package, Gift, Crown, Sparkles, Star, Zap, Lock, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, Package, Gift, Crown, Sparkles, Star, ShoppingBag } from 'lucide-react';
 import { Spell, SpellType } from '../types';
 import { HapticService } from '../services/haptic';
 import { useToastStore } from '../stores/useToastStore';
@@ -23,6 +23,7 @@ interface ShopScreenProps {
   purchasedBundles?: Record<string, number>; // productId -> timestamp
   onPurchaseBundle?: (bundleId: string) => void;
   packInventory?: Record<string, number>;
+  setPackInventory?: (inventory: Record<string, number>) => void;
   onAddPacks?: (packId: string, count: number) => void;
   onConsumePack?: (packId: string) => boolean;
 }
@@ -35,8 +36,9 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
   purchasedBundles = {},
   onPurchaseBundle,
   packInventory = {},
+  setPackInventory,
   onAddPacks,
-  onConsumePack
+  onConsumePack: _onConsumePack // 未使用但保留接口兼容
 }) => {
   const [activeTab, setActiveTab] = useState<'packs' | 'bundles'>('packs');
   const [openingProduct, setOpeningProduct] = useState<Product | null>(null);
@@ -102,36 +104,22 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
 
         // Handle Pack (Direct Open) vs Inventory
         if (product.type === 'pack') {
-             // For direct open, we first Add to inventory (Secure), then Open (Secure)
-             // Pack ID logic:
+             // [Fix] 购买卡包时先添加到库存，不直接开包
+             // 这样用户可以选择自己开包的时机，也避免了竞态条件
              const packItem = product.items.find(i => i.type === 'pack');
              const packId = packItem?.id || 'standard';
-             const packType = packId as 'standard' | 'premium' | 'legendary';
 
              if (user.supabaseUserId) {
-                 // Add pack to DB first
+                 // Add pack to DB
                  const { addUserPacks } = await import('../services/supabase');
                  await addUserPacks(user.supabaseUserId, packId, 1);
-                 
-                 // Open pack via Secure RPC
-                 const openRes = await SecureGameService.openPack(user.supabaseUserId, packId, packType);
-                 
-                 if (openRes.success) {
-                     // Convert Rarity results to Cards
-                     cardsOpened = openRes.cards.map(c => pickCardOfRarity(c.rarity));
-                     
-                     // Sync Pity
-                     // Note: RPC handled pity update on server, we can refresh it later
-                 } else {
-                     toast.error('开包失败', openRes.error);
-                     return;
-                 }
-             } else {
-                 // Guest: Use local openPack (Legacy)
-                 const { cards, newPity } = openPack(pityCounter);
-                 setPityCounter(newPity);
-                 cardsOpened = cards;
              }
+             
+             // 更新本地库存
+             onAddPacks?.(packId, 1);
+             toast.success('购买成功', '卡包已放入库存，点击"开包"按钮开启');
+             HapticService.success();
+             return; // 购买完成，不直接开包
         } else {
              // Bundle / Other items
              purchaseRes.rewards.forEach(reward => {
@@ -175,15 +163,24 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
   };
 
   const handleOpenInventory = async (packId: string) => {
-      // Secure Open from Inventory
+      // [Fix] Secure Open from Inventory
+      // open_pack_secure 已经在服务端扣除卡包，不需要再调用 onConsumePack
       const packType = packId as 'standard' | 'premium' | 'legendary';
       
       try {
           if (user.supabaseUserId) {
               const openRes = await SecureGameService.openPack(user.supabaseUserId, packId, packType);
               if (openRes.success) {
-                  // RPC consumes pack automatically
-                  // Update UI to reflect consumption
+                  // RPC 已经在服务端扣除了卡包数量
+                  // 直接更新本地 UI 状态，不再调用 onConsumePack（避免重复扣除）
+                  const newPackInventory = { ...packInventory };
+                  if (newPackInventory[packId]) {
+                      newPackInventory[packId] = Math.max(0, newPackInventory[packId] - 1);
+                      if (newPackInventory[packId] === 0) {
+                          delete newPackInventory[packId];
+                      }
+                  }
+                  setPackInventory?.(newPackInventory);
                   
                   // Convert results
                   const cards = openRes.cards.map(c => pickCardOfRarity(c.rarity));
@@ -191,25 +188,35 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
                   setRevealedCards(cards);
                   onAddCards?.(cards.map(c => c.id));
                   setInventoryPackOpening(packId); 
-                  
-                  // Update UI inventory count locally
-                  // Use onConsumePack to update local UI state
-                  onConsumePack?.(packId); 
               } else {
                   toast.error('开启失败', openRes.error);
               }
           } else {
-              // Guest
-              if (onConsumePack?.(packId)) {
-                const { cards, newPity } = openPack(pityCounter);
-                setPityCounter(newPity);
-                setRevealedCards(cards);
-                onAddCards?.(cards.map(c => c.id));
-                setInventoryPackOpening(packId); 
+              // Guest: 使用本地逻辑
+              const currentCount = packInventory[packId] || 0;
+              if (currentCount <= 0) {
+                  toast.error('开启失败', '没有可用的卡包');
+                  return;
               }
+              
+              const { cards, newPity } = openPack(pityCounter);
+              setPityCounter(newPity);
+              
+              // 更新本地状态
+              const newPackInventory = { ...packInventory };
+              newPackInventory[packId] = currentCount - 1;
+              if (newPackInventory[packId] === 0) {
+                  delete newPackInventory[packId];
+              }
+              setPackInventory?.(newPackInventory);
+              
+              setRevealedCards(cards);
+              onAddCards?.(cards.map(c => c.id));
+              setInventoryPackOpening(packId); 
           }
       } catch (err) {
           console.error('Open inventory error:', err);
+          toast.error('开包出错', '请稍后重试');
       }
   };
 

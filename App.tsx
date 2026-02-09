@@ -275,6 +275,7 @@ function App() {
               purchasedBundles={user.purchasedBundles}
               onPurchaseBundle={user.purchaseBundle}
               packInventory={user.packInventory}
+              setPackInventory={user.setPackInventory}
               onAddPacks={user.addPacks}
               onConsumePack={user.consumePack}
             />
