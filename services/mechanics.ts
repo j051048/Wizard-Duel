@@ -74,14 +74,36 @@ const freeze: MechanicHandler = (state, caster, spell, countered) => {
   }];
 };
 
+/**
+ * 治疗机制
+ * [P2 Fix #21] 添加治疗溢出提示
+ */
 const heal: MechanicHandler = (state, caster, spell) => {
   const amount = spell.value || 3;
-  return [{ 
-    type: 'HP_CHANGE', 
-    target: caster, 
-    value: amount, 
-    description: `💙 ${caster === 'player' ? '你' : '对手'}恢复了 ${amount} 点生命值`
-  }];
+  const currentHP = caster === 'player' ? state.playerHP : state.opponentHP;
+  const maxHP = 30; // GAME_CONFIG.maxHP
+  const actualHeal = Math.min(amount, maxHP - currentHP);
+  const isOverheal = currentHP >= maxHP;
+  
+  const actions: GameAction[] = [];
+  
+  if (isOverheal) {
+    // [P2 Fix #21] 溢出提示
+    actions.push({ 
+      type: 'MESSAGE', 
+      target: 'system', 
+      description: `❤️ ${caster === 'player' ? '你的' : '对手的'}生命值已满，无法恢复！`
+    });
+  } else {
+    actions.push({ 
+      type: 'HP_CHANGE', 
+      target: caster, 
+      value: actualHeal, 
+      description: `💙 ${caster === 'player' ? '你' : '对手'}恢复了 ${actualHeal} 点生命值${actualHeal < amount ? ` (溢出 ${amount - actualHeal})` : ''}`
+    });
+  }
+  
+  return actions;
 };
 
 const aoe: MechanicHandler = (state, caster, spell, countered) => {

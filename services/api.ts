@@ -518,14 +518,18 @@ export const ApiService = {
 
   /**
    * 向外部应用报告积分变更（用于嵌入其他App时）
+   * [P2 Fix #23] 使用配置的 origin 替代 '*'
    */
   notifyExternalApp(event: 'balance_change' | 'game_end' | 'ready', data: any): void {
+    // [P2 Fix #23] 指定允许的 origin
+    const ALLOWED_ORIGIN = import.meta.env.VITE_PARENT_ORIGIN || '*';
+    
     // 使用 postMessage 通知父应用
     if (window.parent !== window) {
       window.parent.postMessage({
         type: `wizard_duel_${event}`,
         ...data,
-      }, '*');
+      }, ALLOWED_ORIGIN);
     }
 
     // 触发自定义事件（供宿主应用监听）

@@ -24,8 +24,14 @@ import { useTurnManager } from './useTurnManager';
 import { useRoundManager } from './useRoundManager';
 import { usePlayerActions } from './usePlayerActions';
 import { useAITurn } from './useAITurn';
+import { throttle } from '../utils/helpers';
 
 const initialAIStatus: AIStatus = { emote: null, message: null };
+
+// [P2 Fix #22] 节流保存函数，3秒内只保存一次
+const throttledSave = throttle((data: object) => {
+  localStorage.setItem('wizard_duel_save', JSON.stringify(data));
+}, 3000);
 
 export interface GameLoopActions {
   startDuel: (playerDeck: SpellType[], opponentDeck: SpellType[], mode: GameMode) => void;
@@ -214,12 +220,11 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
         savedAt: Date.now(), // 记录保存时间，用于调试
       };
       
+      // [P2 Fix #22] 使用节流保存，减少 localStorage 写入频率
       if ('requestIdleCallback' in window) {
-        requestIdleCallback(() => {
-          localStorage.setItem('wizard_duel_save', JSON.stringify(saveData));
-        });
+        requestIdleCallback(() => throttledSave(saveData));
       } else {
-        localStorage.setItem('wizard_duel_save', JSON.stringify(saveData));
+        throttledSave(saveData);
       }
     } else if (uiState.isGameOver) {
       localStorage.removeItem('wizard_duel_save');
