@@ -1,6 +1,7 @@
 import { SpellType, DuelPhase } from '../../../types';
 import BattleHand from '../BattleHand';
 import { TutorialBubble } from '../../ui/TutorialBubble';
+import { DragState } from '../../../hooks/useDragToPlay';
 
 /**
  * HandArea - 手牌区域组件 (v3.0 - Mobile Optimized)
@@ -17,9 +18,8 @@ interface HandAreaProps {
   phase: DuelPhase;
   isProcessing: boolean;
   isMobile: boolean;
-  dragState: any;
+  dragState: DragState | null;
   startDrag: (id: SpellType, index: number, clientX: number, clientY: number) => void;
-  onCardPressStart: (id: SpellType) => void;
   onCardPressEnd: () => void;
   setHoveredSpellId: (id: SpellType | null) => void;
   handlePlayCard: (id: SpellType, isConfirmed: boolean) => void;
@@ -34,7 +34,6 @@ export const HandArea: React.FC<HandAreaProps> = ({
   isMobile,
   dragState,
   startDrag,
-  onCardPressStart,
   onCardPressEnd,
   setHoveredSpellId,
   handlePlayCard,
@@ -65,7 +64,6 @@ export const HandArea: React.FC<HandAreaProps> = ({
                         isMobile={true}
                         dragState={dragState}
                         startDrag={startDrag}
-                        onPointerDownCard={onCardPressStart}
                         onPointerUpCard={onCardPressEnd}
                         onMouseEnterCard={setHoveredSpellId}
                         onMouseLeaveCard={() => setHoveredSpellId(null)}
@@ -97,7 +95,6 @@ export const HandArea: React.FC<HandAreaProps> = ({
                 isMobile={false}
                 dragState={dragState}
                 startDrag={startDrag}
-                onPointerDownCard={onCardPressStart}
                 onPointerUpCard={onCardPressEnd}
                 onMouseEnterCard={setHoveredSpellId}
                 onMouseLeaveCard={() => setHoveredSpellId(null)}

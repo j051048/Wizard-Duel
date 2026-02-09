@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { DuelState, SpellType } from '../../../types';
+import { SpellProjection } from '../../../services/projection';
 import { GAME_CONFIG, SPELLS } from '../../../constants';
 import { PlayerFrame } from '../../PlayerFrame';
 import { HeroSkillButton } from '../HeroSkillButton';
@@ -11,7 +12,7 @@ interface PlayerHUDProps {
   phase: string;
   isProcessing: boolean;
   isPlayerShaking: boolean;
-  projection: any;
+  projection: SpellProjection | null;
   onPlayCard: (spellId: SpellType, isConfirmed?: boolean) => void;
   onPass: () => void;
 }

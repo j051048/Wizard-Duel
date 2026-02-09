@@ -13,11 +13,9 @@ import { motion } from 'framer-motion';
 import { SpellType, GameLoopState } from '../types';
 import { GAME_CONFIG } from '../constants';
 import { getPlayableCards, getSpellById } from '../services/gameLogic';
-import { HapticService } from '../services/haptic';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { calculateSpellProjection } from '../services/projection';
 import { useSettings } from '../context/SettingsContext';
-import { LONG_PRESS_THRESHOLD } from '../config/timing';
 
 // Components
 import { SpellCard } from './SpellCard'; // Needed for Drag Preview
@@ -71,7 +69,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 }) => {
   const { 
     duelState, phase, playerCard, opponentCard, resultText, 
-    effectMessages, aiStatus, targetingData, turnBanner 
+    effectMessages, aiStatus
   } = gameLoopState;
 
   const isMobile = useIsMobile();
@@ -197,23 +195,10 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   };
 
   // [P0 修复] 长按检测与拖拽冲突修复：检查是否正在拖拽
-  const handleCardPressStart = (spellId: SpellType) => {
-      // 清除之前的计时器
-      if (longPressTimerRef.current) {
-          clearTimeout(longPressTimerRef.current);
-      }
-      
-                  longPressTimerRef.current = setTimeout(() => {
-          // [P0 Fix] 如果正在拖拽，不弹出详情弹窗
-          if (dragState?.isDragging) {
-              return;
-          }
-          setDetailSpell(spellId);
-          HapticService.medium();
-      }, LONG_PRESS_THRESHOLD);
-  };
+  // (handleCardPressStart 已移除，因不再通过 BattleHand 传递)
 
   const handleCardPressEnd = () => {
+      // 保留作为防错
       if (longPressTimerRef.current) {
           clearTimeout(longPressTimerRef.current);
           longPressTimerRef.current = null;
@@ -315,7 +300,6 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
            isMobile={isMobile}
            dragState={dragState}
            startDrag={startDrag}
-           onCardPressStart={handleCardPressStart}
            onCardPressEnd={handleCardPressEnd}
            setHoveredSpellId={setHoveredSpellId}
            handlePlayCard={handlePlayCard}

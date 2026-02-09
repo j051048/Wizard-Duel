@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { DuelState, GameLoopState, SpellType } from '../../../types';
+import { SpellProjection } from '../../../services/projection';
 import { GAME_CONFIG } from '../../../constants';
 import { PlayerFrame } from '../../PlayerFrame';
 import AIEmoteBubble from '../AIEmoteBubble';
@@ -12,13 +13,7 @@ interface OpponentHUDProps {
   aiStatus: GameLoopState['aiStatus'];
   opponentCard: SpellType | null;
   isOpponentShaking: boolean;
-  projection: {
-    hpChange: number;
-    armorChange: number;
-    netHpChange?: number;
-    netArmorChange?: number;
-    target?: string;
-  } | null;
+  projection: SpellProjection | null;
   // Controls (Mobile integration)
   isMuted: boolean;
   onToggleMute: () => void;

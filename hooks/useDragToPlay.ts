@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { SpellType, GameLoopState } from '../types';
 import { HapticService } from '../services/haptic';
-import { useMotionValue, useTransform } from 'framer-motion';
+import { useMotionValue } from 'framer-motion';
 
-interface DragState {
+export interface DragState {
   spellId: SpellType;
   index: number;
   startX: number;

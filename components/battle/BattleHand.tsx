@@ -4,6 +4,7 @@ import { SpellCard } from '../SpellCard';
 import { getSpellById } from '../../services/gameLogic';
 import { HapticService } from '../../services/haptic';
 import { motion, AnimatePresence } from 'framer-motion';
+import { DragState } from '../../hooks/useDragToPlay';
 
 interface BattleHandProps {
   hand: SpellType[];
@@ -11,9 +12,8 @@ interface BattleHandProps {
   phase: DuelPhase;
   isProcessing: boolean;
   isMobile: boolean;
-  dragState: any;
+  dragState: DragState | null;
   startDrag: (spellId: SpellType, index: number, x: number, y: number) => void;
-  onPointerDownCard: (spellId: SpellType) => void;
   onPointerUpCard: () => void;
   onMouseEnterCard: (spellId: SpellType) => void;
   onMouseLeaveCard: () => void;
@@ -28,7 +28,6 @@ const BattleHand: React.FC<BattleHandProps> = ({
   isMobile,
   dragState,
   startDrag,
-  onPointerDownCard,
   onPointerUpCard,
   onMouseEnterCard,
   onMouseLeaveCard,
@@ -151,14 +150,26 @@ const BattleHand: React.FC<BattleHandProps> = ({
     );
   }
 
-  /* ====== 桌面端：扇形布局 ====== */
+  /* ====== 桌面端：平面堆叠布局 ====== */
   const calculateHandLayout = (count: number) => {
-    const baseAngle = 3;
-    const maxTotalAngle = 35;
-    const angleStep = Math.min(baseAngle, maxTotalAngle / (count - 1 || 1));
-    const baseSpacing = 70;
-    let xSpacing = Math.max(25, baseSpacing - (count * 2));
-    return { angleStep, xSpacing };
+    // 基础间距：卡牌宽度约 120px (SpellCard isSmall=false 且在容器内缩放)
+    // 根据卡牌数量动态调整间距
+    const maxContainerWidth = 800;
+    const minSpacing = 40; // 最小重叠间距
+    const maxSpacing = 150; // 最大间距（完全不重叠）
+    
+    // 如果卡牌少，铺开显示；如果卡牌多，紧凑堆叠
+    let xSpacing = maxSpacing;
+    if (count > 0) {
+      // 尝试用最大间距排列
+      const totalWidth = count * maxSpacing;
+      if (totalWidth > maxContainerWidth) {
+        // 如果超出容器，压缩间距
+        xSpacing = Math.max(minSpacing, maxContainerWidth / count);
+      }
+    }
+    
+    return { xSpacing };
   };
 
   const layoutConfig = useMemo(() => calculateHandLayout(hand.length), [hand.length]);
@@ -166,64 +177,73 @@ const BattleHand: React.FC<BattleHandProps> = ({
   return (
     <div 
       className="flex justify-center items-end relative pointer-events-auto h-40 md:h-48"
-      style={{ maxWidth: '900px' }}
+      style={{ maxWidth: '900px', margin: '0 auto' }}
     >
-      <AnimatePresence>
+      <AnimatePresence mode='popLayout'>
         {hand.map((id, index) => {
           const isAffordable = playableCards.includes(id);
           const isBeingDragged = dragState?.index === index;
           const isHovered = hoveredIndex === index;
           const isSelectedForAction = selectedCardId === id;
           const totalCards = hand.length;
-          const centerIndex = (totalCards - 1) / 2;
           
-          const { angleStep, xSpacing } = layoutConfig;
-          const offsetIndex = index - centerIndex;
+          // 计算位置：居中排列
+          const { xSpacing } = layoutConfig;
+          // 计算总宽度
+          const totalWidth = (totalCards - 1) * xSpacing;
+          // 当前卡牌相对于中心的偏移
+          const startX = -totalWidth / 2;
+          const translateX = startX + index * xSpacing;
           
-          const rotate = isHovered ? 0 : offsetIndex * angleStep;
-          const archFactor = 6;
-          const baseY = Math.abs(offsetIndex) * archFactor;
+          // 悬停/选中状态的变换
+          // 悬停时：上浮，放大，置顶
+          let translateY = 0;
+          let scale = 1;
+          let zIndex = index;
           
-          let translateY = isBeingDragged ? -80 : (isSelectedForAction ? -70 : (isHovered ? -60 : baseY));
-          const translateX = offsetIndex * xSpacing;
-          
-          const activeScale = isSelectedForAction ? 1.25 : (isHovered ? 1.25 : 1);
-          const enableShadowAnim = isAffordable && phase === 'PLAYER_TURN' && !isProcessing && !isHovered && !isSelectedForAction;
-
+          if (isBeingDragged) {
+            translateY = -150; // 拖拽时隐藏/移出
+          } else if (isSelectedForAction) {
+            translateY = -80;
+            scale = 1.3;
+            zIndex = 100;
+          } else if (isHovered) {
+            translateY = -60;
+            scale = 1.3;
+            zIndex = 50;
+          } else {
+            // 默认状态：稍微错落一点（偶数索引的牌低一点点，产生一点层次感，或者完全平齐）
+            // 这里选择完全平齐，符合"平面小面积叠加"的要求
+            translateY = 0;
+            scale = 1;
+            zIndex = index;
+          }
+           
           return (
             <motion.div 
               key={`${id}-${index}`} 
-              layoutId={`${id}-${index}`}
-              initial={{ opacity: 0, y: 150, scale: 0.5, rotate: 0 }}
+              // 移除 layoutId 以避免不必要的自动布局动画导致的抖动
+              initial={{ opacity: 0, y: 100, scale: 0.8 }}
               animate={{ 
                 opacity: isBeingDragged ? 0 : 1, 
                 x: translateX,
                 y: translateY,
-                rotate: rotate,
-                scale: activeScale,
-                zIndex: isSelectedForAction ? 200 : (isHovered ? 100 : index + 1),
-                boxShadow: enableShadowAnim
-                  ? [
-                      '0 0 10px rgba(74,222,128,0.3), 0 0 20px rgba(74,222,128,0.2)',
-                      '0 0 20px rgba(74,222,128,0.6), 0 0 40px rgba(74,222,128,0.4)',
-                      '0 0 10px rgba(74,222,128,0.3), 0 0 20px rgba(74,222,128,0.2)'
-                    ]
-                  : 'none'
+                rotate: 0, // 始终不旋转
+                scale: scale,
+                zIndex: zIndex,
+                // 只有选中/高亮时才加阴影，普通状态不加，减少重绘
+                filter: isHovered || isSelectedForAction ? 'drop-shadow(0 10px 20px rgba(0,0,0,0.5))' : 'none'
               }}
               exit={{ 
                 opacity: 0, 
-                y: -150, 
-                scale: 0.2,
-                transition: { duration: 0.4, ease: "easeOut" }
+                scale: 0.5,
+                transition: { duration: 0.2 }
               }}
               transition={{ 
-                duration: 0.25,
-                ease: [0.34, 1.56, 0.64, 1],
-                boxShadow: enableShadowAnim ? { 
-                  duration: 1.5, 
-                  repeat: Infinity, 
-                  ease: "easeInOut" 
-                } : undefined
+                type: "spring",
+                stiffness: 300,
+                damping: 25,
+                mass: 0.8
               }}
               className="absolute origin-bottom cursor-pointer"
               style={{ bottom: '10px' }}
