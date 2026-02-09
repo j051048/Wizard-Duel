@@ -230,13 +230,18 @@ export const useUserStore = create<UserState>((set, get) => ({
       }
 
       // ========== 3. 本地补充数据（PWA 离线兼容） ==========
+      // 注意：只有在 Supabase 未成功加载时才使用 localStorage 数据
       const savedPurchases = localStorage.getItem('wizard_duel_purchases');
       if (savedPurchases) {
         try { set({ purchasedBundles: JSON.parse(savedPurchases) }); } catch { /* ignore */ }
       }
-      const savedPacks = localStorage.getItem('wizard_duel_packs');
-      if (savedPacks) {
-        try { set({ packInventory: JSON.parse(savedPacks) }); } catch { /* ignore */ }
+      
+      // [Fix] 卡包库存：Supabase 加载成功则跳过 localStorage，避免旧数据覆盖
+      if (!supabaseLoaded) {
+        const savedPacks = localStorage.getItem('wizard_duel_packs');
+        if (savedPacks) {
+          try { set({ packInventory: JSON.parse(savedPacks) }); } catch { /* ignore */ }
+        }
       }
     } catch (e) {
       console.error('Failed to load user data:', e);
