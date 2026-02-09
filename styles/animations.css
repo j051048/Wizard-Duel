@@ -1,0 +1,305 @@
+/**
+ * 卡牌入场动画样式
+ * 
+ * [P4 Fix #34] 卡牌入手动画
+ * [P4 Fix #36] 英雄受伤效果
+ * [P4 Fix #37] 随从攻击动画
+ * [P4 Fix #38] 回合倒计时绳子
+ * [P4 Fix #39] 对手出牌翻牌效果
+ */
+
+/* ============ #34 卡牌入手动画 ============ */
+@keyframes cardDraw {
+  0% {
+    transform: translateX(-100px) translateY(-50px) scale(0.5) rotateY(180deg);
+    opacity: 0;
+  }
+  50% {
+    transform: translateX(-20px) translateY(-20px) scale(0.8) rotateY(90deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateX(0) translateY(0) scale(1) rotateY(0);
+    opacity: 1;
+  }
+}
+
+.card-entering {
+  animation: cardDraw 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 卡牌离开动画 */
+@keyframes cardLeave {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100px) scale(0.5);
+    opacity: 0;
+  }
+}
+
+.card-leaving {
+  animation: cardLeave 0.3s ease-out forwards;
+}
+
+/* ============ #36 英雄受伤效果 ============ */
+@keyframes heroShake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+@keyframes heroDamageFlash {
+  0% { background-color: rgba(255, 0, 0, 0.5); }
+  100% { background-color: transparent; }
+}
+
+.hero-damaged {
+  animation: heroShake 0.4s ease-in-out;
+}
+
+.hero-damaged::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: heroDamageFlash 0.5s ease-out forwards;
+}
+
+/* 英雄治疗效果 */
+@keyframes heroHeal {
+  0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); }
+  50% { box-shadow: 0 0 20px 10px rgba(74, 222, 128, 0.4); }
+  100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+}
+
+.hero-healed {
+  animation: heroHeal 0.6s ease-out;
+}
+
+/* ============ #37 随从攻击动画 ============ */
+@keyframes minionAttack {
+  0% { transform: translateY(0); }
+  25% { transform: translateY(-10px) scale(1.1); }
+  50% { transform: translateY(50px) scale(1.2); }
+  75% { transform: translateY(-5px) scale(1); }
+  100% { transform: translateY(0); }
+}
+
+.minion-attacking {
+  animation: minionAttack 0.5s ease-in-out;
+  z-index: 100;
+}
+
+/* 随从受击效果 */
+@keyframes minionHit {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.5) drop-shadow(0 0 10px red); }
+}
+
+.minion-hit {
+  animation: minionHit 0.3s ease-out;
+}
+
+/* 随从死亡动画 */
+@keyframes minionDeath {
+  0% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2) rotate(5deg);
+    filter: brightness(2);
+  }
+  100% {
+    transform: scale(0) rotate(-30deg);
+    opacity: 0;
+  }
+}
+
+.minion-dying {
+  animation: minionDeath 0.6s ease-out forwards;
+}
+
+/* ============ #38 回合倒计时绳子 ============ */
+.turn-timer {
+  position: relative;
+  height: 8px;
+  background: linear-gradient(to right, #1f2937, #374151);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.turn-timer .rope {
+  height: 100%;
+  background: linear-gradient(90deg, 
+    #fbbf24 0%, 
+    #f59e0b 50%, 
+    #d97706 100%
+  );
+  border-radius: 4px;
+  transition: width 0.1s linear;
+  position: relative;
+}
+
+.turn-timer .rope::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 20px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5));
+  animation: shimmer 1s infinite;
+}
+
+@keyframes shimmer {
+  0% { opacity: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* 紧急时间燃烧效果 */
+.turn-timer.urgent .rope {
+  background: linear-gradient(90deg, 
+    #ef4444 0%, 
+    #dc2626 50%, 
+    #b91c1c 100%
+  );
+  animation: urgentPulse 0.5s ease-in-out infinite;
+}
+
+@keyframes urgentPulse {
+  0%, 100% { 
+    filter: brightness(1);
+    box-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
+  }
+  50% { 
+    filter: brightness(1.3);
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.8);
+  }
+}
+
+.burning-fuse {
+  position: absolute;
+  right: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 20px;
+  animation: fuseFlicker 0.15s ease-in-out infinite alternate;
+}
+
+@keyframes fuseFlicker {
+  0% { transform: translateY(-50%) scale(1); opacity: 0.8; }
+  100% { transform: translateY(-50%) scale(1.2); opacity: 1; }
+}
+
+/* ============ #39 对手出牌翻牌效果 ============ */
+@keyframes cardFlip {
+  0% { 
+    transform: rotateY(180deg) scale(0.8);
+    filter: brightness(0.5);
+  }
+  50% {
+    transform: rotateY(90deg) scale(1.1);
+    filter: brightness(1.5);
+  }
+  100% { 
+    transform: rotateY(0) scale(1);
+    filter: brightness(1);
+  }
+}
+
+.opponent-card-reveal {
+  animation: cardFlip 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+
+/* 卡牌发光效果 */
+@keyframes cardGlow {
+  0%, 100% { box-shadow: 0 0 10px currentColor; }
+  50% { box-shadow: 0 0 30px currentColor, 0 0 60px currentColor; }
+}
+
+.card-glowing {
+  animation: cardGlow 2s ease-in-out infinite;
+}
+
+/* ============ 其他动画效果 ============ */
+
+/* 伤害飘字 */
+@keyframes damageFloat {
+  0% {
+    transform: translateY(0) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    transform: translateY(-10px) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-60px) scale(1);
+    opacity: 0;
+  }
+}
+
+.damage-number {
+  animation: damageFloat 1s ease-out forwards;
+  pointer-events: none;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.damage-number.crit {
+  font-size: 1.5em;
+  color: #fbbf24;
+  animation-duration: 1.2s;
+}
+
+/* 治疗飘字 */
+@keyframes healFloat {
+  0% {
+    transform: translateY(0) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    transform: translateY(-10px) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-50px) scale(1);
+    opacity: 0;
+  }
+}
+
+.heal-number {
+  animation: healFloat 1s ease-out forwards;
+  color: #4ade80;
+  pointer-events: none;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* 脉冲动画 */
+@keyframes gentlePulse {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% { 
+    transform: scale(1.02);
+    opacity: 0.9;
+  }
+}
+
+.animate-pulse-gentle {
+  animation: gentlePulse 2s ease-in-out infinite;
+}
+
+/* 光环发光 */
+.aura-glow {
+  filter: drop-shadow(0 0 10px currentColor);
+}

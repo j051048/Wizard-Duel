@@ -1,6 +1,7 @@
 @import "tailwindcss";
+@import "./styles/animations.css";
 
-/* Antigravity: Force rebuild for CSS fix */
+/* [P4 Fix #34-#39] 动画样式已移至 styles/animations.css */
 
 @theme {
   --font-wizard: "Cinzel", serif;
