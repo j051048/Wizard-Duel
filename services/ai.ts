@@ -7,6 +7,60 @@
 import { DuelState, SpellType, GameCommand } from '../types';
 import { getSpellById, canAffordSpell, executeSpell, checkGameOver } from './gameLogic';
 import { cloneDuelState } from './stateUtils';
+// [P1 Fix #10] 使用 ESM import 替代 require
+import { getElementType, doesElementBeat } from './combat/elementSystem';
+import type { Minion } from '../types';
+
+// ============ [P1 Fix #12] 随从威胁评估 ============
+
+/**
+ * 评估随从威胁度
+ * 用于 AI 决定攻击优先级
+ * 
+ * 注意：Minion 类型使用 hp/atk 而非 health/attack
+ */
+export const evaluateMinionThreat = (minion: Minion, _gameState: DuelState): number => {
+  let threat = 0;
+  
+  // 基础威胁 = 攻击力 * 2 + 生命值
+  threat += minion.atk * 2;
+  threat += minion.hp;
+  
+  // 根据随从类型增加威胁度（简化版，无 abilities 字段时使用 type）
+  const minionType = minion.type?.toLowerCase() || '';
+  if (minionType.includes('taunt')) threat += 15;      // 嘲讽随从优先级最高
+  if (minionType.includes('poison')) threat += 20;     // 剧毒随从极度危险
+  if (minionType.includes('divine')) threat += 10;     // 圣盾需要额外处理
+  if (minionType.includes('wind')) threat += minion.atk; // 风怒翻倍攻击
+  if (minionType.includes('lifesteal')) threat += 8;   // 吸血延长对手续航
+  
+  return threat;
+};
+
+/**
+ * 选择随从攻击目标
+ * 优先攻击高威胁度的随从
+ */
+export const selectMinionTarget = (
+  _attacker: Minion,
+  targets: Minion[],
+  gameState: DuelState
+): Minion | null => {
+  if (targets.length === 0) return null;
+  
+  // 必须攻击嘲讽随从
+  const taunters = targets.filter(t => t.type?.toLowerCase().includes('taunt'));
+  if (taunters.length > 0) {
+    return taunters.sort((a, b) => 
+      evaluateMinionThreat(b, gameState) - evaluateMinionThreat(a, gameState)
+    )[0];
+  }
+  
+  // 按威胁度排序，攻击最高威胁
+  return targets.sort((a, b) => 
+    evaluateMinionThreat(b, gameState) - evaluateMinionThreat(a, gameState)
+  )[0];
+};
 
 // ============ AI 决策策略 ============
 
@@ -85,9 +139,8 @@ export const pickBestSpellForAI = (
   }
   
   // 5. 元素克制：如果知道玩家上次用了什么，尝试克制
+  // [P1 Fix #10] 使用顶部导入的元素系统函数
   if (state.playerLastSpell) {
-    // [P0 Fix] 使用元素类型判定，而非直接比较 beats === playerLastSpell
-    const { getElementType, doesElementBeat } = require('./combat/elementSystem');
     const targetElement = getElementType(state.playerLastSpell);
     const counterSpell = affordable.find(s => {
       const attackerElement = getElementType(s);

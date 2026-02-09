@@ -134,4 +134,6 @@ export interface GameConfig {
   deckSize: number;
   cardsDrawnPerTurn: number;
   manaPerTurn: number;
+  /** [P1 Fix #7] 每回合最多出牌数 */
+  maxCardsPerTurn: number;
 }

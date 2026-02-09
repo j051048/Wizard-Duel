@@ -12,6 +12,7 @@ export const GAME_CONFIG: GameConfig = {
   deckSize: 20,          // [P1] 牌库厚度增加
   cardsDrawnPerTurn: 1,  // [P3] 改为每回合抽1张，控制过牌节奏（如果为了快节奏可保持2）
   manaPerTurn: 0,        // (逻辑控制自然增长)
+  maxCardsPerTurn: 8,    // [P1 Fix #7] 每回合最多出牌数，防止无限出牌
 };
 
 export const MAX_HP = GAME_CONFIG.maxHP;
