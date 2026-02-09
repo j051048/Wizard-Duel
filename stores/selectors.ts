@@ -2,9 +2,11 @@
  * Zustand 选择器工具
  * 
  * [P3 Fix #33] 使用浅比较选择器优化渲染性能
+ * 
+ * 使用 useShallow hook 包装选择器以实现浅比较
  */
 
-import { shallow } from 'zustand/shallow';
+import { useShallow } from 'zustand/react/shallow';
 import { useUserStore } from './useUserStore';
 
 // ============ 常用选择器 ============
@@ -15,13 +17,12 @@ import { useUserStore } from './useUserStore';
  */
 export const useUserBasicInfo = () => {
   return useUserStore(
-    (state) => ({
+    useShallow((state) => ({
       address: state.activeAddress,
       balance: state.balance,
       rank: state.userRank,
       rankScore: state.rankScore,
-    }),
-    shallow
+    }))
   );
 };
 
@@ -30,12 +31,11 @@ export const useUserBasicInfo = () => {
  */
 export const useUserDecks = () => {
   return useUserStore(
-    (state) => ({
+    useShallow((state) => ({
       decks: state.decks,
       selectedDeck: state.selectedDeck,
       setSelectedDeck: state.setSelectedDeck,
-    }),
-    shallow
+    }))
   );
 };
 
@@ -44,11 +44,10 @@ export const useUserDecks = () => {
  */
 export const useUserInventory = () => {
   return useUserStore(
-    (state) => ({
+    useShallow((state) => ({
       inventory: state.inventory,
       addCards: state.addCardsToInventory,
-    }),
-    shallow
+    }))
   );
 };
 
@@ -57,12 +56,11 @@ export const useUserInventory = () => {
  */
 export const useUserPacks = () => {
   return useUserStore(
-    (state) => ({
+    useShallow((state) => ({
       packInventory: state.packInventory,
       addPacks: state.addPacks,
       consumePack: state.consumePack,
-    }),
-    shallow
+    }))
   );
 };
 
@@ -71,11 +69,10 @@ export const useUserPacks = () => {
  */
 export const useUserPurchases = () => {
   return useUserStore(
-    (state) => ({
+    useShallow((state) => ({
       purchasedBundles: state.purchasedBundles,
       purchaseBundle: state.purchaseBundle,
-    }),
-    shallow
+    }))
   );
 };
 
@@ -91,13 +88,12 @@ export const useUserLoading = () => {
  */
 export const useUserAuth = () => {
   return useUserStore(
-    (state) => ({
+    useShallow((state) => ({
       address: state.activeAddress,
       supabaseUserId: state.supabaseUserId,
       login: state.login,
       setActiveAddress: state.setActiveAddress,
-    }),
-    shallow
+    }))
   );
 };
 

@@ -8,7 +8,11 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: [],
-    include: ['**/__tests__/**/*.test.{ts,tsx}'],
+    include: ['**/__tests__/**/*.test.{ts,tsx}', 'tests/**/*.test.{ts,tsx}'],
+    coverage: {
+      provider: 'v8',
+      include: ['services/**', 'utils/**', 'hooks/**'],
+    },
   },
   resolve: {
     alias: {

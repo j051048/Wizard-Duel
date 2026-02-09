@@ -13,8 +13,11 @@
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write \"**/*.{ts,tsx,css,json}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,css,json}\"",
-    "test": "playwright test",
-    "test:ui": "playwright test --ui"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.95.3",
@@ -38,8 +41,10 @@
     "@typescript-eslint/eslint-plugin": "^8.54.0",
     "@typescript-eslint/parser": "^8.54.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "@vitest/ui": "^4.0.18",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
+    "jsdom": "^28.0.0",
     "playwright": "^1.58.2",
     "prettier": "^3.8.1",
     "sharp": "^0.34.5",
@@ -48,6 +53,7 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vite": "^6.2.0",
-    "vite-plugin-pwa": "^1.2.0"
+    "vite-plugin-pwa": "^1.2.0",
+    "vitest": "^4.0.18"
   }
 }

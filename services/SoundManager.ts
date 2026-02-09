@@ -3,6 +3,7 @@
  * 
  * 提供游戏中的音效播放功能
  * [P1-22] 新增回合结束音效
+ * [P3 Fix #24] 添加更多音效类型
  */
 
 type SoundKey = 
@@ -14,9 +15,21 @@ type SoundKey =
   | 'heal'
   | 'victory'
   | 'defeat'
-  | 'button_click';
+  | 'button_click'
+  // [P3 Fix #24] 新增音效
+  | 'freeze'
+  | 'burn'
+  | 'crit'
+  | 'combo'
+  | 'counter'
+  | 'projectile'
+  | 'shield'
+  | 'level_up'
+  | 'pack_open'
+  | 'card_reveal';
 
 // 音效文件映射 - 映射到实际存在的音频文件
+// [P3 Fix #24] 新增音效映射（部分复用现有音效）
 const SOUND_MAP: Record<SoundKey, string> = {
   turn_start: '/audio/sfx-card-play.mp3',
   turn_end: '/audio/sfx-block.mp3',
@@ -26,7 +39,18 @@ const SOUND_MAP: Record<SoundKey, string> = {
   heal: '/audio/sfx-block.mp3',
   victory: '/audio/sfx-victory.mp3',
   defeat: '/audio/sfx-defeat.mp3',
-  button_click: '/audio/sfx-card-play.mp3'
+  button_click: '/audio/sfx-card-play.mp3',
+  // 新增音效 - 暂时复用现有音效，未来可替换为专用音效
+  freeze: '/audio/sfx-block.mp3',
+  burn: '/audio/sfx-hit.mp3',
+  crit: '/audio/sfx-hit.mp3',
+  combo: '/audio/sfx-card-play.mp3',
+  counter: '/audio/sfx-block.mp3',
+  projectile: '/audio/sfx-hit.mp3',
+  shield: '/audio/sfx-block.mp3',
+  level_up: '/audio/sfx-victory.mp3',
+  pack_open: '/audio/sfx-card-play.mp3',
+  card_reveal: '/audio/sfx-card-play.mp3',
 };
 
 // 音效缓存
