@@ -14,7 +14,8 @@ import { DuelState, SpellType, Rarity } from '../../types';
 import { PACK_CONFIG } from '../../config/gameConfig';
 
 // Mock 模式标志 - 生产环境应为 false
-const MOCK_MODE = true;
+// [P0 Fix #6] 生产环境自动关闭 MOCK_MODE
+const MOCK_MODE = import.meta.env.DEV || import.meta.env.VITE_FORCE_MOCK === 'true';
 
 // ============ 开包概率安全性 ============
 

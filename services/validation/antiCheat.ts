@@ -7,7 +7,8 @@
 
 import { DuelState } from '../../types';
 
-const MOCK_MODE = true;
+// [P0 Fix #6] 生产环境自动关闭 MOCK_MODE
+const MOCK_MODE = import.meta.env.DEV || import.meta.env.VITE_FORCE_MOCK === 'true';
 
 /**
  * 计算游戏状态哈希（简化版）

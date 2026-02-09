@@ -43,6 +43,9 @@ export {
   recalculateCostMod
 } from './combat';
 
+// [P0 Fix #1] 导入元素系统函数，替代 require()
+import { getElementType, doesElementBeat } from './combat/elementSystem';
+
 
 // ============ 抽牌逻辑 ============
 
@@ -389,8 +392,7 @@ export const determineWinner = (p: SpellType, o: SpellType): 'WIN' | 'LOSS' | 'D
   const playerSpell = getSpellById(p);
   const opponentSpell = getSpellById(o);
   
-  // [P0 Fix] 使用元素类型判定克制关系
-  const { getElementType, doesElementBeat } = require('./combat/elementSystem');
+  // [P0 Fix #1] 使用顶部导入的元素系统函数（已移除 require）
   const playerElement = getElementType(p);
   const opponentElement = getElementType(o);
   
