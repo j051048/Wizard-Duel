@@ -33,8 +33,14 @@ export const CollectionBook: React.FC<CollectionBookProps> = ({ onBack }) => {
       }
       // Element (infer from ID prefix or emoji logic if needed, simplify to manual tags if we had them)
       // For now, let's use ID prefix logic from defineSpell in data/spells.ts
+      // Element
       if (filterElement) {
-          if (!spell.id.startsWith(filterElement)) return false;
+          if (filterElement === 'arcane') {
+              const arcaneIds = ['healing', 'aoe', 'draw', 'silence', 'skip'];
+              if (!arcaneIds.includes(spell.id) && !spell.name.includes('奥术')) return false;
+          } else {
+              if (!spell.id.startsWith(filterElement)) return false;
+          }
       }
 
       return true;
@@ -113,7 +119,7 @@ export const CollectionBook: React.FC<CollectionBookProps> = ({ onBack }) => {
                         { id: 'fire', label: '火焰', emoji: '🔥', color: 'text-red-400 hover:bg-red-900/20' },
                         { id: 'ice', label: '寒冰', emoji: '❄️', color: 'text-blue-400 hover:bg-blue-900/20' },
                         { id: 'thunder', label: '雷电', emoji: '⚡', color: 'text-yellow-400 hover:bg-yellow-900/20' },
-                        { id: 'nature', label: '自然', emoji: '🌿', color: 'text-green-400 hover:bg-green-900/20' },
+                        { id: 'vine', label: '自然', emoji: '🌿', color: 'text-green-400 hover:bg-green-900/20' },
                         { id: 'rock', label: '岩石', emoji: '🪨', color: 'text-stone-400 hover:bg-stone-900/20' },
                         { id: 'arcane', label: '奥术', emoji: '🔮', color: 'text-purple-400 hover:bg-purple-900/20' },
                     ].map(el => (

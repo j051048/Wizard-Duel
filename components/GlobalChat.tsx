@@ -13,6 +13,7 @@ export const GlobalChat: React.FC<GlobalChatProps> = ({ userId, username, isOpen
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [onlineCount, setOnlineCount] = useState(0);
+  const [cooldown, setCooldown] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,15 +42,26 @@ export const GlobalChat: React.FC<GlobalChatProps> = ({ userId, username, isOpen
   }, [isOpen, userId, username]);
 
   useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (cooldown > 0) {
+      timer = setInterval(() => {
+        setCooldown((prev) => Math.max(0, prev - 1));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
 
   const handleSend = () => {
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() || cooldown > 0) return;
     matchmaking.sendChatMessage(inputValue);
     setInputValue('');
+    setCooldown(30);
   };
 
   if (!isOpen) return null;
@@ -109,9 +121,18 @@ export const GlobalChat: React.FC<GlobalChatProps> = ({ userId, username, isOpen
           />
           <button 
             onClick={handleSend}
-            className="p-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors"
+            disabled={cooldown > 0}
+            className={`p-2 rounded-lg transition-colors flex items-center justify-center min-w-[40px] ${
+              cooldown > 0 
+                ? 'bg-slate-800 text-slate-500 cursor-not-allowed' 
+                : 'bg-purple-600 hover:bg-purple-500 text-white'
+            }`}
           >
-            <Send size={16} />
+            {cooldown > 0 ? (
+              <span className="text-xs font-mono">{cooldown}</span>
+            ) : (
+              <Send size={16} />
+            )}
           </button>
         </div>
       </div>

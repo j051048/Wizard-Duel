@@ -43,6 +43,9 @@ class MatchmakingService {
         presence: {
           key: userId,
         },
+        broadcast: {
+          self: true,
+        },
       },
     });
 
