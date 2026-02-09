@@ -1,6 +1,7 @@
 import React from 'react';
 import { Volume2, VolumeX, BookOpen, Crown, Zap, Calendar } from 'lucide-react';
-import { Language, GameMode } from '../../types';
+import { Language, GameMode, Rank } from '../../types';
+import { getRankLevel } from '../../services/rankSystem';
 
 interface TopBarProps {
   userRank: string;
@@ -46,16 +47,22 @@ const TopBar: React.FC<TopBarProps> = ({
                <img src="/pwa-192x192.png" alt="Avatar" className="w-full h-full object-cover" />
             </div>
             <div className={`absolute -bottom-1 -right-1 bg-slate-900 ${isMobile ? 'text-[8px] px-1' : 'text-[10px] px-1.5'} text-amber-500 border border-amber-500/30 py-0.5 rounded-full font-bold`}>
-               L.{Math.floor(rankScore / 100) + 1}
+               L.{getRankLevel(userRank as Rank)}
             </div>
          </button>
          
          <div className="flex flex-col">
            <div className="flex items-center gap-1">
               <span className={`${isMobile ? 'text-base' : 'text-xl'} font-wizard font-black drop-shadow-md ${
-                userRank === 'Legend' ? 'text-yellow-400' :
-                userRank === 'Diamond' ? 'text-cyan-400' :
-                'text-gray-200'
+                userRank === 'Legend' ? 'text-amber-300' :
+                userRank === 'Mythic' ? 'text-rose-400' :
+                userRank === 'Master' ? 'text-orange-400' :
+                userRank === 'Epic' ? 'text-purple-400' :
+                userRank === 'Diamond' ? 'text-blue-400' :
+                userRank === 'Platinum' ? 'text-cyan-300' :
+                userRank === 'Gold' ? 'text-yellow-400' :
+                userRank === 'Silver' ? 'text-slate-300' :
+                'text-gray-400'
               }`}>{t(userRank)}</span>
            </div>
            <div className={`flex items-center gap-1 ${isMobile ? 'text-[9px]' : 'text-xs'} font-tech text-gray-400 bg-black/40 px-2 py-0.5 rounded-full border border-white/5`}>

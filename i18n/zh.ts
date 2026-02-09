@@ -56,9 +56,12 @@ export const zh = {
 
   'DISTANCE_TO_NEXT_RANK': '距离下一段位还需',
   'Iron': '黑铁',
-  'Bronze': '青铜',
   'Silver': '白银',
   'Gold': '黄金',
+  'Platinum': '铂金',
   'Diamond': '钻石',
+  'Epic': '史诗',
+  'Master': '王者',
+  'Mythic': '神话',
   'Legend': '传说',
 };

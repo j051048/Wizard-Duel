@@ -7,6 +7,7 @@ import { Crown, Target } from 'lucide-react';
 import { Rank } from '../../types';
 import { useUIStore } from '../../stores/useUIStore';
 import { TRANSLATIONS } from '../../translations';
+import { getNextRankThreshold, getRankGradient } from '../../services/rankSystem';
 
 interface RankProgressProps {
   userRank: Rank;
@@ -14,24 +15,6 @@ interface RankProgressProps {
   rankStyle: { text: string; bg: string; border: string; glow: string };
 }
 
-function getNextRankThreshold(rank: string): number {
-  const thresholds: Record<string, number> = {
-    Iron: 300, Bronze: 600, Silver: 1000, Gold: 1500, Diamond: 2500, Legend: 5000
-  };
-  return thresholds[rank] || 1000;
-}
-
-function getRankGradient(rank: string): string {
-  const gradients: Record<string, string> = {
-    Iron: 'from-gray-500 to-gray-400',
-    Bronze: 'from-amber-700 to-amber-500',
-    Silver: 'from-slate-400 to-slate-300',
-    Gold: 'from-yellow-500 to-amber-400',
-    Diamond: 'from-cyan-500 to-blue-400',
-    Legend: 'from-amber-400 to-yellow-300',
-  };
-  return gradients[rank] || 'from-gray-500 to-gray-400';
-}
 
 export const RankProgress: React.FC<RankProgressProps> = ({ userRank, rankScore, rankStyle }) => {
   const { language } = useUIStore();

@@ -28,12 +28,15 @@ interface UserProfilePageProps {
 }
 
 const RANK_COLORS: Record<string, { text: string; bg: string; border: string; glow: string }> = {
-  Iron:    { text: 'text-gray-400',   bg: 'bg-gray-500/20',   border: 'border-gray-500/30',   glow: '' },
-  Bronze:  { text: 'text-amber-600',  bg: 'bg-amber-600/20',  border: 'border-amber-600/30',  glow: '' },
-  Silver:  { text: 'text-slate-300',  bg: 'bg-slate-300/20',  border: 'border-slate-300/30',  glow: '' },
-  Gold:    { text: 'text-yellow-400', bg: 'bg-yellow-400/20', border: 'border-yellow-400/30', glow: 'shadow-[0_0_20px_rgba(250,204,21,0.2)]' },
-  Diamond: { text: 'text-cyan-400',   bg: 'bg-cyan-400/20',   border: 'border-cyan-400/30',   glow: 'shadow-[0_0_20px_rgba(34,211,238,0.3)]' },
-  Legend:  { text: 'text-amber-300',  bg: 'bg-amber-300/20',  border: 'border-amber-300/30',  glow: 'shadow-[0_0_30px_rgba(252,211,77,0.4)]' },
+  Iron:     { text: 'text-gray-400',   bg: 'bg-gray-500/20',   border: 'border-gray-500/30',   glow: '' },
+  Silver:   { text: 'text-slate-300',  bg: 'bg-slate-300/20',  border: 'border-slate-300/30',  glow: '' },
+  Gold:     { text: 'text-yellow-400', bg: 'bg-yellow-400/20', border: 'border-yellow-400/30', glow: 'shadow-[0_0_15px_rgba(250,204,21,0.15)]' },
+  Platinum: { text: 'text-cyan-300',   bg: 'bg-cyan-300/20',   border: 'border-cyan-300/30',   glow: 'shadow-[0_0_15px_rgba(103,232,249,0.2)]' },
+  Diamond:  { text: 'text-blue-400',   bg: 'bg-blue-400/20',   border: 'border-blue-400/30',   glow: 'shadow-[0_0_20px_rgba(96,165,250,0.25)]' },
+  Epic:     { text: 'text-purple-400', bg: 'bg-purple-400/20', border: 'border-purple-400/30', glow: 'shadow-[0_0_20px_rgba(192,132,252,0.3)]' },
+  Master:   { text: 'text-orange-400', bg: 'bg-orange-400/20', border: 'border-orange-400/30', glow: 'shadow-[0_0_25px_rgba(251,146,60,0.35)]' },
+  Mythic:   { text: 'text-rose-400',   bg: 'bg-rose-400/20',   border: 'border-rose-400/30',   glow: 'shadow-[0_0_25px_rgba(251,113,133,0.4)]' },
+  Legend:   { text: 'text-amber-300',  bg: 'bg-amber-300/20',  border: 'border-amber-300/30',  glow: 'shadow-[0_0_30px_rgba(252,211,77,0.5)]' },
 };
 
 const UserProfilePage: React.FC<UserProfilePageProps> = ({

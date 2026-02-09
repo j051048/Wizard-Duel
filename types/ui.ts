@@ -11,7 +11,7 @@ export type GameState = "LOGIN" | "LOBBY" | "MODE_SELECT" | "DECK_BUILDER" | "DU
 
 export type Language = 'zh' | 'en';
 
-export type Rank = "Iron" | "Bronze" | "Silver" | "Gold" | "Diamond" | "Legend";
+export type Rank = "Iron" | "Silver" | "Gold" | "Platinum" | "Diamond" | "Epic" | "Master" | "Mythic" | "Legend";
 
 export interface PlayerStats {
   address: string;
