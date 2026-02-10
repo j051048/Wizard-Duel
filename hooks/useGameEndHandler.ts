@@ -141,7 +141,8 @@ export function useGameEndHandler({
             newRank
           );
           user.setBalance(res.newBalance); // 本地模式直接设置
-          user.loadUserData(user.activeAddress!);
+          // [Fix] RPC失败回退模式下，不要重新拉取数据，否则会覆盖本地的乐观更新
+          // user.loadUserData(user.activeAddress!);
           finalPayout = res.payout;
           finalIsCrit = res.isCrit;
         }

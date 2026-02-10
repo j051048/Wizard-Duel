@@ -42,7 +42,7 @@ export const OpponentHUD: React.FC<OpponentHUDProps> = ({
     return (
       <>
         {/* 顶部极简条 - 只有最关键信息 */}
-        <div className="mobile-opponent-bar w-full px-2 pt-1 flex justify-between items-center pointer-events-none z-30"
+        <div className="mobile-opponent-bar w-full px-2 pt-1 flex justify-between items-center pointer-events-none z-[60]"
              style={{ paddingTop: 'max(env(safe-area-inset-top), 4px)' }}>
           
           {/* 左侧：对手信息 - 横向极简 */}
