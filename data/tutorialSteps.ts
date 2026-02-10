@@ -98,7 +98,7 @@ export const TUTORIAL_STEPS: TutorialStepConfig[] = [
     id: 'end_turn_intro',
     title: '⏭️ 结束回合',
     content: '出完牌后，点击「结束回合」把行动权交给对手。\n\n💡 你也可以连续出多张牌（如果法力够的话）！',
-    targetId: 'end-turn-btn-desktop',
+    targetId: 'end-turn-btn',
     position: 'left',
     gameState: 'DUEL',
     triggerPhase: 'PLAYER_TURN',

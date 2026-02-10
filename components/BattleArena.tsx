@@ -320,7 +320,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       {!isMobile && (
         <div className="absolute right-6 bottom-6 z-40 hidden md:block">
               <button 
-                id="end-turn-btn-desktop"
+                id="end-turn-btn"
                 onClick={onPass}  
                 disabled={phase !== 'PLAYER_TURN'} 
                 className={`
