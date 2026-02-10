@@ -22,6 +22,7 @@ import { DuelState, StatusEffect } from '../types';
 import { GAME_CONFIG } from '../constants';
 import { checkGameOver, drawCard } from './gameLogic';
 import { GameSequenceExecutor } from './sequence';
+import { getGameRNG } from '../utils/seededRandom';
 
 export interface ArbiterEvent {
   type: 'DAMAGE' | 'HEAL' | 'EFFECT_TICK' | 'EFFECT_EXPIRE' | 'DRAW' | 'FATIGUE' | 'MANA_RESTORE' | 'DEATH' | 'ROUND_START';
@@ -100,8 +101,15 @@ export class RuleArbiter {
       return { newState: s, events, gameOver: deathCheck2 };
     }
 
-    // ========== 7. 回合开始触发器 ==========
+        // ========== 7. 回合开始触发器 ==========
     s = GameSequenceExecutor.resolveTriggers(s, 'ON_TURN_START');
+
+    // [P0 Fix #3] 统一死亡帧：处理回合开始触发器可能造成的随从死亡
+    const deathResult = GameSequenceExecutor.resolveDeathFrame(s);
+    s = deathResult.state;
+    deathResult.logs.forEach(log => {
+      events.push({ type: 'DEATH', target: 'system', description: log });
+    });
 
     // 💀 死亡检查点 2: 触发器致死
     const deathCheck3 = checkGameOver(s);
@@ -109,6 +117,9 @@ export class RuleArbiter {
       events.push({ type: 'DEATH', target: 'system', description: '💀 触发效果致死！' });
       return { newState: s, events, gameOver: deathCheck3 };
     }
+
+    // [P0 Fix #2] 同步 RNG 状态到 DuelState
+    s.rngState = getGameRNG().serialize();
 
     return { newState: s, events, gameOver: null };
   }
@@ -136,12 +147,22 @@ export class RuleArbiter {
     s = postEffectState;
     events.push(...effectEvents);
 
+        // [P0 Fix #3] 统一死亡帧：处理 DoT 可能造成的随从死亡
+    const deathFrameResult = GameSequenceExecutor.resolveDeathFrame(s);
+    s = deathFrameResult.state;
+    deathFrameResult.logs.forEach(log => {
+      events.push({ type: 'DEATH', target: 'system', description: log });
+    });
+
     // ========== 2. 💀 死亡检查: DoT 致死 ==========
     const deathCheck = checkGameOver(s);
     if (deathCheck) {
       events.push({ type: 'DEATH', target: 'system', description: '💀 有人倒下了！' });
       return { newState: s, events, gameOver: deathCheck };
     }
+
+    // [P0 Fix #2] 同步 RNG 状态
+    s.rngState = getGameRNG().serialize();
 
     return { newState: s, events, gameOver: null };
   }

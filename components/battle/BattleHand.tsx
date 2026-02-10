@@ -150,29 +150,29 @@ const BattleHand: React.FC<BattleHandProps> = ({
     );
   }
 
-  /* ====== 桌面端：平面堆叠布局 ====== */
-  const calculateHandLayout = (count: number) => {
-    // 基础间距：卡牌宽度约 120px (SpellCard isSmall=false 且在容器内缩放)
-    // 根据卡牌数量动态调整间距
+    /* ====== 桌面端：扇形物理布局 [P1 Fix #7] ====== */
+  const calculateFanLayout = (count: number) => {
     const maxContainerWidth = 800;
-    const minSpacing = 40; // 最小重叠间距
-    const maxSpacing = 150; // 最大间距（完全不重叠）
+    const minSpacing = 40;
+    const maxSpacing = 130;
     
-    // 如果卡牌少，铺开显示；如果卡牌多，紧凑堆叠
     let xSpacing = maxSpacing;
     if (count > 0) {
-      // 尝试用最大间距排列
       const totalWidth = count * maxSpacing;
       if (totalWidth > maxContainerWidth) {
-        // 如果超出容器，压缩间距
         xSpacing = Math.max(minSpacing, maxContainerWidth / count);
       }
     }
     
-    return { xSpacing };
+    // 扇形旋转角度：卡牌越多扇形越大
+    const maxFanAngle = Math.min(count * 3, 20); // 最大 ±20°
+    // 垂直弧度（中间高两边低）
+    const arcHeight = Math.min(count * 4, 30); // 最大弧高 30px
+    
+    return { xSpacing, maxFanAngle, arcHeight };
   };
 
-  const layoutConfig = useMemo(() => calculateHandLayout(hand.length), [hand.length]);
+  const layoutConfig = useMemo(() => calculateFanLayout(hand.length), [hand.length]);
 
   return (
     <div 
@@ -187,36 +187,36 @@ const BattleHand: React.FC<BattleHandProps> = ({
           const isSelectedForAction = selectedCardId === id;
           const totalCards = hand.length;
           
-          // 计算位置：居中排列
-          const { xSpacing } = layoutConfig;
-          // 计算总宽度
+                    // [P1 Fix #7] 扇形布局计算
+          const { xSpacing, maxFanAngle, arcHeight } = layoutConfig;
           const totalWidth = (totalCards - 1) * xSpacing;
-          // 当前卡牌相对于中心的偏移
           const startX = -totalWidth / 2;
           const translateX = startX + index * xSpacing;
           
-          // 悬停/选中状态的变换
-          // 悬停时：上浮，放大，置顶
-          let translateY = 0;
+          // 扇形旋转：从左到右 -maxAngle 到 +maxAngle
+          const normalizedPos = totalCards > 1 ? (index / (totalCards - 1)) * 2 - 1 : 0; // -1 to 1
+          const fanRotation = normalizedPos * maxFanAngle;
+          // 弧形高度：中间高，两边低（抛物线）
+          const arcOffset = arcHeight * (1 - normalizedPos * normalizedPos);
+          
+          let translateY = -arcOffset;
           let scale = 1;
           let zIndex = index;
+          let cardRotation = fanRotation;
           
           if (isBeingDragged) {
-            translateY = -150; // 拖拽时隐藏/移出
+            translateY = -150;
+            cardRotation = 0;
           } else if (isSelectedForAction) {
             translateY = -80;
             scale = 1.3;
             zIndex = 100;
+            cardRotation = 0; // 选中时摊平
           } else if (isHovered) {
-            translateY = -60;
+            translateY = -60 - arcOffset;
             scale = 1.3;
             zIndex = 50;
-          } else {
-            // 默认状态：稍微错落一点（偶数索引的牌低一点点，产生一点层次感，或者完全平齐）
-            // 这里选择完全平齐，符合"平面小面积叠加"的要求
-            translateY = 0;
-            scale = 1;
-            zIndex = index;
+            cardRotation = 0; // 悬停时摊平
           }
            
           return (
@@ -224,14 +224,13 @@ const BattleHand: React.FC<BattleHandProps> = ({
               key={`${id}-${index}`} 
               // 移除 layoutId 以避免不必要的自动布局动画导致的抖动
               initial={{ opacity: 0, y: 100, scale: 0.8 }}
-              animate={{ 
+                            animate={{ 
                 opacity: isBeingDragged ? 0 : 1, 
                 x: translateX,
                 y: translateY,
-                rotate: 0, // 始终不旋转
+                rotate: cardRotation, // [P1 Fix #7] 扇形旋转
                 scale: scale,
                 zIndex: zIndex,
-                // 只有选中/高亮时才加阴影，普通状态不加，减少重绘
                 filter: isHovered || isSelectedForAction ? 'drop-shadow(0 10px 20px rgba(0,0,0,0.5))' : 'none'
               }}
               exit={{ 

@@ -2,6 +2,7 @@ import { DuelState, GameActionCommand, StatusEffect, SpellType } from '../types'
 import { checkGameOver, executeSpell, executeAITurn, prepareNextTurn } from './gameLogic';
 import { GameSequenceExecutor } from './sequence';
 import { MINION_ATTACK_DELAY, MINION_COMBAT_START_DELAY } from '../config/timing';
+import { getGameRNG } from '../utils/seededRandom';
 
 /**
  * GameRuleEngine
@@ -72,6 +73,16 @@ export class GameRuleEngine {
         logs.forEach(msg => commands.push({ type: 'ADD_MESSAGE', payload: msg }));
     }
 
+        // [P0 Fix #3] 统一死亡帧：在所有 Action 执行后处理濒死随从
+    const deathFrameResult = GameSequenceExecutor.resolveDeathFrame(tempState);
+    tempState = deathFrameResult.state;
+    deathFrameResult.logs.forEach(log => {
+        commands.push({ type: 'ADD_MESSAGE', payload: log });
+    });
+    if (deathFrameResult.logs.length > 0) {
+        commands.push({ type: 'UPDATE_STATE', payload: tempState });
+    }
+
     // 3. Final Death Check
     const gameOver = checkGameOver(tempState);
     if (gameOver) {
@@ -81,14 +92,12 @@ export class GameRuleEngine {
             resultText: gameOver,
         }});
         commands.push({ type: 'SET_PHASE', payload: 'ROUND_RESET' });
-        // We return the state at point of death
         return { newState: tempState, commands };
     } 
 
-    // 4. Return the final clean state (from executeSpell) to ensure consistency
-    // However, tempState should be identical to postCastState if GameSequenceExecutor is deterministic.
-    // Let's trust tempState which reflects the *animation path*.
-    
+    // [P0 Fix #2] 同步 RNG 状态
+    tempState.rngState = getGameRNG().serialize();
+
     return { newState: tempState, commands };
   }
 
@@ -151,12 +160,18 @@ export class GameRuleEngine {
            commands.push({ type: 'EXECUTE_LOGIC', payload: () => {}, delay: MINION_ATTACK_DELAY });
 
            // [Fix 1.2] Pass instanceId instead of index to avoid index shifting issues
-           const action = { type: 'MINION_ATTACK', target: 'player', value: id } as any;
+                      const action = { type: 'MINION_ATTACK', target: 'player', value: id } as any;
            const result = GameSequenceExecutor.applyAction(currentState, action);
            
            currentState = result.state;
            commands.push({ type: 'UPDATE_STATE', payload: currentState });
            if (result.log) commands.push({ type: 'ADD_MESSAGE', payload: result.log });
+
+           // [P0 Fix #3] 每次攻击后执行死亡帧
+           const df1 = GameSequenceExecutor.resolveDeathFrame(currentState);
+           currentState = df1.state;
+           df1.logs.forEach(l => commands.push({ type: 'ADD_MESSAGE', payload: l }));
+           if (df1.logs.length > 0) commands.push({ type: 'UPDATE_STATE', payload: currentState });
 
            if (checkBreak()) return { finalState: currentState, commands };
       }
@@ -169,13 +184,18 @@ export class GameRuleEngine {
 
            commands.push({ type: 'WAIT', payload: null, delay: MINION_ATTACK_DELAY });
 
-           // [Fix 1.2] Pass instanceId instead of index to avoid index shifting issues
            const action = { type: 'MINION_ATTACK', target: 'opponent', value: id } as any;
            const result = GameSequenceExecutor.applyAction(currentState, action);
            
            currentState = result.state;
            commands.push({ type: 'UPDATE_STATE', payload: currentState });
            if (result.log) commands.push({ type: 'ADD_MESSAGE', payload: result.log });
+
+           // [P0 Fix #3] 每次攻击后执行死亡帧
+           const df2 = GameSequenceExecutor.resolveDeathFrame(currentState);
+           currentState = df2.state;
+           df2.logs.forEach(l => commands.push({ type: 'ADD_MESSAGE', payload: l }));
+           if (df2.logs.length > 0) commands.push({ type: 'UPDATE_STATE', payload: currentState });
 
            if (checkBreak()) return { finalState: currentState, commands };
       }

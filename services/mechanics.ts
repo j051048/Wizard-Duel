@@ -148,6 +148,19 @@ const silence: MechanicHandler = (state, caster, spell, countered) => {
   ];
 };
 
+/**
+ * [P1 Fix #13] 幸运币机制
+ * 0费使用，获得1点临时法力水晶（本回合）
+ */
+const luckCoin: MechanicHandler = (state, caster, spell) => {
+  return [{
+    type: 'MANA_CHANGE',
+    target: caster,
+    value: 1,
+    description: `🪙 ${caster === 'player' ? '你' : '对手'}使用了幸运币，获得1点法力水晶！`
+  }];
+};
+
 // ============ 机制注册表 ============
 
 export const MECHANIC_DEFINITIONS: Record<string, MechanicHandler> = {
@@ -157,7 +170,8 @@ export const MECHANIC_DEFINITIONS: Record<string, MechanicHandler> = {
   heal,
   aoe,
   draw,
-  silence
+  silence,
+  luck_coin: luckCoin, // [P1 Fix #13]
 };
 
 /**

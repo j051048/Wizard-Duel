@@ -25,6 +25,8 @@ import { useRoundManager } from './useRoundManager';
 import { usePlayerActions } from './usePlayerActions';
 import { useAITurn } from './useAITurn';
 import { throttle } from '../utils/helpers';
+import { GameFSM } from '../services/GameFSM';
+import { restoreGameRNG } from '../utils/seededRandom';
 
 const initialAIStatus: AIStatus = { emote: null, message: null };
 
@@ -45,10 +47,12 @@ export interface GameLoopActions {
 }
 
 export function useGameLoop(): [GameLoopState, GameLoopActions] {
-  // ============ [#6] Processing Lock ============
-  // 使用 ref 而非 state 来追踪锁状态，避免额外渲染
+    // ============ [#6] Processing Lock ============
   const processingLockRef = useRef(false);
   const actionInProgressRef = useRef<string | null>(null);
+
+  // ============ [P0 Fix #1] FSM 实例 ============
+  const fsmRef = useRef(new GameFSM('DRAFT_PHASE'));
 
   // 1. Core State
   const [duelState, setDuelState] = useState<DuelState | null>(null);
@@ -238,7 +242,7 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
     if (saved && !duelState) {
       try {
         const parsed = JSON.parse(saved);
-        // [P0 Bug 4] 验证保存数据的完整性
+              // [P0 Bug 4] 验证保存数据的完整性
         if (parsed.duelState && 
             typeof parsed.duelState.roundNumber === 'number' &&
             Array.isArray(parsed.duelState.playerEffects) &&
@@ -246,6 +250,13 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
           // 恢复完整的 duelState
           setDuelState(parsed.duelState);
           setPhase(parsed.phase);
+          // [P0 Fix #1] 恢复 FSM 状态
+          fsmRef.current.reset(parsed.phase);
+          // [P0 Fix #2] 恢复 RNG 状态（确定性重连）
+          if (parsed.duelState.rngState) {
+            restoreGameRNG(parsed.duelState.rngState);
+            console.log('[GameLoop] RNG 状态已恢复, seed:', parsed.duelState.rngState.initialSeed, 'calls:', parsed.duelState.rngState.callCount);
+          }
           setUiState(prev => ({ 
             ...prev, 
             effectMessages: parsed.effectMessages || [],
@@ -268,10 +279,12 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
   }, []); // Once on mount
   
   // ============ Reset ============
-  const reset = useCallback(() => {
+    const reset = useCallback(() => {
     // [#6] 清除所有锁和进行中的动作
     processingLockRef.current = false;
     actionInProgressRef.current = null;
+    // [P0 Fix #1] 重置 FSM
+    fsmRef.current.reset('DRAFT_PHASE');
     
     clearQueue();
     resetTurnManager();

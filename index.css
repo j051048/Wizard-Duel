@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./styles/animations.css";
+@import "./styles/safeArea.css";
 
 /* [P4 Fix #34-#39] 动画样式已移至 styles/animations.css */
 

@@ -15,6 +15,7 @@ import {
 } from '../services/gameLogic';
 import { GameRuleEngine } from '../services/GameRuleEngine';
 import { RuleArbiter, ArbiterEvent } from '../services/RuleArbiter';
+import { generateValidationReport } from '../services/validation/antiCheat';
 import {
   AI_THINK_DELAY, AI_CARD_PLAY_DELAY, AI_EMOTE_DELAY,
   PHASE_TRANSITION_DELAY, BANNER_WAIT_DELAY, ROUND_TRANSITION_DELAY
@@ -156,7 +157,20 @@ export function useAITurn({
         }
       });
       commands.push({ type: 'SET_PHASE', payload: 'ROUND_RESET' });
-    } else {
+        } else {
+      // [P0 Fix #6] 回合结束时执行防作弊校验
+      const finalValidationState = tempState;
+      commands.push({
+        type: 'EXECUTE_LOGIC',
+        payload: () => {
+          const report = generateValidationReport(finalValidationState);
+          if (!report.valid) {
+            console.error('[AntiCheat] Round validation FAILED:', report.violations);
+            // 在生产环境可上报服务端或强制结束游戏
+          }
+        }
+      });
+
       commands.push({ type: 'WAIT', payload: null, delay: ROUND_TRANSITION_DELAY });
       commands.push({
         type: 'EXECUTE_LOGIC',

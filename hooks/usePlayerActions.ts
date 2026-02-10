@@ -14,6 +14,8 @@ import {
   createInitialDuelState, createTavernDuelState, canAffordSpell
 } from '../services/gameLogic';
 import { GameRuleEngine } from '../services/GameRuleEngine';
+import { getGameRNG } from '../utils/seededRandom';
+import { validateCardPlay } from '../services/validation/antiCheat';
 import {
   PHASE_TRANSITION_DELAY, BANNER_WAIT_DELAY, ROUND_TRANSITION_DELAY
 } from '../config/timing';
@@ -44,10 +46,24 @@ export function usePlayerActions({
   startNewRound,
 }: UsePlayerActionsDeps) {
 
-  /** 出牌 */
+    /** 出牌 */
   const playCard = useCallback((spellId: SpellType): boolean => {
     const state = duelStateRef.current;
     if (!state || phaseRef.current !== 'PLAYER_TURN' || isProcessing) return false;
+
+    // [P0 Fix #6] 独立防作弊校验（不信任 canAffordSpell 单独的结果）
+    const violations = validateCardPlay(state, spellId, 'player');
+    if (violations.length > 0) {
+      const criticalViolation = violations.find(v => v.severity === 'critical' || v.severity === 'error');
+      if (criticalViolation) {
+        console.warn('[AntiCheat] Card play rejected:', violations);
+        setUiState((prev: any) => ({
+          ...prev,
+          effectMessages: [...prev.effectMessages, criticalViolation.message || '非法操作']
+        }));
+        return false;
+      }
+    }
 
     const affordable = canAffordSpell(spellId, state.playerMana, state.playerEffects, state.playerCostMod);
     if (!affordable.canAfford) {
@@ -82,7 +98,8 @@ export function usePlayerActions({
         newDeck.push(card);
       }
     });
-    newDeck = newDeck.sort(() => Math.random() - 0.5);
+    // [P0 Fix #2] 使用确定性 RNG 洗牌
+    newDeck = getGameRNG().shuffle(newDeck);
 
     const newState = { ...state, playerHand: newHand, playerDeck: newDeck };
     setDuelState(newState);

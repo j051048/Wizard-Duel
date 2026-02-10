@@ -23,6 +23,9 @@ export const cloneDuelState = (state: DuelState): DuelState => {
     opponentMinions: state.opponentMinions.map(m => ({ ...m })),
     playerTriggers: state.playerTriggers ? [...state.playerTriggers] : [],
     opponentTriggers: state.opponentTriggers ? [...state.opponentTriggers] : [],
+    // [P0 Fix #2] 保留 RNG 状态引用（不可变值对象，无需深拷贝）
+    rngState: state.rngState ? { ...state.rngState } : undefined,
+    triggerOrderCounter: state.triggerOrderCounter ?? 0,
   };
 };
 

@@ -5,6 +5,7 @@
 
 import { SpellType, Minion, GameMode } from './card';
 import { AIProfile } from './ai';
+import type { RNGState } from '../utils/seededRandom';
 
 export type DuelPhase =
   | "DRAFT_PHASE"
@@ -12,7 +13,10 @@ export type DuelPhase =
   | "PLAYER_TURN"
   | "OPPONENT_TURN"
   | "ROUND_RESET"
-  | "TURN_TRANSITION";
+  | "TURN_TRANSITION"
+  | "DEATH_CHECK"
+  | "TRIGGER_RESOLVE"
+  | "MINION_COMBAT";
 
 export interface StatusEffect {
   type: "burn" | "tangle" | "frozen" | "thawed";
@@ -20,11 +24,15 @@ export interface StatusEffect {
   value?: number;
 }
 
-export type TriggerTiming = 'ON_CAST' | 'ON_DAMAGE' | 'ON_TURN_START' | 'ON_TURN_END';
+export type TriggerTiming = 'ON_CAST' | 'ON_DAMAGE' | 'ON_TURN_START' | 'ON_TURN_END' | 'ON_BEFORE_PLAY' | 'ON_DEATH';
 
 export interface GameTrigger {
   id: string;
   timing: TriggerTiming;
+  /** 入场时间戳，用于 Order of Play 排序 */
+  createdAt: number;
+  /** 触发器所属方 */
+  owner: 'player' | 'opponent';
   condition?: (state: DuelState, context?: any) => boolean;
   action: (state: DuelState, context?: any) => GameAction[];
   isOnce?: boolean;
@@ -78,6 +86,11 @@ export interface DuelState {
   playerTriggers: GameTrigger[];
   opponentTriggers: GameTrigger[];
   isTutorial?: boolean;
+
+  /** [P0 Fix #2] 确定性随机种子状态，用于回放和断线重连 */
+  rngState?: RNGState;
+  /** [P0 Fix #1] 全局触发器入场计数器 */
+  triggerOrderCounter: number;
 }
 
 export type ActionType =

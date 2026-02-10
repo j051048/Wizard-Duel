@@ -145,10 +145,103 @@ export const SoundManager = {
     globalVolume = Math.min(1, Math.max(0, volume));
   },
   
-  /**
+    /**
    * 获取全局音量
    */
   getVolume(): number {
     return globalVolume;
+  },
+
+  // ============ [P2 Fix #21] Dynamic BGM System ============
+  
+  /** 当前 BGM 状态 */
+  _currentBGMState: 'neutral' as 'neutral' | 'advantage' | 'danger' | 'lethal',
+  _bgmAudio: null as HTMLAudioElement | null,
+  _bgmFadeInterval: null as NodeJS.Timeout | null,
+  
+  /**
+   * [P2 Fix #21] 根据游戏局势动态切换 BGM 节奏
+   * 每次状态更新时调用，会自动判断是否需要切换音乐
+   */
+  updateBattleBGM(playerHP: number, opponentHP: number, maxHP: number): void {
+    if (isMuted) return;
+    
+    const playerRatio = playerHP / maxHP;
+    const opponentRatio = opponentHP / maxHP;
+    
+    let newState: typeof this._currentBGMState = 'neutral';
+    
+    // 斩杀线：对手血量 <= 30%
+    if (opponentRatio <= 0.3 && playerRatio > 0.3) {
+      newState = 'lethal';
+    }
+    // 劣势：玩家血量 <= 30%
+    else if (playerRatio <= 0.3) {
+      newState = 'danger';
+    }
+    // 优势：玩家血量领先较多
+    else if (playerRatio - opponentRatio > 0.3) {
+      newState = 'advantage';
+    }
+    
+    // 状态没变则不切换
+    if (newState === this._currentBGMState) return;
+    this._currentBGMState = newState;
+    
+    // 动态调整 BGM 参数（在没有多首 BGM 的情况下，调整音量和播放速率来模拟气氛变化）
+    if (this._bgmAudio) {
+      const audio = this._bgmAudio;
+      switch (newState) {
+        case 'danger':
+          audio.playbackRate = 1.1;
+          audio.volume = Math.min(1, globalVolume * 0.8);
+          break;
+        case 'lethal':
+          audio.playbackRate = 1.2;
+          audio.volume = Math.min(1, globalVolume * 1.0);
+          break;
+        case 'advantage':
+          audio.playbackRate = 1.0;
+          audio.volume = Math.min(1, globalVolume * 0.6);
+          break;
+        default:
+          audio.playbackRate = 1.0;
+          audio.volume = Math.min(1, globalVolume * 0.5);
+          break;
+      }
+    }
+  },
+
+  /**
+   * 开始播放战斗 BGM
+   */
+  startBattleBGM(): void {
+    if (isMuted) return;
+    try {
+      if (this._bgmAudio) {
+        this._bgmAudio.pause();
+      }
+      this._bgmAudio = new Audio('/audio/bgm-battle.mp3');
+      this._bgmAudio.loop = true;
+      this._bgmAudio.volume = globalVolume * 0.5;
+      this._currentBGMState = 'neutral';
+      this._bgmAudio.play().catch(() => {
+        console.debug('[SoundManager] BGM autoplay blocked');
+      });
+    } catch (e) {
+      console.debug('[SoundManager] BGM error:', e);
+    }
+  },
+
+  /**
+   * 停止战斗 BGM
+   */
+  stopBattleBGM(): void {
+    if (this._bgmAudio) {
+      this._bgmAudio.pause();
+      this._bgmAudio.currentTime = 0;
+      this._bgmAudio = null;
+    }
+    this._currentBGMState = 'neutral';
   }
 };

@@ -1,14 +1,25 @@
 import { SpellType, GameMode, Rarity, Spell } from '../types';
 import { SPELLS, STANDARD_SETS, WILD_SETS } from '../data/spells';
 import { PACK_CONFIG } from '../config/gameConfig';
+import { getGameRNG } from './seededRandom';
 
-export const shuffleArray = <T>(array: T[]): T[] => {
-  const result = [...array];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
+/**
+ * 通用洗牌函数
+ * [P0 Fix #2] 默认使用 SeededRNG 保证确定性
+ * 传入 useNativeRandom=true 可使用 Math.random（仅用于非对战场景如开包）
+ */
+export const shuffleArray = <T>(array: T[], useNativeRandom: boolean = false): T[] => {
+  if (useNativeRandom) {
+    // 非对战场景：使用 Math.random
+    const result = [...array];
+    for (let i = result.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [result[i], result[j]] = [result[j], result[i]];
+    }
+    return result;
   }
-  return result;
+  // [P0 Fix #2] 对战场景：使用 SeededRNG
+  return getGameRNG().shuffle(array);
 };
 
 /**
@@ -18,10 +29,11 @@ export const createDeck = (baseCards?: SpellType[]): SpellType[] => {
   let deck: SpellType[] = [];
   const elements: SpellType[] = baseCards || ['fire', 'vine', 'ice', 'thunder', 'rock'];
   
-  if (baseCards) {
-    // 如果提供了基础卡池，随机选择填充到20张
+    if (baseCards) {
+    // [P0 Fix #2] 使用确定性 RNG 填充牌组
+    const rng = getGameRNG();
     for (let i = 0; i < 20; i++) {
-        deck.push(elements[Math.floor(Math.random() * elements.length)]);
+        deck.push(rng.pick(elements));
     }
   } else {
     // 默认平均分配

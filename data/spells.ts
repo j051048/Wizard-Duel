@@ -281,6 +281,26 @@ export const SPELLS: Spell[] = [
      artSrc: '/cards/hero-rock-earthquake.webp'
   }),
   
+    // ============ [P1 Fix #13] Luck Coin 幸运币 ============
+  {
+    id: 'luck_coin' as SpellType,
+    name: '幸运币',
+    emoji: '🪙',
+    artSrc: '/cards/luck-coin.webp',
+    color: 'text-yellow-400',
+    borderColor: 'border-yellow-400',
+    shadowColor: 'rgba(250,204,21,0.5)',
+    beats: 'skip' as SpellType,
+    manaCost: 0,
+    damage: 0,
+    rarity: 'common',
+    mechanic: 'heal' as any, // 使用 heal 机制但实际效果是 +1 法力
+    cardSet: 'core' as CardSet,
+    description: '获得1点临时法力水晶。后手补偿。',
+    shortDesc: '+1法力',
+    value: 0, // 不治疗
+  },
+
   // ============ Skip ============
   { 
     id: 'skip', 

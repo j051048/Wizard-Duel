@@ -26,6 +26,7 @@ import {
 import { GameSequenceExecutor } from './sequence';
 import { getMechanicHandler, MECHANIC_DEFINITIONS } from './mechanics';
 import { cloneDuelState } from './stateUtils';
+import { SeededRNG, resetGameRNG, getGameRNG } from '../utils/seededRandom';
 
 // [Phase 2] 重新导出 AI 模块，保持向后兼容
 export { executeAITurn, getAISpell, pickBestSpellForAI } from './ai';
@@ -80,16 +81,19 @@ export const drawCard = (deck: SpellType[], hand: SpellType[], fatigue: number =
 
 // ============ 初始化对战状态 ============
 
-export const createInitialDuelState = (playerDeck: SpellType[], gameMode: GameMode = 'standard'): DuelState => {
-  // 初始手牌: 从牌组抽5张
-  const shuffledDeck = shuffleArray(playerDeck);
+export const createInitialDuelState = (playerDeck: SpellType[], gameMode: GameMode = 'standard', seed?: number): DuelState => {
+  // [P0 Fix #2] 使用确定性 RNG
+  const rng = resetGameRNG(seed);
+  
+  // 初始手牌: 从牌组抽5张（使用确定性洗牌）
+  const shuffledDeck = rng.shuffle(playerDeck);
   const playerHand = shuffledDeck.slice(0, 5);
   const remainingDeck = shuffledDeck.slice(5);
   
   // 为对手创建基于游戏模式的牌组
   const availableSpells = getCardsForMode(gameMode);
   const opponentDeck = createDeck(availableSpells.map(s => s.id));
-  const shuffledOpponentDeck = shuffleArray(opponentDeck);
+  const shuffledOpponentDeck = rng.shuffle(opponentDeck);
   
   return {
     playerHP: GAME_CONFIG.maxHP,
@@ -114,7 +118,7 @@ export const createInitialDuelState = (playerDeck: SpellType[], gameMode: GameMo
     opponentFatigue: 0,
     playerHand,
     playerDeck: remainingDeck,
-    opponentHand: shuffledOpponentDeck.slice(0, 5), // 初始化对手真实手牌
+        opponentHand: shuffledOpponentDeck.slice(0, 5),
     opponentHandSize: 5,
     opponentDeck: shuffledOpponentDeck.slice(5),
     
@@ -127,8 +131,41 @@ export const createInitialDuelState = (playerDeck: SpellType[], gameMode: GameMo
     opponentHeroSkillUsed: false,
     playerTriggers: [],
     opponentTriggers: [],
-    isTutorial: false
+    isTutorial: false,
+    
+    // [P0 Fix #2] 保存 RNG 状态用于断线重连
+    rngState: rng.serialize(),
+    // [P0 Fix #1] 触发器入场计数器
+    triggerOrderCounter: 0,
   };
+};
+
+/**
+ * [P1 Fix #13] 给后手玩家发放幸运币
+ * 后手方额外获得1张牌 + 1张幸运币
+ */
+export const applyLuckCoin = (state: DuelState, secondPlayer: 'player' | 'opponent'): DuelState => {
+  const newState = { ...state };
+  if (secondPlayer === 'player') {
+    // 玩家后手：多抽1张 + 获得幸运币
+    if (newState.playerDeck.length > 0) {
+      const extraCard = newState.playerDeck[0];
+      newState.playerDeck = newState.playerDeck.slice(1);
+      newState.playerHand = [...newState.playerHand, extraCard];
+    }
+    newState.playerHand = [...newState.playerHand, 'luck_coin' as SpellType];
+  } else {
+    // 对手后手
+    if (newState.opponentDeck.length > 0) {
+      const extraCard = newState.opponentDeck[0];
+      newState.opponentDeck = newState.opponentDeck.slice(1);
+      newState.opponentHand = [...newState.opponentHand, extraCard];
+      newState.opponentHandSize = newState.opponentHand.length;
+    }
+    newState.opponentHand = [...newState.opponentHand, 'luck_coin' as SpellType];
+    newState.opponentHandSize = newState.opponentHand.length;
+  }
+  return newState;
 };
 
 // ============ 辅助逻辑 ============
@@ -371,7 +408,9 @@ export const calculatePayout = (
   if (result === 'DRAW') {
     payout = Math.floor(bet); 
   } else if (result === 'WIN') {
-    isCrit = Math.random() < CRIT_CHANCE;
+    // [P0 Fix #2] 使用确定性 RNG
+    const rng = getGameRNG();
+    isCrit = rng.chance(CRIT_CHANCE);
     let profit = bet * WIN_MULTIPLIER;
     if (isCrit) profit *= CRIT_MULTIPLIER;
     payout = Math.floor(bet + profit);
@@ -385,7 +424,9 @@ export const calculatePayout = (
  * @deprecated
  */
 export const getRandomSpell = (playerSpellId?: SpellType): SpellType => {
-  return SPELLS[Math.floor(Math.random() * 10)].id;
+  // [P0 Fix #2] 使用确定性 RNG
+  const rng = getGameRNG();
+  return rng.pick(SPELLS.slice(0, 10)).id;
 };
 
 export const determineWinner = (p: SpellType, o: SpellType): 'WIN' | 'LOSS' | 'DRAW' => {
@@ -470,7 +511,7 @@ export const getTavernAIDecision = (
       if (damageCards.length > 0) return damageCards[0].id;
 
       // 如果没有伤害卡，选择其他卡
-      return availableCards[Math.floor(Math.random() * availableCards.length)];
+            return getGameRNG().pick(availableCards);
 
     case 'defensive':
       // 优先选择治疗或护甲卡牌
@@ -480,26 +521,29 @@ export const getTavernAIDecision = (
       if (defensiveCards.length > 0) return defensiveCards[0].id;
 
       // 如果没有防御卡，选择其他卡
-      return availableCards[Math.floor(Math.random() * availableCards.length)];
+      return getGameRNG().pick(availableCards);
 
     case 'balanced':
     default:
-      // 随机选择
-      return availableCards[Math.floor(Math.random() * availableCards.length)];
+      // [P0 Fix #2] 使用确定性 RNG
+      return getGameRNG().pick(availableCards);
   }
 };
 
-export const createTavernDuelState = (playerDeck: SpellType[], aiProfile: AIProfile, gameMode: GameMode = 'standard'): DuelState => {
+export const createTavernDuelState = (playerDeck: SpellType[], aiProfile: AIProfile, gameMode: GameMode = 'standard', seed?: number): DuelState => {
+  // [P0 Fix #2] 使用确定性 RNG
+  const rng = resetGameRNG(seed);
+  
   // 为AI创建随机牌组（使用相同的基础牌池）
-  const aiDeck = generateTavernAIDeck(aiProfile, gameMode);
+  const aiDeck = generateTavernAIDeck(aiProfile, gameMode, rng);
 
-  // 玩家初始状态
-  const shuffledPlayerDeck = shuffleArray(playerDeck);
+  // 玩家初始状态（确定性洗牌）
+  const shuffledPlayerDeck = rng.shuffle(playerDeck);
   const playerHand = shuffledPlayerDeck.slice(0, 5);
   const remainingPlayerDeck = shuffledPlayerDeck.slice(5);
  
-  // AI初始状态
-  const shuffledAIDeck = shuffleArray(aiDeck);
+  // AI初始状态（确定性洗牌）
+  const shuffledAIDeck = rng.shuffle(aiDeck);
   const aiHand = shuffledAIDeck.slice(0, 5);
   const remainingAIDeck = shuffledAIDeck.slice(5);
 
@@ -542,11 +586,19 @@ export const createTavernDuelState = (playerDeck: SpellType[], aiProfile: AIProf
     opponentHeroSkillUsed: false,
     playerTriggers: [],
     opponentTriggers: [],
-    isTutorial: false
+    isTutorial: false,
+    
+    // [P0 Fix #2] 保存 RNG 状态
+    rngState: rng.serialize(),
+    // [P0 Fix #1] 触发器入场计数器
+    triggerOrderCounter: 0,
   };
 };
 
-const generateTavernAIDeck = (aiProfile: AIProfile, gameMode: GameMode = 'standard'): SpellType[] => {
+const generateTavernAIDeck = (aiProfile: AIProfile, gameMode: GameMode = 'standard', rng?: SeededRNG): SpellType[] => {
+  // [P0 Fix #2] 使用传入的 SeededRNG 或全局 RNG
+  const _rng = rng || getGameRNG();
+  
   // [P1-23] AI 牌组构建策略优化
   const availableSpells = getCardsForMode(gameMode);
   const baseCards = availableSpells.filter(s => s.id !== 'skip' && !s.id.startsWith('hero_'));
@@ -594,8 +646,8 @@ const generateTavernAIDeck = (aiProfile: AIProfile, gameMode: GameMode = 'standa
       const pool = cardsByCost[cost] || [];
       if (pool.length === 0) continue;
       
-      for (let i = 0; i < count && deck.length < deckSize; i++) {
-        const card = pool[Math.floor(Math.random() * pool.length)];
+            for (let i = 0; i < count && deck.length < deckSize; i++) {
+        const card = _rng.pick(pool);
         // 限制同一张卡牌最多2张（传说1张）
         const currentCount = deck.filter(id => id === card.id).length;
         const maxCopies = card.rarity === 'legendary' ? 1 : 2;
@@ -609,9 +661,9 @@ const generateTavernAIDeck = (aiProfile: AIProfile, gameMode: GameMode = 'standa
       }
     }
     
-    // 补满到 deckSize
+        // 补满到 deckSize
     while (deck.length < deckSize) {
-      const card = cardPool[Math.floor(Math.random() * cardPool.length)];
+      const card = _rng.pick(cardPool);
       const currentCount = deck.filter(id => id === card.id).length;
       if (currentCount < 2) {
         deck.push(card.id);
@@ -626,9 +678,9 @@ const generateTavernAIDeck = (aiProfile: AIProfile, gameMode: GameMode = 'standa
       // 新手AI：只用基础便宜卡牌
       return buildBalancedDeck(baseCards.filter(c => c.manaCost <= 4 && c.rarity !== 'legendary'), 0.3);
 
-    case 'medium':
+        case 'medium':
       // 中等AI：均衡牌组
-      return buildBalancedDeck(baseCards.filter(c => c.rarity !== 'legendary' || Math.random() < 0.3), 0.5);
+      return buildBalancedDeck(baseCards.filter(c => c.rarity !== 'legendary' || _rng.chance(0.3)), 0.5);
 
     case 'hard':
       // 困难AI：使用最强组合

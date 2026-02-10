@@ -1,65 +1,331 @@
 /**
- * Anti-Cheat System Stubs
+ * Anti-Cheat & Server Validation System
  * 
- * 防作弊机制：状态哈希验证、时间验证、输入清理
- * 当前为 mock 模式，仅记录日志
+ * [P0 Fix #6] 防作弊机制 - 所有关键结算的独立校验层
+ * 
+ * 设计原则：
+ * 1. 所有 HP 变化必须经过 validateHPChange 校验
+ * 2. 出牌合法性由 validateCardPlay 独立计算（不信任客户端状态）
+ * 3. 状态哈希在每次回合结束时生成，用于检测篡改
+ * 4. RNG 种子校验确保客户端没有替换随机数生成器
+ * 
+ * 在 Supabase Edge Function 部署前，此模块在客户端独立运行作为双重校验。
  */
 
-import { DuelState } from '../../types';
+import { DuelState, SpellType } from '../../types';
+import { getGameRNG } from '../../utils/seededRandom';
+import { GAME_CONFIG } from '../../config/gameConfig';
+import { SPELLS } from '../../data/spells';
 
-// [P0 Fix #6] 生产环境自动关闭 MOCK_MODE
-const MOCK_MODE = import.meta.env.DEV || import.meta.env.VITE_FORCE_MOCK === 'true';
+const IS_DEV = import.meta.env.DEV || import.meta.env.VITE_FORCE_MOCK === 'true';
+
+/** 校验违规的严重程度 */
+export type ViolationSeverity = 'warning' | 'error' | 'critical';
+
+export interface ValidationViolation {
+  type: string;
+  severity: ViolationSeverity;
+  message: string;
+  expected?: any;
+  actual?: any;
+}
+
+/** 校验报告 */
+export interface ValidationReport {
+  valid: boolean;
+  violations: ValidationViolation[];
+  stateHash: string;
+  timestamp: number;
+}
 
 /**
- * 计算游戏状态哈希（简化版）
- * 用于检测客户端状态是否被篡改
+ * 计算游戏状态哈希
+ * 包含所有关键字段，用于检测客户端状态篡改
  */
 export const calculateStateHash = (state: DuelState): string => {
-  // 简化的哈希计算 - 生产环境应使用加密哈希
   const criticalFields = [
     state.playerHP,
     state.opponentHP,
+    state.playerArmor,
+    state.opponentArmor,
     state.playerMana,
     state.opponentMana,
+    state.playerMaxMana,
+    state.opponentMaxMana,
     state.roundNumber,
     state.playerHand.join(','),
+    state.playerDeck.length,
     state.opponentHandSize,
+    state.opponentDeck.length,
+    state.playerFatigue,
+    state.opponentFatigue,
+    state.playerEffects.map(e => `${e.type}:${e.duration}:${e.value || 0}`).join(';'),
+    state.opponentEffects.map(e => `${e.type}:${e.duration}:${e.value || 0}`).join(';'),
+    state.playerMinions.length,
+    state.opponentMinions.length,
+    // [P0 Fix #2] 包含 RNG 状态
+    state.rngState?.initialSeed ?? 'none',
+    state.rngState?.callCount ?? 0,
   ].join('|');
   
-  // Mock: 简单字符串哈希
-  let hash = 0;
+  // FNV-1a 哈希（比简单移位更好的分布）
+  let hash = 0x811c9dc5;
   for (let i = 0; i < criticalFields.length; i++) {
-    const char = criticalFields.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
+    hash ^= criticalFields.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
+};
+
+/**
+ * [P0 Fix #6] 独立校验出牌合法性
+ * 不信任客户端传入的 canAfford 结果，完全重新计算
+ */
+export const validateCardPlay = (
+  state: DuelState,
+  cardId: SpellType,
+  caster: 'player' | 'opponent'
+): ValidationViolation[] => {
+  const violations: ValidationViolation[] = [];
+  const isPlayer = caster === 'player';
+  
+  // 1. 卡牌存在性校验
+  const spell = SPELLS.find(s => s.id === cardId);
+  if (!spell) {
+    violations.push({
+      type: 'INVALID_CARD',
+      severity: 'critical',
+      message: `Card ${cardId} does not exist in SPELLS database`,
+    });
+    return violations;
   }
   
-  return Math.abs(hash).toString(16);
+  // 2. 手牌持有校验
+  if (cardId !== 'skip' && !cardId.startsWith('hero_')) {
+    const hand = isPlayer ? state.playerHand : state.opponentHand;
+    if (!hand.includes(cardId)) {
+      violations.push({
+        type: 'CARD_NOT_IN_HAND',
+        severity: 'critical',
+        message: `Card ${cardId} not in ${caster}'s hand`,
+        expected: 'card in hand',
+        actual: hand,
+      });
+    }
+  }
+  
+  // 3. 法力值校验（独立计算费用）
+  const costMod = isPlayer ? state.playerCostMod : state.opponentCostMod;
+  const baseCost = spell.manaCost;
+  const finalCost = Math.max(0, baseCost + costMod);
+  const currentMana = isPlayer ? state.playerMana : state.opponentMana;
+  
+  if (currentMana < finalCost && cardId !== 'skip') {
+    violations.push({
+      type: 'INSUFFICIENT_MANA',
+      severity: 'error',
+      message: `Not enough mana: need ${finalCost}, have ${currentMana}`,
+      expected: finalCost,
+      actual: currentMana,
+    });
+  }
+  
+  // 4. 冻结校验
+  const effects = isPlayer ? state.playerEffects : state.opponentEffects;
+  if (effects.some(e => e.type === 'frozen') && cardId !== 'skip') {
+    violations.push({
+      type: 'FROZEN_VIOLATION',
+      severity: 'error',
+      message: `${caster} is frozen and cannot play cards`,
+    });
+  }
+  
+  // 5. 英雄技能重复使用校验
+  if (cardId.startsWith('hero_')) {
+    const alreadyUsed = isPlayer ? state.heroSkillsUsed : state.opponentHeroSkillUsed;
+    if (alreadyUsed) {
+      violations.push({
+        type: 'HERO_SKILL_ALREADY_USED',
+        severity: 'error',
+        message: `${caster} already used hero skill this turn`,
+      });
+    }
+  }
+  
+  return violations;
+};
+
+/**
+ * [P0 Fix #6] 校验 HP 变化合理性
+ * 伤害不能超过法术最大值 * 暴击系数 * 连击系数的合理范围
+ */
+export const validateHPChange = (
+  state: DuelState,
+  target: 'player' | 'opponent',
+  delta: number,
+  sourceSpell?: SpellType
+): ValidationViolation[] => {
+  const violations: ValidationViolation[] = [];
+  
+  // 治疗不能超过满血
+  if (delta > 0) {
+    const currentHP = target === 'player' ? state.playerHP : state.opponentHP;
+    if (currentHP + delta > GAME_CONFIG.maxHP + 5) { // 5 点容差
+      violations.push({
+        type: 'OVERHEAL',
+        severity: 'warning',
+        message: `Heal would exceed max HP: ${currentHP} + ${delta} > ${GAME_CONFIG.maxHP}`,
+      });
+    }
+  }
+  
+  // 单次伤害不能超过合理上限（最强卡 * 1.5 暴击 * 3 连击 = 10 * 1.5 * 3 = 45）
+  if (delta < 0) {
+    const absDamage = Math.abs(delta);
+    const MAX_REASONABLE_DAMAGE = 50; // 合理上限
+    if (absDamage > MAX_REASONABLE_DAMAGE) {
+      violations.push({
+        type: 'EXCESSIVE_DAMAGE',
+        severity: 'critical',
+        message: `Damage ${absDamage} exceeds reasonable maximum ${MAX_REASONABLE_DAMAGE}`,
+        expected: `<= ${MAX_REASONABLE_DAMAGE}`,
+        actual: absDamage,
+      });
+    }
+  }
+  
+  return violations;
+};
+
+/**
+ * [P0 Fix #6] RNG 完整性校验
+ * 验证客户端的 RNG 状态是否与预期一致
+ */
+export const validateRNGIntegrity = (state: DuelState): ValidationViolation[] => {
+  const violations: ValidationViolation[] = [];
+  
+  if (!state.rngState) {
+    violations.push({
+      type: 'MISSING_RNG_STATE',
+      severity: 'warning',
+      message: 'DuelState missing rngState - cannot verify randomness integrity',
+    });
+    return violations;
+  }
+  
+  const currentRNG = getGameRNG();
+  if (currentRNG.initialSeed !== state.rngState.initialSeed) {
+    violations.push({
+      type: 'RNG_SEED_MISMATCH',
+      severity: 'critical',
+      message: 'RNG seed mismatch - possible tampering',
+      expected: state.rngState.initialSeed,
+      actual: currentRNG.initialSeed,
+    });
+  }
+  
+  return violations;
+};
+
+/**
+ * [P0 Fix #6] 完整的回合结束校验报告
+ * 在每个回合结束时调用，生成完整的校验报告
+ */
+export const generateValidationReport = (state: DuelState): ValidationReport => {
+  const violations: ValidationViolation[] = [];
+  
+  // HP 范围校验
+  if (state.playerHP < 0 || state.playerHP > GAME_CONFIG.maxHP) {
+    violations.push({
+      type: 'INVALID_HP',
+      severity: 'critical',
+      message: `Player HP out of range: ${state.playerHP}`,
+      expected: `0-${GAME_CONFIG.maxHP}`,
+      actual: state.playerHP,
+    });
+  }
+  if (state.opponentHP < 0 || state.opponentHP > GAME_CONFIG.maxHP) {
+    violations.push({
+      type: 'INVALID_HP',
+      severity: 'critical',
+      message: `Opponent HP out of range: ${state.opponentHP}`,
+    });
+  }
+  
+  // 法力值范围校验
+  if (state.playerMana < 0 || state.playerMana > GAME_CONFIG.maxMana) {
+    violations.push({
+      type: 'INVALID_MANA',
+      severity: 'error',
+      message: `Player mana out of range: ${state.playerMana}`,
+    });
+  }
+  
+  // 手牌数量校验
+  if (state.playerHand.length > 10) {
+    violations.push({
+      type: 'HAND_OVERFLOW',
+      severity: 'error',
+      message: `Player hand exceeds maximum: ${state.playerHand.length}/10`,
+    });
+  }
+  
+  // 随从数量校验
+  if (state.playerMinions.length > 5) {
+    violations.push({
+      type: 'MINION_OVERFLOW',
+      severity: 'error',
+      message: `Player minions exceed maximum: ${state.playerMinions.length}/5`,
+    });
+  }
+  
+  // 回合数合理性
+  if (state.roundNumber > 100) {
+    violations.push({
+      type: 'EXCESSIVE_ROUNDS',
+      severity: 'warning',
+      message: `Game lasted ${state.roundNumber} rounds - unusually long`,
+    });
+  }
+  
+  // RNG 完整性
+  violations.push(...validateRNGIntegrity(state));
+  
+  // 生成哈希
+  const stateHash = calculateStateHash(state);
+  
+  const hasCritical = violations.some(v => v.severity === 'critical');
+  
+  // 日志输出（开发模式详细，生产模式只输出 critical）
+  if (IS_DEV && violations.length > 0) {
+    console.warn('[AntiCheat] Validation report:', violations);
+  } else if (hasCritical) {
+    console.error('[AntiCheat] CRITICAL violations detected!', violations.filter(v => v.severity === 'critical'));
+  }
+  
+  return {
+    valid: !hasCritical,
+    violations,
+    stateHash,
+    timestamp: Date.now(),
+  };
 };
 
 /**
  * 验证状态哈希
- * @param state - 当前状态
- * @param expectedHash - 期望的哈希值
- * @returns 验证结果
  */
-export const verifyStateHash = async (
+export const verifyStateHash = (
   state: DuelState,
   expectedHash: string
-): Promise<{ valid: boolean; reason?: string }> => {
-  if (MOCK_MODE) {
-    const actualHash = calculateStateHash(state);
-    console.log(`[Mock] verifyStateHash: expected=${expectedHash}, actual=${actualHash}`);
-    
-    if (actualHash !== expectedHash) {
-      console.warn('[AntiCheat] State hash mismatch - possible tampering');
-      return { valid: false, reason: 'State hash mismatch' };
-    }
-    
-    return { valid: true };
+): { valid: boolean; reason?: string } => {
+  const actualHash = calculateStateHash(state);
+  if (actualHash !== expectedHash) {
+    console.warn('[AntiCheat] State hash mismatch - possible tampering', {
+      expected: expectedHash,
+      actual: actualHash,
+    });
+    return { valid: false, reason: 'State hash mismatch' };
   }
-  
-  // TODO: Real server-side hash verification
   return { valid: true };
 };
 

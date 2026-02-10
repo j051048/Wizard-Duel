@@ -37,6 +37,8 @@ import { PlayerHUD } from './battle/hud/PlayerHUD';
 import { HandArea } from './battle/hand/HandArea';
 import { DragDropZone } from './battle/board/DragDropZone';
 import { FloatingTextOverlay } from './battle/feedback/FloatingText';
+import { FloatingActionLog } from './battle/FloatingActionLog';
+import { SoundManager } from '../services/SoundManager';
 
 // Hooks
 import { useDragToPlay } from '../hooks/useDragToPlay';
@@ -171,10 +173,17 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     prevOppCard.current = opponentCard;
   }, [opponentCard, spawnProjectile]);
 
-  useEffect(() => {
+    useEffect(() => {
     isMounted.current = true;
     return () => { isMounted.current = false; };
   }, []);
+
+  // [P2 Fix #21] Dynamic BGM: 根据 HP 比例动态调整音乐气氛
+  useEffect(() => {
+    if (duelState && !isMuted) {
+      SoundManager.updateBattleBGM(duelState.playerHP, duelState.opponentHP, GAME_CONFIG.maxHP);
+    }
+  }, [duelState?.playerHP, duelState?.opponentHP, isMuted]);
 
     // [P0 Fix A-2] TurnBanner 逻辑已移除，统一由 useTurnManager.showTurnBanner 控制
   // 通过 gameLoopState.turnBanner 传入 TurnBanner 组件
@@ -213,9 +222,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   return (
     <div className={`
       fixed inset-0 w-full h-full bg-slate-950 no-select flex flex-col z-40 overflow-hidden 
-      ${shakeClass}
+            ${shakeClass}
       ${isPlayerTurnGlow ? 'ring-4 ring-amber-500/30 ring-inset' : ''}
-    `}>
+    `}
+    style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+    >
             {/* [P0 Fix A-2] 回合横幅 — 统一由 useTurnManager 驱动 */}
       <TurnBanner type={gameLoopState.turnBanner} roundNumber={duelState?.roundNumber || 1} />
       
@@ -359,6 +370,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         playerHp={duelState.playerHP}
         maxHp={GAME_CONFIG.maxHP}
       />
+
+            {/* [P2 Fix #19] Floating Action Log — 常驻最近5条 */}
+      {!isMobile && (
+        <FloatingActionLog messages={effectMessages} maxVisible={5} />
+      )}
 
       {/* Mobile Combat Feed - [P1-21] 改进移动端可读性 */}
       <div className={`${isMobile ? 'fixed top-16 left-2 z-30 pointer-events-none max-w-[180px]' : ''}`}>

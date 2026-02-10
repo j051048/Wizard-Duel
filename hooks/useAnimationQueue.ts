@@ -46,12 +46,34 @@ export function useAnimationQueue<T extends { delay?: number }>(
     setQueue(prev => [...prev, ...(Array.isArray(actions) ? actions : [actions])]);
   }, []);
 
-  const clearQueue = useCallback(() => {
+    const clearQueue = useCallback(() => {
     setQueue([]);
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
+  }, []);
+
+  /**
+   * [P1 Fix #12] 跳过当前队列中所有非关键动画
+   * 立即执行所有 UPDATE_STATE / SET_PHASE / EXECUTE_LOGIC，跳过 WAIT / ADD_MESSAGE / PLAY_ANIMATION
+   */
+  const skipToEnd = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    setQueue(prev => {
+      // 立即处理所有关键指令
+      for (const action of prev) {
+        const a = action as any;
+        if (a.type === 'UPDATE_STATE' || a.type === 'SET_PHASE' || 
+            a.type === 'UPDATE_UI' || a.type === 'EXECUTE_LOGIC') {
+          try { processRef.current(action); } catch (e) { console.error('[skipToEnd]', e); }
+        }
+      }
+      return [];
+    });
   }, []);
 
     // [P0 Fix 3.7] 使用 ref 追踪组件是否已卸载，防止卸载后更新 state
@@ -102,10 +124,12 @@ export function useAnimationQueue<T extends { delay?: number }>(
       };
   }, []);
 
-  return {
+    return {
     queue,
     isProcessing: queue.length > 0,
     enqueue,
-    clearQueue
+    clearQueue,
+    /** [P1 Fix #12] 跳过非关键动画，快进到最终状态 */
+    skipToEnd
   };
 }
