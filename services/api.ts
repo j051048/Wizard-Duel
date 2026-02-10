@@ -117,7 +117,7 @@ const _saveLocalData = (key: string, data: any) => {
 
 // ============ Mock 数据存储 (In-Memory Fallback) ============
 // Note: We now primarily use LocalStorage in Mock Mode
-let mockBalance = 1000;
+let mockBalance = 100;
 let mockHistory: BattleRecord[] = [];
 const mockDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -173,7 +173,7 @@ export const ApiService = {
         // Init new profile
         profiles[userId] = {
           address: userId,
-          balance: 1000,
+          balance: 100,
           userRank: 'Iron',
           rankScore: 0,
           stats: { wins: 0, losses: 0, totalGames: 0, winStreak: 0 }
@@ -283,7 +283,7 @@ export const ApiService = {
       const profiles = _loadLocalData<Record<string, UserProfile>>(STORAGE_KEYS.PROFILE, {});
       const profile = profiles[userId] || { 
         address: userId, 
-        balance: 1000, 
+        balance: 100, 
         userRank: 'Iron', 
         rankScore: 0, 
         stats: { wins: 0, losses: 0, totalGames: 0, winStreak: 0 } 
@@ -359,7 +359,7 @@ export const ApiService = {
       console.error('游戏结算失败:', response.error);
       const profiles = _loadLocalData<Record<string, UserProfile>>(STORAGE_KEYS.PROFILE, {});
       const profile = profiles[userId];
-      return { newBalance: profile ? profile.balance : 1000, verified: false, payout: 0, isCrit: false };
+      return { newBalance: profile ? profile.balance : 100, verified: false, payout: 0, isCrit: false };
     }
 
     return response.data!;
@@ -430,7 +430,7 @@ export const ApiService = {
       const profiles = _loadLocalData<Record<string, UserProfile>>(STORAGE_KEYS.PROFILE, {});
       const profile = profiles[userId] || { 
         address: userId, 
-        balance: 1000, 
+        balance: 100, 
         userRank: 'Iron', 
         rankScore: 0, 
         stats: { wins: 0, losses: 0, totalGames: 0, winStreak: 0 } 

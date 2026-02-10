@@ -46,7 +46,7 @@ export interface FriendBattleInvite {
 
 // ============ 排位赛季系统 ============
 
-export type RankTier = 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Diamond' | 'Master' | 'Grandmaster';
+export type RankTier = 'Iron' | 'Silver' | 'Gold' | 'Platinum' | 'Diamond' | 'Epic' | 'Master' | 'Mythic' | 'Legend';
 
 export interface RankInfo {
   tier: RankTier;
@@ -90,23 +90,27 @@ export interface PlayerSeasonData {
 // ============ 段位配置 ============
 
 export const RANK_TIERS: { tier: RankTier; minPoints: number; icon: string; color: string }[] = [
-  { tier: 'Bronze', minPoints: 0, icon: '🥉', color: '#cd7f32' },
-  { tier: 'Silver', minPoints: 400, icon: '🥈', color: '#c0c0c0' },
-  { tier: 'Gold', minPoints: 800, icon: '🥇', color: '#ffd700' },
-  { tier: 'Platinum', minPoints: 1200, icon: '💎', color: '#e5e4e2' },
-  { tier: 'Diamond', minPoints: 1600, icon: '💠', color: '#b9f2ff' },
-  { tier: 'Master', minPoints: 2000, icon: '👑', color: '#9932cc' },
-  { tier: 'Grandmaster', minPoints: 2500, icon: '🏆', color: '#ff4500' },
+  { tier: 'Iron', minPoints: 0, icon: '🥉', color: '#a19d94' },
+  { tier: 'Silver', minPoints: 1000, icon: '🥈', color: '#c0c0c0' },
+  { tier: 'Gold', minPoints: 2500, icon: '🥇', color: '#ffd700' },
+  { tier: 'Platinum', minPoints: 4500, icon: '💠', color: '#e5e4e2' },
+  { tier: 'Diamond', minPoints: 7000, icon: '💎', color: '#b9f2ff' },
+  { tier: 'Epic', minPoints: 10000, icon: '🟣', color: '#9d00ff' },
+  { tier: 'Master', minPoints: 14000, icon: '👑', color: '#ff8c00' },
+  { tier: 'Mythic', minPoints: 19000, icon: '🔥', color: '#ff4500' },
+  { tier: 'Legend', minPoints: 25000, icon: '🏆', color: '#ff0000' },
 ];
 
 export const SEASON_REWARDS: SeasonReward[] = [
-  { tier: 'Bronze', rewards: { gold: 100, packs: 1 } },
+  { tier: 'Iron', rewards: { gold: 50, packs: 1 } },
   { tier: 'Silver', rewards: { gold: 200, packs: 2 } },
   { tier: 'Gold', rewards: { gold: 400, packs: 3, cardback: 'cardback_gold_s1' } },
   { tier: 'Platinum', rewards: { gold: 600, packs: 4, cardback: 'cardback_platinum_s1' } },
-  { tier: 'Diamond', rewards: { gold: 800, packs: 5, cardback: 'cardback_diamond_s1', avatar: 'avatar_diamond_s1' } },
-  { tier: 'Master', rewards: { gold: 1000, packs: 6, cardback: 'cardback_master_s1', avatar: 'avatar_master_s1', title: '大师' } },
-  { tier: 'Grandmaster', rewards: { gold: 1500, packs: 8, cardback: 'cardback_gm_s1', avatar: 'avatar_gm_s1', title: '宗师' } },
+  { tier: 'Diamond', rewards: { gold: 1000, packs: 5, cardback: 'cardback_diamond_s1', avatar: 'avatar_diamond_s1' } },
+  { tier: 'Epic', rewards: { gold: 1500, packs: 6, cardback: 'cardback_epic_s1' } },
+  { tier: 'Master', rewards: { gold: 2000, packs: 8, cardback: 'cardback_master_s1', avatar: 'avatar_master_s1', title: '大师' } },
+  { tier: 'Mythic', rewards: { gold: 3000, packs: 10, title: '神话' } },
+  { tier: 'Legend', rewards: { gold: 5000, packs: 20, title: '传说' } },
 ];
 
 // ============ 积分计算配置 ============

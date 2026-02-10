@@ -108,7 +108,11 @@ export type Database = {
           username: string | null
           win_count: number | null
           xp: number | null
-          rank_score: number | null // [P0 Fix #3] 新增积分字段
+          rank_score: number | null
+          rank_tier: string | null
+          games_played: number | null
+          updated_at: string | null
+          wallet_address: string | null
         }
         Insert: {
           avatar_url?: string | null

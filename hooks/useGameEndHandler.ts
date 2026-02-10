@@ -15,7 +15,7 @@ import { SpellType } from '../types'; // Corrected import path for SpellType
 import { ApiService } from '../services/api';
 import { useUserStore } from '../stores/useUserStore';
 import { useUIStore } from '../stores/useUIStore';
-import { calculateRankUpdate } from '../services/rankSystem';
+import { calculateRankUpdate, getRankByScore } from '../services/rankSystem';
 import { QuestManager } from '../services/QuestManager';
 import { calculatePayout } from '../services/gameLogic';
 
@@ -72,8 +72,8 @@ export function useGameEndHandler({
     const damage = opponentMaxMana - opponentHP;
     if (damage > 0) QuestManager.updateProgress('deal_damage', damage);
 
-    // 计算排名更新
-    const { newScore, newRank, scoreDelta } = calculateRankUpdate(user.rankScore, result, newStreak);
+    // 计算排名更新（客户端先乐观计算）
+    let { newScore, newRank, scoreDelta } = calculateRankUpdate(user.rankScore, result, newStreak);
     user.setRankScore(newScore);
     user.setUserRank(newRank);
 
@@ -101,7 +101,7 @@ export function useGameEndHandler({
             
             // [P0 Fix #3] 调用原子化 settlement RPC
             // 包含：金币结算、经验增加、积分变动、战绩记录
-            await saveBattleResult({
+            const rpcResult = await saveBattleResult({
               user_id: sessionUserId,
               opponent_name: gameLoopState.duelState?.aiProfile?.name || 'Unknown',
               result: result.toLowerCase() as 'win' | 'loss' | 'draw',
@@ -111,15 +111,24 @@ export function useGameEndHandler({
               score_delta: scoreDelta // 传递客户端计算的 ELO 变化
             });
 
-            // 移除旧的 redundant update({ xp: newScore }) 调用
-            // RPC 内部已处理 rank_score 更新
+            // 立即使用 RPC 返回的最新数据更新 store
+            if (rpcResult?.success) {
+              user.setBalance(rpcResult.new_balance);
+              user.setRankScore(rpcResult.new_score);
+              const rpcRank = getRankByScore(rpcResult.new_score);
+              user.setUserRank(rpcRank);
+              // 用服务端的权威数据覆盖客户端的乐观计算
+              newScore = rpcResult.new_score;
+              newRank = rpcRank;
+              console.log(`[Battle] RPC 成功: score=${rpcResult.new_score}, rank=${rpcResult.new_rank}`);
+            }
             
             finalPayout = mock.payout;
             finalIsCrit = mock.isCrit;
             supabaseSaved = true;
             
-            // 重新从 Supabase 加载最新数据 (确保一致性)
-            user.loadUserData(user.activeAddress!);
+            // 异步加载完整数据（不阻塞结算UI）
+            user.loadUserData(user.activeAddress!).catch(() => {});
           }
         } catch (supabaseErr) {
           console.warn('Supabase save skipped:', supabaseErr);

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Rank, Deck, BattleRecord, PlayerStats, SpellType } from '../types';
 import { ApiService } from '../services/api';
+import { getRankByScore } from '../services/rankSystem';
 
 interface UserState {
   activeAddress: string | null;
@@ -180,11 +181,13 @@ export const useUserStore = create<UserState>((set, get) => ({
           // -- Profile（金币、经验、胜负）
           const profile = await getProfile(userId);
           if (profile) {
+            const score = profile.rank_score ?? 0;
+            // 直接使用数据库中的 rank_tier，兜底时用 getRankByScore 根据积分计算
+            const rank = (profile.rank_tier as Rank) || getRankByScore(score);
             set({
               balance: profile.gold || 0,
-              userRank: (profile.level && profile.level > 10 ? 'Gold' : 'Iron') as Rank,
-              // [P0 Fix #3] 积分字段迁移：优先读取 rank_score，回退读取 xp (legacy)
-              rankScore: profile.rank_score ?? profile.xp ?? 0,
+              userRank: rank,
+              rankScore: score,
               winStreak: profile.win_count || 0,
             });
           }

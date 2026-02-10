@@ -14,7 +14,6 @@ import {
   SEASON_REWARDS
 } from '../types/social';
 
-const STORAGE_KEY_RANK = 'wizard_duel_rank';
 const STORAGE_KEY_SEASON = 'wizard_duel_season_data';
 
 class RankServiceClass {
@@ -64,13 +63,13 @@ class RankServiceClass {
       oduserId: userId,
       seasonId: this.currentSeason.id,
       currentRank: {
-        tier: 'Bronze',
+        tier: 'Iron',
         division: 4,
         points: 0,
         totalPoints: 0
       },
       peakRank: {
-        tier: 'Bronze',
+        tier: 'Iron',
         division: 4,
         points: 0,
         totalPoints: 0
@@ -160,7 +159,6 @@ class RankServiceClass {
     }
 
     // 更新积分
-    const oldRank = { ...this.playerData.currentRank };
     this.playerData.currentRank.points += pointsChange;
     this.playerData.currentRank.totalPoints += pointsChange;
     this.playerData.currentRank.totalPoints = Math.max(0, this.playerData.currentRank.totalPoints);
@@ -241,7 +239,7 @@ class RankServiceClass {
 
   private createDefaultRank(): RankInfo {
     return {
-      tier: 'Bronze',
+      tier: 'Iron',
       division: 4,
       points: 0,
       totalPoints: 0
@@ -261,13 +259,15 @@ class RankServiceClass {
 
   private getTierNameCN(tier: RankTier): string {
     const names: Record<RankTier, string> = {
-      'Bronze': '青铜',
+      'Iron': '黑铁',
       'Silver': '白银',
       'Gold': '黄金',
       'Platinum': '铂金',
       'Diamond': '钻石',
+      'Epic': '史诗',
       'Master': '大师',
-      'Grandmaster': '宗师'
+      'Mythic': '神话',
+      'Legend': '传说'
     };
     return names[tier];
   }
