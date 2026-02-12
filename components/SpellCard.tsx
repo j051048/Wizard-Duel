@@ -346,11 +346,26 @@ export const SpellCard = memo<SpellCardProps>(({
         </div>
       </motion.div>
   );
-}, (prev, next) => {
-    return prev.spell?.id === next.spell?.id && 
-           prev.isSelected === next.isSelected && 
-           prev.isAffordable === next.isAffordable &&
-           prev.disabled === next.disabled;
+}, (prevProps, nextProps) => {
+    // 【性能优化】完整比较所有影响渲染的 props
+    // 卡牌数据比较
+    if (prevProps.spell?.id !== nextProps.spell?.id) return false;
+    
+    // 交互状态比较（高频变化）
+    if (prevProps.isSelected !== nextProps.isSelected) return false;
+    if (prevProps.isAffordable !== nextProps.isAffordable) return false;
+    if (prevProps.disabled !== nextProps.disabled) return false;
+    
+    // 布局状态比较
+    if (prevProps.isSmall !== nextProps.isSmall) return false;
+    if (prevProps.isFaceDown !== nextProps.isFaceDown) return false;
+    if (prevProps.showMechanic !== nextProps.showMechanic) return false;
+    if (prevProps.showCost !== nextProps.showCost) return false;
+    
+    // 事件处理器引用稳定性由调用方保证（useCallback）
+    // onClick, onMouseEnter, onMouseLeave, onPointerDown, onPointerUp 不参与比较
+    
+    return true;
 });
 
 export default SpellCard;

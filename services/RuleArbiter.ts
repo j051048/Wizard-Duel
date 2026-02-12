@@ -53,7 +53,6 @@ export class RuleArbiter {
     const events: ArbiterEvent[] = [];
     let s: DuelState = {
       ...state,
-      // 深拷贝数组
       playerEffects: state.playerEffects.map(e => ({ ...e })),
       opponentEffects: state.opponentEffects.map(e => ({ ...e })),
       playerHand: [...state.playerHand],
@@ -101,7 +100,7 @@ export class RuleArbiter {
       return { newState: s, events, gameOver: deathCheck2 };
     }
 
-        // ========== 7. 回合开始触发器 ==========
+    // ========== 7. 回合开始触发器 ==========
     s = GameSequenceExecutor.resolveTriggers(s, 'ON_TURN_START');
 
     // [P0 Fix #3] 统一死亡帧：处理回合开始触发器可能造成的随从死亡
@@ -147,7 +146,7 @@ export class RuleArbiter {
     s = postEffectState;
     events.push(...effectEvents);
 
-        // [P0 Fix #3] 统一死亡帧：处理 DoT 可能造成的随从死亡
+    // [P0 Fix #3] 统一死亡帧：处理 DoT 可能造成的随从死亡
     const deathFrameResult = GameSequenceExecutor.resolveDeathFrame(s);
     s = deathFrameResult.state;
     deathFrameResult.logs.forEach(log => {
@@ -169,8 +168,14 @@ export class RuleArbiter {
 
   /**
    * 效果 tick: 灼烧伤害 + 持续时间递减 + 过期移除
+   * [优化] 若双方均无效果，early return 减少运算
    */
   private static tickEffects(state: DuelState): { state: DuelState; events: ArbiterEvent[] } {
+    // Early return: 双方均无效果时直接返回
+    if (state.playerEffects.length === 0 && state.opponentEffects.length === 0) {
+      return { state, events: [] };
+    }
+
     const events: ArbiterEvent[] = [];
     let s = { ...state };
 
@@ -219,34 +224,39 @@ export class RuleArbiter {
 
   /**
    * 抽牌阶段: 双方各抽1张
+   * [优化] 减少中间 spread 操作
    */
   private static resolveDrawPhase(state: DuelState): { state: DuelState; events: ArbiterEvent[] } {
     const events: ArbiterEvent[] = [];
-    let s = { ...state };
-
+    
     // 玩家抽牌
-    const pResult = drawCard(s.playerDeck, s.playerHand, s.playerFatigue);
-    s = { ...s, playerDeck: pResult.newDeck, playerHand: pResult.newHand, playerFatigue: pResult.newFatigue };
+    const pResult = drawCard(state.playerDeck, state.playerHand, state.playerFatigue);
+    // 对手抽牌
+    const oResult = drawCard(pResult.newDeck, pResult.newHand, pResult.newFatigue);
+
+    // 构建 event
     if (pResult.fatigueDamage > 0) {
-      s.playerHP = Math.max(0, s.playerHP - pResult.fatigueDamage);
       events.push({ type: 'FATIGUE', target: 'player', value: pResult.fatigueDamage, description: `😵 你因疲劳受到 ${pResult.fatigueDamage} 点伤害` });
     } else if (pResult.drawnCard) {
       events.push({ type: 'DRAW', target: 'player', description: `📜 你抽了一张牌` });
     }
+    if (oResult.fatigueDamage > 0) {
+      events.push({ type: 'FATIGUE', target: 'opponent', value: oResult.fatigueDamage, description: `😵 对手因疲劳受到 ${oResult.fatigueDamage} 点伤害` });
+    }
 
-    // 对手抽牌
-    const oResult = drawCard(s.opponentDeck, s.opponentHand, s.opponentFatigue);
-    s = {
-      ...s,
+    // 一次性构建新状态，避免多次 spread
+    const s: DuelState = {
+      ...state,
+      playerDeck: pResult.newDeck,
+      playerHand: pResult.newHand,
+      playerFatigue: pResult.newFatigue,
+      playerHP: pResult.fatigueDamage > 0 ? Math.max(0, state.playerHP - pResult.fatigueDamage) : state.playerHP,
       opponentDeck: oResult.newDeck,
       opponentHand: oResult.newHand,
       opponentHandSize: oResult.newHand.length,
       opponentFatigue: oResult.newFatigue,
+      opponentHP: oResult.fatigueDamage > 0 ? Math.max(0, state.opponentHP - oResult.fatigueDamage) : state.opponentHP,
     };
-    if (oResult.fatigueDamage > 0) {
-      s.opponentHP = Math.max(0, s.opponentHP - oResult.fatigueDamage);
-      events.push({ type: 'FATIGUE', target: 'opponent', value: oResult.fatigueDamage, description: `😵 对手因疲劳受到 ${oResult.fatigueDamage} 点伤害` });
-    }
 
     return { state: s, events };
   }
