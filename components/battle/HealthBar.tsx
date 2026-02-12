@@ -17,7 +17,9 @@ export const HealthBar: React.FC<HealthBarProps> = ({ current, max, isPlayer }) 
   
   const [displayPercentage, setDisplayPercentage] = useState(percentage);
   const [isHurt, setIsHurt] = useState(false);
+  const [isBouncing, setIsBouncing] = useState(false);
   const prevPercentage = useRef(percentage);
+  const prevCurrent = useRef(current);
   
   useEffect(() => {
     if (percentage < prevPercentage.current) {
