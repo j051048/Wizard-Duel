@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { SpellCard } from '../SpellCard';
-import { DuelState, SpellType } from '../../types';
+import { DuelState, SpellType, Minion } from '../../types';
 import { getSpellById } from '../../services/gameLogic';
 
 // 随从入场动画配置 - 只在首次挂载时执行
@@ -11,6 +11,32 @@ const minionEntryAnimation = {
   transition: { duration: 0.2, ease: "easeOut" }
 };
 
+// ============ MinionCard 子组件 ============
+interface MinionCardProps {
+  minion: Minion;
+  isPlayer: boolean;
+  isMobile: boolean;
+}
+
+const MinionCard: React.FC<MinionCardProps> = ({ minion, isPlayer, isMobile }) => {
+  const borderColor = isPlayer ? 'border-blue-500/50' : 'border-red-500/50';
+  const icon = isPlayer ? '🛡️' : '👾';
+
+  return (
+    <motion.div
+      key={minion.instanceId}
+      className={`${isMobile ? 'w-14 h-20' : 'w-20 h-28'} bg-slate-800 border-2 ${borderColor} rounded-lg flex flex-col items-center justify-center relative shadow-lg`}
+      {...minionEntryAnimation}
+    >
+      <div className={`${isMobile ? 'text-[8px]' : 'text-[10px]'} text-white/50 absolute top-1 truncate w-full text-center px-1`}>{minion.name}</div>
+      <div className={isMobile ? 'text-lg' : 'text-2xl'}>{icon}</div>
+      <div className={`absolute bottom-0.5 left-0.5 bg-slate-900 border border-white/20 ${isMobile ? 'w-4 h-4 text-[8px]' : 'w-6 h-6 text-[10px]'} rounded-full flex items-center justify-center font-bold text-yellow-400`}>{minion.atk}</div>
+      <div className={`absolute bottom-0.5 right-0.5 bg-slate-900 border border-white/20 ${isMobile ? 'w-4 h-4 text-[8px]' : 'w-6 h-6 text-[10px]'} rounded-full flex items-center justify-center font-bold text-green-400`}>{minion.hp}</div>
+    </motion.div>
+  );
+};
+
+// ============ BattleBoard 主组件 ============
 interface BattleBoardProps {
   duelState: DuelState | null;
   playerCard: SpellType | null;
@@ -34,12 +60,12 @@ const BattleBoard: React.FC<BattleBoardProps> = ({
       {/* Opponent Minions Board */}
       <div className={`flex justify-center ${isMobile ? 'gap-1.5' : 'gap-4'} w-full h-24 md:h-32 items-center`}>
         {duelState?.opponentMinions.map(minion => (
-          <div key={minion.instanceId} className={`${isMobile ? 'w-14 h-20' : 'w-20 h-28'} bg-slate-800 border-2 border-red-500/50 rounded-lg flex flex-col items-center justify-center relative shadow-lg animate-fade-in-up`}>
-            <div className={`${isMobile ? 'text-[8px]' : 'text-[10px]'} text-white/50 absolute top-1 truncate w-full text-center px-1`}>{minion.name}</div>
-            <div className={isMobile ? 'text-lg' : 'text-2xl'}>👾</div>
-            <div className={`absolute bottom-0.5 left-0.5 bg-slate-900 border border-white/20 ${isMobile ? 'w-4 h-4 text-[8px]' : 'w-6 h-6 text-[10px]'} rounded-full flex items-center justify-center font-bold text-yellow-400`}>{minion.atk}</div>
-            <div className={`absolute bottom-0.5 right-0.5 bg-slate-900 border border-white/20 ${isMobile ? 'w-4 h-4 text-[8px]' : 'w-6 h-6 text-[10px]'} rounded-full flex items-center justify-center font-bold text-green-400`}>{minion.hp}</div>
-          </div>
+          <MinionCard
+            key={minion.instanceId}
+            minion={minion}
+            isPlayer={false}
+            isMobile={isMobile}
+          />
         ))}
       </div>
 
@@ -64,12 +90,12 @@ const BattleBoard: React.FC<BattleBoardProps> = ({
       {/* Player Minions Board */}
       <div className={`flex justify-center ${isMobile ? 'gap-1.5' : 'gap-4'} w-full h-24 md:h-32 items-center`}>
         {duelState?.playerMinions.map(minion => (
-          <div key={minion.instanceId} className={`${isMobile ? 'w-14 h-20' : 'w-20 h-28'} bg-slate-800 border-2 border-blue-500/50 rounded-lg flex flex-col items-center justify-center relative shadow-lg animate-fade-in-down`}>
-            <div className={`${isMobile ? 'text-[8px]' : 'text-[10px]'} text-white/50 absolute top-1 truncate w-full text-center px-1`}>{minion.name}</div>
-            <div className={isMobile ? 'text-lg' : 'text-2xl'}>🛡️</div>
-            <div className={`absolute bottom-0.5 left-0.5 bg-slate-900 border border-white/20 ${isMobile ? 'w-4 h-4 text-[8px]' : 'w-6 h-6 text-[10px]'} rounded-full flex items-center justify-center font-bold text-yellow-400`}>{minion.atk}</div>
-            <div className={`absolute bottom-0.5 right-0.5 bg-slate-900 border border-white/20 ${isMobile ? 'w-4 h-4 text-[8px]' : 'w-6 h-6 text-[10px]'} rounded-full flex items-center justify-center font-bold text-green-400`}>{minion.hp}</div>
-          </div>
+          <MinionCard
+            key={minion.instanceId}
+            minion={minion}
+            isPlayer={true}
+            isMobile={isMobile}
+          />
         ))}
       </div>
     </div>
