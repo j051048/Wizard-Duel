@@ -336,9 +336,10 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                 disabled={phase !== 'PLAYER_TURN'} 
                 className={`
                   relative px-6 py-3 md:px-8 md:py-4 rounded-xl font-bold text-sm md:text-base uppercase tracking-wider
-                  transition-all duration-300 shadow-2xl
+                  shadow-2xl
+                  transition-all duration-150 ease-[cubic-bezier(0.34, 1.56, 0.64, 1)]
               ${phase === 'PLAYER_TURN' 
-                ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-black border-2 border-amber-300 hover:scale-105 hover:shadow-amber-500/50 active:scale-95' 
+                ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-black border-2 border-amber-300 hover:shadow-[0_0_20px_rgba(251,191,36,0.6)] active:scale-90' 
                 : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
               }
             `}
