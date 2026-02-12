@@ -6,13 +6,19 @@
  * - 视图路由分发
  * - 全局组件挂载
  * 
+ * [#任务1 页面物理阻尼弹性过渡]
+ * - iOS 级别 Spring 物理动画
+ * - 横向滑动位移模拟手势切换
+ * 
  * 逻辑已提取到：
  * - useAppRouting: 视图切换逻辑
  * - useGameFeedback: 音效与震动反馈
  * - useGameEndHandler: 游戏结束处理
+ * - useViewTransition: 物理阻尼过渡动画
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Sparkles, Settings, CheckCircle } from 'lucide-react';
 
 // Types
@@ -31,6 +37,11 @@ import { useTutorial } from './hooks/useTutorial';
 import { useAppRouting } from './hooks/useAppRouting';
 import { useGameFeedback } from './hooks/useGameFeedback';
 import { useGameEndHandler } from './hooks/useGameEndHandler';
+import { 
+  useViewTransition, 
+  getTransitionDirection,
+  TransitionDirection 
+} from './hooks/useViewTransition';
 
 // Stores
 import { useUserStore } from './stores/useUserStore';
@@ -73,11 +84,24 @@ function App() {
   const ui = useUIStore();
   const toast = useToastStore();
 
+  // ============ 视图过渡追踪 ============
+  const prevGameStateRef = useRef<string | null>(null);
+  const transitionDirection = getTransitionDirection(
+    prevGameStateRef.current,
+    ui.gameState
+  );
+  
+  // 更新前一个状态（在渲染后）
+  useEffect(() => {
+    prevGameStateRef.current = ui.gameState;
+  }, [ui.gameState]);
+
   // ============ Core Hooks ============
   const { progress, startPreloading } = usePreloader();
   const [gameLoopState, gameLoopActions] = useGameLoop();
   const [audioState, audioActions] = useAudioManager();
   const { isMobileLandscape } = useScreenOrientation();
+  const viewTransition = useViewTransition();
 
   // ============ Extracted Hooks ============
   const routing = useAppRouting({ gameLoopActions, audioActions });
@@ -157,220 +181,352 @@ function App() {
         <div className="fixed inset-0 z-[55]" onClick={() => ui.setShowSettings(false)} />
       )}
 
-      {/* Main Content */}
+      {/* Main Content - 带物理阻尼过渡 */}
       <main className={ui.gameState === 'LOBBY' ? 'pt-16' : ''}>
-        
-        {/* Lobby */}
-        {ui.gameState === 'LOBBY' && (
-          <Lobby
-            balance={user.balance}
-            userRank={user.userRank}
-            rankScore={user.rankScore}
-            selectedBet={ui.selectedBet}
-            onSelectBet={ui.setSelectedBet}
-            onStartDuel={routing.handleStartDuel}
-            onOpenShop={() => ui.setGameState('SHOP')}
-            onOpenCollection={() => ui.setGameState('COLLECTION')}
-            history={user.history}
-            isMuted={audioState.isMuted}
-            onToggleMute={audioActions.toggleMute}
-            isLoading={user.isLoading}
-            decks={user.decks}
-            selectedDeck={user.selectedDeck}
-            onOpenDeckBuilder={() => ui.setGameState('DECK_BUILDER')}
-            onSelectDeck={user.setSelectedDeck}
-            onOpenTavernMode={() => ui.setGameState('TAVERN')}
-            gameMode={ui.gameMode}
-            onOpenModeSelect={() => ui.setGameState('MODE_SELECT')}
-            language={ui.language}
-            onLanguageChange={ui.setLanguage}
+        <AnimatePresence mode="wait" custom={transitionDirection}>
+          
+          {/* Lobby */}
+          {ui.gameState === 'LOBBY' && (
+            <motion.div
+              key="lobby"
+              custom={transitionDirection}
+              variants={viewTransition.pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={viewTransition.springConfig}
+              className="w-full"
+            >
+              <Lobby
+                balance={user.balance}
+                userRank={user.userRank}
+                rankScore={user.rankScore}
+                selectedBet={ui.selectedBet}
+                onSelectBet={ui.setSelectedBet}
+                onStartDuel={routing.handleStartDuel}
+                onOpenShop={() => ui.setGameState('SHOP')}
+                onOpenCollection={() => ui.setGameState('COLLECTION')}
+                history={user.history}
+                isMuted={audioState.isMuted}
+                onToggleMute={audioActions.toggleMute}
+                isLoading={user.isLoading}
+                decks={user.decks}
+                selectedDeck={user.selectedDeck}
+                onOpenDeckBuilder={() => ui.setGameState('DECK_BUILDER')}
+                onSelectDeck={user.setSelectedDeck}
+                onOpenTavernMode={() => ui.setGameState('TAVERN')}
+                gameMode={ui.gameMode}
+                onOpenModeSelect={() => ui.setGameState('MODE_SELECT')}
+                language={ui.language}
+                onLanguageChange={ui.setLanguage}
                         onClaimQuestReward={(amount: number) => {
-              user.setBalance(user.balance + amount);
-              toast.success('奖励到账', `获得 ${amount} 法力值！`);
-            }}
-            onOpenProfile={() => ui.setGameState('PROFILE')}
-          />
-        )}
+                  user.setBalance(user.balance + amount);
+                  toast.success('奖励到账', `获得 ${amount} 法力值！`);
+                }}
+                onOpenProfile={() => ui.setGameState('PROFILE')}
+              />
+            </motion.div>
+          )}
 
-        {/* Mode Select */}
-        {ui.gameState === 'MODE_SELECT' && (
-          <ModeSelect
-            onSelectMode={routing.handleSelectMode}
-            onBackToLobby={() => ui.setGameState('LOBBY')}
-          />
-        )}
+          {/* Mode Select */}
+          {ui.gameState === 'MODE_SELECT' && (
+            <motion.div
+              key="mode-select"
+              custom={transitionDirection}
+              variants={viewTransition.pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={viewTransition.springConfig}
+              className="w-full"
+            >
+              <ModeSelect
+                onSelectMode={routing.handleSelectMode}
+                onBackToLobby={() => ui.setGameState('LOBBY')}
+              />
+            </motion.div>
+          )}
 
-        {/* Matchmaking */}
-        {ui.gameState === 'MATCHMAKING' && (
-          <MatchmakingAnimation
-            onComplete={routing.handleMatchmakingComplete}
-            opponentName={ui.pendingTavernDuel?.name}
-            opponentAvatar={ui.pendingTavernDuel?.avatar}
-            isTavernMode={!!ui.pendingTavernDuel}
-          />
-        )}
+          {/* Matchmaking */}
+          {ui.gameState === 'MATCHMAKING' && (
+            <motion.div
+              key="matchmaking"
+              custom={transitionDirection}
+              variants={viewTransition.pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={viewTransition.springConfig}
+              className="w-full"
+            >
+              <MatchmakingAnimation
+                onComplete={routing.handleMatchmakingComplete}
+                opponentName={ui.pendingTavernDuel?.name}
+                opponentAvatar={ui.pendingTavernDuel?.avatar}
+                isTavernMode={!!ui.pendingTavernDuel}
+              />
+            </motion.div>
+          )}
 
         {/* Lazy Loaded Views */}
         <React.Suspense fallback={<LoadingScreen progress={{ percentage: 100, isComplete: false, loaded: 1, total: 1, currentItem: '加载中...', errors: [] }} />}>
           
           {/* Tavern Mode */}
           {ui.gameState === 'TAVERN' && (
-            <TavernMode
-              onStartTavernDuel={(ai: any) => {
-                if (!user.selectedDeck) {
-                  toast.warning('需要牌组', '请先选择牌组！');
-                  return;
-                }
-                ui.setPendingTavernDuel(ai);
-                ui.setGameState('MATCHMAKING');
-              }}
-              onBackToLobby={() => ui.setGameState('LOBBY')}
-              playerStats={{ tavernWins: 0, tavernLosses: 0, bestStreak: 0 }}
-            />
+            <motion.div
+              key="tavern"
+              custom={transitionDirection}
+              variants={viewTransition.pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={viewTransition.springConfig}
+              className="w-full"
+            >
+              <TavernMode
+                onStartTavernDuel={(ai: any) => {
+                  if (!user.selectedDeck) {
+                    toast.warning('需要牌组', '请先选择牌组！');
+                    return;
+                  }
+                  ui.setPendingTavernDuel(ai);
+                  ui.setGameState('MATCHMAKING');
+                }}
+                onBackToLobby={() => ui.setGameState('LOBBY')}
+                playerStats={{ tavernWins: 0, tavernLosses: 0, bestStreak: 0 }}
+              />
+            </motion.div>
           )}
 
           {/* Dungeon Map */}
           {ui.gameState === 'DUNGEON_MAP' && ui.dungeonRun && (
-            <DungeonMap
-              runState={ui.dungeonRun}
-              onSelectNode={(node: DungeonNode) => {
-                if (['BATTLE', 'ELITE', 'BOSS'].includes(node.type)) {
-                  const diff = node.type === 'BOSS' ? 'hard' : node.type === 'ELITE' ? 'medium' : 'easy';
-                  const opp = AI_PROFILES.find(p => p.difficulty === diff) || AI_PROFILES[0];
-                  ui.setPendingTavernDuel(opp);
-                  ui.setGameState('MATCHMAKING');
-                } else if (node.type === 'REST') {
-                  const updated = DungeonService.updateHP(ui.dungeonRun!, Math.floor(ui.dungeonRun!.maxHP * 0.3));
-                  ui.setDungeonRun(DungeonService.advanceNode(updated));
-                  toast.success('休息完成', '恢复了 30% 生命值！');
-                } else {
-                  ui.setDungeonRun(DungeonService.advanceNode(ui.dungeonRun!));
-                }
-              }}
-            />
+            <motion.div
+              key="dungeon-map"
+              custom={transitionDirection}
+              variants={viewTransition.pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={viewTransition.springConfig}
+              className="w-full"
+            >
+              <DungeonMap
+                runState={ui.dungeonRun}
+                onSelectNode={(node: DungeonNode) => {
+                  if (['BATTLE', 'ELITE', 'BOSS'].includes(node.type)) {
+                    const diff = node.type === 'BOSS' ? 'hard' : node.type === 'ELITE' ? 'medium' : 'easy';
+                    const opp = AI_PROFILES.find(p => p.difficulty === diff) || AI_PROFILES[0];
+                    ui.setPendingTavernDuel(opp);
+                    ui.setGameState('MATCHMAKING');
+                  } else if (node.type === 'REST') {
+                    const updated = DungeonService.updateHP(ui.dungeonRun!, Math.floor(ui.dungeonRun!.maxHP * 0.3));
+                    ui.setDungeonRun(DungeonService.advanceNode(updated));
+                    toast.success('休息完成', '恢复了 30% 生命值！');
+                  } else {
+                    ui.setDungeonRun(DungeonService.advanceNode(ui.dungeonRun!));
+                  }
+                }}
+              />
+            </motion.div>
           )}
 
           {/* Deck Builder */}
           {ui.gameState === 'DECK_BUILDER' && (
-            <DeckBuilder
-              onBack={() => ui.setGameState('LOBBY')}
-              onSaveDeck={user.saveDeck}
-              onSelectDeck={user.setSelectedDeck}
-              existingDecks={user.decks}
-              selectedDeck={user.selectedDeck}
-              gameMode={ui.gameMode}
-            />
+            <motion.div
+              key="deck-builder"
+              custom={transitionDirection}
+              variants={viewTransition.slideUpVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="w-full fixed inset-0 z-40 bg-slate-950"
+            >
+              <DeckBuilder
+                onBack={() => ui.setGameState('LOBBY')}
+                onSaveDeck={user.saveDeck}
+                onSelectDeck={user.setSelectedDeck}
+                existingDecks={user.decks}
+                selectedDeck={user.selectedDeck}
+                gameMode={ui.gameMode}
+              />
+            </motion.div>
           )}
 
           {/* Shop */}
           {ui.gameState === 'SHOP' && (
-            <ShopScreen
-              balance={user.balance}
-              onBack={() => ui.setGameState('LOBBY')}
-              onUpdateBalance={user.setBalance}
-              onAddCards={(cardIds: SpellType[]) => {
-                user.addCardsToInventory(cardIds);
-                toast.success('卡牌已添加', `${cardIds.length} 张卡牌已加入收藏`);
-              }}
-              purchasedBundles={user.purchasedBundles}
-              onPurchaseBundle={user.purchaseBundle}
-              packInventory={user.packInventory}
-              setPackInventory={user.setPackInventory}
-              onAddPacks={user.addPacks}
-              onConsumePack={user.consumePack}
-            />
+            <motion.div
+              key="shop"
+              custom={transitionDirection}
+              variants={viewTransition.pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={viewTransition.springConfig}
+              className="w-full"
+            >
+              <ShopScreen
+                balance={user.balance}
+                onBack={() => ui.setGameState('LOBBY')}
+                onUpdateBalance={user.setBalance}
+                onAddCards={(cardIds: SpellType[]) => {
+                  user.addCardsToInventory(cardIds);
+                  toast.success('卡牌已添加', `${cardIds.length} 张卡牌已加入收藏`);
+                }}
+                purchasedBundles={user.purchasedBundles}
+                onPurchaseBundle={user.purchaseBundle}
+                packInventory={user.packInventory}
+                setPackInventory={user.setPackInventory}
+                onAddPacks={user.addPacks}
+                onConsumePack={user.consumePack}
+              />
+            </motion.div>
           )}
 
                     {/* Collection */}
           {ui.gameState === 'COLLECTION' && (
-            <CollectionBook onBack={() => ui.setGameState('LOBBY')} />
+            <motion.div
+              key="collection"
+              custom={transitionDirection}
+              variants={viewTransition.pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={viewTransition.springConfig}
+              className="w-full"
+            >
+              <CollectionBook onBack={() => ui.setGameState('LOBBY')} />
+            </motion.div>
           )}
 
           {/* User Profile */}
           {ui.gameState === 'PROFILE' && (
-            <UserProfilePage
-              onBack={() => ui.setGameState('LOBBY')}
-              balance={user.balance}
-              userRank={user.userRank}
-              rankScore={user.rankScore}
-              history={user.history}
-              activeAddress={user.activeAddress}
-              isGuest={ui.isGuest}
-              onUpdateBalance={user.setBalance}
-              onUpdateName={(name: string) => {
-                localStorage.setItem('wizard_display_name', name);
-                toast.success('昵称已更新', name);
-              }}
-              displayName={localStorage.getItem('wizard_display_name') || (user.activeAddress ? `Wizard_${user.activeAddress.slice(0, 6)}` : '游客法师')}
-            />
+            <motion.div
+              key="profile"
+              custom={transitionDirection}
+              variants={viewTransition.pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={viewTransition.springConfig}
+              className="w-full"
+            >
+              <UserProfilePage
+                onBack={() => ui.setGameState('LOBBY')}
+                balance={user.balance}
+                userRank={user.userRank}
+                rankScore={user.rankScore}
+                history={user.history}
+                activeAddress={user.activeAddress}
+                isGuest={ui.isGuest}
+                onUpdateBalance={user.setBalance}
+                onUpdateName={(name: string) => {
+                  localStorage.setItem('wizard_display_name', name);
+                  toast.success('昵称已更新', name);
+                }}
+                displayName={localStorage.getItem('wizard_display_name') || (user.activeAddress ? `Wizard_${user.activeAddress.slice(0, 6)}` : '游客法师')}
+              />
+            </motion.div>
           )}
 
           {/* Battle Pass */}
           {ui.gameState === 'BATTLE_PASS' && (
-            <BattlePassPage
-              onBack={() => ui.setGameState('LOBBY')}
-              onPurchasePremium={() => {
-                toast.info('即将推出', '高级通行证即将上线！');
-              }}
-              balance={user.balance}
-            />
+            <motion.div
+              key="battle-pass"
+              custom={transitionDirection}
+              variants={viewTransition.pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={viewTransition.springConfig}
+              className="w-full"
+            >
+              <BattlePassPage
+                onBack={() => ui.setGameState('LOBBY')}
+                onPurchasePremium={() => {
+                  toast.info('即将推出', '高级通行证即将上线！');
+                }}
+                balance={user.balance}
+              />
+            </motion.div>
           )}
 
           {/* Mulligan */}
           {ui.gameState === 'MULLIGAN' && gameLoopState.duelState && (
-            <MulliganScreen
-              initialHand={gameLoopState.duelState.playerHand}
-              opponentName={gameLoopState.duelState.aiProfile?.name}
-              opponentAvatar={gameLoopState.duelState.aiProfile?.avatar}
-              onConfirm={(indices: number[]) => {
-                gameLoopActions.handleMulligan(indices);
-                tutorial.handleAction('MULLIGAN');
-                ui.setGameState('DUEL');
-              }}
-              timeLimit={30}
-            />
+            <motion.div
+              key="mulligan"
+              custom={transitionDirection}
+              variants={viewTransition.pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={viewTransition.springConfig}
+              className="w-full"
+            >
+              <MulliganScreen
+                initialHand={gameLoopState.duelState.playerHand}
+                opponentName={gameLoopState.duelState.aiProfile?.name}
+                opponentAvatar={gameLoopState.duelState.aiProfile?.avatar}
+                onConfirm={(indices: number[]) => {
+                  gameLoopActions.handleMulligan(indices);
+                  tutorial.handleAction('MULLIGAN');
+                  ui.setGameState('DUEL');
+                }}
+                timeLimit={30}
+              />
+            </motion.div>
           )}
 
           {/* Battle */}
           {ui.gameState === 'DUEL' && (
             gameLoopState.duelState ? (
-              <BattleArena
-                gameLoopState={gameLoopState}
-                selectedBet={ui.selectedBet}
-                onPlayCard={(spellId: SpellType) => {
-                  if (gameLoopActions.playCard(spellId)) {
-                    feedback.triggerCardPlayFeedback();
-                    audioActions.playSpellSfx(spellId);
-                    tutorial.handleAction('PLAY_CARD');
-                  }
-                }}
-                onPass={() => {
-                  gameLoopActions.passTurn();
-                  feedback.triggerButtonFeedback();
-                  tutorial.handleAction('END_TURN');
-                }}
-                onSurrender={() => {
-                  ui.showConfirmDialog({
-                    title: '确认投降',
-                    message: '投降将判定为失败，确定要放弃这场对战吗？',
-                    confirmText: '投降',
-                    cancelText: '继续战斗',
-                    type: 'danger',
-                    onConfirm: () => {
-                      gameLoopActions.reset();
-                      ui.setGameState('LOBBY');
-                      audioActions.playBgm('lobby');
-                      ui.hideConfirmDialog();
-                      toast.info('对战结束', '你选择了投降');
+              <motion.div
+                key="battle"
+                custom={transitionDirection}
+                variants={viewTransition.pageVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={viewTransition.springConfig}
+                className="w-full fixed inset-0 z-30"
+              >
+                <BattleArena
+                  gameLoopState={gameLoopState}
+                  selectedBet={ui.selectedBet}
+                  onPlayCard={(spellId: SpellType) => {
+                    if (gameLoopActions.playCard(spellId)) {
+                      feedback.triggerCardPlayFeedback();
+                      audioActions.playSpellSfx(spellId);
+                      tutorial.handleAction('PLAY_CARD');
                     }
-                  });
-                }}
-                isMuted={audioState.isMuted}
-                onToggleMute={audioActions.toggleMute}
-                isPlayerShaking={ui.isPlayerShaking}
-                isOpponentShaking={ui.isOpponentShaking}
-                setTargeting={gameLoopActions.setTargeting}
-              />
+                  }}
+                  onPass={() => {
+                    gameLoopActions.passTurn();
+                    feedback.triggerButtonFeedback();
+                    tutorial.handleAction('END_TURN');
+                  }}
+                  onSurrender={() => {
+                    ui.showConfirmDialog({
+                      title: '确认投降',
+                      message: '投降将判定为失败，确定要放弃这场对战吗？',
+                      confirmText: '投降',
+                      cancelText: '继续战斗',
+                      type: 'danger',
+                      onConfirm: () => {
+                        gameLoopActions.reset();
+                        ui.setGameState('LOBBY');
+                        audioActions.playBgm('lobby');
+                        ui.hideConfirmDialog();
+                        toast.info('对战结束', '你选择了投降');
+                      }
+                    });
+                  }}
+                  isMuted={audioState.isMuted}
+                  onToggleMute={audioActions.toggleMute}
+                  isPlayerShaking={ui.isPlayerShaking}
+                  isOpponentShaking={ui.isOpponentShaking}
+                  setTargeting={gameLoopActions.setTargeting}
+                />
+              </motion.div>
             ) : (
               <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-50">
                 <div className="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mb-4" />
@@ -381,19 +537,29 @@ function App() {
 
           {/* Results */}
           {ui.finalResult && (
-            <ResultsModal
-              result={ui.finalResult.result}
-              playerSpell={ui.finalResult.player}
-              opponentSpell={ui.finalResult.opponent}
-              payout={ui.finalResult.payout}
-              bet={ui.selectedBet}
-              isCrit={ui.finalResult.isCrit}
-              onClose={routing.handleResetGame}
-              isTavernMode={gameLoopState.duelState?.isTavernMode}
-              rankUpdates={ui.finalResult.rankUpdates}
-            />
+            <motion.div
+              key="results"
+              variants={viewTransition.springBounceVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="fixed inset-0 z-50"
+            >
+              <ResultsModal
+                result={ui.finalResult.result}
+                playerSpell={ui.finalResult.player}
+                opponentSpell={ui.finalResult.opponent}
+                payout={ui.finalResult.payout}
+                bet={ui.selectedBet}
+                isCrit={ui.finalResult.isCrit}
+                onClose={routing.handleResetGame}
+                isTavernMode={gameLoopState.duelState?.isTavernMode}
+                rankUpdates={ui.finalResult.rankUpdates}
+              />
+            </motion.div>
           )}
         </React.Suspense>
+        </AnimatePresence>
       </main>
 
       {/* Global Components */}
