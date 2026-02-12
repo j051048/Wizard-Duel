@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { SpellType, DuelPhase } from '../../types';
 import { SpellCard } from '../SpellCard';
 import { getSpellById } from '../../services/gameLogic';
@@ -37,6 +37,15 @@ const BattleHand: React.FC<BattleHandProps> = ({
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const selectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // [Task 07] 内存安全清理：组件卸载时清理 timeout，防止内存泄漏
+  useEffect(() => {
+    return () => {
+      if (selectionTimeoutRef.current) {
+        clearTimeout(selectionTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleCardClick = (spellId: SpellType, isAffordable: boolean) => {
     if (!isAffordable || phase !== 'PLAYER_TURN' || isProcessing) return;
