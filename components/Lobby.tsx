@@ -194,7 +194,7 @@ export const Lobby: React.FC<LobbyProps> = ({
          {onOpenShop && (
             <button 
                onClick={onOpenShop}
-               className="flex items-center gap-2 text-xs text-purple-400 hover:text-purple-300 font-bold uppercase tracking-widest border border-purple-500/30 px-4 py-2 rounded-full hover:bg-purple-900/20 transition-all bg-purple-500/10"
+               className="flex items-center gap-2 text-xs text-purple-400 hover:text-purple-300 font-bold uppercase tracking-widest border border-purple-500/30 px-4 py-2 rounded-full hover:bg-purple-900/20 hover:scale-105 active:scale-95 transition-all duration-150 bg-purple-500/10"
             >
                <ShoppingBag size={14} />
                <span>商店</span>
@@ -205,7 +205,7 @@ export const Lobby: React.FC<LobbyProps> = ({
          {onOpenCollection && (
             <button 
                onClick={onOpenCollection}
-               className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 font-bold uppercase tracking-widest border border-blue-500/30 px-4 py-2 rounded-full hover:bg-blue-900/20 transition-all bg-blue-500/10"
+               className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 font-bold uppercase tracking-widest border border-blue-500/30 px-4 py-2 rounded-full hover:bg-blue-900/20 hover:scale-105 active:scale-95 transition-all duration-150 bg-blue-500/10"
             >
                <Book size={14} />
                <span>图鉴</span>
@@ -216,7 +216,7 @@ export const Lobby: React.FC<LobbyProps> = ({
          {onOpenTavernMode && (
             <button 
                onClick={onOpenTavernMode}
-               className="flex items-center gap-2 text-xs text-amber-500/80 hover:text-amber-400 font-bold uppercase tracking-widest border border-amber-500/20 px-4 py-2 rounded-full hover:bg-amber-900/20 transition-all opacity-70 hover:opacity-100"
+               className="flex items-center gap-2 text-xs text-amber-500/80 hover:text-amber-400 font-bold uppercase tracking-widest border border-amber-500/20 px-4 py-2 rounded-full hover:bg-amber-900/20 hover:scale-105 active:scale-95 transition-all duration-150 opacity-70 hover:opacity-100"
             >
                <span>🍺</span>
                <span>{t('Visit Tavern')}</span>
@@ -226,7 +226,7 @@ export const Lobby: React.FC<LobbyProps> = ({
          {/* PvP 对战入口 */}
          <button 
             onClick={() => setIsMatchmaking(true)}
-            className="flex items-center gap-2 text-xs text-red-400 hover:text-red-300 font-bold uppercase tracking-widest border border-red-500/30 px-4 py-2 rounded-full hover:bg-red-900/20 transition-all bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.2)]"
+            className="flex items-center gap-2 text-xs text-red-400 hover:text-red-300 font-bold uppercase tracking-widest border border-red-500/30 px-4 py-2 rounded-full hover:bg-red-900/20 hover:scale-105 active:scale-95 transition-all duration-150 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.2)]"
          >
             <Swords size={14} />
             <span>{t('PvP Mode')}</span>
@@ -235,7 +235,7 @@ export const Lobby: React.FC<LobbyProps> = ({
          {/* 聊天按钮 */}
          <button 
             onClick={() => setIsChatOpen(!isChatOpen)}
-            className="flex items-center gap-2 text-xs text-green-400 hover:text-green-300 font-bold uppercase tracking-widest border border-green-500/30 px-4 py-2 rounded-full hover:bg-green-900/20 transition-all bg-green-500/10"
+            className="flex items-center gap-2 text-xs text-green-400 hover:text-green-300 font-bold uppercase tracking-widest border border-green-500/30 px-4 py-2 rounded-full hover:bg-green-900/20 hover:scale-105 active:scale-95 transition-all duration-150 bg-green-500/10"
          >
             <MessageCircle size={14} />
             <span>聊天</span>
