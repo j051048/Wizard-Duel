@@ -8,7 +8,7 @@
  * - DragDropZone
  */
 
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { SpellType, GameLoopState } from '../types';
 import { GAME_CONFIG } from '../constants';
@@ -16,6 +16,7 @@ import { getPlayableCards, getSpellById } from '../services/gameLogic';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { calculateSpellProjection } from '../services/projection';
 import { useSettings } from '../context/SettingsContext';
+import { pvpService } from '../services/pvpService';
 
 // Components
 import { SpellCard } from './SpellCard'; // Needed for Drag Preview
@@ -82,9 +83,12 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   const [hasShownTutorial, setHasShownTutorial] = useState(false);
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [detailSpell, setDetailSpell] = useState<SpellType | null>(null);
+  const [isPVPMode, setIsPVPMode] = useState(false);
   
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isMounted = useRef(true);
+  const isRemoteActionRef = useRef(false); // [PVP] 标记是否为远程同步过来的操作，防止无限循环
+  const playerIdRef = useRef<string>(`player-${Date.now()}`); // [PVP] 玩家唯一ID
 
   // Hooks
   const { 
@@ -178,6 +182,60 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     return () => { isMounted.current = false; };
   }, []);
 
+  // [PVP] PVP 连接与消息监听
+  useEffect(() => {
+    // 检查是否启用 PVP 模式（可通过 URL 参数或 prop 传入）
+    const urlParams = new URLSearchParams(window.location.search);
+    const pvpRoom = urlParams.get('room') || 'test-room';
+    const pvpEnabled = urlParams.has('pvp') || false;
+    
+    if (pvpEnabled) {
+      setIsPVPMode(true);
+      
+      // 连接 PVP 服务器
+      pvpService.connect(pvpRoom, playerIdRef.current, (data) => {
+        console.log('[PVP] Received:', data);
+        
+        // 处理服务器消息
+        if (data.type === 'ACTION' && data.action) {
+          // 标记为远程操作，避免无限循环
+          isRemoteActionRef.current = true;
+          
+          const action = data.action;
+          
+          // 根据动作类型执行相应操作
+          if (action.type === 'PLAY_CARD' && action.spellId) {
+            // 对手出牌：通过 onPlayCard 执行
+            // 注意：这里是对手的操作，实际游戏中对手的卡牌不应该通过我们的 onPlayCard 执行
+            // 而是应该更新 gameLoopState 中对手的出牌状态
+            // 暂时先调用 onPlayCard，后续需要根据实际架构调整
+            console.log('[PVP] Opponent played card:', action.spellId);
+          } else if (action.type === 'END_TURN') {
+            // 对手结束回合
+            console.log('[PVP] Opponent ended turn');
+            if (onPass) {
+              // 这里需要区分是对手结束回合还是轮到我方
+              // 实际逻辑应根据游戏状态机处理
+            }
+          }
+          
+          // 重置标记
+          setTimeout(() => {
+            isRemoteActionRef.current = false;
+          }, 100);
+        } else if (data.type === 'PLAYER_JOINED') {
+          console.log('[PVP] Player joined:', data.playerId);
+        } else if (data.type === 'GAME_START') {
+          console.log('[PVP] Game starting...');
+        }
+      });
+      
+      return () => {
+        pvpService.disconnect();
+      };
+    }
+  }, [onPass]);
+
   // [P2 Fix #21] Dynamic BGM: 根据 HP 比例动态调整音乐气氛
   useEffect(() => {
     if (duelState && !isMuted) {
@@ -200,6 +258,20 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     setTargeting(null);
     spawnProjectile('player');
 
+    // [PVP] 只有本地操作才广播给对手，避免无限循环
+    if (isPVPMode && !isRemoteActionRef.current) {
+      pvpService.sendAction({
+        type: 'ACTION',
+        action: {
+          type: 'PLAY_CARD',
+          spellId,
+          isConfirmed,
+          playerId: playerIdRef.current,
+          timestamp: Date.now()
+        }
+      });
+    }
+
     onPlayCard(spellId, isConfirmed);
   };
 
@@ -213,6 +285,25 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           longPressTimerRef.current = null;
       }
   };
+
+  // [PVP] 结束回合处理函数
+  const handleEndTurn = useCallback(() => {
+    // [PVP] 只有本地操作才广播给对手，避免无限循环
+    if (isPVPMode && !isRemoteActionRef.current && phase === 'PLAYER_TURN') {
+      pvpService.sendAction({
+        type: 'ACTION',
+        action: {
+          type: 'END_TURN',
+          playerId: playerIdRef.current,
+          timestamp: Date.now()
+        }
+      });
+    }
+    
+    if (onPass) {
+      onPass();
+    }
+  }, [isPVPMode, phase, onPass]);
   
   if (!duelState) return null;
 
@@ -299,7 +390,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           isPlayerShaking={isPlayerShaking}
           projection={projection}
           onPlayCard={handlePlayCard}
-          onPass={() => onPass && onPass()}
+          onPass={handleEndTurn}
       />
       
       {/* Hand Area (Bottom Layer) */}
@@ -332,7 +423,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         <div className="absolute right-6 bottom-6 z-40 hidden md:block">
               <button 
                 id="end-turn-btn"
-                onClick={onPass}  
+                onClick={handleEndTurn}  
                 disabled={phase !== 'PLAYER_TURN'} 
                 className={`
                   relative px-6 py-3 md:px-8 md:py-4 rounded-xl font-bold text-sm md:text-base uppercase tracking-wider
@@ -387,7 +478,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         isActive={phase === 'PLAYER_TURN' && !gameLoopState.isProcessing}
         duration={60}
         warningTime={15}
-        onTimeUp={() => onPass && onPass()}
+        onTimeUp={handleEndTurn}
       />
 
       {detailSpell && (
