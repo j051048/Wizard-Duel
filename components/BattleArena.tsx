@@ -83,7 +83,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   const [hasShownTutorial, setHasShownTutorial] = useState(false);
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [detailSpell, setDetailSpell] = useState<SpellType | null>(null);
-  const [isPVPMode, setIsPVPMode] = useState(false);
+  const [isPVPMode, setIsPVPMode] = useState(true); // 默认强制开启，不再等待匹配遮罩
   
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isMounted = useRef(true);
@@ -327,9 +327,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
       <FloatingTextOverlay items={floatingTexts} />
 
-      {/* PVP 状态指示器 */}
-      <div className="fixed top-2 left-2 z-50 text-[10px] font-mono text-emerald-400 opacity-50 pointer-events-none">
-        PVP: CONNECTED
+      {/* PVP 状态指示器 - 强提醒版 */}
+      <div className="fixed top-4 left-4 z-[99] animate-pulse">
+        <span className={`px-2 py-1 rounded text-[10px] font-bold ${isPVPMode ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
+          {isPVPMode ? 'PVP: ONLINE' : 'PVP: OFFLINE'}
+        </span>
       </div>
 
       {/* [P1] Spell Cast Effects */}
