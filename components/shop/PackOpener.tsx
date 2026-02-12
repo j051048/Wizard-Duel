@@ -4,7 +4,7 @@
  * 重构为thin wrapper，使用分解的子组件
  */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { Spell } from '../../types';
 import { HapticService } from '../../services/haptic';

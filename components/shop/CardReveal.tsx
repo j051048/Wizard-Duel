@@ -1,8 +1,10 @@
 /**
  * CardReveal - 卡牌翻转展示组件
+ * 
+ * 性能优化：使用 React.memo 防止不必要的重渲染
  */
 
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Spell } from '../../types';
 import { SpellCard } from '../SpellCard';
@@ -12,24 +14,43 @@ interface CardRevealProps {
   index: number;
   isRevealed: boolean;
   isMobile: boolean;
-  onClick: () => void;
+  onCardClick: (index: number) => void;
 }
 
-export const CardReveal: React.FC<CardRevealProps> = ({
+/**
+ * 稀有度颜色映射 - 提取到组件外部避免重复创建
+ */
+const RARITY_COLOR_MAP: Record<string, string> = {
+  legendary: 'from-yellow-500/50 to-amber-600/50',
+  mythic: 'from-purple-500/50 to-pink-600/50',
+  epic: 'from-purple-600/50 to-indigo-700/50',
+  rare: 'from-blue-500/50 to-cyan-600/50',
+  common: 'from-gray-500/50 to-slate-600/50',
+};
+
+const CardRevealComponent: React.FC<CardRevealProps> = ({
   card,
   index,
   isRevealed,
   isMobile,
-  onClick
+  onCardClick
 }) => {
-  const isHighRarity = card.rarity === 'legendary' || card.rarity === 'mythic';
+  // 使用 useMemo 缓存计算结果
+  const isHighRarity = useMemo(
+    () => card.rarity === 'legendary' || card.rarity === 'mythic',
+    [card.rarity]
+  );
   
-  const rarityColor = 
-    card.rarity === 'legendary' ? 'from-yellow-500/50 to-amber-600/50' :
-    card.rarity === 'mythic' ? 'from-purple-500/50 to-pink-600/50' :
-    card.rarity === 'epic' ? 'from-purple-600/50 to-indigo-700/50' :
-    card.rarity === 'rare' ? 'from-blue-500/50 to-cyan-600/50' :
-    'from-gray-500/50 to-slate-600/50';
+  // 使用 useMemo 缓存稀有度颜色
+  const rarityColor = useMemo(
+    () => RARITY_COLOR_MAP[card.rarity] || RARITY_COLOR_MAP.common,
+    [card.rarity]
+  );
+  
+  // 使用 useCallback 创建稳定的点击处理函数
+  const handleClick = useCallback(() => {
+    onCardClick(index);
+  }, [onCardClick, index]);
 
   return (
     <div className={`${isMobile ? 'w-28 h-40' : 'w-40 h-56'} relative`}> 
@@ -76,7 +97,7 @@ export const CardReveal: React.FC<CardRevealProps> = ({
               ${isRevealed ? 'border-transparent' : 'border-slate-700 hover:border-purple-500'}
               relative transition-colors duration-300 cursor-pointer
             `}
-            onClick={onClick}
+            onClick={handleClick}
           >
             <img src="/ui/card_back.webp" className="w-full h-full object-cover" alt="Card Back" />
             <div className={`absolute inset-0 bg-gradient-to-t ${rarityColor} opacity-0 hover:opacity-40 transition-opacity duration-500`} />
@@ -91,3 +112,19 @@ export const CardReveal: React.FC<CardRevealProps> = ({
     </div>
   );
 };
+
+/**
+ * 使用 React.memo 包装组件，配合自定义比较函数
+ * 只有当 props 真正变化时才重新渲染
+ */
+export const CardReveal = React.memo(CardRevealComponent, (prevProps, nextProps) => {
+  // 自定义比较：只有这些属性变化时才重新渲染
+  return (
+    prevProps.card.id === nextProps.card.id &&
+    prevProps.card.rarity === nextProps.card.rarity &&
+    prevProps.isRevealed === nextProps.isRevealed &&
+    prevProps.isMobile === nextProps.isMobile &&
+    prevProps.index === nextProps.index
+    // onCardClick 是稳定的 useCallback 引用，不需要比较
+  );
+});
