@@ -41,7 +41,6 @@ import { useToastStore } from './stores/useToastStore';
 const BattleArena = React.lazy(() => import('./components/BattleArena'));
 const DeckBuilder = React.lazy(() => import('./components/DeckBuilder'));
 const DungeonMap = React.lazy(() => import('./components/DungeonMap'));
-const ResultsModal = React.lazy(() => import('./components/ResultsModal'));
 const TavernMode = React.lazy(() => import('./components/TavernMode'));
 const ShopScreen = React.lazy(() => import('./components/ShopScreen'));
 const CollectionBook = React.lazy(() => import('./components/CollectionBook'));
@@ -49,6 +48,7 @@ const UserProfilePage = React.lazy(() => import('./components/UserProfilePage'))
 const BattlePassPage = React.lazy(() => import('./components/shop/BattlePassPage'));
 
 // Immediate Components
+import { ResultsModal } from './components/ResultsModal';
 import { LoadingScreen } from './components/LoadingScreen';
 import { Lobby } from './components/Lobby';
 import { ModeSelect } from './components/ModeSelect';
