@@ -209,6 +209,98 @@ export const getPlayableCards = (
 
 // [Phase 2] MECHANIC_DEFINITIONS 已迁移到 services/mechanics.ts
 
+// ============ 战斗辅助函数 (BattleLogic 解耦) ============
+
+/**
+ * 获取施法者状态值的辅助函数集合
+ * 解决频繁出现的 `isPlayer ? state.playerXXX : state.opponentXXX` 模式
+ */
+const getCasterValue = {
+  effects: (state: DuelState, isPlayer: boolean): StatusEffect[] => 
+    isPlayer ? state.playerEffects : state.opponentEffects,
+  
+  hand: (state: DuelState, isPlayer: boolean): SpellType[] => 
+    isPlayer ? state.playerHand : state.opponentHand,
+  
+  lastSpell: (state: DuelState, isPlayer: boolean): SpellType | null => 
+    isPlayer ? state.playerLastSpell : state.opponentLastSpell,
+  
+  costMod: (state: DuelState, isPlayer: boolean): number => 
+    isPlayer ? state.playerCostMod : state.opponentCostMod,
+  
+  heroSkillUsed: (state: DuelState, isPlayer: boolean): boolean => 
+    isPlayer ? state.heroSkillsUsed : state.opponentHeroSkillUsed,
+  
+  deck: (state: DuelState, isPlayer: boolean): SpellType[] => 
+    isPlayer ? state.playerDeck : state.opponentDeck,
+};
+
+/**
+ * 获取目标状态值的辅助函数集合
+ * 目标 = 施法者的对手
+ */
+const getTargetValue = {
+  lastSpell: (state: DuelState, isPlayer: boolean): SpellType | null => 
+    isPlayer ? state.opponentLastSpell : state.playerLastSpell,
+  
+  effects: (state: DuelState, isPlayer: boolean): StatusEffect[] => 
+    isPlayer ? state.opponentEffects : state.playerEffects,
+};
+
+/**
+ * 设置施法者状态值的辅助函数集合
+ * 封装状态修改逻辑，确保对手手牌大小同步更新
+ */
+const setCasterValue = {
+  effects: (state: DuelState, isPlayer: boolean, value: StatusEffect[]): void => {
+    if (isPlayer) state.playerEffects = value;
+    else state.opponentEffects = value;
+  },
+  
+  hand: (state: DuelState, isPlayer: boolean, value: SpellType[]): void => {
+    if (isPlayer) state.playerHand = value;
+    else { state.opponentHand = value; state.opponentHandSize = value.length; }
+  },
+  
+  lastSpell: (state: DuelState, isPlayer: boolean, value: SpellType | null): void => {
+    if (isPlayer) state.playerLastSpell = value;
+    else state.opponentLastSpell = value;
+  },
+  
+  costMod: (state: DuelState, isPlayer: boolean, value: number): void => {
+    if (isPlayer) state.playerCostMod = value;
+    else state.opponentCostMod = value;
+  },
+  
+  heroSkillUsed: (state: DuelState, isPlayer: boolean, value: boolean): void => {
+    if (isPlayer) state.heroSkillsUsed = value;
+    else state.opponentHeroSkillUsed = value;
+  },
+};
+
+/**
+ * 检查施法者是否被冻结
+ */
+const isCasterFrozen = (state: DuelState, isPlayer: boolean): boolean => 
+  getCasterValue.effects(state, isPlayer).some(e => e.type === 'frozen');
+
+/**
+ * 检查施法者是否持有指定卡牌
+ */
+const casterHasCard = (state: DuelState, isPlayer: boolean, spellId: SpellType): boolean => 
+  getCasterValue.hand(state, isPlayer).includes(spellId);
+
+/**
+ * 从施法者手牌中移除指定卡牌（首次出现）
+ */
+const removeCardFromCasterHand = (state: DuelState, isPlayer: boolean, spellId: SpellType): void => {
+  const hand = getCasterValue.hand(state, isPlayer);
+  const idx = hand.indexOf(spellId);
+  if (idx !== -1) {
+    setCasterValue.hand(state, isPlayer, hand.filter((_, i) => i !== idx));
+  }
+};
+
 // ============ 单卡执行逻辑 (完全重构) ============
 
 import { 
@@ -228,8 +320,7 @@ export const executeSpell = (
   
   // [P0 Bug 2 Fix] 冻结检查移至最顶层 — 在任何状态拷贝和逻辑之前
   // 确保英雄技能、普通卡牌、skip 以外的所有行为都无法绕过冻结
-  const casterEffects = isPlayer ? state.playerEffects : state.opponentEffects;
-  if (casterEffects.some(e => e.type === 'frozen') && spellId !== 'skip') {
+  if (isCasterFrozen(state, isPlayer) && spellId !== 'skip') {
     return { 
         newState: state as DuelState, 
         logs: [`❄️ ${isPlayer ? '你' : '对手'}被冻结，无法行动！`], 
@@ -244,21 +335,19 @@ export const executeSpell = (
 
   // 2. 英雄技能占用逻辑
   if (spellId.startsWith('hero_')) {
-    const alreadyUsed = isPlayer ? mutableState.heroSkillsUsed : mutableState.opponentHeroSkillUsed;
-    if (alreadyUsed) return { 
-        newState: state as DuelState, 
-        logs: [`${isPlayer ? '玩家' : '对手'}本回合已使用过英雄技能`], 
-        command: { id: 'fail', caster, actions: [] } 
-    };
+    if (getCasterValue.heroSkillUsed(mutableState, isPlayer)) {
+      return { 
+          newState: state as DuelState, 
+          logs: [`${isPlayer ? '玩家' : '对手'}本回合已使用过英雄技能`], 
+          command: { id: 'fail', caster, actions: [] } 
+      };
+    }
     // [P0 Fix] 修改的是拷贝后的状态，不影响原始 state
-    if (isPlayer) mutableState.heroSkillsUsed = true;
-    else mutableState.opponentHeroSkillUsed = true;
+    setCasterValue.heroSkillUsed(mutableState, isPlayer, true);
   } else if (spellId !== 'skip') {
     // [P0 Critical Fix] 手牌持有校验 - 防止双重触发导致的超额扣费
     // 只有当卡牌确实在手牌中时才执行扣费和效果
-    const hand = isPlayer ? mutableState.playerHand : mutableState.opponentHand;
-    const hasCard = hand.includes(spellId);
-    if (!hasCard) {
+    if (!casterHasCard(mutableState, isPlayer, spellId)) {
         // 卡牌不在手牌中，可能是重复点击或延迟导致的
         // 默默失败或返回无操作，不扣费
         return {
@@ -270,13 +359,13 @@ export const executeSpell = (
   }
 
   // 3. 费用计算与扣除
-  const costMod = isPlayer ? state.playerCostMod : state.opponentCostMod;
+  const costMod = getCasterValue.costMod(state, isPlayer);
   const finalCost = calculateSpellCost(spellId, costMod);
   actions.push({ type: 'MANA_CHANGE', target: caster, value: -finalCost });
 
   // [Fix] 消耗缠绕效果 (Tangle) - 机制设计为"下一张牌"费用增加，因此生效一次后需移除
   if (spell.id !== 'skip' && costMod > 0) {
-      const currentEffects = isPlayer ? mutableState.playerEffects : mutableState.opponentEffects;
+      const currentEffects = getCasterValue.effects(mutableState, isPlayer);
       const tangleEffect = currentEffects.find(e => e.type === 'tangle');
       
       // 如果存在缠绕效果，且持续时间较短（<=2，代表单次生效），则移除它
@@ -289,34 +378,18 @@ export const executeSpell = (
           });
           
           // 同步移除 mutableState 中的状态，确保后续逻辑（如连击判定）状态一致
-          if (isPlayer) {
-              mutableState.playerEffects = mutableState.playerEffects.filter(e => e.type !== 'tangle');
-              mutableState.playerCostMod = 0;
-          } else {
-              mutableState.opponentEffects = mutableState.opponentEffects.filter(e => e.type !== 'tangle');
-              mutableState.opponentCostMod = 0;
-          }
+          setCasterValue.effects(mutableState, isPlayer, currentEffects.filter(e => e.type !== 'tangle'));
+          setCasterValue.costMod(mutableState, isPlayer, 0);
       }
   }
 
   // [P0 Fix] 立即从拷贝的状态中移除手牌，确保后续所有中间状态都包含此更动
   if (spell.id !== 'skip') {
-    if (isPlayer) {
-      const firstIdx = mutableState.playerHand.indexOf(spellId);
-      if (firstIdx !== -1) {
-        mutableState.playerHand = mutableState.playerHand.filter((_, i) => i !== firstIdx);
-      }
-      mutableState.playerLastSpell = spellId;
-    } else {
-      if (!spellId.startsWith('hero_')) {
-        const firstIdx = mutableState.opponentHand.indexOf(spellId);
-        if (firstIdx !== -1) {
-          mutableState.opponentHand = mutableState.opponentHand.filter((_, i) => i !== firstIdx);
-          mutableState.opponentHandSize = mutableState.opponentHand.length;
-        }
-      }
-      mutableState.opponentLastSpell = spellId;
+    // 英雄技能不从手牌移除
+    if (!spellId.startsWith('hero_')) {
+      removeCardFromCasterHand(mutableState, isPlayer, spellId);
     }
+    setCasterValue.lastSpell(mutableState, isPlayer, spellId);
   }
 
   if (spell.id === 'skip') {
@@ -326,7 +399,7 @@ export const executeSpell = (
   }
 
   // 3. 克制判定 (Counter/Crit) - 使用 combat 模块
-  const targetLastId = isPlayer ? mutableState.opponentLastSpell : mutableState.playerLastSpell;
+  const targetLastId = getTargetValue.lastSpell(mutableState, isPlayer);
   const { countered, crit } = evaluateElementInteraction(spellId, targetLastId);
   
   if (countered) {
