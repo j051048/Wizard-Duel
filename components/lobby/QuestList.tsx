@@ -2,28 +2,13 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Check, Lock, Star, Trophy,  Flame, Snowflake, Zap, Leaf, Scroll, Sword } from 'lucide-react';
 import { Quest, QuestRarity, QuestType } from '../../types/quest';
+import { RARITY_COLORS, RARITY_TEXT_COLORS } from '../../config/gameConfig';
 
 interface QuestItemProps {
   quest: Quest;
   onClaim: (questId: string) => void;
   t: (key: string) => string;
 }
-
-// ... RARITY_COLORS, RARITY_TEXT_COLORS, getIcon ...
-
-const RARITY_COLORS: Record<QuestRarity, string> = {
-  common: 'border-slate-600 bg-slate-800',
-  rare: 'border-blue-500 bg-slate-800',
-  epic: 'border-purple-500 bg-slate-800',
-  legendary: 'border-amber-500 bg-slate-800'
-};
-
-const RARITY_TEXT_COLORS: Record<QuestRarity, string> = {
-  common: 'text-slate-400',
-  rare: 'text-blue-400',
-  epic: 'text-purple-400',
-  legendary: 'text-amber-400'
-};
 
 const getIcon = (iconName: string, className: string) => {
   switch(iconName) {

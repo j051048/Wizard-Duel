@@ -1,6 +1,23 @@
 import { GameConfig } from '../types';
+import { QuestRarity } from '../types/quest';
 
 export const API_BASE_URL = ''; // 默认为空，由 ApiService 处理环境变量或 Mock
+
+// ============ 稀有度视觉常量 ============
+
+export const RARITY_COLORS: Record<QuestRarity, string> = {
+  common: 'border-slate-600 bg-slate-800',
+  rare: 'border-blue-500 bg-slate-800',
+  epic: 'border-purple-500 bg-slate-800',
+  legendary: 'border-amber-500 bg-slate-800'
+};
+
+export const RARITY_TEXT_COLORS: Record<QuestRarity, string> = {
+  common: 'text-slate-400',
+  rare: 'text-blue-400',
+  epic: 'text-purple-400',
+  legendary: 'text-amber-400'
+};
 
 // ============ 暴雪级游戏配置 (Patch 2.0) ============
 
