@@ -9,24 +9,32 @@ class PVPService {
             this.socket.close();
         }
 
-        // 构造连接地址，FastAPI 路由是 /ws/{room_id}/{player_id}
-        this.socket = new WebSocket(`${this.serverUrl}/ws/${roomId}/${playerId}`);
+        const url = `${this.serverUrl}/ws/${roomId}/${playerId}`;
+        console.log("Attempting PVP Connection to:", url);
+        
+        this.socket = new WebSocket(url);
 
         this.socket.onopen = () => {
-            console.log("PVP Server Connected");
+            console.log("✅ PVP Server Connected successfully!");
         };
 
         this.socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            onMessage(data);
+            console.log("📩 PVP Message Received:", event.data);
+            try {
+                const data = JSON.parse(event.data);
+                onMessage(data);
+            } catch (e) {
+                console.error("❌ Failed to parse PVP message:", e);
+            }
         };
 
-        this.socket.onclose = () => {
-            console.log("PVP Server Disconnected");
+        this.socket.onclose = (event) => {
+            console.warn(`❌ PVP Server Disconnected. Code: ${event.code}, Reason: ${event.reason}`);
+            // 尝试重连逻辑? 暂时先打 log
         };
 
         this.socket.onerror = (error) => {
-            console.error("PVP Socket Error:", error);
+            console.error("🔥 PVP Socket Error Detail:", error);
         };
     }
 

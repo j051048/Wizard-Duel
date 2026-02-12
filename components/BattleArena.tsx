@@ -184,57 +184,50 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
   // [PVP] PVP 连接与消息监听
   useEffect(() => {
-    // 检查是否启用 PVP 模式（可通过 URL 参数或 prop 传入）
-    const urlParams = new URLSearchParams(window.location.search);
-    const pvpRoom = urlParams.get('room') || 'test-room';
-    const pvpEnabled = urlParams.has('pvp') || false;
+    // 强制开启测试模式
+    const pvpRoom = 'test-room';
+    setIsPVPMode(true);
     
-    if (pvpEnabled) {
-      setIsPVPMode(true);
+    console.log(`[PVP] 正在连接服务器: ${pvpRoom}...`);
+    
+    pvpService.connect(pvpRoom, playerIdRef.current, (data) => {
+      if (!isMounted.current) return;
       
-      // 连接 PVP 服务器
-      pvpService.connect(pvpRoom, playerIdRef.current, (data) => {
-        console.log('[PVP] Received:', data);
+      console.log('📩 [PVP] 收到远程数据:', data);
+      
+      if (data.type === 'ACTION' && data.action) {
+        const action = data.action;
         
-        // 处理服务器消息
-        if (data.type === 'ACTION' && data.action) {
-          // 标记为远程操作，避免无限循环
-          isRemoteActionRef.current = true;
-          
-          const action = data.action;
-          
-          // 根据动作类型执行相应操作
+        // 如果是自己发出的广播（被后端传回），则忽略
+        if (action.playerId === playerIdRef.current) return;
+
+        // 标记为远程操作，避免本地执行时再次广播
+        isRemoteActionRef.current = true;
+        
+        try {
           if (action.type === 'PLAY_CARD' && action.spellId) {
-            // 对手出牌：通过 onPlayCard 执行
-            // 注意：这里是对手的操作，实际游戏中对手的卡牌不应该通过我们的 onPlayCard 执行
-            // 而是应该更新 gameLoopState 中对手的出牌状态
-            // 暂时先调用 onPlayCard，后续需要根据实际架构调整
-            console.log('[PVP] Opponent played card:', action.spellId);
+            console.log(`🔥 [PVP] 执行对手法术: ${action.spellId}`);
+            // 注意：PVP模式下，对方的操作应触发对应的结算逻辑
+            // 这里我们调用 onPlayCard 来模拟对方在本地的出牌
+            onPlayCard(action.spellId, action.isConfirmed);
           } else if (action.type === 'END_TURN') {
-            // 对手结束回合
-            console.log('[PVP] Opponent ended turn');
-            if (onPass) {
-              // 这里需要区分是对手结束回合还是轮到我方
-              // 实际逻辑应根据游戏状态机处理
-            }
+            console.log('⏳ [PVP] 对手结束回合');
+            if (onPass) onPass();
           }
-          
-          // 重置标记
+        } finally {
           setTimeout(() => {
             isRemoteActionRef.current = false;
-          }, 100);
-        } else if (data.type === 'PLAYER_JOINED') {
-          console.log('[PVP] Player joined:', data.playerId);
-        } else if (data.type === 'GAME_START') {
-          console.log('[PVP] Game starting...');
+          }, 200);
         }
-      });
-      
-      return () => {
-        pvpService.disconnect();
-      };
-    }
-  }, [onPass]);
+      } else if (data.type === 'PLAYER_JOINED') {
+        console.log('👥 [PVP] 对手已进入房间:', data.player_id);
+      }
+    });
+    
+    return () => {
+      pvpService.disconnect();
+    };
+  }, [onPlayCard, onPass]);
 
   // [P2 Fix #21] Dynamic BGM: 根据 HP 比例动态调整音乐气氛
   useEffect(() => {
@@ -333,6 +326,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       </div>
 
       <FloatingTextOverlay items={floatingTexts} />
+
+      {/* PVP 状态指示器 */}
+      <div className="fixed top-2 left-2 z-50 text-[10px] font-mono text-emerald-400 opacity-50 pointer-events-none">
+        PVP: CONNECTED
+      </div>
 
       {/* [P1] Spell Cast Effects */}
       <SpellCastEffect spellId={playerCard} caster="player" />
