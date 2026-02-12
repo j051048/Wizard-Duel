@@ -22,6 +22,14 @@ export const HealthBar: React.FC<HealthBarProps> = ({ current, max, isPlayer }) 
   const prevCurrent = useRef(current);
   
   useEffect(() => {
+    // 数值弹跳动画：当 current 真正改变时触发
+    if (current !== prevCurrent.current) {
+      setIsBouncing(true);
+      const timer = setTimeout(() => setIsBouncing(false), 200);
+      prevCurrent.current = current;
+      return () => clearTimeout(timer);
+    }
+    
     if (percentage < prevPercentage.current) {
       setIsHurt(true);
       setTimeout(() => setIsHurt(false), 300);
@@ -79,7 +87,7 @@ export const HealthBar: React.FC<HealthBarProps> = ({ current, max, isPlayer }) 
       <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
         <div className="bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-sm border border-white/10 flex items-center gap-1">
            <span className="text-[red] text-[10px] drop-shadow-sm">❤️</span>
-           <span className={`text-[10px] md:text-xs font-black drop-shadow-md ${isHurt ? 'text-white scale-110' : 'text-gray-100'}`}>
+           <span className={`text-[10px] md:text-xs font-black drop-shadow-md transition-transform duration-[200ms] ease-out ${isHurt ? 'text-white scale-110' : 'text-gray-100'}`} style={{ transform: isBouncing ? 'scale(1.2)' : isHurt ? 'scale(1.1)' : 'scale(1)' }}>
              {current} <span className="text-gray-400 font-normal">/ {max}</span>
            </span>
         </div>
