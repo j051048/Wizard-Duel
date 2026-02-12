@@ -12,26 +12,13 @@ const TargetingArrow: React.FC<TargetingArrowProps> = ({ data, isMobile = false 
 
   const { startX, startY, endX, endY } = data;
 
-  // Calculate Bezier Points
-  const points = useMemo(() => {
-    const numPoints = isMobile ? 8 : 12; // 移动端稍微减少点数提升性能
-    const pts = [];
-    
-    // Control Point - Higher arc based on distance
+  // 使用 SVG Path 替代大量的 DOM 节点
+  const pathData = useMemo(() => {
     const dist = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
-    // 移动端手指可能遮挡，稍微向上偏移
     const offsetFactor = isMobile ? 0.3 : 0.2;
     const controlX = (startX + endX) / 2 - (startY - endY) * offsetFactor;
     const controlY = (startY + endY) / 2 - dist * (isMobile ? 0.25 : 0.15);
-
-    for (let i = 0; i <= numPoints; i++) {
-      const t = i / numPoints;
-      // Quadratic Bezier formula
-      const x = (1 - t) * (1 - t) * startX + 2 * (1 - t) * t * controlX + t * t * endX;
-      const y = (1 - t) * (1 - t) * startY + 2 * (1 - t) * t * controlY + t * t * endY;
-      pts.push({ x, y, scale: 0.5 + t * 0.5, opacity: 0.3 + t * 1.5 });
-    }
-    return pts;
+    return `M ${startX} ${startY} Q ${controlX} ${controlY}, ${endX} ${endY}`;
   }, [startX, startY, endX, endY, isMobile]);
 
   return (
@@ -49,48 +36,36 @@ const TargetingArrow: React.FC<TargetingArrowProps> = ({ data, isMobile = false 
         </radialGradient>
       </defs>
 
-      {/* Connection Glow Line */}
-      <path 
-        d={`M ${startX} ${startY} Q ${(startX + endX) / 2 - (startY - endY) * 0.3} ${(startY + endY) / 2 - (isMobile ? 150 : 100)}, ${endX} ${endY}`}
+      {/* 主路径 - 加上虚线效果模拟之前的点状感，但性能极佳 */}
+      <motion.path 
+        d={pathData}
         fill="none"
-        stroke="rgba(251, 191, 36, 0.2)"
-        strokeWidth={isMobile ? "24" : "15"}
+        stroke="url(#dotGrad)"
+        strokeWidth={isMobile ? "12" : "8"}
+        strokeDasharray={isMobile ? "1 25" : "1 20"}
+        strokeLinecap="round"
+        filter="url(#glow)"
+        animate={{ strokeDashoffset: [-100, 0] }}
+        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+      />
+
+      {/* 辅助外发光路径 */}
+      <path 
+        d={pathData}
+        fill="none"
+        stroke="rgba(251, 191, 36, 0.15)"
+        strokeWidth={isMobile ? "30" : "20"}
         strokeLinecap="round"
         filter="url(#glow)"
       />
 
-      {/* Animated Dots */}
-      {points.map((pt, i) => (
-        <motion.circle
-          key={i}
-          cx={pt.x}
-          cy={pt.y}
-          r={(isMobile ? 10 : 7) * pt.scale}
-          fill="url(#dotGrad)"
-          initial={{ opacity: 0 }}
-          animate={{ 
-            opacity: Math.min(1, pt.opacity),
-            scale: [pt.scale, pt.scale * 1.3, pt.scale],
-          }}
-          transition={{
-            duration: 1.2,
-            repeat: Infinity,
-            delay: i * 0.1
-          }}
-          style={{ filter: 'url(#glow)' }}
-        />
-      ))}
-
-      {/* Target Crosshair / Impact */}
+      {/* 目标准星 */}
       <motion.g
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
         style={{ x: endX, y: endY }}
       >
          <circle r={isMobile ? "35" : "25"} fill="none" stroke="#fbbf24" strokeWidth="2" strokeDasharray="4 6" className="animate-spin-slow" />
          <circle r={isMobile ? "10" : "6"} fill="#fbbf24" filter="url(#glow)" />
          
-         {/* Pulse effect at the tip */}
          <motion.circle 
             r={isMobile ? "45" : "30"}
             fill="none"

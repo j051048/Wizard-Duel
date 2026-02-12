@@ -6,9 +6,11 @@
  * - 卡牌边框发光效果
  * - 更大的费用/伤害图标
  * - 3D 透视悬停效果
+ * 
+ * [P0 性能优化] - React.memo + 精准 Props 比较
  */
 
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Spell, SpellType } from '../types';
 import { getMechanicName } from '../constants';
@@ -67,7 +69,7 @@ const getFrameImage = (element: string) => {
   }
 };
 
-export const SpellCard: React.FC<SpellCardProps> = ({ 
+export const SpellCard = memo<SpellCardProps>(({ 
   spell, 
   isSelected, 
   onClick, 
@@ -344,6 +346,11 @@ export const SpellCard: React.FC<SpellCardProps> = ({
         </div>
       </motion.div>
   );
-};
+}, (prev, next) => {
+    return prev.spell?.id === next.spell?.id && 
+           prev.isSelected === next.isSelected && 
+           prev.isAffordable === next.isAffordable &&
+           prev.disabled === next.disabled;
+});
 
 export default SpellCard;
