@@ -4,9 +4,11 @@ import { globalFPSMonitor } from '../services/performance';
 import { FloatingTextItem, FloatingTextType } from '../components/battle/feedback/FloatingText';
 
 /**
- * useBattleAnimations Hook (v2.1)
+ * useBattleAnimations Hook (v2.2)
  * 
- * [P0 UX] 增强打击反馈系统 + [P0 Performance] 离屏渲染与坐标预计算
+ * [P0 UX] 增强打击反馈系统 
+ * [P0 Performance] 离屏渲染与坐标预计算
+ * [Audit Fix] 优化加载卡顿：改为 Lazy Creation 模式
  */
 
 interface Projectile {
@@ -22,8 +24,8 @@ interface Projectile {
 export type ParticleType = 'fire' | 'ice' | 'thunder' | 'poison' | 'rock' | 'default' | 'heal' | 'arcane';
 
 interface Particle {
-    x: number; // 像素坐标
-    y: number; // 像素坐标
+    x: number; 
+    y: number; 
     vx: number;
     vy: number;
     size: number;
@@ -41,13 +43,12 @@ interface PooledParticle extends Particle {
     active: boolean;
 }
 
-const createParticlePool = (): PooledParticle[] => {
-    return Array.from({ length: MAX_PARTICLES }, () => ({
-        x: 0, y: 0, vx: 0, vy: 0, size: 2, color: '#ffffff', 
-        life: 0, maxLife: 1, type: 'default' as ParticleType, 
-        gravity: 0, drag: 0.95, active: false
-    }));
-};
+// [Audit Fix] 移除启动时的昂贵循环计算
+const createEmptyParticle = (): PooledParticle => ({
+    x: 0, y: 0, vx: 0, vy: 0, size: 2, color: '#ffffff', 
+    life: 0, maxLife: 1, type: 'default' as ParticleType, 
+    gravity: 0, drag: 0.95, active: false
+});
 
 const HIT_STOP_DURATION = {
     light: 30,
@@ -56,13 +57,12 @@ const HIT_STOP_DURATION = {
     ultra: 120
 };
 
-// 预创建渐变缓存
 const gradientCache = new Map<string, CanvasGradient>();
 
 export const useBattleAnimations = (isLowQuality: boolean) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const projectilesRef = useRef<Projectile[]>([]);
-  const particlePoolRef = useRef<PooledParticle[]>(createParticlePool());
+  const particlePoolRef = useRef<PooledParticle[]>([]); // 初始为空，解决加载卡顿
   
   const [floatingTexts, setFloatingTexts] = useState<FloatingTextItem[]>([]);
   const [isHitStopped, setIsHitStopped] = useState(false);
@@ -83,6 +83,9 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
       shakeTimer.current = setTimeout(() => setShakeClass(''), duration);
   }, []);
 
+  /**
+   * 按需激活/创建粒子
+   */
   const spawnParticles = useCallback((pctX: number, pctY: number, count: number, type: ParticleType = 'default') => {
       const colors: Record<ParticleType, string[]> = {
           fire: ['#ef4444', '#f97316', '#fbbf24', '#7f1d1d'],
@@ -100,27 +103,39 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
       const h = window.innerHeight;
       let spawned = 0;
 
+      // 1. 尝试复用空闲粒子
       for (let i = 0; i < pool.length && spawned < count; i++) {
           const p = pool[i];
-          if (p.active) continue;
-          
-          const colorList = colors[type] || colors.default;
-          p.color = colorList[Math.floor(Math.random() * colorList.length)];
-          // 预计算像素坐标，避免 render 循环中计算
-          p.x = (pctX / 100) * w;
-          p.y = (pctY / 100) * h;
-          p.type = type;
-          p.vx = (Math.random() - 0.5) * 10;
-          p.vy = (Math.random() - 0.5) * 10;
-          p.gravity = 0.2;
-          p.drag = 0.95;
-          p.life = 600 + Math.random() * 400;
-          p.size = 2 + Math.random() * 3;
-          p.maxLife = p.life;
-          p.active = true;
+          if (!p.active) {
+            activateParticle(p, pctX, pctY, type, colors, w, h);
+            spawned++;
+          }
+      }
+
+      // 2. 如果池子没满且不够用，则即时创建 (Lazy Creation)
+      while (spawned < count && pool.length < MAX_PARTICLES) {
+          const newP = createEmptyParticle();
+          pool.push(newP);
+          activateParticle(newP, pctX, pctY, type, colors, w, h);
           spawned++;
       }
   }, []);
+
+  const activateParticle = (p: PooledParticle, pctX: number, pctY: number, type: ParticleType, colors: any, w: number, h: number) => {
+    const colorList = colors[type] || colors.default;
+    p.color = colorList[Math.floor(Math.random() * colorList.length)];
+    p.x = (pctX / 100) * w;
+    p.y = (pctY / 100) * h;
+    p.type = type;
+    p.vx = (Math.random() - 0.5) * 10;
+    p.vy = (Math.random() - 0.5) * 10;
+    p.gravity = 0.2;
+    p.drag = 0.95;
+    p.life = 600 + Math.random() * 400;
+    p.size = 2 + Math.random() * 3;
+    p.maxLife = p.life;
+    p.active = true;
+  };
 
   const addFloatingText = useCallback((text: string, type: FloatingTextType, isPlayer: boolean, xOffset: number = 0) => {
     const jitterX = (Math.random() - 0.5) * 80;
@@ -188,7 +203,7 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
         canvas.style.width = `${window.innerWidth}px`;
         canvas.style.height = `${window.innerHeight}px`;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        gradientCache.clear(); // 清理缓存
+        gradientCache.clear(); 
     };
     window.addEventListener('resize', handleResize);
     handleResize();
@@ -208,7 +223,6 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
         
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // 1. Particles
         const pool = particlePoolRef.current;
         for (let i = 0; i < pool.length; i++) {
             const p = pool[i];
@@ -230,7 +244,6 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
             ctx.fill();
         }
 
-        // 2. Projectiles
         const w = window.innerWidth;
         const h = window.innerHeight;
         projectilesRef.current = projectilesRef.current.filter(p => {
