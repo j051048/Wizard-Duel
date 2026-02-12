@@ -56,25 +56,33 @@ export const PackOpener: React.FC<PackOpenerProps> = ({
   const [phase, setPhase] = useState<'PACK' | 'BURST' | 'REVEAL'>('PACK');
   const [revealedIndices, setRevealedIndices] = useState<Set<number>>(new Set());
   
-  const hasRare = cards.some(c => c.rarity === 'legendary' || c.rarity === 'mythic');
+  const hasRare = useMemo(
+    () => cards.some(c => c.rarity === 'legendary' || c.rarity === 'mythic'),
+    [cards]
+  );
+  
   const isAllRevealed = revealedIndices.size === cards.length;
 
-  const handlePackClick = () => {
+  const handlePackClick = useCallback(() => {
     HapticService.impact('medium');
     setPhase('BURST');
     setTimeout(() => setPhase('REVEAL'), 800);
-  };
+  }, []);
 
-  const handleCardClick = (idx: number) => {
-    if (revealedIndices.has(idx)) return;
-    HapticService.impact('light');
-    setRevealedIndices(new Set([...revealedIndices, idx]));
-  };
+  // 使用 useCallback 创建稳定的点击处理函数
+  // 使用函数式更新避免依赖 revealedIndices
+  const handleCardClick = useCallback((idx: number) => {
+    setRevealedIndices(prev => {
+      if (prev.has(idx)) return prev;
+      HapticService.impact('light');
+      return new Set([...prev, idx]);
+    });
+  }, []);
 
-  const handleRevealAll = () => {
+  const handleRevealAll = useCallback(() => {
     HapticService.impact('heavy');
     setRevealedIndices(new Set(cards.map((_, i) => i)));
-  };
+  }, [cards]);
 
   return (
     <div className={`fixed inset-0 z-50 bg-gradient-to-br ${bgGradient} flex items-center justify-center overflow-hidden`}>
@@ -132,7 +140,7 @@ export const PackOpener: React.FC<PackOpenerProps> = ({
                       index={idx}
                       isRevealed={isRevealed}
                       isMobile={isMobile}
-                      onClick={() => handleCardClick(idx)}
+                      onCardClick={handleCardClick}
                     />
                   </motion.div>
                 );
