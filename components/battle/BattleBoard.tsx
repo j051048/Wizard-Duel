@@ -1,7 +1,15 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { SpellCard } from '../SpellCard';
 import { DuelState, SpellType } from '../../types';
 import { getSpellById } from '../../services/gameLogic';
+
+// 随从入场动画配置 - 只在首次挂载时执行
+const minionEntryAnimation = {
+  initial: { opacity: 0, scale: 0.8, y: 10 },
+  animate: { opacity: 1, scale: 1, y: 0 },
+  transition: { duration: 0.2, ease: "easeOut" }
+};
 
 interface BattleBoardProps {
   duelState: DuelState | null;
