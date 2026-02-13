@@ -2,57 +2,56 @@ import { Action } from '../types/game';
 
 class PVPService {
     private socket: WebSocket | null = null;
+    // 强制使用 wss:// 标准 URL，Zeabur 会自动处理 443 -> 8080 的转发
     private serverUrl: string = "wss://xwizard.zeabur.app";
-    private retryCount: number = 0;
 
     connect(roomId: string, playerId: string, onMessage: (data: any) => void) {
         if (this.socket) {
-            this.socket.onclose = null; // 清除之前的监听，防止干扰
+            this.socket.onclose = null;
             this.socket.close();
         }
 
-        // 终极兼容方案：如果 wss:// 1006 报错，则在第二次尝试时强制切换到 8080 端口且可能尝试非加密
-        let url = `${this.serverUrl}/ws/${roomId}/${playerId}`;
+        // 强制使用标准 wss:// URL，不带端口，让 Zeabur 网关处理转发
+        const url = `wss://xwizard.zeabur.app/ws/${roomId}/${playerId}`;
         
-        if (this.retryCount === 1) {
-            url = `wss://xwizard.zeabur.app:8080/ws/${roomId}/${playerId}`;
-            console.log("⚠️ [PVP_DIAGNOSTIC] 尝试 8080 强制端口...");
-        } else if (this.retryCount > 1) {
-            url = `ws://xwizard.zeabur.app:8080/ws/${roomId}/${playerId}`;
-            console.log("⚠️ [PVP_DIAGNOSTIC] 尝试非加密 ws:// 协议强制突破...");
-        }
-
-        console.log("🚀 [PVP_DIAGNOSTIC] 连接中:", url);
+        console.log("🚀 [PVP] Connecting to:", url);
+        console.log("📍 [PVP] Room:", roomId, "Player:", playerId);
         
         try {
             this.socket = new WebSocket(url);
-            this.bindEvents(onMessage, roomId, playerId);
+            this.bindEvents(onMessage);
         } catch (e) {
-            console.error("🚫 初始化失败:", e);
+            console.error("🚫 [PVP] WebSocket initialization failed:", e);
         }
     }
 
-    private bindEvents(onMessage: (data: any) => void, roomId: string, playerId: string) {
+    private bindEvents(onMessage: (data: any) => void) {
         if (!this.socket) return;
 
         this.socket.onopen = () => {
-            this.retryCount = 0;
-            console.log("✅ [PVP_DIAGNOSTIC] 成功握手!");
+            console.log("✅ [PVP] WebSocket connection opened");
         };
 
         this.socket.onmessage = (event) => {
+            console.log("📨 [PVP] Received message:", event.data);
             try {
                 const data = JSON.parse(event.data);
+                // 检查握手确认
+                if (data.type === "CONNECTED") {
+                    console.log("🎉 [PVP] Server confirmed connection:", data.msg);
+                }
                 onMessage(data);
-            } catch (err) {}
+            } catch (err) {
+                console.error("❌ [PVP] Failed to parse message:", err);
+            }
         };
 
         this.socket.onclose = (event) => {
-            console.warn(`❌ [PVP_DIAGNOSTIC] 失败码: ${event.code}`);
-            if (this.retryCount < 3) {
-                this.retryCount++;
-                setTimeout(() => this.connect(roomId, playerId, onMessage), 2000);
-            }
+            console.warn(`❌ [PVP] WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`);
+        };
+
+        this.socket.onerror = (error) => {
+            console.error("🚨 [PVP] WebSocket error:", error);
         };
     }
 

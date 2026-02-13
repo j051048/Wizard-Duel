@@ -19,6 +19,7 @@ import { useUserStore } from '../stores/useUserStore';
 import { ShoppingBag, Book, Swords, MessageCircle } from 'lucide-react';
 import { MatchmakingOverlay } from './MatchmakingOverlay';
 import { QuestManager } from '../services/QuestManager';
+import { pvpService } from '../services/pvpService';
 
 // Extracted Components
 import TopBar from './lobby/TopBar';
