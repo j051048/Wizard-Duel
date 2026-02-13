@@ -10,16 +10,16 @@ import { useIsMobile } from '../../../hooks/useIsMobile';
 
 interface OpponentHUDProps {
   duelState: DuelState;
-  aiStatus: GameLoopState['aiStatus'];
-  opponentCard: SpellType | null;
-  isOpponentShaking: boolean;
-  projection: SpellProjection | null;
+  aiStatus?: GameLoopState['aiStatus'];
+  opponentCard?: SpellType | null;
+  isOpponentShaking?: boolean;
+  projection?: SpellProjection | null;
   // Controls (Mobile integration)
-  isMuted: boolean;
-  onToggleMute: () => void;
-  onSurrender: () => void;
-  isLogOpen: boolean;
-  setIsLogOpen: (open: boolean) => void;
+  isMuted?: boolean;
+  onToggleMute?: () => void;
+  onSurrender?: () => void;
+  isLogOpen?: boolean;
+  setIsLogOpen?: (open: boolean) => void;
 }
 
 export const OpponentHUD: React.FC<OpponentHUDProps> = ({
@@ -57,7 +57,7 @@ export const OpponentHUD: React.FC<OpponentHUDProps> = ({
                 />
               </div>
               {/* 思考指示器 */}
-              {(aiStatus.emote === 'thinking' || aiStatus.emote === 'thinking_fast') && (
+              {(aiStatus?.emote === 'thinking' || aiStatus?.emote === 'thinking_fast') && (
                 <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-amber-500 rounded-full animate-pulse border border-black" />
               )}
             </div>
@@ -129,7 +129,7 @@ export const OpponentHUD: React.FC<OpponentHUDProps> = ({
         </div>
 
         {/* AI思考状态浮动提示 - 独立显示 */}
-        {(aiStatus.emote === 'thinking' || aiStatus.emote === 'thinking_fast') && (
+        {(aiStatus?.emote === 'thinking' || aiStatus?.emote === 'thinking_fast') && (
           <div className="absolute top-14 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
             <div className="bg-black/80 backdrop-blur px-3 py-1.5 rounded-xl border border-amber-500/40 flex items-center gap-2 shadow-lg">
               <span className="text-xs text-amber-300 font-bold">对手思考中</span>
@@ -168,7 +168,7 @@ export const OpponentHUD: React.FC<OpponentHUDProps> = ({
           effects={duelState.opponentEffects}
           isShaking={isOpponentShaking}
           avatarSrc={duelState.aiProfile?.avatar}
-          isThinking={aiStatus.emote === 'thinking'}
+          isThinking={aiStatus?.emote === 'thinking'}
           projection={projection?.target === 'opponent' ? { hpChange: projection.netHpChange || 0, armorChange: projection.netArmorChange || 0 } : null}
         />
         

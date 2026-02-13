@@ -2,11 +2,12 @@ import React from 'react';
 import { AIStatus, AIEmoteType } from '../../types';
 
 interface AIEmoteBubbleProps {
-  status: AIStatus;
+  status?: AIStatus;
 }
 
 const AIEmoteBubble: React.FC<AIEmoteBubbleProps> = ({ status }) => {
-  if (!status.emote && !status.message) return null;
+  // 【防御性编程】如果 status 为空，直接返回 null
+  if (!status?.emote && !status?.message) return null;
   
   const getEmoteIcon = (emote: AIEmoteType | null) => {
     switch (emote) {
