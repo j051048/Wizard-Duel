@@ -102,6 +102,16 @@ function App() {
 
   // ============ Initialization ============
   useEffect(() => {
+    // 强制清理旧版本缓存与存档
+    const version = "v2026.02.13.PVP.01";
+    const storedVer = localStorage.getItem('app_version');
+    if (storedVer !== version) {
+        console.log('🚀 [VERSION_RECOVERY] 检测到新版本 PVP 补丁，正在重置本地存储...');
+        // 清理战斗状态、RNG状态等
+        localStorage.removeItem('wizard_duel_state');
+        localStorage.removeItem('wizard_rng_state');
+        localStorage.setItem('app_version', version);
+    }
     startPreloading();
   }, [startPreloading]);
 
