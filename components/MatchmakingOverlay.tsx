@@ -1,6 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Loader2, Swords, X, User, Zap } from 'lucide-react';
-import { matchmaking, OnlineUser } from '../services/matchmaking';
+import { pvpService } from '../services/pvpService';
+
+export interface OnlineUser {
+  id: string;
+  username: string;
+  avatar_url?: string;
+  status: 'online' | 'seeking' | 'battling';
+  last_active: number;
+}
 
 interface MatchmakingOverlayProps {
   userId: string;
@@ -20,9 +28,12 @@ export const MatchmakingOverlay: React.FC<MatchmakingOverlayProps> = ({
   const [status, setStatus] = useState<'idle' | 'searching' | 'found'>('idle');
   const [timer, setTimer] = useState(0);
   const [matchedOpponent, setMatchedOpponent] = useState<OnlineUser | null>(null);
+  const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
+  const hasConnectedRef = useRef(false);
 
+  // Timer effect
   useEffect(() => {
-    let interval: any;
+    let interval: ReturnType<typeof setInterval>;
     if (status === 'searching') {
       interval = setInterval(() => setTimer(t => t + 1), 1000);
     } else {
@@ -31,35 +42,78 @@ export const MatchmakingOverlay: React.FC<MatchmakingOverlayProps> = ({
     return () => clearInterval(interval);
   }, [status]);
 
-  useEffect(() => {
-    if (isOpen) {
-      handleStartSearch();
-    } else {
-      handleCancel();
-    }
-  }, [isOpen]);
+  // 处理 WebSocket 消息
+  const handleWebSocketMessage = useCallback((data: any) => {
+    console.log('[Matchmaking] Received:', data);
 
-  const handleStartSearch = async () => {
-    setStatus('searching');
-    await matchmaking.init(userId, username);
-    
-    // 开始寻找对手
-    matchmaking.startSeeking(({ roomId, opponent }) => {
+    // 处理匹配成功消息
+    if (data.type === 'MATCH_FOUND') {
+      const { roomId, opponent } = data;
       setMatchedOpponent(opponent);
+      setCurrentRoomId(roomId);
       setStatus('found');
-      
+
       // 延迟 2 秒后进入对战
       setTimeout(() => {
         onMatchFound(roomId, opponent);
       }, 2000);
-    });
-  };
+    }
 
-  const handleCancel = () => {
-    matchmaking.updateStatus('online');
+    // 处理连接确认
+    if (data.type === 'CONNECTED') {
+      console.log('[Matchmaking] Server confirmed connection');
+    }
+  }, [onMatchFound]);
+
+  // 主 effect: 监听 isOpen 变化，管理 WebSocket 连接
+  useEffect(() => {
+    // 当 overlay 打开时，发起 WebSocket 连接
+    if (isOpen && !hasConnectedRef.current) {
+      hasConnectedRef.current = true;
+      setStatus('searching');
+
+      // 使用 "matchmaking" 作为临时房间 ID 进行匹配
+      // 服务端应该能够处理这个特殊房间并分配对手
+      const matchmakingRoomId = 'matchmaking';
+
+      console.log('[Matchmaking] Connecting to WebSocket...');
+      pvpService.connect(matchmakingRoomId, userId, handleWebSocketMessage);
+      setCurrentRoomId(matchmakingRoomId);
+    }
+
+    // 当 isOpen 变为 false 时断开连接（组件仍然挂载）
+    if (!isOpen && hasConnectedRef.current) {
+      console.log('[Matchmaking] isOpen changed to false, disconnecting...');
+      pvpService.disconnect();
+      hasConnectedRef.current = false;
+      setStatus('idle');
+      setMatchedOpponent(null);
+      setCurrentRoomId(null);
+    }
+
+    // Cleanup: 组件卸载时总是断开连接
+    return () => {
+      if (hasConnectedRef.current) {
+        console.log('[Matchmaking] Disconnecting WebSocket (cleanup)...');
+        pvpService.disconnect();
+        hasConnectedRef.current = false;
+        setStatus('idle');
+        setMatchedOpponent(null);
+        setCurrentRoomId(null);
+      }
+    };
+  }, [isOpen, userId, handleWebSocketMessage]);
+
+  // 处理取消匹配
+  const handleCancel = useCallback(() => {
+    console.log('[Matchmaking] User cancelled');
+    pvpService.disconnect();
+    hasConnectedRef.current = false;
     setStatus('idle');
+    setMatchedOpponent(null);
+    setCurrentRoomId(null);
     onClose();
-  };
+  }, [onClose]);
 
   if (!isOpen) return null;
 
