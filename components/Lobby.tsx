@@ -259,13 +259,8 @@ export const Lobby: React.FC<LobbyProps> = ({
         onMatchFound={(roomId, opponent) => {
           console.log('Match Found!', roomId, opponent);
           setIsMatchmaking(false);
-          // 使用类型判断或字符串判断
-          if (typeof opponent === 'string' && opponent === 'AI') {
-            onStartDuel(); // 如果是 AI，直接走原有的单机对战逻辑
-          } else {
-            const opp = opponent as any;
-            alert(`匹配完成！房间号: ${roomId}\n对手: ${opp.username}\n(PvP 战斗模式开发中...)`);
-          }
+          // [PVP 强制放行] 所有的匹配成功现在都导向对战场景
+          onStartDuel();
         }}
       />
 
