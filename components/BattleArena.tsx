@@ -182,8 +182,13 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     return () => { isMounted.current = false; };
   }, []);
 
-  // [PVP] PVP 连接与消息监听
   useEffect(() => {
+    // 强制清理旧的单机存档，防止进入 PVP 时被状态恢复劫持
+    if (localStorage.getItem('wizard_duel_state')) {
+      console.log('🧹 [PVP_INIT] 清理本地旧存档，确保联网环境纯净');
+      localStorage.removeItem('wizard_duel_state');
+    }
+
     // 强制开启测试模式
     const pvpRoom = 'test-room';
     setIsPVPMode(true);
