@@ -2,6 +2,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict, List, Tuple, Optional
 import json
+import random
 import uuid
 import asyncio
 import uvicorn
@@ -42,11 +43,14 @@ class ConnectionManager:
 
         # 生成唯一房间 ID
         room_id = f"game_{uuid.uuid4().hex[:8]}"
+        
+        # 生成随机种子，用于前端同步 RNG
+        seed = random.randint(1, 1000000)
 
         # 预创建空房间（等待双方以对战 WebSocket 加入）
         self.rooms[room_id] = {}
 
-        print(f"⚔️ [MATCH_FOUND] 配对成功! 房间: {room_id} | {p1_id} vs {p2_id}")
+        print(f"⚔️ [MATCH_FOUND] 配对成功! 房间: {room_id} | {p1_id} vs {p2_id} | Seed: {seed}")
 
         # 构建消息
         p1_match_data = {
@@ -55,6 +59,7 @@ class ConnectionManager:
             "status": "ready",
             "opponent": {"id": p2_id, "name": p2_id[:12]},
             "your_role": "player1",
+            "seed": seed
         }
         p2_match_data = {
             "type": "MATCH_FOUND",
@@ -62,6 +67,7 @@ class ConnectionManager:
             "status": "ready",
             "opponent": {"id": p1_id, "name": p1_id[:12]},
             "your_role": "player2",
+            "seed": seed
         }
 
         # 缓存结果 + 唤醒等待中的 handler

@@ -179,6 +179,7 @@ function App() {
             selectedBet={ui.selectedBet}
             onSelectBet={ui.setSelectedBet}
             onStartDuel={routing.handleStartDuel}
+            onPvpStart={routing.handlePvpStart}
             onOpenShop={() => ui.setGameState('SHOP')}
             onOpenCollection={() => ui.setGameState('COLLECTION')}
             history={user.history}

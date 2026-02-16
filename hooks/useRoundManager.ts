@@ -20,9 +20,10 @@ const initialAIStatus: AIStatus = { emote: null, message: null };
 interface UseRoundManagerDeps {
   enqueue: (commands: GameActionCommand[], actionId?: string) => void;
   showTurnBanner: (type: 'player' | 'opponent') => void;
+  pvpRoleRef?: React.MutableRefObject<'player1' | 'player2' | null>;
 }
 
-export function useRoundManager({ enqueue, showTurnBanner }: UseRoundManagerDeps) {
+export function useRoundManager({ enqueue, showTurnBanner, pvpRoleRef }: UseRoundManagerDeps) {
 
   /**
    * 执行新回合的完整流程：
@@ -59,10 +60,22 @@ export function useRoundManager({ enqueue, showTurnBanner }: UseRoundManagerDeps
       });
       commands.push({ type: 'SET_PHASE', payload: 'ROUND_RESET' });
     } else {
-      // 4. Start Player Turn
-      commands.push({ type: 'EXECUTE_LOGIC', payload: () => showTurnBanner('player'), delay: PHASE_TRANSITION_DELAY });
-      commands.push({ type: 'WAIT', payload: null, delay: BANNER_WAIT_DELAY });
-      commands.push({ type: 'SET_PHASE', payload: 'PLAYER_TURN' });
+      // 4. Start Player Turn or Wait in PVP
+      // [PVP Fix] 如果是后手玩家 (player2)，新回合开始时也是等待对手
+      const isPlayer2 = pvpRoleRef?.current === 'player2';
+      
+      if (isPlayer2) {
+        // 后手逻辑：进入等待
+        commands.push({ type: 'EXECUTE_LOGIC', payload: () => showTurnBanner('opponent'), delay: PHASE_TRANSITION_DELAY });
+        commands.push({ type: 'WAIT', payload: null, delay: BANNER_WAIT_DELAY });
+        commands.push({ type: 'SET_PHASE', payload: 'WAITING_FOR_OPPONENT' });
+      } else {
+        // 先手/PVE逻辑：进入玩家回合
+        commands.push({ type: 'EXECUTE_LOGIC', payload: () => showTurnBanner('player'), delay: PHASE_TRANSITION_DELAY });
+        commands.push({ type: 'WAIT', payload: null, delay: BANNER_WAIT_DELAY });
+        commands.push({ type: 'SET_PHASE', payload: 'PLAYER_TURN' });
+      }
+
       commands.push({
         type: 'UPDATE_UI', payload: {
           playerCard: null,
@@ -73,7 +86,7 @@ export function useRoundManager({ enqueue, showTurnBanner }: UseRoundManagerDeps
     }
 
     enqueue(commands, `round_${newState.roundNumber}`);
-  }, [enqueue, showTurnBanner]);
+  }, [enqueue, showTurnBanner, pvpRoleRef]);
 
   return { startNewRound };
 }

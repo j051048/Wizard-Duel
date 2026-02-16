@@ -15,7 +15,7 @@ interface MatchmakingOverlayProps {
   username: string;
   isOpen: boolean;
   onClose: () => void;
-  onMatchFound: (roomId: string, opponent: OnlineUser) => void;
+  onMatchFound: (roomId: string, opponent: OnlineUser, role: 'player1' | 'player2', seed?: number) => void;
 }
 
 export const MatchmakingOverlay: React.FC<MatchmakingOverlayProps> = ({
@@ -57,6 +57,9 @@ export const MatchmakingOverlay: React.FC<MatchmakingOverlayProps> = ({
         status: 'seeking' as const,
         last_active: Date.now()
       };
+      // [PVP Fix] 获取角色分配与随机种子
+      const role = data.your_role || 'player2'; // 默认为后手以防万一
+      const seed = data.seed;
       
       setMatchedOpponent(opponent);
       setCurrentRoomId(roomId);
@@ -64,7 +67,7 @@ export const MatchmakingOverlay: React.FC<MatchmakingOverlayProps> = ({
 
       // 延迟 2 秒后进入对战
       setTimeout(() => {
-        onMatchFound(roomId, opponent);
+        onMatchFound(roomId, opponent, role, seed);
       }, 2000);
     }
 

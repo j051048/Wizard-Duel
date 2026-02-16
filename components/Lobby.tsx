@@ -53,6 +53,7 @@ interface LobbyProps {
   onOpenModeSelect?: () => void;
   language: Language;
   onLanguageChange: (lang: Language) => void;
+  onPvpStart: (role: 'player1' | 'player2', seed?: number) => void;
 }
 
 export const Lobby: React.FC<LobbyProps> = ({
@@ -79,6 +80,7 @@ export const Lobby: React.FC<LobbyProps> = ({
   onOpenModeSelect,
   language,
   onLanguageChange,
+  onPvpStart,
 }) => {
   const isMobile = useIsMobile();
   const [isRulesOpen, setIsRulesOpen] = useState(false);
@@ -258,13 +260,15 @@ export const Lobby: React.FC<LobbyProps> = ({
         username={activeAddress?.slice(0, 8) || 'Guest'}
         isOpen={isMatchmaking}
         onClose={() => setIsMatchmaking(false)}
-        onMatchFound={(roomId, opponent) => {
-          console.log('Match Found!', roomId, opponent);
+        onMatchFound={(roomId, opponent, role, seed) => {
+          console.log('Match Found!', roomId, opponent, role, seed);
           setIsMatchmaking(false);
           // [P1] 将匹配成功的房间 ID 存入全局 store，供 BattleArena 使用
           useUIStore.getState().setPvpRoomId(roomId);
+          useUIStore.getState().setPvpRole(role);
+          useUIStore.getState().setPvpSeed(seed ?? null);
           // [PVP 强制放行] 所有的匹配成功现在都导向对战场景
-          onStartDuel();
+          onPvpStart(role, seed);
         }}
       />
 

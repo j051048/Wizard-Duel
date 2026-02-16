@@ -32,6 +32,7 @@ interface UsePlayerActionsDeps {
   setPhase: (phase: any) => void;
   setUiState: React.Dispatch<React.SetStateAction<any>>;
   startNewRound: (state: DuelState) => void;
+  pvpRoleRef?: React.MutableRefObject<'player1' | 'player2' | null>;
 }
 
 export function usePlayerActions({
@@ -44,6 +45,7 @@ export function usePlayerActions({
   setPhase,
   setUiState,
   startNewRound,
+  pvpRoleRef,
 }: UsePlayerActionsDeps) {
 
     /** 出牌 */
@@ -106,9 +108,11 @@ export function usePlayerActions({
 
     const commands: GameActionCommand[] = [
       { type: 'UPDATE_STATE', payload: newState },
-      { type: 'EXECUTE_LOGIC', payload: () => showTurnBanner('player'), delay: PHASE_TRANSITION_DELAY },
+      // [Fix] 根据角色决定显示哪个 Banner
+      { type: 'EXECUTE_LOGIC', payload: () => showTurnBanner(pvpRoleRef?.current === 'player2' ? 'opponent' : 'player'), delay: PHASE_TRANSITION_DELAY },
       { type: 'WAIT', payload: null, delay: BANNER_WAIT_DELAY },
-      { type: 'ADD_MESSAGE', payload: '对战开始！你的回合。' },
+      // [Fix] 根据角色决定消息
+      { type: 'ADD_MESSAGE', payload: pvpRoleRef?.current === 'player2' ? '等待对手...' : '对战开始！你的回合。' },
       {
         type: 'EXECUTE_LOGIC',
         payload: () => startNewRound({ ...newState, roundNumber: 0 }),
@@ -118,7 +122,7 @@ export function usePlayerActions({
 
     setUiState((prev: any) => ({ ...prev, effectMessages: [] }));
     enqueue(commands, 'mulligan');
-  }, [duelStateRef, enqueue, showTurnBanner, setDuelState, setUiState, startNewRound]);
+  }, [duelStateRef, enqueue, showTurnBanner, setDuelState, setUiState, startNewRound, pvpRoleRef]);
 
   /** 初始化标准对战 */
   const startDuel = useCallback((playerDeck: SpellType[], _opponentDeck: SpellType[], gameMode: GameMode = 'standard') => {
@@ -148,10 +152,29 @@ export function usePlayerActions({
     }));
   }, [setDuelState, setPhase, setUiState]);
 
+  /** [PVP] 初始化 PVP 对战 */
+  const startPvpDuel = useCallback((playerDeck: SpellType[], role: 'player1' | 'player2', seed?: number) => {
+    if (pvpRoleRef) pvpRoleRef.current = role;
+    
+    // PVP 模式默认为 Standard 规则，但使用传入的 seed 来同步 RNG
+    const initialState = createInitialDuelState(playerDeck || [], 'standard', seed);
+    
+    setDuelState(initialState);
+    setPhase('MULLIGAN_PHASE');
+    setUiState((prev: any) => ({
+      ...prev,
+      isGameOver: false,
+      gameResult: null,
+      effectMessages: [],
+      resultText: ''
+    }));
+  }, [setDuelState, setPhase, setUiState, pvpRoleRef]);
+
   return {
     playCard,
     handleMulligan,
     startDuel,
     startTavernDuel,
+    startPvpDuel,
   };
 }

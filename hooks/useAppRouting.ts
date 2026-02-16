@@ -23,6 +23,7 @@ interface UseAppRoutingDeps {
   gameLoopActions: {
     reset: () => void;
     startTavernDuel: (deck: SpellType[], ai: AIProfile, mode: GameMode) => void;
+    startPvpDuel: (playerDeck: SpellType[], role: 'player1' | 'player2', seed?: number) => void;
   };
   audioActions: {
     playBgm: (track: 'lobby' | 'battle') => void;
@@ -30,7 +31,10 @@ interface UseAppRoutingDeps {
 }
 
 export function useAppRouting({ gameLoopActions, audioActions }: UseAppRoutingDeps) {
-  const user = useUserStore();
+  const user = useUserStore((state) => ({ 
+    selectedDeck: state.selectedDeck,
+    setActiveAddress: state.setActiveAddress,
+  }));
   const ui = useUIStore();
   const toast = useToastStore();
 
@@ -53,6 +57,22 @@ export function useAppRouting({ gameLoopActions, audioActions }: UseAppRoutingDe
       ui.setGameState('LOBBY');
     }
   }, [user.selectedDeck, ui, audioActions, toast]);
+
+  // Handle PVP Start
+  const handlePvpStart = useCallback((role: 'player1' | 'player2', seed?: number) => {
+      if (!user.selectedDeck || !user.selectedDeck.cards) {
+          toast.warning('缺少牌组', '请先在牌组编辑器中选择一副牌组！');
+          return;
+      }
+
+      console.log('Starting PVP Duel:', { role, deckSize: user.selectedDeck.cards.length });
+      gameLoopActions.startPvpDuel(user.selectedDeck.cards, role, seed);
+      ui.setGameState('MULLIGAN');
+      // BGM will be handled by BattleArena or stays as lobby until duel starts?
+      // Usually Battle BGM starts at Mulligan or Duel. 
+      // App.tsx doesn't seem to play BGM automatically on state change, but relies on audioActions calls.
+      audioActions.playBgm('battle');
+  }, [user.selectedDeck, gameLoopActions, ui, audioActions, toast]);
 
   /**
    * 重置游戏状态
@@ -130,6 +150,7 @@ export function useAppRouting({ gameLoopActions, audioActions }: UseAppRoutingDe
   return {
     handleSelectMode,
     handleResetGame,
+    handlePvpStart,
     handleLoginComplete,
     handleMatchmakingComplete,
     handleStartDuel,

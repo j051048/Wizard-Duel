@@ -48,6 +48,7 @@ export interface GameLoopActions {
   // [PVP] 远程操作处理
   handleRemotePlayCard: (spellId: SpellType) => void;
   handleRemoteEndTurn: () => void;
+  startPvpDuel: (playerDeck: SpellType[], role: 'player1' | 'player2', seed?: number) => void;
 }
 
 export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoopActions] {
@@ -159,6 +160,9 @@ export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoo
   const phaseRef = useRef(phase);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
 
+  // [PVP] 角色引用，用于在各个 Hook 间共享角色信息
+  const pvpRoleRef = useRef<'player1' | 'player2' | null>(null);
+
   // ============ [#6] 优化的 enqueue 包装 ============
   const safeEnqueue = useCallback((commands: GameActionCommand[], actionId?: string) => {
     // 防止重复触发同一动作
@@ -181,9 +185,13 @@ export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoo
 
   // ============ [B-1] 组合拆分后的子 Hooks ============
 
-  const { startNewRound } = useRoundManager({ enqueue: safeEnqueue, showTurnBanner });
+  const { startNewRound } = useRoundManager({ 
+    enqueue: safeEnqueue, 
+    showTurnBanner,
+    pvpRoleRef 
+  });
 
-  const { playCard, handleMulligan, startDuel, startTavernDuel } = usePlayerActions({
+  const { playCard, handleMulligan, startDuel, startTavernDuel, startPvpDuel } = usePlayerActions({
     duelStateRef,
     phaseRef,
     isProcessing,
@@ -193,6 +201,7 @@ export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoo
     setPhase,
     setUiState,
     startNewRound,
+    pvpRoleRef
   });
 
   const { passTurn, handleRemoteEndTurn } = useAITurn({
@@ -203,6 +212,7 @@ export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoo
     enqueue: safeEnqueue,
     showTurnBanner,
     startNewRound,
+    pvpRoleRef
   });
 
   // [PVP] 处理远程对手出牌：以"对手"身份执行法术结算
@@ -355,6 +365,7 @@ export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoo
     {
       startDuel,
       startTavernDuel,
+      startPvpDuel,
       playCard,
       passTurn,
       reset,

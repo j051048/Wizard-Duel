@@ -26,6 +26,7 @@ interface UseAITurnDeps {
   phaseRef: React.MutableRefObject<string>;
   isProcessing: boolean;
   isPVPMode: boolean; // [PVP] 是否为 PVP 模式
+  pvpRoleRef?: React.MutableRefObject<'player1' | 'player2' | null>; // [PVP] 角色引用
   enqueue: (commands: GameActionCommand[], actionId?: string) => void;
   showTurnBanner: (type: 'player' | 'opponent') => void;
   startNewRound: (state: DuelState) => void;
@@ -36,6 +37,7 @@ export function useAITurn({
   phaseRef,
   isProcessing: _isProcessing,
   isPVPMode,
+  pvpRoleRef,
   enqueue,
   showTurnBanner,
   startNewRound,
@@ -49,15 +51,54 @@ export function useAITurn({
     const state = duelStateRef.current;
     if (!state || phaseRef.current !== 'PLAYER_TURN') return;
 
-    // ============ [PVP] PVP 模式：不运行 AI，只切换阶段 ============
+    // ============ [PVP] PVP 模式：逻辑分流 ============
     if (isPVPMode) {
       const commands: GameActionCommand[] = [];
-      commands.push({ type: 'EXECUTE_LOGIC', payload: () => showTurnBanner('opponent'), delay: PHASE_TRANSITION_DELAY });
-      commands.push({ type: 'WAIT', payload: null, delay: BANNER_WAIT_DELAY });
-      commands.push({ type: 'SET_PHASE', payload: 'WAITING_FOR_OPPONENT' });
-      commands.push({ type: 'UPDATE_UI', payload: { playerCard: null } });
-      commands.push({ type: 'ADD_MESSAGE', payload: '等待对手操作...' });
-      enqueue(commands, 'pvp_pass_turn');
+      const role = pvpRoleRef?.current;
+
+      if (role === 'player2') {
+        // [PVP P2] 后手玩家结束回合 -> 触发结算 -> 进入下一轮(等待)
+        // 1. Settle Round End
+        const roundEndResult = RuleArbiter.resolveRoundEnd(state);
+        let tempState = roundEndResult.newState; // Save for execution
+        
+        // Log events
+        roundEndResult.events.forEach(e => {
+            if (e.description) commands.push({ type: 'ADD_MESSAGE', payload: e.description });
+        });
+        commands.push({ type: 'UPDATE_STATE', payload: tempState });
+
+        if (roundEndResult.gameOver) {
+             commands.push({
+                type: 'UPDATE_UI', payload: {
+                  isGameOver: true,
+                  gameResult: roundEndResult.gameOver === 'DRAW' ? 'LOSS' : roundEndResult.gameOver,
+                  resultText: roundEndResult.gameOver,
+                }
+              });
+              commands.push({ type: 'SET_PHASE', payload: 'ROUND_RESET' });
+              enqueue(commands, 'pvp_p2_end');
+              return;
+        }
+
+        // 2. Start New Round (Will set Phase to WAITING automatically due to useRoundManager fix)
+        commands.push({ type: 'WAIT', payload: null, delay: ROUND_TRANSITION_DELAY });
+        commands.push({
+            type: 'EXECUTE_LOGIC', 
+            payload: () => startNewRound(tempState) 
+        });
+
+        enqueue(commands, 'pvp_p2_end');
+
+      } else {
+        // [PVP P1] 先手玩家结束回合 -> 仅切换到等待 -> 等待 P2 操作
+        commands.push({ type: 'EXECUTE_LOGIC', payload: () => showTurnBanner('opponent'), delay: PHASE_TRANSITION_DELAY });
+        commands.push({ type: 'WAIT', payload: null, delay: BANNER_WAIT_DELAY });
+        commands.push({ type: 'SET_PHASE', payload: 'WAITING_FOR_OPPONENT' });
+        commands.push({ type: 'UPDATE_UI', payload: { playerCard: null } });
+        commands.push({ type: 'ADD_MESSAGE', payload: '等待对手操作...' });
+        enqueue(commands, 'pvp_p1_end');
+      }
       return;
     }
 
@@ -145,46 +186,33 @@ export function useAITurn({
       combatResult.commands.forEach(cmd => commands.push(cmd));
 
       if (checkGameOver(tempState)) {
-        enqueue(commands);
+        enqueue(commands, 'ai_turn');
         return;
       }
     }
 
-    // 6. 死亡检查 / 新回合触发
-    const gameOverResult = checkGameOver(tempState);
-    if (gameOverResult) {
-      commands.push({
-        type: 'UPDATE_UI', payload: {
-          isGameOver: true,
-          gameResult: gameOverResult === 'DRAW' ? 'LOSS' : gameOverResult,
-          resultText: gameOverResult,
+    // 6. 新回合
+    // [P0 Fix #6] 回合结束时执行防作弊校验
+    const finalValidationState = tempState;
+    commands.push({
+      type: 'EXECUTE_LOGIC',
+      payload: () => {
+        const report = generateValidationReport(finalValidationState);
+        if (!report.valid) {
+          console.error('[AntiCheat] Round validation FAILED:', report.violations);
         }
-      });
-      commands.push({ type: 'SET_PHASE', payload: 'ROUND_RESET' });
-        } else {
-      // [P0 Fix #6] 回合结束时执行防作弊校验
-      const finalValidationState = tempState;
-      commands.push({
-        type: 'EXECUTE_LOGIC',
-        payload: () => {
-          const report = generateValidationReport(finalValidationState);
-          if (!report.valid) {
-            console.error('[AntiCheat] Round validation FAILED:', report.violations);
-          }
-        }
-      });
+      }
+    });
 
-      commands.push({ type: 'WAIT', payload: null, delay: ROUND_TRANSITION_DELAY });
-      commands.push({
-        type: 'EXECUTE_LOGIC',
-        payload: () => {
-          if (duelStateRef.current) startNewRound(duelStateRef.current);
-        }
-      });
-    }
+    commands.push({ type: 'WAIT', payload: null, delay: ROUND_TRANSITION_DELAY });
+    commands.push({
+      type: 'EXECUTE_LOGIC',
+      payload: () => startNewRound(tempState)
+    });
 
     enqueue(commands, 'ai_turn');
-  }, [duelStateRef, phaseRef, isPVPMode, enqueue, showTurnBanner, startNewRound]);
+
+  }, [duelStateRef, phaseRef, isPVPMode, enqueue, showTurnBanner, startNewRound, pvpRoleRef]);
 
   /**
    * [PVP] 处理远程对手结束回合：
@@ -194,6 +222,23 @@ export function useAITurn({
     const state = duelStateRef.current;
     if (!state) return;
 
+    // [PVP Fix] 特殊处理 P2 视角
+    if (isPVPMode && pvpRoleRef?.current === 'player2') {
+         // 我是 P2, 收到 P1 结束回合 -> 只是意味着轮到我了
+         console.log('Received P1 End Turn -> Starting My Turn');
+         const commands: GameActionCommand[] = [];
+         
+         commands.push({ type: 'EXECUTE_LOGIC', payload: () => showTurnBanner('player'), delay: PHASE_TRANSITION_DELAY });
+         commands.push({ type: 'WAIT', payload: null, delay: BANNER_WAIT_DELAY });
+         commands.push({ type: 'SET_PHASE', payload: 'PLAYER_TURN' });
+         commands.push({ type: 'UPDATE_UI', payload: { playerCard: null, opponentCard: null } });
+         commands.push({ type: 'ADD_MESSAGE', payload: '轮到你了！' });
+         
+         enqueue(commands, 'pvp_my_turn');
+         return;
+    }
+
+    // [Standard Logic] P1/PVE 收到对手回合结束 -> 结算整个 Round -> 开始新 Round
     const commands: GameActionCommand[] = [];
 
     // 1. 回合结束 DoT 结算
@@ -249,7 +294,7 @@ export function useAITurn({
     });
 
     enqueue(commands, 'pvp_remote_end');
-  }, [duelStateRef, enqueue, startNewRound]);
+  }, [duelStateRef, enqueue, startNewRound, isPVPMode, pvpRoleRef]);
 
   return { passTurn, handleRemoteEndTurn };
 }
