@@ -141,6 +141,78 @@ export const createInitialDuelState = (playerDeck: SpellType[], gameMode: GameMo
 };
 
 /**
+ * [PvP P0] 创建 PvP 对战初始状态
+ * 
+ * 关键：双方使用相同的 seed + 相同的两副牌组，
+ * 并以固定顺序洗牌（先 P1 牌组、后 P2 牌组），
+ * 确保无论哪一方调用，生成的状态都完全一致。
+ * role 参数仅决定哪副牌是"我的"、哪副是"对手的"。
+ */
+export const createPvpDuelState = (
+  p1Deck: SpellType[],
+  p2Deck: SpellType[],
+  seed: number,
+  role: 'player1' | 'player2'
+): DuelState => {
+  const rng = resetGameRNG(seed);
+
+  // 固定顺序洗牌：先洗 P1、后洗 P2，确保双方 RNG 序列一致
+  const shuffledP1Deck = rng.shuffle([...p1Deck]);
+  const shuffledP2Deck = rng.shuffle([...p2Deck]);
+
+  const p1Hand = shuffledP1Deck.slice(0, 5);
+  const p1Remaining = shuffledP1Deck.slice(5);
+  const p2Hand = shuffledP2Deck.slice(0, 5);
+  const p2Remaining = shuffledP2Deck.slice(5);
+
+  // 根据角色分配视角
+  const isP1 = role === 'player1';
+
+  return {
+    playerHP: GAME_CONFIG.maxHP,
+    playerArmor: 0,
+    opponentHP: GAME_CONFIG.maxHP,
+    opponentArmor: 0,
+
+    playerMana: GAME_CONFIG.startingMana,
+    playerMaxMana: GAME_CONFIG.startingMana,
+    opponentMana: GAME_CONFIG.startingMana,
+    opponentMaxMana: GAME_CONFIG.startingMana,
+
+    playerLastSpell: null,
+    opponentLastSpell: null,
+    playerCostMod: 0,
+    opponentCostMod: 0,
+    playerConsecutiveThunder: 0,
+    opponentConsecutiveThunder: 0,
+
+    roundNumber: 0,
+    playerFatigue: 0,
+    opponentFatigue: 0,
+
+    playerHand: isP1 ? p1Hand : p2Hand,
+    playerDeck: isP1 ? p1Remaining : p2Remaining,
+    opponentHand: isP1 ? p2Hand : p1Hand,
+    opponentHandSize: 5,
+    opponentDeck: isP1 ? p2Remaining : p1Remaining,
+
+    playerEffects: [],
+    opponentEffects: [],
+    playerMinions: [],
+    opponentMinions: [],
+
+    heroSkillsUsed: false,
+    opponentHeroSkillUsed: false,
+    playerTriggers: [],
+    opponentTriggers: [],
+    isTutorial: false,
+
+    rngState: rng.serialize(),
+    triggerOrderCounter: 0,
+  };
+};
+
+/**
  * [P1 Fix #13] 给后手玩家发放幸运币
  * 后手方额外获得1张牌 + 1张幸运币
  */

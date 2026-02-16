@@ -7,7 +7,7 @@ import { SpellType } from './card';
 import { DuelState, DuelPhase } from './duel';
 import { AIStatus } from './ai';
 
-export type GameState = "LOGIN" | "LOBBY" | "MODE_SELECT" | "DECK_BUILDER" | "DUEL" | "RESULT" | "TAVERN" | "MATCHMAKING" | "DUNGEON_MAP" | "MULLIGAN" | "SHOP" | "COLLECTION" | "PROFILE" | "BATTLE_PASS";
+export type GameState = "LOGIN" | "LOBBY" | "MODE_SELECT" | "DECK_BUILDER" | "DUEL" | "RESULT" | "TAVERN" | "MATCHMAKING" | "DUNGEON_MAP" | "MULLIGAN" | "SHOP" | "COLLECTION" | "PROFILE" | "BATTLE_PASS" | "PVP_SYNC";
 
 export type Language = 'zh' | 'en';
 

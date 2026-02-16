@@ -48,7 +48,7 @@ export interface GameLoopActions {
   // [PVP] 远程操作处理
   handleRemotePlayCard: (spellId: SpellType) => void;
   handleRemoteEndTurn: () => void;
-  startPvpDuel: (playerDeck: SpellType[], role: 'player1' | 'player2', seed?: number) => void;
+  startPvpDuel: (p1Deck: SpellType[], p2Deck: SpellType[], role: 'player1' | 'player2', seed?: number) => void;
 }
 
 export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoopActions] {

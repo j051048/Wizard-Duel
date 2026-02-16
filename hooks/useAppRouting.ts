@@ -23,7 +23,7 @@ interface UseAppRoutingDeps {
   gameLoopActions: {
     reset: () => void;
     startTavernDuel: (deck: SpellType[], ai: AIProfile, mode: GameMode) => void;
-    startPvpDuel: (playerDeck: SpellType[], role: 'player1' | 'player2', seed?: number) => void;
+    startPvpDuel: (p1Deck: SpellType[], p2Deck: SpellType[], role: 'player1' | 'player2', seed?: number) => void;
   };
   audioActions: {
     playBgm: (track: 'lobby' | 'battle') => void;
@@ -58,21 +58,36 @@ export function useAppRouting({ gameLoopActions, audioActions }: UseAppRoutingDe
     }
   }, [user.selectedDeck, ui, audioActions, toast]);
 
-  // Handle PVP Start
+  // Handle PVP Start - Transition to Sync Phase
   const handlePvpStart = useCallback((role: 'player1' | 'player2', seed?: number) => {
       if (!user.selectedDeck || !user.selectedDeck.cards) {
           toast.warning('缺少牌组', '请先在牌组编辑器中选择一副牌组！');
           return;
       }
 
-      console.log('Starting PVP Duel:', { role, deckSize: user.selectedDeck.cards.length });
-      gameLoopActions.startPvpDuel(user.selectedDeck.cards, role, seed);
+      console.log('Starting PVP Sync:', { role, seed });
+      ui.setPvpRole(role);
+      ui.setPvpSeed(seed ?? null);
+      ui.setGameState('PVP_SYNC');
+      // Wait for sync to complete before playing battle music
+  }, [user.selectedDeck, ui, toast]);
+
+  // Handle PVP Sync Complete - Start Actual Duel
+  const handlePvpSyncComplete = useCallback((p1Deck: SpellType[], p2Deck: SpellType[]) => {
+      const role = ui.pvpRole;
+      const seed = ui.pvpSeed;
+      
+      if (!role || seed === null || seed === undefined) {
+          console.error('[Pvp Routing] Missing role or seed');
+          ui.setGameState('LOBBY'); 
+          return;
+      }
+      
+      console.log('PVP Sync Complete, Starting Duel');
+      gameLoopActions.startPvpDuel(p1Deck, p2Deck, role, seed);
       ui.setGameState('MULLIGAN');
-      // BGM will be handled by BattleArena or stays as lobby until duel starts?
-      // Usually Battle BGM starts at Mulligan or Duel. 
-      // App.tsx doesn't seem to play BGM automatically on state change, but relies on audioActions calls.
       audioActions.playBgm('battle');
-  }, [user.selectedDeck, gameLoopActions, ui, audioActions, toast]);
+  }, [ui, gameLoopActions, audioActions]);
 
   /**
    * 重置游戏状态
@@ -153,6 +168,7 @@ export function useAppRouting({ gameLoopActions, audioActions }: UseAppRoutingDe
     handlePvpStart,
     handleLoginComplete,
     handleMatchmakingComplete,
+    handlePvpSyncComplete,
     handleStartDuel,
   };
 }

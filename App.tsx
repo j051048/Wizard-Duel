@@ -46,6 +46,7 @@ const ShopScreen = React.lazy(() => import('./components/ShopScreen'));
 const CollectionBook = React.lazy(() => import('./components/CollectionBook'));
 const UserProfilePage = React.lazy(() => import('./components/UserProfilePage'));
 const BattlePassPage = React.lazy(() => import('./components/shop/BattlePassPage'));
+const PvpStateSync = React.lazy(() => import('./components/PvpStateSync').then(m => ({ default: m.PvpStateSync })));
 
 // Immediate Components
 import { ResultsModal } from './components/ResultsModal';
@@ -324,6 +325,17 @@ function App() {
                 toast.info('即将推出', '高级通行证即将上线！');
               }}
               balance={user.balance}
+            />
+          )}
+
+
+          {/* PVP State Sync */}
+          {ui.gameState === 'PVP_SYNC' && ui.pvpRole && ui.pvpSeed !== null && user.selectedDeck && (
+            <PvpStateSync 
+              role={ui.pvpRole}
+              seed={ui.pvpSeed}
+              myDeck={user.selectedDeck.cards}
+              onSyncComplete={routing.handlePvpSyncComplete}
             />
           )}
 

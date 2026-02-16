@@ -11,7 +11,7 @@ import {
   SpellType, DuelState, GameMode, AIProfile, GameActionCommand, AIStatus
 } from '../types';
 import { 
-  createInitialDuelState, createTavernDuelState, canAffordSpell
+  createInitialDuelState, createTavernDuelState, canAffordSpell, createPvpDuelState
 } from '../services/gameLogic';
 import { GameRuleEngine } from '../services/GameRuleEngine';
 import { getGameRNG } from '../utils/seededRandom';
@@ -152,12 +152,13 @@ export function usePlayerActions({
     }));
   }, [setDuelState, setPhase, setUiState]);
 
-  /** [PVP] 初始化 PVP 对战 */
-  const startPvpDuel = useCallback((playerDeck: SpellType[], role: 'player1' | 'player2', seed?: number) => {
+  /** [PVP] 初始化 PVP 对战 (已认证同步版 & P0 Fix) */
+  const startPvpDuel = useCallback((p1Deck: SpellType[], p2Deck: SpellType[], role: 'player1' | 'player2', seed?: number) => {
     if (pvpRoleRef) pvpRoleRef.current = role;
     
-    // PVP 模式默认为 Standard 规则，但使用传入的 seed 来同步 RNG
-    const initialState = createInitialDuelState(playerDeck || [], 'standard', seed);
+    // PVP 模式不再默认 Standard，而是使用 createPvpDuelState 创建完全一致的初始状态
+    // 此函数内部会对 p1Deck/p2Deck 进行确定性洗牌并根据 role 分配视角
+    const initialState = createPvpDuelState(p1Deck, p2Deck, seed || 0, role);
     
     setDuelState(initialState);
     setPhase('MULLIGAN_PHASE');
