@@ -17,6 +17,7 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import { calculateSpellProjection } from '../services/projection';
 import { useSettings } from '../context/SettingsContext';
 import { pvpService } from '../services/pvpService';
+import { useUserStore } from '../stores/useUserStore';
 
 // Components
 import { SpellCard } from './SpellCard'; // Needed for Drag Preview
@@ -95,7 +96,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isMounted = useRef(true);
   const isRemoteActionRef = useRef(false); // [PVP] 标记是否为远程同步过来的操作，防止无限循环
-  const playerIdRef = useRef<string>(`player-${Date.now()}`); // [PVP] 玩家唯一ID
+  // [PVP修复] 使用 activeAddress 作为 playerId，确保和匹配端的 userId 一致
+  const playerIdRef = useRef<string>(useUserStore.getState().activeAddress || `guest_${Date.now()}`);
 
   // [P0] 用 Ref 存储最新回调引用，避免 useEffect 因引用变化重复触发
   const onPlayCardRef = useRef(onPlayCard);
