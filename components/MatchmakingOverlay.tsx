@@ -81,19 +81,15 @@ export const MatchmakingOverlay: React.FC<MatchmakingOverlayProps> = ({
       hasConnectedRef.current = true;
       setStatus('searching');
 
-      // 使用 "matchmaking" 作为临时房间 ID 进行匹配
-      // 服务端应该能够处理这个特殊房间并分配对手
-      const matchmakingRoomId = 'matchmaking';
-
-      console.log('[Matchmaking] Connecting to WebSocket...');
-      pvpService.connect(matchmakingRoomId, userId, handleWebSocketMessage);
-      setCurrentRoomId(matchmakingRoomId);
+      console.log('[Matchmaking] Connecting to matchmaking queue...');
+      // 使用独立的匹配端点，不再传 roomId
+      pvpService.connectMatchmaking(userId, handleWebSocketMessage);
     }
 
     // 当 isOpen 变为 false 时断开连接（组件仍然挂载）
     if (!isOpen && hasConnectedRef.current) {
       console.log('[Matchmaking] isOpen changed to false, disconnecting...');
-      pvpService.disconnect();
+      pvpService.disconnectMatchmaking();
       hasConnectedRef.current = false;
       setStatus('idle');
       setMatchedOpponent(null);
@@ -103,12 +99,9 @@ export const MatchmakingOverlay: React.FC<MatchmakingOverlayProps> = ({
     // Cleanup: 组件卸载时总是断开连接
     return () => {
       if (hasConnectedRef.current) {
-        console.log('[Matchmaking] Disconnecting WebSocket (cleanup)...');
-        pvpService.disconnect();
+        console.log('[Matchmaking] Disconnecting matchmaking (cleanup)...');
+        pvpService.disconnectMatchmaking();
         hasConnectedRef.current = false;
-        setStatus('idle');
-        setMatchedOpponent(null);
-        setCurrentRoomId(null);
       }
     };
   }, [isOpen, userId, handleWebSocketMessage]);
@@ -116,7 +109,7 @@ export const MatchmakingOverlay: React.FC<MatchmakingOverlayProps> = ({
   // 处理取消匹配
   const handleCancel = useCallback(() => {
     console.log('[Matchmaking] User cancelled');
-    pvpService.disconnect();
+    pvpService.disconnectMatchmaking();
     hasConnectedRef.current = false;
     setStatus('idle');
     setMatchedOpponent(null);

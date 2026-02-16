@@ -25,6 +25,7 @@ interface UseAITurnDeps {
   duelStateRef: React.MutableRefObject<DuelState | null>;
   phaseRef: React.MutableRefObject<string>;
   isProcessing: boolean;
+  isPVPMode: boolean; // [PVP] 是否为 PVP 模式
   enqueue: (commands: GameActionCommand[], actionId?: string) => void;
   showTurnBanner: (type: 'player' | 'opponent') => void;
   startNewRound: (state: DuelState) => void;
@@ -33,25 +34,34 @@ interface UseAITurnDeps {
 export function useAITurn({
   duelStateRef,
   phaseRef,
-  isProcessing,
+  isProcessing: _isProcessing,
+  isPVPMode,
   enqueue,
   showTurnBanner,
   startNewRound,
 }: UseAITurnDeps) {
 
   /**
-   * 结束玩家回合，执行完整的 AI 回合：
-   * 1. 横幅切换
-   * 2. AI 思考延迟
-   * 3. 逐张出牌 + 中间状态快照
-   * 4. 随从战斗
-   * 5. 死亡检查
-   * 6. 触发新回合
+   * PVP 模式下：只切换到对手回合，等待 WebSocket 传来的操作
+   * AI 模式下：执行完整的 AI 回合逻辑
    */
   const passTurn = useCallback(() => {
     const state = duelStateRef.current;
     if (!state || phaseRef.current !== 'PLAYER_TURN') return;
 
+    // ============ [PVP] PVP 模式：不运行 AI，只切换阶段 ============
+    if (isPVPMode) {
+      const commands: GameActionCommand[] = [];
+      commands.push({ type: 'EXECUTE_LOGIC', payload: () => showTurnBanner('opponent'), delay: PHASE_TRANSITION_DELAY });
+      commands.push({ type: 'WAIT', payload: null, delay: BANNER_WAIT_DELAY });
+      commands.push({ type: 'SET_PHASE', payload: 'WAITING_FOR_OPPONENT' });
+      commands.push({ type: 'UPDATE_UI', payload: { playerCard: null } });
+      commands.push({ type: 'ADD_MESSAGE', payload: '等待对手操作...' });
+      enqueue(commands, 'pvp_pass_turn');
+      return;
+    }
+
+    // ============ AI 模式：执行完整 AI 回合 ============
     const commands: GameActionCommand[] = [];
 
     // 1. 切换到对手回合
@@ -64,11 +74,8 @@ export function useAITurn({
     commands.push({ type: 'WAIT', payload: null, delay: AI_THINK_DELAY });
 
     // 2. [Fix 1.3] 逐张出牌，每张都用 executeSpell 计算中间状态
-    //    不再预计算最终状态，避免状态分叉
     const { newState: aiResultState, commands: aiCommands } = executeAITurn(state);
 
-    // aiCommands 中的每个 command 都有 snapshot（中间状态快照）
-    // 直接使用这些快照作为真实的中间状态
     let latestState = { ...state };
 
     for (let i = 0; i < aiCommands.length; i++) {
@@ -87,7 +94,6 @@ export function useAITurn({
           }
         }
 
-        // 使用 executeAITurn 已经计算好的 snapshot 作为权威中间状态
         if (cmd.snapshot) {
             latestState = cmd.snapshot;
         }
@@ -101,14 +107,12 @@ export function useAITurn({
       }
     }
 
-    // [Fix 1.3] 不再用 aiResultState 覆盖：latestState 就是最终状态
-    // aiResultState 与最后一个 snapshot 是同一条执行链的结果，所以直接用 aiResultState
     let tempState = aiResultState;
 
-    // 4. 回合结束 DoT 结算 [Fix 1.1]
+    // 4. 回合结束 DoT 结算
     const roundEndResult = RuleArbiter.resolveRoundEnd(tempState);
     if (roundEndResult.events.length > 0) {
-      roundEndResult.events.forEach((e: any) => {
+      roundEndResult.events.forEach((e: ArbiterEvent) => {
         if (e.description) {
           commands.push({ type: 'ADD_MESSAGE', payload: e.description });
         }
@@ -166,7 +170,6 @@ export function useAITurn({
           const report = generateValidationReport(finalValidationState);
           if (!report.valid) {
             console.error('[AntiCheat] Round validation FAILED:', report.violations);
-            // 在生产环境可上报服务端或强制结束游戏
           }
         }
       });
@@ -181,7 +184,72 @@ export function useAITurn({
     }
 
     enqueue(commands, 'ai_turn');
-  }, [duelStateRef, phaseRef, enqueue, showTurnBanner, startNewRound]);
+  }, [duelStateRef, phaseRef, isPVPMode, enqueue, showTurnBanner, startNewRound]);
 
-  return { passTurn };
+  /**
+   * [PVP] 处理远程对手结束回合：
+   * 触发回合结算 → 新回合 → 切回玩家回合
+   */
+  const handleRemoteEndTurn = useCallback(() => {
+    const state = duelStateRef.current;
+    if (!state) return;
+
+    const commands: GameActionCommand[] = [];
+
+    // 1. 回合结束 DoT 结算
+    const roundEndResult = RuleArbiter.resolveRoundEnd(state);
+    let tempState = state;
+    
+    if (roundEndResult.events.length > 0) {
+      roundEndResult.events.forEach((e: ArbiterEvent) => {
+        if (e.description) {
+          commands.push({ type: 'ADD_MESSAGE', payload: e.description });
+        }
+      });
+      commands.push({ type: 'UPDATE_STATE', payload: roundEndResult.newState });
+      tempState = roundEndResult.newState;
+    }
+
+    if (roundEndResult.gameOver) {
+      commands.push({
+        type: 'UPDATE_UI', payload: {
+          isGameOver: true,
+          gameResult: roundEndResult.gameOver === 'DRAW' ? 'LOSS' : roundEndResult.gameOver,
+          resultText: roundEndResult.gameOver,
+        }
+      });
+      commands.push({ type: 'SET_PHASE', payload: 'ROUND_RESET' });
+      enqueue(commands, 'pvp_remote_end');
+      return;
+    }
+
+    // 2. 随从战斗
+    const activeMinionsCount =
+      tempState.playerMinions.filter(m => !m.exhausted).length +
+      tempState.opponentMinions.filter(m => !m.exhausted).length;
+
+    if (activeMinionsCount > 0) {
+      const combatResult = GameRuleEngine.resolveMinionCombat(tempState);
+      tempState = combatResult.finalState;
+      combatResult.commands.forEach(cmd => commands.push(cmd));
+
+      if (checkGameOver(tempState)) {
+        enqueue(commands, 'pvp_remote_end');
+        return;
+      }
+    }
+
+    // 3. 触发新回合 → 切换到玩家回合
+    commands.push({ type: 'WAIT', payload: null, delay: ROUND_TRANSITION_DELAY });
+    commands.push({
+      type: 'EXECUTE_LOGIC',
+      payload: () => {
+        if (duelStateRef.current) startNewRound(duelStateRef.current);
+      }
+    });
+
+    enqueue(commands, 'pvp_remote_end');
+  }, [duelStateRef, enqueue, startNewRound]);
+
+  return { passTurn, handleRemoteEndTurn };
 }

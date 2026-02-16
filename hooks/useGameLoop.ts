@@ -27,6 +27,7 @@ import { useAITurn } from './useAITurn';
 import { throttle } from '../utils/helpers';
 import { GameFSM } from '../services/GameFSM';
 import { restoreGameRNG } from '../utils/seededRandom';
+import { GameRuleEngine } from '../services/GameRuleEngine';
 
 const initialAIStatus: AIStatus = { emote: null, message: null };
 
@@ -44,9 +45,12 @@ export interface GameLoopActions {
   setTargeting: (data: GameLoopState['targetingData']) => void;
   handleMulligan: (indicesToReplace: number[]) => void;
   startFirstTurn: (currentState: DuelState) => void;
+  // [PVP] 远程操作处理
+  handleRemotePlayCard: (spellId: SpellType) => void;
+  handleRemoteEndTurn: () => void;
 }
 
-export function useGameLoop(): [GameLoopState, GameLoopActions] {
+export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoopActions] {
     // ============ [#6] Processing Lock ============
   const processingLockRef = useRef(false);
   const actionInProgressRef = useRef<string | null>(null);
@@ -191,14 +195,30 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
     startNewRound,
   });
 
-  const { passTurn } = useAITurn({
+  const { passTurn, handleRemoteEndTurn } = useAITurn({
     duelStateRef,
     phaseRef,
     isProcessing,
+    isPVPMode,
     enqueue: safeEnqueue,
     showTurnBanner,
     startNewRound,
   });
+
+  // [PVP] 处理远程对手出牌：以“对手”身份执行法术结算
+  const handleRemotePlayCard = useCallback((spellId: SpellType) => {
+    const state = duelStateRef.current;
+    if (!state) return;
+    
+    console.log(`🌐 [PVP] 执行对手远程出牌: ${spellId}`);
+    
+    // 设置对手出牌 UI
+    setUiState(prev => ({ ...prev, opponentCard: spellId }));
+    
+    // 以对手身份执行法术结算
+    const { commands: engineCommands } = GameRuleEngine.castSpell(state, spellId, 'opponent');
+    safeEnqueue([...engineCommands], `remote_play_${spellId}_${Date.now()}`);
+  }, [duelStateRef, safeEnqueue, setUiState]);
   
   passTurnRef.current = passTurn;
   
@@ -329,7 +349,9 @@ export function useGameLoop(): [GameLoopState, GameLoopActions] {
       reset,
       setTargeting,
       handleMulligan,
-      startFirstTurn: startNewRound
+      startFirstTurn: startNewRound,
+      handleRemotePlayCard,
+      handleRemoteEndTurn,
     }
   ];
 }

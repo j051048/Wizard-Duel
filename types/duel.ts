@@ -12,6 +12,7 @@ export type DuelPhase =
   | "MULLIGAN_PHASE"
   | "PLAYER_TURN"
   | "OPPONENT_TURN"
+  | "WAITING_FOR_OPPONENT" // [PVP] PVP 模式下等待对手操作
   | "ROUND_RESET"
   | "TURN_TRANSITION"
   | "DEATH_CHECK"

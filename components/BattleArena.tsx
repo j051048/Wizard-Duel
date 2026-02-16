@@ -57,7 +57,10 @@ interface BattleArenaProps {
   isOpponentShaking?: boolean;
   isTavernMode?: boolean;
   setTargeting: (data: GameLoopState['targetingData']) => void;
-  pvpRoomId?: string; // [P1] PVP 房间 ID，有值时才启用 PVP 模式
+  pvpRoomId?: string;
+  // [PVP] 远程操作回调（对手的操作以对手身份执行，不走玩家出牌逻辑）
+  onRemotePlayCard?: (spellId: SpellType) => void;
+  onRemoteEndTurn?: () => void;
 }
 
 export const BattleArena: React.FC<BattleArenaProps> = ({
@@ -71,6 +74,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   isOpponentShaking = false,
   setTargeting,
   pvpRoomId,
+  onRemotePlayCard,
+  onRemoteEndTurn,
 }) => {
   const { duelState, phase, playerCard, opponentCard, resultText, effectMessages, aiStatus } =
     gameLoopState;
@@ -95,12 +100,12 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   // [P0] 用 Ref 存储最新回调引用，避免 useEffect 因引用变化重复触发
   const onPlayCardRef = useRef(onPlayCard);
   const onPassRef = useRef(onPass);
-  useEffect(() => {
-    onPlayCardRef.current = onPlayCard;
-  }, [onPlayCard]);
-  useEffect(() => {
-    onPassRef.current = onPass;
-  }, [onPass]);
+  const onRemotePlayCardRef = useRef(onRemotePlayCard);
+  const onRemoteEndTurnRef = useRef(onRemoteEndTurn);
+  useEffect(() => { onPlayCardRef.current = onPlayCard; }, [onPlayCard]);
+  useEffect(() => { onPassRef.current = onPass; }, [onPass]);
+  useEffect(() => { onRemotePlayCardRef.current = onRemotePlayCard; }, [onRemotePlayCard]);
+  useEffect(() => { onRemoteEndTurnRef.current = onRemoteEndTurn; }, [onRemoteEndTurn]);
 
   // Hooks
   const {
@@ -232,11 +237,12 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         try {
           if (action.type === 'PLAY_CARD' && action.spellId) {
             console.log(`🔥 [PVP] 执行对手法术: ${action.spellId}`);
-            // [P0] 通过 ref 访问最新的回调，避免闭包捕获旧引用
-            onPlayCardRef.current(action.spellId, action.isConfirmed);
+            // [核心修复] 走远程出牌回调，以“对手”身份执行法术结算
+            onRemotePlayCardRef.current?.(action.spellId);
           } else if (action.type === 'END_TURN') {
             console.log('⏳ [PVP] 对手结束回合');
-            onPassRef.current?.();
+            // [核心修复] 走远程结束回合回调，触发回合结算→新回合
+            onRemoteEndTurnRef.current?.();
           }
         } finally {
           setTimeout(() => {

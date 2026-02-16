@@ -1,78 +1,119 @@
 // PVP 服务：管理 WebSocket 连接与通信
+// 分为两个独立连接：匹配队列 和 对战房间
 
 class PVPService {
-    private socket: WebSocket | null = null;
-    // 强制使用 wss:// 标准 URL，Zeabur 会自动处理 443 -> 8080 的转发
+    // 匹配连接（临时，匹配成功后断开）
+    private matchSocket: WebSocket | null = null;
+    // 对战连接（整场对战期间保持）
+    private gameSocket: WebSocket | null = null;
     private serverUrl: string = "wss://xwizard.zeabur.app";
 
-    connect(roomId: string, playerId: string, onMessage: (data: any) => void) {
-        // [P2] 防御性检查：如果旧连接正在建立中，先关闭
-        if (this.socket) {
-            if (this.socket.readyState === WebSocket.CONNECTING) {
-                console.warn('[PVP] Aborting in-progress connection before reconnecting');
-            }
-            this.socket.onclose = null;
-            this.socket.onerror = null;
-            this.socket.onmessage = null;
-            this.socket.onopen = null;
-            try { this.socket.close(); } catch {}
-            this.socket = null;
-        }
+    // ============ 匹配队列 ============
 
-        // 强制使用标准 wss:// URL，不带端口，让 Zeabur 网关处理转发
-        const url = `wss://xwizard.zeabur.app/ws/${roomId}/${playerId}`;
-        
-        console.log("🚀 [PVP] Connecting to:", url);
-        console.log("📍 [PVP] Room:", roomId, "Player:", playerId);
-        
+    /**
+     * 连接到匹配队列
+     * URL: /ws/matchmaking/{playerId}
+     */
+    connectMatchmaking(playerId: string, onMessage: (data: any) => void) {
+        this.cleanupSocket('match');
+
+        const url = `${this.serverUrl}/ws/matchmaking/${playerId}`;
+        console.log("🔍 [PVP] 连接匹配队列:", url);
+
         try {
-            this.socket = new WebSocket(url);
-            this.bindEvents(onMessage);
+            this.matchSocket = new WebSocket(url);
+            this.bindSocketEvents(this.matchSocket, onMessage, 'MATCH');
         } catch (e) {
-            console.error("🚫 [PVP] WebSocket initialization failed:", e);
+            console.error("🚫 [PVP] 匹配连接失败:", e);
         }
     }
 
-    private bindEvents(onMessage: (data: any) => void) {
-        if (!this.socket) return;
+    /**
+     * 断开匹配连接
+     */
+    disconnectMatchmaking() {
+        this.cleanupSocket('match');
+    }
 
-        this.socket.onopen = () => {
-            console.log("✅ [PVP] WebSocket connection opened");
+    // ============ 对战房间 ============
+
+    /**
+     * 连接到对战房间
+     * URL: /ws/{roomId}/{playerId}
+     */
+    connect(roomId: string, playerId: string, onMessage: (data: any) => void) {
+        this.cleanupSocket('game');
+
+        const url = `${this.serverUrl}/ws/${roomId}/${playerId}`;
+        console.log("🚀 [PVP] 连接对战房间:", url);
+        console.log("📍 [PVP] 房间:", roomId, "玩家:", playerId);
+
+        try {
+            this.gameSocket = new WebSocket(url);
+            this.bindSocketEvents(this.gameSocket, onMessage, 'GAME');
+        } catch (e) {
+            console.error("🚫 [PVP] 对战连接失败:", e);
+        }
+    }
+
+    /**
+     * 发送操作到对战房间
+     */
+    sendAction(action: any) {
+        if (this.gameSocket && this.gameSocket.readyState === WebSocket.OPEN) {
+            this.gameSocket.send(JSON.stringify(action));
+        }
+    }
+
+    /**
+     * 断开对战连接
+     */
+    disconnect() {
+        this.cleanupSocket('game');
+    }
+
+    // ============ 内部工具 ============
+
+    private bindSocketEvents(socket: WebSocket, onMessage: (data: any) => void, tag: string) {
+        socket.onopen = () => {
+            console.log(`✅ [PVP:${tag}] WebSocket 已连接`);
         };
 
-        this.socket.onmessage = (event) => {
-            console.log("📨 [PVP] Received message:", event.data);
+        socket.onmessage = (event) => {
+            console.log(`📨 [PVP:${tag}] 收到消息:`, event.data);
             try {
                 const data = JSON.parse(event.data);
-                // 检查握手确认
                 if (data.type === "CONNECTED") {
-                    console.log("🎉 [PVP] Server confirmed connection:", data.msg);
+                    console.log(`🎉 [PVP:${tag}] 服务端确认连接:`, data.msg);
                 }
                 onMessage(data);
             } catch (err) {
-                console.error("❌ [PVP] Failed to parse message:", err);
+                console.error(`❌ [PVP:${tag}] 消息解析失败:`, err);
             }
         };
 
-        this.socket.onclose = (event) => {
-            console.warn(`❌ [PVP] WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`);
+        socket.onclose = (event) => {
+            console.warn(`❌ [PVP:${tag}] WebSocket 已关闭. Code: ${event.code}, Reason: ${event.reason}`);
         };
 
-        this.socket.onerror = (error) => {
-            console.error("🚨 [PVP] WebSocket error:", error);
+        socket.onerror = (error) => {
+            console.error(`🚨 [PVP:${tag}] WebSocket 错误:`, error);
         };
     }
 
-    sendAction(action: any) {
-        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-            this.socket.send(JSON.stringify(action));
-        }
-    }
-
-    disconnect() {
-        if (this.socket) {
-            this.socket.close();
-            this.socket = null;
+    private cleanupSocket(type: 'match' | 'game') {
+        const socket = type === 'match' ? this.matchSocket : this.gameSocket;
+        if (socket) {
+            socket.onclose = null;
+            socket.onerror = null;
+            socket.onmessage = null;
+            socket.onopen = null;
+            try { socket.close(); } catch {}
+            if (type === 'match') {
+                this.matchSocket = null;
+            } else {
+                this.gameSocket = null;
+            }
         }
     }
 }

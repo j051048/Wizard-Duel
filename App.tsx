@@ -75,7 +75,7 @@ function App() {
 
   // ============ Core Hooks ============
   const { progress, startPreloading } = usePreloader();
-  const [gameLoopState, gameLoopActions] = useGameLoop();
+  const [gameLoopState, gameLoopActions] = useGameLoop(!!ui.pvpRoomId);
   const [audioState, audioActions] = useAudioManager();
   const { isMobileLandscape } = useScreenOrientation();
 
@@ -348,6 +348,8 @@ function App() {
                 gameLoopState={gameLoopState}
                 selectedBet={ui.selectedBet}
                 pvpRoomId={ui.pvpRoomId || undefined}
+                onRemotePlayCard={gameLoopActions.handleRemotePlayCard}
+                onRemoteEndTurn={gameLoopActions.handleRemoteEndTurn}
                 onPlayCard={(spellId: SpellType) => {
                   if (gameLoopActions.playCard(spellId)) {
                     feedback.triggerCardPlayFeedback();
@@ -369,7 +371,7 @@ function App() {
                     type: 'danger',
                     onConfirm: () => {
                       gameLoopActions.reset();
-                      ui.setPvpRoomId(null); // [P1] 清空 PVP 房间 ID
+                      ui.setPvpRoomId(null);
                       ui.setGameState('LOBBY');
                       audioActions.playBgm('lobby');
                       ui.hideConfirmDialog();
