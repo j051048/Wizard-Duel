@@ -1,4 +1,4 @@
-import { Action } from '../types/game';
+// PVP 服务：管理 WebSocket 连接与通信
 
 class PVPService {
     private socket: WebSocket | null = null;
@@ -6,9 +6,17 @@ class PVPService {
     private serverUrl: string = "wss://xwizard.zeabur.app";
 
     connect(roomId: string, playerId: string, onMessage: (data: any) => void) {
+        // [P2] 防御性检查：如果旧连接正在建立中，先关闭
         if (this.socket) {
+            if (this.socket.readyState === WebSocket.CONNECTING) {
+                console.warn('[PVP] Aborting in-progress connection before reconnecting');
+            }
             this.socket.onclose = null;
-            this.socket.close();
+            this.socket.onerror = null;
+            this.socket.onmessage = null;
+            this.socket.onopen = null;
+            try { this.socket.close(); } catch {}
+            this.socket = null;
         }
 
         // 强制使用标准 wss:// URL，不带端口，让 Zeabur 网关处理转发

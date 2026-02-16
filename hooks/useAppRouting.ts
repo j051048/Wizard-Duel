@@ -63,6 +63,7 @@ export function useAppRouting({ gameLoopActions, audioActions }: UseAppRoutingDe
 
     ui.resetResult();
     gameLoopActions.reset();
+    ui.setPvpRoomId(null); // [P1] 清空 PVP 房间 ID
     
     if (wasDungeon) {
       if (isWin) {

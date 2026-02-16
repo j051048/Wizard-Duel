@@ -48,7 +48,16 @@ export const MatchmakingOverlay: React.FC<MatchmakingOverlayProps> = ({
 
     // 处理匹配成功消息
     if (data.type === 'MATCH_FOUND') {
-      const { roomId, opponent } = data;
+      // [P1] 兼容后端 snake_case (room_id) 和前端 camelCase (roomId)
+      const roomId = data.room_id || data.roomId || 'matchmaking';
+      // [P1] 后端可能暂未包含 opponent 数据，提供默认值
+      const opponent: OnlineUser = data.opponent || {
+        id: 'unknown',
+        username: '神秘法师',
+        status: 'seeking' as const,
+        last_active: Date.now()
+      };
+      
       setMatchedOpponent(opponent);
       setCurrentRoomId(roomId);
       setStatus('found');

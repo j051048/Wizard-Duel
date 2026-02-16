@@ -16,6 +16,7 @@ import { SoundManager } from '../services/SoundManager';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { GlobalChat } from './GlobalChat';
 import { useUserStore } from '../stores/useUserStore';
+import { useUIStore } from '../stores/useUIStore';
 import { ShoppingBag, Book, Swords, MessageCircle } from 'lucide-react';
 import { MatchmakingOverlay } from './MatchmakingOverlay';
 import { QuestManager } from '../services/QuestManager';
@@ -260,6 +261,8 @@ export const Lobby: React.FC<LobbyProps> = ({
         onMatchFound={(roomId, opponent) => {
           console.log('Match Found!', roomId, opponent);
           setIsMatchmaking(false);
+          // [P1] 将匹配成功的房间 ID 存入全局 store，供 BattleArena 使用
+          useUIStore.getState().setPvpRoomId(roomId);
           // [PVP 强制放行] 所有的匹配成功现在都导向对战场景
           onStartDuel();
         }}

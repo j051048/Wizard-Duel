@@ -41,6 +41,7 @@ interface UIState {
   isPlayerShaking: boolean;
   isOpponentShaking: boolean;
   confirmDialog: ConfirmDialogConfig;
+  pvpRoomId: string | null; // [P1] PVP 匹配成功后的房间 ID
 
     // Actions
   setGameState: (state: GameState) => void;
@@ -56,6 +57,7 @@ interface UIState {
   setFinalResult: (result: FinalResult | null) => void;
   setIsPlayerShaking: (shaking: boolean) => void;
   setIsOpponentShaking: (shaking: boolean) => void;
+  setPvpRoomId: (roomId: string | null) => void; // [P1]
 
   // Confirm Dialog
   showConfirmDialog: (config: Omit<ConfirmDialogConfig, 'isOpen'>) => void;
@@ -90,6 +92,7 @@ export const useUIStore = create<UIState>((set) => ({
   isPlayerShaking: false,
   isOpponentShaking: false,
   confirmDialog: defaultConfirmDialog,
+  pvpRoomId: null,
 
   setGameState: (gameState) => set({ gameState }),
   setGameMode: (gameMode) => set({ gameMode }),
@@ -106,6 +109,7 @@ export const useUIStore = create<UIState>((set) => ({
   setFinalResult: (finalResult) => set({ finalResult }),
   setIsPlayerShaking: (isPlayerShaking) => set({ isPlayerShaking }),
   setIsOpponentShaking: (isOpponentShaking) => set({ isOpponentShaking }),
+  setPvpRoomId: (pvpRoomId) => set({ pvpRoomId }),
 
   showConfirmDialog: (config) => set({
     confirmDialog: { ...defaultConfirmDialog, ...config, isOpen: true }

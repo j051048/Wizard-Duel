@@ -347,6 +347,7 @@ function App() {
               <BattleArena
                 gameLoopState={gameLoopState}
                 selectedBet={ui.selectedBet}
+                pvpRoomId={ui.pvpRoomId || undefined}
                 onPlayCard={(spellId: SpellType) => {
                   if (gameLoopActions.playCard(spellId)) {
                     feedback.triggerCardPlayFeedback();
@@ -368,6 +369,7 @@ function App() {
                     type: 'danger',
                     onConfirm: () => {
                       gameLoopActions.reset();
+                      ui.setPvpRoomId(null); // [P1] 清空 PVP 房间 ID
                       ui.setGameState('LOBBY');
                       audioActions.playBgm('lobby');
                       ui.hideConfirmDialog();
