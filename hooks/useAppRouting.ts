@@ -14,6 +14,7 @@ import { useCallback } from 'react';
 import { GameMode, SpellType } from '../types/card';
 import { AIProfile } from '../types/ai';
 import { useUserStore } from '../stores/useUserStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useUIStore } from '../stores/useUIStore';
 import { useToastStore } from '../stores/useToastStore';
 import { DungeonService } from '../services/dungeon';
@@ -31,10 +32,10 @@ interface UseAppRoutingDeps {
 }
 
 export function useAppRouting({ gameLoopActions, audioActions }: UseAppRoutingDeps) {
-  const user = useUserStore((state) => ({ 
+  const user = useUserStore(useShallow((state) => ({ 
     selectedDeck: state.selectedDeck,
     setActiveAddress: state.setActiveAddress,
-  }));
+  })));
   const ui = useUIStore();
   const toast = useToastStore();
 

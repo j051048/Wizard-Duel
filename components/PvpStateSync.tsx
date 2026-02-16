@@ -19,8 +19,7 @@ export const PvpStateSync: React.FC<PvpStateSyncProps> = ({
   onSyncComplete
 }) => {
   const pvpRoomId = useUIStore(state => state.pvpRoomId);
-  //@ts-ignore - fixing type mismatch with store
-  const activeAddress = useUserStore(state => state.activeAddress) || `guest_${Date.now()}`;
+  const activeAddress = useUserStore(state => state.activeAddress);
   
   const [status, setStatus] = useState('连接战场中...');
   const [opponentDeck, setOpponentDeck] = useState<SpellType[] | null>(null);
@@ -28,7 +27,7 @@ export const PvpStateSync: React.FC<PvpStateSyncProps> = ({
   const hasSentDeck = useRef(false);
   
   useEffect(() => {
-    if (!pvpRoomId) return;
+    if (!pvpRoomId || !activeAddress) return;
 
     // 清理并在连接成功后发送牌组
     const connectAndSync = () => {

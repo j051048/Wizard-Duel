@@ -20,7 +20,7 @@ import { useUIStore } from '../stores/useUIStore';
 import { ShoppingBag, Book, Swords, MessageCircle } from 'lucide-react';
 import { MatchmakingOverlay } from './MatchmakingOverlay';
 import { QuestManager } from '../services/QuestManager';
-import { pvpService } from '../services/pvpService';
+
 
 // Extracted Components
 import TopBar from './lobby/TopBar';
@@ -63,8 +63,9 @@ export const Lobby: React.FC<LobbyProps> = ({
   selectedBet,
   onSelectBet,
   onStartDuel,
-  history,
+  // history, // unused
   isMuted,
+
   onToggleMute,
   isLoading = false,
   decks,
@@ -91,7 +92,7 @@ export const Lobby: React.FC<LobbyProps> = ({
   const canStart = balance >= selectedBet;
 
   const t = (key: string) => TRANSLATIONS[language][key] || key;
-  const { activeAddress } = useUserStore();
+  const activeAddress = useUserStore(state => state.activeAddress);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isMatchmaking, setIsMatchmaking] = useState(false);
   

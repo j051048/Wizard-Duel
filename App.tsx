@@ -34,6 +34,7 @@ import { useGameEndHandler } from './hooks/useGameEndHandler';
 
 // Stores
 import { useUserStore } from './stores/useUserStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useUIStore } from './stores/useUIStore';
 import { useToastStore } from './stores/useToastStore';
 
@@ -64,13 +65,38 @@ import { OrientationWarning } from './components/ui/OrientationWarning';
 // Services
 import { DungeonService } from './services/dungeon';
 import { AI_PROFILES } from './services/gameLogic';
-import { HapticService } from './services/haptic';
+
+
 
 function App() {
   const { quality, setQuality, isLowQuality } = useSettings();
 
   // ============ Stores ============
-  const user = useUserStore();
+  const user = useUserStore(useShallow(state => ({
+    activeAddress: state.activeAddress,
+    balance: state.balance,
+    isLoading: state.isLoading,
+    userRank: state.userRank,
+    rankScore: state.rankScore,
+    history: state.history,
+    decks: state.decks,
+    selectedDeck: state.selectedDeck,
+    packInventory: state.packInventory,
+    purchasedBundles: state.purchasedBundles,
+    
+    // Actions
+    setActiveAddress: state.setActiveAddress,
+    loadUserData: state.loadUserData,
+    loadLeaderboard: state.loadLeaderboard,
+    setBalance: state.setBalance,
+    saveDeck: state.saveDeck,
+    setSelectedDeck: state.setSelectedDeck,
+    addCardsToInventory: state.addCardsToInventory,
+    purchaseBundle: state.purchaseBundle,
+    addPacks: state.addPacks,
+    consumePack: state.consumePack,
+    setPackInventory: state.setPackInventory
+  })));
   const ui = useUIStore();
   const toast = useToastStore();
 
