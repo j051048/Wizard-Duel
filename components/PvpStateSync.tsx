@@ -29,32 +29,8 @@ export const PvpStateSync: React.FC<PvpStateSyncProps> = ({
   useEffect(() => {
     if (!pvpRoomId || !activeAddress) return;
 
-    // 清理并在连接成功后发送牌组
-    const connectAndSync = () => {
-      setStatus('建立加密连接...');
-      
-      pvpService.connect(pvpRoomId, activeAddress, (data: any) => {
-        // 处理握手消息
-        if (data.type === 'HANDSHAKE' && data.deck && Array.isArray(data.deck)) {
-          console.log('[PVP Sync] 收到对手牌组，数量:', data.deck.length);
-          setOpponentDeck(data.deck);
-        }
-        
-        // 如果对手刚加入，重发我的牌组（为了鲁棒性，以防对手通过重连加入）
-        if (data.type === 'PLAYER_JOINED') {
-          console.log('[PVP Sync] 对手加入，发送牌组...');
-          sendDeck();
-        }
-      });
-      
-      // 连接建立需要一点时间，简单延迟后发送
-      setTimeout(() => {
-        sendDeck();
-      }, 1000);
-    };
-
     const sendDeck = () => {
-      console.log('[PVP Sync] 广播我的牌组...');
+      console.log('[PVP Sync] 广播我的牌组...', { role, count: myDeck.length });
       setStatus('等待对手同步...');
       
       pvpService.sendAction({
@@ -66,12 +42,45 @@ export const PvpStateSync: React.FC<PvpStateSyncProps> = ({
       hasSentDeck.current = true;
     };
 
+    const connectAndSync = () => {
+      setStatus('建立加密连接...');
+      
+      pvpService.connect(pvpRoomId, activeAddress, (data: any) => {
+        // 1. 服务端确认连接成功
+        if (data.type === 'CONNECTED' || data.type === 'READY') {
+          console.log('[PVP Sync] 连接已就绪，准备交换数据');
+          sendDeck(); // 连接成功立刻发送
+        }
+
+        // 2. 处理握手消息 (对手发来的牌组)
+        if (data.type === 'HANDSHAKE' && data.deck && Array.isArray(data.deck)) {
+          // 这里加一个校验，防止误收自己的包（虽然概率低）
+          if (data.playerId !== activeAddress) {
+             console.log('[PVP Sync] 收到对手牌组，数量:', data.deck.length);
+             setOpponentDeck(data.deck);
+          }
+        }
+        
+        // 3. 补发机制：如果有人加入（对方可能是后进来的），重新广播我的牌组
+        if (data.type === 'PLAYER_JOINED' && data.playerId !== activeAddress) {
+          console.log('[PVP Sync] 对手重新加入/连接，补发牌组...');
+          sendDeck();
+        }
+      });
+    };
+
     connectAndSync();
 
+    // 兜底机制：如果连接成功但 3秒内没动作，尝试补发一次
+    const fallbackTimer = setTimeout(() => {
+        if (!opponentDeck && hasSentDeck.current) {
+            console.log('[PVP Sync] 兜底补发...');
+            sendDeck();
+        }
+    }, 3000);
+
     return () => {
-      // 在这里不断开，因为 BattleArena 还要用同一个连接？
-      // 不，pvpService是单例，connect会覆盖旧连接。
-      // BattleArena 会再次调用 connect，这没问题。
+       clearTimeout(fallbackTimer);
     };
   }, [pvpRoomId, activeAddress, role, myDeck]);
 
