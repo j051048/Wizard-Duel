@@ -9,7 +9,7 @@ import { parseUnits } from 'viem';
 
 const XLAYER_CHAIN_ID = 196;
 const DONATION_TOKEN_ADDRESS = '0xdcc83b32b6b4e95a61951bfcc9d71967515c0fca' as const;
-const TREASURY_ADDRESS = '0xbd8aa43f0e2fe80d24bf80f3ee45a8f233ce04f7' as const;
+const TREASURY_ADDRESS = '0xda139d3333a8fec3b4a76ba049cb904e869052e5' as const;
 
 const ERC20_ABI = [
   {
