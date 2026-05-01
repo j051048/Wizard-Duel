@@ -120,7 +120,7 @@ export const SecureGameService = {
 
       return { 
         success: true, 
-        cards: result.cards || [], 
+        cards: (result.cards as { rarity: Rarity; index: number }[] | null) || [],
         pityTriggered: result.pity_triggered || false 
       };
     } catch (e: any) {

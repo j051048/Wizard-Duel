@@ -300,8 +300,8 @@ const getCasterValue = {
   costMod: (state: DuelState, isPlayer: boolean): number => 
     isPlayer ? state.playerCostMod : state.opponentCostMod,
   
-  heroSkillUsed: (state: DuelState, isPlayer: boolean): boolean => 
-    isPlayer ? state.heroSkillsUsed : state.opponentHeroSkillUsed,
+  heroSkillUsed: (state: DuelState, isPlayer: boolean): boolean =>
+    isPlayer ? (state.heroSkillsUsed ?? false) : (state.opponentHeroSkillUsed ?? false),
   
   deck: (state: DuelState, isPlayer: boolean): SpellType[] => 
     isPlayer ? state.playerDeck : state.opponentDeck,

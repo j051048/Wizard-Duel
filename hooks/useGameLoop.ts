@@ -49,6 +49,9 @@ export interface GameLoopActions {
   handleRemotePlayCard: (spellId: SpellType) => void;
   handleRemoteEndTurn: () => void;
   startPvpDuel: (p1Deck: SpellType[], p2Deck: SpellType[], role: 'player1' | 'player2', seed?: number) => void;
+  // [P0-4] PvP state sync for reconnection
+  getSerializedState: () => { duelState: DuelState | null; phase: string };
+  restoreFromSync: (syncData: { duelState: DuelState; phase: string }) => void;
 }
 
 export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoopActions] {
@@ -351,6 +354,20 @@ export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoo
     });
   }, []);
 
+  // ============ [P0-4] PvP State Sync ============
+  const getSerializedState = useCallback(() => {
+    return { duelState, phase };
+  }, [duelState, phase]);
+
+  const restoreFromSync = useCallback((syncData: { duelState: DuelState; phase: string }) => {
+    if (syncData.duelState) {
+      setDuelState(syncData.duelState);
+    }
+    if (syncData.phase) {
+      setPhase(syncData.phase as any);
+    }
+  }, [setPhase]);
+
   // ============ Return ============
   return [
     {
@@ -374,6 +391,8 @@ export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoo
       startFirstTurn: startNewRound,
       handleRemotePlayCard,
       handleRemoteEndTurn,
+      getSerializedState,
+      restoreFromSync,
     }
   ];
 }

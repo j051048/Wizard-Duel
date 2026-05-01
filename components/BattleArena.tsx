@@ -40,7 +40,7 @@ import { HandArea } from './battle/hand/HandArea';
 import { DragDropZone } from './battle/board/DragDropZone';
 import { FloatingTextOverlay } from './battle/feedback/FloatingText';
 import { FloatingActionLog } from './battle/FloatingActionLog';
-import { SoundManager } from '../services/SoundManager';
+import { audioBridge } from '../hooks/useAudioManager';
 
 // Hooks
 import { useDragToPlay } from '../hooks/useDragToPlay';
@@ -62,6 +62,9 @@ interface BattleArenaProps {
   // [PVP] 远程操作回调（对手的操作以对手身份执行，不走玩家出牌逻辑）
   onRemotePlayCard?: (spellId: SpellType) => void;
   onRemoteEndTurn?: () => void;
+  // [P0-4] PvP state sync for reconnection
+  getSerializedState?: () => { duelState: any; phase: string };
+  restoreFromSync?: (syncData: { duelState: any; phase: string }) => void;
 }
 
 export const BattleArena: React.FC<BattleArenaProps> = ({
@@ -77,6 +80,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   pvpRoomId,
   onRemotePlayCard,
   onRemoteEndTurn,
+  getSerializedState,
+  restoreFromSync,
 }) => {
   const { duelState, phase, playerCard, opponentCard, resultText, effectMessages, aiStatus } =
     gameLoopState;
@@ -87,6 +92,10 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   // States
   const [hoveredSpellId, setHoveredSpellId] = useState<SpellType | null>(null);
   const [hasShownTutorial, setHasShownTutorial] = useState(false);
+  // [P0-4] Opponent disconnect tracking
+  const [opponentDisconnected, setOpponentDisconnected] = useState(false);
+  const [reconnectCountdown, setReconnectCountdown] = useState(30);
+  const disconnectTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [detailSpell, setDetailSpell] = useState<SpellType | null>(null);
 
@@ -108,6 +117,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   useEffect(() => { onPassRef.current = onPass; }, [onPass]);
   useEffect(() => { onRemotePlayCardRef.current = onRemotePlayCard; }, [onRemotePlayCard]);
   useEffect(() => { onRemoteEndTurnRef.current = onRemoteEndTurn; }, [onRemoteEndTurn]);
+  // [P0-4] Refs for state sync functions
+  const getSerializedStateRef = useRef(getSerializedState);
+  const restoreFromSyncRef = useRef(restoreFromSync);
+  useEffect(() => { getSerializedStateRef.current = getSerializedState; }, [getSerializedState]);
+  useEffect(() => { restoreFromSyncRef.current = restoreFromSync; }, [restoreFromSync]);
 
   // Hooks
   const {
@@ -253,6 +267,53 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         }
       } else if (data.type === 'PLAYER_JOINED') {
         console.log('👥 [PVP] 对手已进入房间:', data.player_id);
+        // Opponent reconnected
+        setOpponentDisconnected(false);
+        if (disconnectTimerRef.current) {
+          clearInterval(disconnectTimerRef.current);
+          disconnectTimerRef.current = null;
+        }
+      } else if (data.type === 'PLAYER_LEFT') {
+        console.log('⚠️ [PVP] 对手断开连接:', data.player_id);
+        setOpponentDisconnected(true);
+        setReconnectCountdown(30);
+      } else if (data.type === 'RECONNECTED') {
+        console.log(`🔄 [PVP] 重连成功! Role: ${data.role}, Seed: ${data.seed}`);
+        setOpponentDisconnected(false);
+        if (disconnectTimerRef.current) {
+          clearInterval(disconnectTimerRef.current);
+          disconnectTimerRef.current = null;
+        }
+        // If I reconnected and I'm player1, send current state to player2
+        const info = pvpService.getRoomInfo();
+        if (info.role === 'player1' && getSerializedStateRef.current) {
+          const state = getSerializedStateRef.current();
+          if (state.duelState) {
+            pvpService.sendAction({ type: 'STATE_SYNC', state });
+          }
+        }
+        // If I'm player2, request state from player1
+        if (data.role === 'player2') {
+          pvpService.sendAction({ type: 'REQUEST_STATE' });
+        }
+      } else if (data.type === 'STATE_SYNC') {
+        // Received full state from P1 (only P2 should process this)
+        const info = pvpService.getRoomInfo();
+        if (info.role === 'player2' && data.state && restoreFromSyncRef.current) {
+          console.log('📦 [PVP] 收到状态同步，正在恢复游戏...');
+          restoreFromSyncRef.current(data.state);
+          setOpponentDisconnected(false);
+        }
+      } else if (data.type === 'REQUEST_STATE') {
+        // P1 receives this — send current state to P2
+        const info = pvpService.getRoomInfo();
+        if (info.role === 'player1' && getSerializedStateRef.current) {
+          const state = getSerializedStateRef.current();
+          if (state.duelState) {
+            console.log('📦 [PVP] 发送状态同步给 P2...');
+            pvpService.sendAction({ type: 'STATE_SYNC', state });
+          }
+        }
       }
     });
 
@@ -264,9 +325,40 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   // [P2 Fix #21] Dynamic BGM: 根据 HP 比例动态调整音乐气氛
   useEffect(() => {
     if (duelState && !isMuted) {
-      SoundManager.updateBattleBGM(duelState.playerHP, duelState.opponentHP, GAME_CONFIG.maxHP);
+      audioBridge.updateBattleBGM(duelState.playerHP, duelState.opponentHP, GAME_CONFIG.maxHP);
     }
   }, [duelState?.playerHP, duelState?.opponentHP, isMuted]);
+
+  // [P0-4] Opponent disconnect countdown (30s → surrender)
+  useEffect(() => {
+    if (!opponentDisconnected) {
+      if (disconnectTimerRef.current) {
+        clearInterval(disconnectTimerRef.current);
+        disconnectTimerRef.current = null;
+      }
+      return;
+    }
+
+    disconnectTimerRef.current = setInterval(() => {
+      setReconnectCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(disconnectTimerRef.current!);
+          disconnectTimerRef.current = null;
+          // Auto-surrender if opponent doesn't reconnect
+          onSurrender();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (disconnectTimerRef.current) {
+        clearInterval(disconnectTimerRef.current);
+        disconnectTimerRef.current = null;
+      }
+    };
+  }, [opponentDisconnected, onSurrender]);
 
   // [P0 Fix A-2] TurnBanner 逻辑已移除，统一由 useTurnManager.showTurnBanner 控制
   // 通过 gameLoopState.turnBanner 传入 TurnBanner 组件
@@ -512,6 +604,27 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         warningTime={15}
         onTimeUp={handleEndTurn}
       />
+
+      {/* [P0-4] Opponent disconnected overlay */}
+      {opponentDisconnected && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="text-center p-8 rounded-2xl bg-gray-900/90 border border-yellow-500/40 max-w-sm mx-4">
+            <div className="text-5xl mb-4">⚡</div>
+            <h2 className="text-2xl font-bold text-yellow-400 mb-2">对手断开连接</h2>
+            <p className="text-gray-300 mb-4">
+              等待对手重连中...
+            </p>
+            <div className="text-4xl font-mono text-white mb-4">
+              {reconnectCountdown}s
+            </div>
+            <p className="text-sm text-gray-500">
+              {reconnectCountdown > 0
+                ? '对手在时间内重连将恢复对战'
+                : '对手未在时间内重连，判定胜利'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {detailSpell && (
         <CardDetailModal spell={getSpellById(detailSpell)} onClose={() => setDetailSpell(null)} />

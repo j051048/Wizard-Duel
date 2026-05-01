@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HapticService } from '../../services/haptic';
-import { SoundManager } from '../../services/SoundManager';
+import { audioBridge } from '../../hooks/useAudioManager';
 
 interface TurnBannerProps {
   type: 'player' | 'opponent' | null;
@@ -18,7 +18,7 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({ type, roundNumber = 0 })
       HapticService.medium();
       // 尝试播放回合开始音效
       try {
-        SoundManager.play('turn_start');
+        audioBridge.playSfx('turn_start');
       } catch (e) {
         // 音效文件可能不存在，静默处理
       }

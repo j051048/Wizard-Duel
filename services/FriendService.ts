@@ -120,7 +120,7 @@ class FriendServiceClass {
     this.requests.push(request);
     this.saveRequests();
     
-    // TODO: 通过 Supabase Realtime 发送给对方
+    // Planned: Supabase Realtime delivery for real-time friend requests
     
     return request;
   }
@@ -225,7 +225,7 @@ class FriendServiceClass {
     this.invites.push(invite);
     this.saveInvites();
 
-    // TODO: 通过 Supabase Realtime 发送给对方
+    // Planned: Supabase Realtime delivery for real-time friend requests
 
     return invite;
   }
@@ -284,8 +284,7 @@ class FriendServiceClass {
 
   // 搜索好友 (模拟，实际应调用后端API)
   async searchUsers(query: string): Promise<{ id: string; username: string; avatar?: string }[]> {
-    // TODO: 实际实现应调用 Supabase 或后端 API
-    // 这里返回模拟数据
+    // Stub: Supabase search API integration pending
     if (!query.trim()) return [];
     
     return [

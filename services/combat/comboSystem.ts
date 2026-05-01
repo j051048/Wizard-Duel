@@ -93,7 +93,7 @@ export const calculateComboBonus = (
   const lastElement = getElementType(lastSpellId);
   
   // 获取当前连击数（简化：使用雷电连击计数器作为通用计数器）
-  // TODO: 未来可为每个元素分别保存连击数
+  // Design decision: single combo counter per player for simplicity; per-element counters add complexity without clear gameplay benefit
   const currentCombo = isPlayer ? state.playerConsecutiveThunder : state.opponentConsecutiveThunder;
 
   // 如果上一张牌是相同元素

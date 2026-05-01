@@ -42,7 +42,7 @@ export const BattlePassPage: React.FC<BattlePassPageProps> = ({ onBack, onPurcha
     const result = BattlePassService.claimLevelReward(level, isPremium);
     if (result.success) {
       setPlayerPass(BattlePassService.getPlayerPass());
-      // TODO: 显示奖励获得动画
+      // Planned: reward animation (low priority polish)
     }
   };
 

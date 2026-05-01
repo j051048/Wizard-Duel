@@ -36,6 +36,23 @@ const AUDIO_CONFIG = {
     block: '/audio/sfx-block.mp3',
     victory: '/audio/sfx-victory.mp3',
     defeat: '/audio/sfx-defeat.mp3',
+    // Additional SFX (mapped to existing audio files)
+    turn_start: '/audio/sfx-card-play.mp3',
+    turn_end: '/audio/sfx-block.mp3',
+    card_draw: '/audio/sfx-card-play.mp3',
+    button_click: '/audio/sfx-card-play.mp3',
+    damage: '/audio/sfx-hit.mp3',
+    heal: '/audio/sfx-block.mp3',
+    freeze: '/audio/sfx-block.mp3',
+    burn: '/audio/sfx-hit.mp3',
+    crit: '/audio/sfx-hit.mp3',
+    combo: '/audio/sfx-card-play.mp3',
+    counter: '/audio/sfx-block.mp3',
+    projectile: '/audio/sfx-hit.mp3',
+    shield: '/audio/sfx-block.mp3',
+    level_up: '/audio/sfx-victory.mp3',
+    pack_open: '/audio/sfx-card-play.mp3',
+    card_reveal: '/audio/sfx-card-play.mp3',
         spell: {
       fire: '/audio/sfx-spell-fire.mp3',
       vine: '/audio/sfx-spell-vine.mp3',
@@ -92,7 +109,15 @@ export interface AudioManagerActions {
   stopBgm: () => void;
   playSfx: (effect: string) => void;
   playSpellSfx: (spellType: SpellType) => void;
+  updateBattleBGM: (playerHP: number, opponentHP: number, maxHP: number) => void;
 }
+
+// Module-level bridge for non-hook consumers (TurnBanner, Lobby, etc.)
+// Populated by the hook on first render
+export const audioBridge = {
+  playSfx: (_effect: string) => {},
+  updateBattleBGM: (_playerHP: number, _opponentHP: number, _maxHP: number) => {},
+};
 
 export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
   const [isMuted, setIsMuted] = useState(false);
@@ -272,6 +297,58 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
     }
   }, [isMuted, sfxVolume, getAudioInstance, isOnCooldown, setCooldown]);
 
+  // Dynamic BGM: adjust playback rate/volume based on battle state
+  const currentBgmStateRef = useRef<'neutral' | 'advantage' | 'danger' | 'lethal'>('neutral');
+
+  const updateBattleBGM = useCallback((playerHP: number, opponentHP: number, maxHP: number) => {
+    if (isMuted || !bgmRef.current) return;
+
+    const playerRatio = playerHP / maxHP;
+    const opponentRatio = opponentHP / maxHP;
+
+    let newState: typeof currentBgmStateRef.current = 'neutral';
+    if (opponentRatio <= 0.3 && playerRatio > 0.3) {
+      newState = 'lethal';
+    } else if (playerRatio <= 0.3) {
+      newState = 'danger';
+    } else if (playerRatio - opponentRatio > 0.3) {
+      newState = 'advantage';
+    }
+
+    if (newState === currentBgmStateRef.current) return;
+    currentBgmStateRef.current = newState;
+
+    const audio = bgmRef.current;
+    switch (newState) {
+      case 'danger':
+        audio.playbackRate = 1.1;
+        audio.volume = Math.min(1, bgmVolume * 0.8);
+        break;
+      case 'lethal':
+        audio.playbackRate = 1.2;
+        audio.volume = Math.min(1, bgmVolume);
+        break;
+      case 'advantage':
+        audio.playbackRate = 1.0;
+        audio.volume = Math.min(1, bgmVolume * 0.6);
+        break;
+      default:
+        audio.playbackRate = 1.0;
+        audio.volume = Math.min(1, bgmVolume * 0.5);
+        break;
+    }
+  }, [isMuted, bgmVolume]);
+
+  // Populate module-level bridge so non-hook consumers can access audio
+  useEffect(() => {
+    audioBridge.playSfx = playSfx;
+    audioBridge.updateBattleBGM = updateBattleBGM;
+    return () => {
+      audioBridge.playSfx = () => {};
+      audioBridge.updateBattleBGM = () => {};
+    };
+  }, [playSfx, updateBattleBGM]);
+
   // 切换静音
   const toggleMute = useCallback(() => {
     setIsMuted(prev => {
@@ -348,6 +425,7 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
     stopBgm,
     playSfx,
     playSpellSfx,
+    updateBattleBGM,
   };
 
   return [state, actions];

@@ -205,12 +205,76 @@ export type Database = {
           },
         ]
       }
+      pity_counters: {
+        Row: {
+          user_id: string
+          rare_pity: number
+          mythic_pity: number
+          legendary_pity: number
+          updated_at: string | null
+        }
+        Insert: {
+          user_id: string
+          rare_pity?: number
+          mythic_pity?: number
+          legendary_pity?: number
+          updated_at?: string | null
+        }
+        Update: {
+          rare_pity?: number
+          mythic_pity?: number
+          legendary_pity?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      adjust_gold_secure: {
+        Args: {
+          p_user_id: string
+          p_delta: number
+          p_reason: string
+        }
+        Returns: {
+          success: boolean
+          new_balance: number
+          error_message: string
+        }[]
+      }
+      open_pack_secure: {
+        Args: {
+          p_user_id: string
+          p_pack_id: string
+          p_pack_type: string
+        }
+        Returns: {
+          success: boolean
+          cards: Json
+          pity_triggered: boolean
+          error_message: string
+        }[]
+      }
+      settle_battle_secure: {
+        Args: {
+          p_user_id: string
+          p_result: string
+          p_gold_earned: number
+          p_xp_earned: number
+          p_opponent_name: string
+          p_turns: number
+          p_battle_hash?: string | null
+        }
+        Returns: {
+          success: boolean
+          new_gold: number
+          new_xp: number
+          error_message: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

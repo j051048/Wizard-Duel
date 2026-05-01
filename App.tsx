@@ -389,6 +389,8 @@ function App() {
                 pvpRoomId={ui.pvpRoomId || undefined}
                 onRemotePlayCard={gameLoopActions.handleRemotePlayCard}
                 onRemoteEndTurn={gameLoopActions.handleRemoteEndTurn}
+                getSerializedState={gameLoopActions.getSerializedState}
+                restoreFromSync={gameLoopActions.restoreFromSync}
                 onPlayCard={(spellId: SpellType) => {
                   if (gameLoopActions.playCard(spellId)) {
                     feedback.triggerCardPlayFeedback();

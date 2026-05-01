@@ -1,14 +1,11 @@
 import React from 'react';
-import { Pressable, StyleSheet, ViewStyle, TextStyle, View } from 'react-native';
-import { motion } from 'framer-motion/client';
-import { Ionicons } from '@expo/vector-icons';
-
-// framer-motion MotionView for React Native
-const MotionView = motion(View);
+import { motion } from 'framer-motion';
+import type { LucideIcon } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 
 interface IconButtonProps {
-  /** Icon name from Ionicons */
-  icon: keyof typeof Ionicons.glyphMap;
+  /** Icon component from lucide-react */
+  icon?: LucideIcon;
   /** Icon size (default: 24) */
   size?: number;
   /** Icon color (default: #FFFFFF) */
@@ -22,7 +19,7 @@ interface IconButtonProps {
   /** Disabled state */
   disabled?: boolean;
   /** Custom container style */
-  style?: ViewStyle;
+  style?: React.CSSProperties;
   /** Badge count (optional) */
   badge?: number;
   /** Badge color */
@@ -33,22 +30,12 @@ interface IconButtonProps {
   testID?: string;
 }
 
-/**
- * IconButton - A tactile button with physics-based press feedback
- * 
- * Features:
- * - Smooth spring-based scale animation on tap (0.92 scale)
- * - Subtle hover/touch feedback
- * - Optional badge for notifications
- * - Accessible and testable
- */
 const IconButton: React.FC<IconButtonProps> = ({
-  icon,
+  icon: Icon,
   size = 24,
   color = '#FFFFFF',
   backgroundColor = 'transparent',
   onPress,
-  onLongPress,
   disabled = false,
   style,
   badge,
@@ -56,75 +43,63 @@ const IconButton: React.FC<IconButtonProps> = ({
   accessibilityLabel,
   testID,
 }) => {
-  const isInteractive = !disabled && (onPress || onLongPress);
+  const isInteractive = !disabled && !!onPress;
 
   return (
-    <Pressable
-      onPress={onPress}
-      onLongPress={onLongPress}
+    <motion.button
+      onClick={onPress}
       disabled={disabled}
-      accessibilityLabel={accessibilityLabel}
-      testID={testID}
-      style={{ backgroundColor: 'transparent' }}
+      aria-label={accessibilityLabel}
+      data-testid={testID}
+      whileTap={isInteractive ? { scale: 0.92 } : undefined}
+      transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: '9999px',
+        padding: 8,
+        minWidth: 44,
+        minHeight: 44,
+        backgroundColor,
+        border: 'none',
+        cursor: disabled ? 'not-allowed' : isInteractive ? 'pointer' : 'default',
+        opacity: disabled ? 0.5 : 1,
+        position: 'relative',
+        outline: 'none',
+        ...style,
+      }}
     >
-      <MotionView
-        style={[
-          styles.container,
-          { backgroundColor },
-          disabled && styles.disabled,
-          style,
-        ]}
-        whileTap={isInteractive ? { scale: 0.92 } : undefined}
-        transition={{
-          type: 'spring',
-          stiffness: 400,
-          damping: 17,
-        }}
-      >
-        <Ionicons
-          name={icon}
-          size={size}
-          color={disabled ? '#666666' : color}
-        />
-        
-        {/* Badge */}
-        {badge !== undefined && badge > 0 && (
-          <View style={[styles.badge, { backgroundColor: badgeColor }]}>
-            <Ionicons
-              name="ellipsis-horizontal"
-              size={10}
-              color="#FFFFFF"
-            />
-          </View>
-        )}
-      </MotionView>
-    </Pressable>
+      {Icon ? (
+        <Icon size={size} color={disabled ? '#666666' : color} />
+      ) : (
+        <MoreHorizontal size={size} color={disabled ? '#666666' : color} />
+      )}
+
+      {badge !== undefined && badge > 0 && (
+        <span
+          style={{
+            position: 'absolute',
+            top: 2,
+            right: 2,
+            minWidth: 16,
+            height: 16,
+            borderRadius: 8,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '0 4px',
+            backgroundColor: badgeColor,
+            color: '#FFFFFF',
+            fontSize: 10,
+            lineHeight: '16px',
+          }}
+        >
+          {badge}
+        </span>
+      )}
+    </motion.button>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 999, // Fully rounded by default
-    padding: 8,
-    minWidth: 44, // Minimum touch target
-    minHeight: 44,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  badge: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-  },
-});
 
 export default IconButton;

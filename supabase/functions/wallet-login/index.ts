@@ -1,3 +1,4 @@
+// @ts-nocheck -- Deno imports cannot be resolved by the project's TypeScript config
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.0.0";
 import { verifyMessage } from "npm:viem";

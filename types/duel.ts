@@ -45,7 +45,6 @@ export interface GameTrigger {
  * [P0 Fix #2] 安全注意事项：
  * - opponentHand 标记为 @internal，仅供内部 AI 逻辑使用
  * - 前端组件应使用 opponentHandSize，不直接访问 opponentHand
- * - AI 逻辑应使用 AIBrain 类来管理手牌
  */
 export interface DuelState {
   playerHP: number;
@@ -61,7 +60,6 @@ export interface DuelState {
   /** 
    * @internal 仅供内部 AI 逻辑使用
    * @deprecated 前端组件请使用 opponentHandSize
-   * @see services/AIBrain.ts 使用 AIBrain 类隔离 AI 手牌
    */
   opponentHand: SpellType[];
   /** 对手手牌数量 - 前端组件应使用此字段 */

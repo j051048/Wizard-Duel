@@ -111,7 +111,8 @@ export default defineConfig(({ mode }) => {
         chunkSizeWarningLimit: 800,
       },
       esbuild: {
-        legalComments: 'none'
+        legalComments: 'none',
+        drop: mode === 'production' ? ['console', 'debugger'] : [],
       }
     };
 });

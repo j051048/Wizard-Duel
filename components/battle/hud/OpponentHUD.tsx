@@ -102,14 +102,14 @@ export const OpponentHUD: React.FC<OpponentHUDProps> = ({
             {showMenu && (
               <div className="absolute right-0 top-10 bg-slate-900/95 backdrop-blur-md rounded-xl border border-white/10 shadow-2xl p-2 flex flex-col gap-1.5 min-w-[120px] z-50">
                 <button 
-                  onClick={() => { setIsLogOpen(!isLogOpen); setShowMenu(false); }}
+                  onClick={() => { setIsLogOpen?.(!isLogOpen); setShowMenu(false); }}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-white/80 text-sm"
                 >
                   <ScrollText size={16} />
                   <span>战斗日志</span>
                 </button>
                 <button 
-                  onClick={() => { onToggleMute(); setShowMenu(false); }}
+                  onClick={() => { onToggleMute?.(); setShowMenu(false); }}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-white/80 text-sm"
                 >
                   {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
@@ -117,7 +117,7 @@ export const OpponentHUD: React.FC<OpponentHUDProps> = ({
                 </button>
                 <div className="h-px bg-white/10 my-1" />
                 <button 
-                  onClick={() => { onSurrender(); setShowMenu(false); }}
+                  onClick={() => { onSurrender?.(); setShowMenu(false); }}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-900/30 text-red-400 text-sm"
                 >
                   <Flag size={16} />
@@ -187,14 +187,14 @@ export const OpponentHUD: React.FC<OpponentHUDProps> = ({
       {/* Desktop Controls (Fixed Top Right) */}
       <div className="fixed z-40 top-4 right-4 safe-area-top flex gap-2">
            <button 
-             onClick={onSurrender} 
+             onClick={() => onSurrender?.()} 
              className="p-2 backdrop-blur-md rounded-lg border border-red-500/30 text-red-400 hover:text-red-200 hover:bg-red-900/40 transition-colors bg-red-900/40"
              title="投降"
            >
              <Flag size={20} />
            </button>
            <button 
-             onClick={() => setIsLogOpen(!isLogOpen)} 
+             onClick={() => setIsLogOpen?.(!isLogOpen)} 
              className="p-2 backdrop-blur-md rounded-lg border border-white/10 text-white/60 hover:text-white transition-colors bg-black/40"
            >
              <ScrollText size={20} />

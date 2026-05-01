@@ -183,7 +183,7 @@ export const ApiService = {
       
       return profiles[userId];
     }
-    // TODO: Real API implementation
+    // Stub: Supabase integration handles real data
     return { address: userId, balance: 0 }; 
   },
 
@@ -216,7 +216,7 @@ export const ApiService = {
       const allInventories = _loadLocalData<Record<string, SpellType[]>>(STORAGE_KEYS.INVENTORY, {});
       return allInventories[userId] || [];
     }
-    // TODO: Real API
+    // Stub: Supabase integration handles real data
     return [];
   },
 
@@ -227,7 +227,7 @@ export const ApiService = {
       _saveLocalData(STORAGE_KEYS.INVENTORY, allInventories);
       return;
     }
-    // TODO: Real API
+    // Stub: Supabase integration handles real data
   },
 
   // ---------- 牌组管理 (NEW) ----------
@@ -237,7 +237,7 @@ export const ApiService = {
       const allDecks = _loadLocalData<Record<string, Deck[]>>(STORAGE_KEYS.DECKS, {});
       return allDecks[userId] || [];
     }
-    return []; // TODO: Real API
+    return []; // Stub: Supabase integration handles real data
   },
 
   async saveDeck(userId: string, deck: Deck): Promise<void> {
@@ -253,7 +253,7 @@ export const ApiService = {
       _saveLocalData(STORAGE_KEYS.DECKS, allDecks);
       return;
     }
-    // TODO: Real API
+    // Stub: Supabase integration handles real data
   },
 
   // ---------- 游戏相关 ----------

@@ -1,7 +1,9 @@
 // components/index.ts - 组件导出入口
 
 export { LoadingScreen } from './LoadingScreen';
-export { PlayerFrame, HealthBar, ManaCrystals } from './PlayerFrame';
+export { default as PlayerFrame } from './PlayerFrame';
+export { HealthBar } from './battle/HealthBar';
+export { ManaDisplay } from './battle/ManaDisplay';
 export { Lobby } from './Lobby';
 export { BattleArena } from './BattleArena';
 export { SpellCard } from './SpellCard';

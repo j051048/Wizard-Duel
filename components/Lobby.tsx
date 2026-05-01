@@ -12,7 +12,7 @@ import { RulesModal } from './RulesModal';
 import { TutorialModal } from './TutorialModal';
 import { QuestModal } from './lobby/QuestModal';
 import { HapticService } from '../services/haptic';
-import { SoundManager } from '../services/SoundManager';
+import { audioBridge } from '../hooks/useAudioManager';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { GlobalChat } from './GlobalChat';
 import { useUserStore } from '../stores/useUserStore';
@@ -110,7 +110,7 @@ export const Lobby: React.FC<LobbyProps> = ({
               onClaimQuestReward(result.reward);
           }
           HapticService.success();
-          try { SoundManager.play('victory', 0.5); } catch {}
+          try { audioBridge.playSfx('victory'); } catch {}
       }
   };
   

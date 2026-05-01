@@ -64,7 +64,7 @@ export const PackOpener: React.FC<PackOpenerProps> = ({
   const isAllRevealed = revealedIndices.size === cards.length;
 
   const handlePackClick = useCallback(() => {
-    HapticService.impact('medium');
+    HapticService.medium();
     setPhase('BURST');
     setTimeout(() => setPhase('REVEAL'), 800);
   }, []);
@@ -74,13 +74,13 @@ export const PackOpener: React.FC<PackOpenerProps> = ({
   const handleCardClick = useCallback((idx: number) => {
     setRevealedIndices(prev => {
       if (prev.has(idx)) return prev;
-      HapticService.impact('light');
+      HapticService.light();
       return new Set([...prev, idx]);
     });
   }, []);
 
   const handleRevealAll = useCallback(() => {
-    HapticService.impact('heavy');
+    HapticService.heavy();
     setRevealedIndices(new Set(cards.map((_, i) => i)));
   }, [cards]);
 

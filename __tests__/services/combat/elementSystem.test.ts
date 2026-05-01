@@ -3,48 +3,49 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { 
-  isElementCounter, 
-  evaluateElementInteraction, 
-  getSpellById 
-} from '../../services/combat/elementSystem';
+import type { SpellType } from '../../../types';
+import {
+  isElementCounter,
+  evaluateElementInteraction,
+  getSpellById
+} from '../../../services/combat/elementSystem';
 
 describe('Element System', () => {
   it('should correctly identify element counters', () => {
     // fire > vine
-    expect(isElementCounter('fire1', 'vine1')).toBe(true);
-    expect(isElementCounter('vine1', 'fire1')).toBe(false);
-    
+    expect(isElementCounter('fire' as SpellType, 'vine' as SpellType)).toBe(true);
+    expect(isElementCounter('vine' as SpellType, 'fire' as SpellType)).toBe(false);
+
     // ice > thunder
-    expect(isElementCounter('ice1', 'thunder1')).toBe(true);
+    expect(isElementCounter('ice' as SpellType, 'thunder' as SpellType)).toBe(true);
   });
 
   it('should return false for non-counter relationships', () => {
-    expect(isElementCounter('fire1', 'ice1')).toBe(false);
-    expect(isElementCounter('thunder1', 'vine1')).toBe(false);
+    expect(isElementCounter('fire' as SpellType, 'ice' as SpellType)).toBe(false);
+    expect(isElementCounter('thunder' as SpellType, 'vine' as SpellType)).toBe(false);
   });
 
   it('should evaluate element interaction for crit', () => {
-    const { crit, countered } = evaluateElementInteraction('fire1', 'vine1');
+    const { crit, countered } = evaluateElementInteraction('fire' as SpellType, 'vine' as SpellType);
     expect(crit).toBe(true);
     expect(countered).toBe(false);
   });
 
   it('should evaluate element interaction for counter', () => {
-    const { crit, countered } = evaluateElementInteraction('vine1', 'fire1');
+    const { crit, countered } = evaluateElementInteraction('vine' as SpellType, 'fire' as SpellType);
     expect(crit).toBe(false);
     expect(countered).toBe(true);
   });
 
   it('should handle null target spell', () => {
-    const { crit, countered } = evaluateElementInteraction('fire1', null);
+    const { crit, countered } = evaluateElementInteraction('fire' as SpellType, null);
     expect(crit).toBe(false);
     expect(countered).toBe(false);
   });
 
   it('should get spell by id correctly', () => {
-    const spell = getSpellById('fire1');
+    const spell = getSpellById('fire' as SpellType);
     expect(spell).toBeDefined();
-    expect(spell.id).toBe('fire1');
+    expect(spell.id).toBe('fire');
   });
 });

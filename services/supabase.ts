@@ -22,7 +22,7 @@ export const supabase = isSupabaseConfigured
         storageKey: 'wizard-duel-auth',
       }
     })
-  : null as any;
+  : null as unknown as ReturnType<typeof createClient<Database>>;
 
 // ============ 辅助：获取当前登录用户 ID ============
 
@@ -333,7 +333,7 @@ export const getUserDecks = async (userId: string): Promise<Deck[]> => {
   if (error) throw error;
   if (!data) return [];
 
-  return data.map(row => ({
+  return (data as Array<{ id: string; name: string | null; cards: string[]; created_at: string | null }>).map(row => ({
     id: row.id,
     name: row.name || 'Unnamed Deck',
     cards: (row.cards || []) as SpellType[],

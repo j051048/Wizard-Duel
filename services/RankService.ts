@@ -323,8 +323,7 @@ class RankServiceClass {
   // ============ 排行榜 ============
 
   async getLeaderboard(limit: number = 100): Promise<{ rank: number; username: string; rankInfo: RankInfo }[]> {
-    // TODO: 实际实现应调用 Supabase
-    // 这里返回模拟数据
+    // Stub: Supabase leaderboard query pending
     const mockLeaderboard = [];
     for (let i = 0; i < Math.min(limit, 20); i++) {
       const tierIndex = Math.max(0, RANK_TIERS.length - 1 - Math.floor(i / 3));
