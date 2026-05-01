@@ -45,6 +45,7 @@ import { audioBridge } from '../hooks/useAudioManager';
 // Hooks
 import { useDragToPlay } from '../hooks/useDragToPlay';
 import { useBattleAnimations } from '../hooks/useBattleAnimations';
+import { useTranslation } from '../i18n';
 
 interface BattleArenaProps {
   gameLoopState: GameLoopState;
@@ -87,6 +88,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     gameLoopState;
 
   const isMobile = useIsMobile();
+  const { t } = useTranslation();
   const { isLowQuality } = useSettings();
 
   // States
@@ -565,12 +567,12 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           >
             {phase === 'PLAYER_TURN' ? (
               <span className="flex items-center gap-2">
-                <span>结束回合</span>
+                <span>{t('End Turn')}</span>
                 <span className="text-lg">👉</span>
               </span>
             ) : (
               <span className="flex items-center gap-2">
-                <span>等待中</span>
+                <span>{t('Waiting')}</span>
                 <span className="animate-spin">⏳</span>
               </span>
             )}
@@ -610,17 +612,17 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
           <div className="text-center p-8 rounded-2xl bg-gray-900/90 border border-yellow-500/40 max-w-sm mx-4">
             <div className="text-5xl mb-4">⚡</div>
-            <h2 className="text-2xl font-bold text-yellow-400 mb-2">对手断开连接</h2>
+            <h2 className="text-2xl font-bold text-yellow-400 mb-2">{t('Opponent Disconnected')}</h2>
             <p className="text-gray-300 mb-4">
-              等待对手重连中...
+              {t('Waiting for opponent to reconnect...')}
             </p>
             <div className="text-4xl font-mono text-white mb-4">
               {reconnectCountdown}s
             </div>
             <p className="text-sm text-gray-500">
               {reconnectCountdown > 0
-                ? '对手在时间内重连将恢复对战'
-                : '对手未在时间内重连，判定胜利'}
+                ? t('If opponent reconnects in time, battle resumes')
+                : t('Opponent did not reconnect in time, Victory')}
             </p>
           </div>
         </div>

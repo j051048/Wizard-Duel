@@ -46,15 +46,16 @@ export const CRIT_MULTIPLIER = 1.0;   // 失效
 
 /**
  * 开包系统 - 保底机制
- * 5包保底稀有，10包保底史诗，20包保底传说
+ * 与服务端 Supabase RPC open_pack_sync 保持一致
+ * 5包保底稀有，20包保底史诗，40包保底传说
  */
 export const PACK_CONFIG = {
   cost: 100, // 每个卡包价格
   cardsPerPack: 5,
   pitySystem: {
     rare: { threshold: 5, guaranteed: false },
-    mythic: { threshold: 12, guaranteed: false },
-    legendary: { threshold: 25, guaranteed: false }
+    mythic: { threshold: 20, guaranteed: false },
+    legendary: { threshold: 40, guaranteed: false }
   },
   // 基础概率：Common 75%, Rare 18%, Mythic 5%, Legendary 2%
   dropRates: {

@@ -57,6 +57,8 @@ export const useDeckBuilder = (selectedDeck: Deck | null | undefined, gameMode: 
   const getCardLimit = (spell: Spell): number => {
     // 传说卡最多1张
     if (spell.rarity === 'legendary') return MAX_COPIES_LEGENDARY;
+    // 0费卡最多1张（防止免费卡泛滥破坏法力曲线）
+    if (spell.manaCost === 0) return MAX_COPIES_LEGENDARY;
     // 其他稀有度最多2张
     const baseLimit = MAX_COPIES_OTHER;
     // 核心卡牌默认解锁，上限为 baseLimit

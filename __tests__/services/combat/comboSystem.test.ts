@@ -63,13 +63,14 @@ describe('Combo System', () => {
     expect(result.comboMessage).toContain('闪电连击');
   });
 
-  it('should not apply combo when countered', () => {
+  it('should still apply combo when countered (50% damage handled elsewhere)', () => {
     const state = { ...mockState, playerLastSpell: 'thunder' as SpellType };
     const result = calculateComboBonus(state, 'player', 'thunder2', true);
 
-    expect(result.multiplier).toBe(1.0);
-    expect(result.newComboCount).toBe(0);
-    expect(result.comboMessage).toBeNull();
+    // Combo persists through counter — the 50% damage reduction is handled in gameLogic, not here
+    expect(result.multiplier).toBe(1.5);
+    expect(result.newComboCount).toBe(1);
+    expect(result.comboMessage).toContain('闪电连击');
   });
 
   it('should cap combo at 2 stacks', () => {

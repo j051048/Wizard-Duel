@@ -12,7 +12,7 @@
  * - useGameEndHandler: 游戏结束处理
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, Component, type ReactNode } from 'react';
 import { Sparkles, Settings, CheckCircle } from 'lucide-react';
 
 // Types
@@ -68,6 +68,45 @@ import { AI_PROFILES } from './services/gameLogic';
 
 
 
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class LazyLoadErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error('[ErrorBoundary] Lazy component failed to load:', error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-50 p-8">
+          <div className="text-6xl mb-4">💥</div>
+          <h2 className="text-xl text-red-400 font-tech mb-2">加载失败</h2>
+          <p className="text-gray-400 text-sm mb-6 text-center max-w-md">
+            {this.state.error?.message || '页面组件加载出错，请刷新页面重试'}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-tech transition-colors"
+          >
+            刷新页面
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+
 function App() {
   const { quality, setQuality, isLowQuality } = useSettings();
 
@@ -83,7 +122,7 @@ function App() {
     selectedDeck: state.selectedDeck,
     packInventory: state.packInventory,
     purchasedBundles: state.purchasedBundles,
-    
+
     // Actions
     setActiveAddress: state.setActiveAddress,
     loadUserData: state.loadUserData,
@@ -97,8 +136,47 @@ function App() {
     consumePack: state.consumePack,
     setPackInventory: state.setPackInventory
   })));
-  const ui = useUIStore();
-  const toast = useToastStore();
+  const ui = useUIStore(useShallow(state => ({
+    gameState: state.gameState,
+    gameMode: state.gameMode,
+    selectedBet: state.selectedBet,
+    language: state.language,
+    showSettings: state.showSettings,
+    isResourcesLoaded: state.isResourcesLoaded,
+    isGuest: state.isGuest,
+    dungeonRun: state.dungeonRun,
+    pendingTavernDuel: state.pendingTavernDuel,
+    finalResult: state.finalResult,
+    isPlayerShaking: state.isPlayerShaking,
+    isOpponentShaking: state.isOpponentShaking,
+    confirmDialog: state.confirmDialog,
+    pvpRoomId: state.pvpRoomId,
+    pvpRole: state.pvpRole,
+    pvpSeed: state.pvpSeed,
+    setGameState: state.setGameState,
+    setGameMode: state.setGameMode,
+    setSelectedBet: state.setSelectedBet,
+    setLanguage: state.setLanguage,
+    setShowSettings: state.setShowSettings,
+    setIsResourcesLoaded: state.setIsResourcesLoaded,
+    setIsGuest: state.setIsGuest,
+    setDungeonRun: state.setDungeonRun,
+    setPendingTavernDuel: state.setPendingTavernDuel,
+    setFinalResult: state.setFinalResult,
+    showConfirmDialog: state.showConfirmDialog,
+    hideConfirmDialog: state.hideConfirmDialog,
+    setPvpRoomId: state.setPvpRoomId,
+    setPvpRole: state.setPvpRole,
+    setPvpSeed: state.setPvpSeed,
+  })));
+  const toast = useToastStore(useShallow(state => ({
+    toasts: state.toasts,
+    removeToast: state.removeToast,
+    success: state.success,
+    warning: state.warning,
+    error: state.error,
+    info: state.info,
+  })));
 
   // ============ Core Hooks ============
   const { progress, startPreloading } = usePreloader();
@@ -249,6 +327,7 @@ function App() {
         )}
 
         {/* Lazy Loaded Views */}
+        <LazyLoadErrorBoundary>
         <React.Suspense fallback={<LoadingScreen progress={{ percentage: 100, isComplete: false, loaded: 1, total: 1, currentItem: '加载中...', errors: [] }} />}>
           
           {/* Tavern Mode */}
@@ -449,6 +528,7 @@ function App() {
             />
           )}
         </React.Suspense>
+        </LazyLoadErrorBoundary>
       </main>
 
       {/* Global Components */}

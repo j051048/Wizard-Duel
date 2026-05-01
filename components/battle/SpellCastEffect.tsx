@@ -164,4 +164,4 @@ export const SpellCastEffect: React.FC<SpellCastEffectProps> = ({ spellId, caste
   );
 };
 
-export default SpellCastEffect;
+export default React.memo(SpellCastEffect);

@@ -4,15 +4,16 @@
  * [P0 Phase 4] 排位积分、段位晋级、赛季奖励
  */
 
-import { 
-  RankInfo, 
-  RankTier, 
-  SeasonInfo, 
+import {
+  RankInfo,
+  RankTier,
+  SeasonInfo,
   PlayerSeasonData,
   RANK_TIERS,
   RANK_POINTS_CONFIG,
   SEASON_REWARDS
 } from '../types/social';
+import { getActiveSeason } from '../config/seasonConfig';
 
 const STORAGE_KEY_SEASON = 'wizard_duel_season_data';
 
@@ -21,14 +22,8 @@ class RankServiceClass {
   private playerData: PlayerSeasonData | null = null;
 
   constructor() {
-    // 默认赛季配置
-    this.currentSeason = {
-      id: 'season_1',
-      name: '元素觉醒',
-      startDate: '2026-02-01',
-      endDate: '2026-03-31',
-      isActive: true
-    };
+    // [P1] 使用统一赛季配置，支持自动轮转
+    this.currentSeason = getActiveSeason();
   }
 
   // ============ 初始化 ============

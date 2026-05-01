@@ -102,4 +102,4 @@ const BattleBoard: React.FC<BattleBoardProps> = ({
   );
 };
 
-export default BattleBoard;
+export default React.memo(BattleBoard);

@@ -203,7 +203,7 @@ export class GameSequenceExecutor {
               // 选择防御目标：有嘲讽优先 → 存活的随从 → 英雄
               const aliveDefenders = defenderSide.filter(m => m.hp > 0);
               // 嘲讽随从优先（如果有 taunt 属性）
-              const tauntDefenders = aliveDefenders.filter(m => (m as any).taunt);
+              const tauntDefenders = aliveDefenders.filter(m => m.taunt);
               let defender: typeof attacker | null = null;
               let defenderIdx = -1;
 
@@ -251,7 +251,7 @@ export class GameSequenceExecutor {
               // 更新攻击方状态
               attacker.exhausted = true;
               if (attacker.hp <= 0) {
-                  (attacker as any).isDying = true;
+                  attacker.isDying = true;
               }
               const newAttackers = attackerSide.map((m, i) =>
                   i === attackerIdx ? attacker : m

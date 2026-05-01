@@ -4,21 +4,34 @@
  * [P0 商业化] 管理通行证状态、任务进度、奖励领取
  */
 
-import { 
-  BattlePassSeason, 
-  PlayerBattlePass, 
+import {
+  BattlePassSeason,
+  PlayerBattlePass,
   BattlePassTask,
   BattlePassReward,
   DEFAULT_SEASON,
   DEFAULT_DAILY_TASKS,
   DEFAULT_WEEKLY_TASKS
 } from '../types/battlepass';
+import { getActiveSeason } from '../config/seasonConfig';
 
 const STORAGE_KEY_PASS = 'wizard_duel_battlepass';
 const STORAGE_KEY_TASKS = 'wizard_duel_tasks';
 
 class BattlePassServiceClass {
-  private season: BattlePassSeason = DEFAULT_SEASON;
+  private season: BattlePassSeason;
+
+  constructor() {
+    // [P1] 使用统一赛季配置，支持自动轮转
+    const activeSeason = getActiveSeason();
+    this.season = {
+      ...DEFAULT_SEASON,
+      id: activeSeason.id,
+      name: activeSeason.name,
+      startDate: activeSeason.startDate,
+      endDate: activeSeason.endDate,
+    };
+  }
   private playerPass: PlayerBattlePass | null = null;
   private tasks: BattlePassTask[] = [];
 

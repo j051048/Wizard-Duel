@@ -25,14 +25,16 @@ export const calculateSpellDamage = (
   crit: boolean,
   comboMultiplier: number = 1.0
 ): number => {
-  if (countered) return 0;
-  
   let damage = spell.damage;
-  
-  // [Fix 1.5] 暴击和连击叠加：damage = base * critMult * comboMult
+
   const critMultiplier = crit ? 1.5 : 1.0;
   damage = Math.floor(damage * critMultiplier * comboMultiplier);
-  
+
+  // [Balance v2.0] 克制不再完全取消伤害，而是减半
+  if (countered) {
+    damage = Math.floor(damage * 0.5);
+  }
+
   return damage;
 };
 

@@ -105,6 +105,8 @@ export default defineConfig(({ mode }) => {
             manualChunks: {
               'vendor-react': ['react', 'react-dom'],
               'vendor-web3': ['wagmi', 'viem', '@tanstack/react-query'],
+              'vendor-animation': ['framer-motion'],
+              'vendor-supabase': ['@supabase/supabase-js'],
             },
           },
         },

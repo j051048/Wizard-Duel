@@ -79,8 +79,8 @@ export const calculateComboBonus = (
   const isPlayer = caster === 'player';
   const currentElement = getElementType(spellId);
   
-  // 检查法术是否可触发连击
-  if (!canTriggerCombo(spellId) || countered) {
+  // 检查法术是否可触发连击（被克制不中断连击，伤害减半由上层处理）
+  if (!canTriggerCombo(spellId)) {
     return { multiplier: 1.0, newComboCount: 0, comboMessage: null, element: 'neutral' };
   }
   

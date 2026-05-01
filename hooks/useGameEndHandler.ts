@@ -18,6 +18,7 @@ import { useUIStore } from '../stores/useUIStore';
 import { calculateRankUpdate, getRankByScore } from '../services/rankSystem';
 import { QuestManager } from '../services/QuestManager';
 import { calculatePayout } from '../services/gameLogic';
+import { BattlePassService } from '../services/BattlePassService';
 
 interface GameLoopState {
   isGameOver: boolean;
@@ -64,6 +65,28 @@ export function useGameEndHandler({
     const newStreak = result === 'WIN' ? user.winStreak + 1 : 0;
     user.setWinStreak(newStreak);
 
+    // [P1] 首胜奖励：每天第一次胜利额外获得 50 金币
+    let firstWinBonus = 0;
+    if (result === 'WIN') {
+      const today = new Date().toDateString();
+      const lastFirstWin = localStorage.getItem('wizard_first_win_date');
+      if (lastFirstWin !== today) {
+        firstWinBonus = 50;
+        localStorage.setItem('wizard_first_win_date', today);
+      }
+    }
+
+    // [P1] 金币救济：余额低于 50 时，每天首次登录补 30 金币
+    let reliefBonus = 0;
+    if (user.balance < 50) {
+      const today = new Date().toDateString();
+      const lastRelief = localStorage.getItem('wizard_relief_date');
+      if (lastRelief !== today) {
+        reliefBonus = 30;
+        localStorage.setItem('wizard_relief_date', today);
+      }
+    }
+
     // 更新任务进度
     QuestManager.updateProgress('play_cards', 1);
     if (result === 'WIN') {
@@ -71,6 +94,15 @@ export function useGameEndHandler({
     }
     const damage = opponentMaxMana - opponentHP;
     if (damage > 0) QuestManager.updateProgress('deal_damage', damage);
+
+    // [P1] 战斗通行证经验：胜利 50 XP，失败 10 XP
+    const bpXP = result === 'WIN' ? 50 : 10;
+    BattlePassService.addXP(bpXP);
+    BattlePassService.onBattleComplete(
+      result === 'WIN',
+      [], // usedElements — not tracked client-side yet
+      {}  // damage by element — not tracked client-side yet
+    );
 
     // 计算排名更新（客户端先乐观计算）
     let { newScore, newRank, scoreDelta } = calculateRankUpdate(user.rankScore, result, newStreak);
@@ -159,6 +191,13 @@ export function useGameEndHandler({
         const mock = calculatePayout(ui.selectedBet, result);
         finalPayout = mock.payout;
         finalIsCrit = mock.isCrit;
+      }
+
+      // [P1] 应用首胜和救济金奖励
+      const bonusTotal = firstWinBonus + reliefBonus;
+      if (bonusTotal > 0) {
+        user.setBalance(user.balance + bonusTotal);
+        finalPayout += bonusTotal;
       }
 
       ui.setFinalResult({

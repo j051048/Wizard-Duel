@@ -50,4 +50,4 @@ const CombatLog: React.FC<CombatLogProps> = ({ isOpen, messages, onClose }) => {
   );
 };
 
-export default CombatLog;
+export default React.memo(CombatLog);

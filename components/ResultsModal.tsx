@@ -2,6 +2,7 @@ import React from 'react';
 import { SpellType, Rank } from '../types';
 import { getSpellById } from '../services/gameLogic';
 import { Trophy, Skull } from 'lucide-react';
+import { useTranslation } from '../i18n';
 
 interface ResultsModalProps {
   result: 'WIN' | 'LOSS' | 'DRAW' | null;
@@ -40,6 +41,7 @@ export const ResultsModal: React.FC<ResultsModalProps> = ({
   rankUpdates
 }) => {
   if (!result || !playerSpell || !opponentSpell) return null;
+  const { t } = useTranslation();
 
   const playerParams = getSpellById(playerSpell);
   const oppParams = getSpellById(opponentSpell);
@@ -156,7 +158,7 @@ export const ResultsModal: React.FC<ResultsModalProps> = ({
                 : 'bg-slate-800 text-white border border-white/10 hover:bg-slate-700'}
             `}
           >
-            {result === 'WIN' ? '继续征程' : '重振旗鼓'}
+            {result === 'WIN' ? t('Continue Journey') : t('Rise Again')}
           </button>
         </div>
       </div>

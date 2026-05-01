@@ -125,4 +125,253 @@ export const en = {
   'Match Found': 'Match Found',
   'MMR': 'MMR',
   'Rank Score': 'Rank Score',
+
+  // ============ [P2 Fix #16] Full i18n ============
+
+  // Lobby nav
+  'Shop': 'Shop',
+  'Collection': 'Collection',
+  'Chat': 'Chat',
+  'Profile': 'Profile',
+  'Back': 'Back',
+
+  // Deck Builder
+  'Slot N': 'Slot {n}',
+  'New Deck N': 'New Deck {n}',
+  'Enter deck name...': 'Enter deck name...',
+  'N / 30 Cards': '{n} / 30 Cards',
+  'Ready': 'Ready',
+  'N Cards Left': '{n} cards left',
+  'Saved': 'Saved',
+  'Save Config': 'Save Deck',
+
+  // Loading
+  'Enter Game': 'Enter Game',
+
+  // Chat
+  'World Channel': 'World Channel',
+  'No messages yet, start chatting': 'No messages yet, start chatting',
+  'Type a message...': 'Type a message...',
+
+  // Mana Curve
+  'Mana Curve': 'Mana Curve',
+  'N-cost Cards: M': '{n}-cost Cards: {m}',
+  'N cards': '{n} cards',
+
+  // Error Boundary
+  'Error copied to clipboard': 'Error log copied to clipboard',
+  'Magic Surge Error': 'Magic Surge Error',
+  'Unstable magic flow detected. Please try resetting the game state.': 'Unstable magic flow detected. Please try resetting the game state.',
+  'Refresh Page': 'Refresh Page',
+  'Reset State': 'Reset State',
+  'Copy Log': '📋 Copy Log',
+
+  // Card Detail
+  'Type': 'Type',
+  'Rarity': 'Rarity',
+  'Common': 'Common',
+  'Rare': 'Rare',
+  'Rarity: Mythic': 'Mythic',
+  'Base Damage:': 'Base Damage:',
+  'Armor Gain:': 'Armor Gain:',
+  'Card Flavor Text': 'Imbued with ancient elemental power, only the mightiest mages can unlock its full potential.',
+
+  // Shop
+  'Insufficient Balance': 'Insufficient Balance',
+  'Purchase Failed': 'Purchase Failed',
+  'Unknown Error': 'Unknown Error',
+  'Transaction Failed': 'Transaction Failed',
+  'Purchase Success': 'Purchase Success',
+  'Pack added to inventory, click "Open" to open': 'Pack added to inventory. Click "Open" to open.',
+  'Item added to inventory': 'Item added to inventory',
+  'Purchase Error': 'Purchase Error',
+  'Open Failed': 'Open Failed',
+  'No packs available': 'No packs available',
+  'Open Error': 'Open Error',
+  'Please try again later': 'Please try again later',
+  'Pack': 'Pack',
+  'Mystic Shop': 'Mystic Shop',
+  'Card Packs': 'Card Packs',
+  'Value Bundles': 'Value Bundles',
+  'Inventory: {n}': 'Inventory: {n}',
+  'Owned: Basic Pack': 'Owned: Basic Pack',
+  'Click to open now': 'Click to open now',
+  'Open': 'Open',
+  'Buy': 'Buy',
+  'N packs': '{n} packs',
+  'N Diamonds': '{n} Diamonds',
+  'Rare Card': 'Rare Card',
+  'Purchased': 'Purchased',
+  'Buy Now {n}': 'Buy Now {n} 💎',
+
+  // Results
+  'Continue Journey': 'Continue',
+  'Rise Again': 'Try Again',
+
+  // Mulligan
+  'You': 'You',
+  'Opponent': 'Opponent',
+  'Selecting...': 'Selecting...',
+  'Select Starting Hand': 'Select Starting Hand',
+  'Click cards to replace, then confirm': 'Click cards to replace, then confirm',
+  'seconds': 's',
+  'Click cards to mark for replacement, or confirm to keep all': 'Click cards to mark for replacement, or confirm to keep all',
+  'Selected N cards to replace': 'Selected {n} cards to replace',
+  'Confirmed': 'Confirmed',
+  'Replace N': 'Replace {n}',
+  'Keep All': 'Keep All',
+
+  // Matchmaking Overlay
+  'Mysterious Mage': 'Mysterious Mage',
+  'Searching for opponent...': 'Searching for opponent...',
+  'Waited {n}s': 'Waited {n}s',
+  'Current Player': 'Current Player',
+  'Searching...': 'Searching...',
+  'Found Opponent!': 'Found Opponent!',
+  'Entering battle hall': 'Entering battle hall',
+  'Level 10 · Elemental Lord': 'Level 10 · Elemental Lord',
+  'Cancel Match': 'Cancel Match',
+
+  // Deck List
+  'Deck is empty': 'Deck is empty',
+  'Switch to card pool to add cards': 'Switch to card pool to add cards',
+  'Save Deck': 'Save Deck',
+
+  // PvP Sync
+  'Connecting to battle...': 'Connecting to battle...',
+  'Waiting for opponent sync...': 'Waiting for opponent sync...',
+  'Establishing secure connection...': 'Establishing secure connection...',
+  'Sync complete, generating battlefield...': 'Sync complete, generating battlefield...',
+  'Syncing battlefield': 'Syncing battlefield',
+
+  // Mode Select
+  'Select Game Mode': 'Select Game Mode',
+  'Choose the experience for you': 'Choose the experience for you',
+  'Standard Mode': 'Standard Mode',
+  'Primary competitive experience. Balanced card pool.': 'Primary competitive experience. Balanced card pool.',
+  'Core Balanced Mode': 'Core Balanced Mode',
+  'Fair Match': 'Fair Match',
+  'Dungeon Adventure': 'Dungeon Adventure',
+  'Dungeon Flavor Text': 'In these forgotten depths, only the strongest survive...',
+  'Roguelike Exploration': 'Roguelike Exploration',
+  'Acquire Legendary Artifacts': 'Acquire Legendary Artifacts',
+  'Build Relics Progressively': 'Build Relics Progressively',
+  'Solo Challenge': 'Solo Challenge',
+  'Wild Mode': 'Wild Mode',
+  'Wild Mode Desc': 'All cards available. Unleash your creativity.',
+  'All Cards Unlocked': 'All Cards Unlocked',
+  'Fun Builds': 'Fun Builds',
+  'Return to Magic Hall': 'Return to Magic Hall',
+
+  // Battle Arena
+  'Opponent Disconnected': 'Opponent Disconnected',
+  'Waiting for opponent to reconnect...': 'Waiting for opponent to reconnect...',
+  'If opponent reconnects in time, battle resumes': 'If opponent reconnects in time, battle will resume',
+  'Opponent did not reconnect in time, Victory': 'Opponent did not reconnect in time. Victory!',
+
+  // Profile
+  'Guest Mode': 'Guest Mode',
+  'Battle Stats': 'Battle Stats',
+  'Total Games': 'Total Games',
+  'Wins': 'Wins',
+  'Losses': 'Losses',
+  'Total Earnings': 'Total Earnings',
+  'Win Rate Distribution': 'Win Rate Distribution',
+  'Recent Battles': 'Recent Battles',
+  'No battle records': 'No battle records',
+
+  // Dungeon
+  'Current Position': 'Current Position',
+
+  // Collection
+  'Spell Codex': 'Spell Codex',
+  'Collection Progress:': 'Collection Progress:',
+  'Search spells...': 'Search spells...',
+  'Mana Cost': 'Mana Cost',
+  'Element Faction': 'Element Faction',
+  'Fire': 'Fire',
+  'Ice': 'Ice',
+  'Thunder': 'Thunder',
+  'Nature': 'Nature',
+  'Rock': 'Rock',
+  'Arcane': 'Arcane',
+  'Not Owned': 'Not Owned',
+  'No matching spells found': 'No matching spells found',
+  'Favorited': 'Favorited',
+  'Locked': 'Locked',
+
+  // Assets
+  'Diamonds': 'Diamonds',
+  'Donate for Points': 'Donate for Points',
+  'Overall Win Rate': 'Overall Win Rate',
+  'Last 10 Games:': 'Last 10 Games:',
+
+  // Donate
+  'Please switch to X Layer network': 'Please switch to X Layer network',
+  'Network:': 'Network:',
+  'Donate Desc': 'Donate tokens to the foundation address. 1 token = 1 point (rounded down).',
+  'Token:': 'Token:',
+  'Recipient:': 'Recipient:',
+  'Custom amount': 'Custom amount',
+  'Points': 'Points',
+  'Waiting for signature...': 'Waiting for signature...',
+  'Confirming on chain...': 'Confirming on chain...',
+  'Switch to X Layer': 'Switch to X Layer Network',
+  'Confirm donate N tokens': 'Confirm donate {n} tokens',
+  'Guest cannot donate, connect wallet': 'Guests cannot donate. Please connect your wallet.',
+  'Connect wallet first': 'Please connect your wallet first',
+  'Donate Success': '✅ Donation successful! Thank you!',
+  'Points received': 'Points received',
+  'View Transaction': 'View Transaction',
+
+  // Rank
+  'Rank Progress': 'Rank Progress',
+
+  // Pack Animation
+  'Click to Open': 'Click to Open',
+
+  // Battle Pass
+  'Current Level': 'Current Level',
+  'Upgrade Premium': 'Upgrade Premium',
+  'Premium': 'Premium',
+  'Experience': 'Experience',
+  'Level Rewards': 'Level Rewards',
+  'Quests': 'Quests',
+  'Daily Quests': 'Daily Quests',
+  'Weekly Quests': 'Weekly Quests',
+  'Claim': 'Claim',
+
+  // Card Reveal
+  'Click to Reveal': 'Click to Reveal',
+
+  // Rules Modal
+  'How to Play': 'How to Play',
+  'Duel Rules': 'Duel Rules',
+  'Rules HP': 'Both players start with **30 HP**. Use five-element spells to attack. First to 0 HP loses.',
+  'Rules Mana': 'Each turn, mana recovers up to your max (which increases each turn). Manage your hand and costs wisely.',
+  'Element Counters': 'Element Counters',
+  'Rules Counter': 'When spells have a counter relationship, the winner deals damage and the loser\'s spell is nullified.',
+  'Fire Element': 'Fire',
+  'Vine Element': 'Vine',
+  'Ice Element': 'Ice',
+  'Thunder Element': 'Thunder',
+  'Rock Element': 'Rock',
+  'Rules Tie': '(If no counter or same element, a damage tie is resolved...)',
+  'Special Mechanics': 'Special Mechanics',
+  'Burn': 'Burn',
+  'Burn Desc': 'Deals damage at the end of each turn.',
+  'Tangle': 'Tangle',
+  'Tangle Desc': 'Next spell costs +2 mana.',
+  'Freeze': 'Freeze',
+  'Freeze Desc': 'Skip next attack (can still defend).',
+  'Charge': 'Charge',
+  'Charge Desc': 'Consecutive lightning spells deal double damage.',
+  'Fortify': 'Fortify',
+  'Fortify Desc': 'Gain armor to block incoming damage.',
+  'Fatigue / Skip': 'Fatigue / Skip',
+  'Skip Desc': 'When out of cards or unable to afford any, you may skip your turn.',
+  'Got it, start dueling!': 'Got it, start dueling!',
+
+  // Stats Section extra
+  'Close Widget': 'Close',
 };

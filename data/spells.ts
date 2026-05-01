@@ -72,7 +72,7 @@ export const SPELLS: Spell[] = [
     artSrc: '/cards/ice-frostnova.webp'
   }),
   defineSpell({
-    id: 'thunder', name: '闪电箭', manaCost: 2, damage: 4, rarity: 'common', mechanic: 'charge', cardSet: 'core',
+    id: 'thunder', name: '闪电箭', manaCost: 2, damage: 3, rarity: 'common', mechanic: 'charge', cardSet: 'core',
     artSrc: '/cards/thunder-chainlightning.webp'
   }),
   defineSpell({
@@ -294,7 +294,7 @@ export const SPELLS: Spell[] = [
     manaCost: 0,
     damage: 0,
     rarity: 'common',
-    mechanic: 'heal' as any, // 使用 heal 机制但实际效果是 +1 法力
+    mechanic: 'heal', // 使用 heal 机制但实际效果是 +1 法力
     cardSet: 'core' as CardSet,
     description: '获得1点临时法力水晶。后手补偿。',
     shortDesc: '+1法力',
@@ -333,8 +333,9 @@ export const PRESET_DECKS: { name: string; cards: SpellType[]; description: stri
       'fire2', 'fire2', 
       'fire4', 'fire4', 
       'fire5', 'fire5',
-      'fire7', 'fire7',
-      'aoe', 'aoe', 
+      'fire7',
+      'silence',
+      'aoe', 'aoe',
       'draw', 'draw', 
       'thunder', 'thunder', 
       'thunder4', 'thunder4',

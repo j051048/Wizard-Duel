@@ -126,4 +126,253 @@ export const zh = {
   'Match Found': '匹配成功',
   'MMR': '匹配分',
   'Rank Score': '段位分',
+
+  // ============ [P2 Fix #16] Full i18n ============
+
+  // Lobby nav
+  'Shop': '商店',
+  'Collection': '图鉴',
+  'Chat': '聊天',
+  'Profile': '个人中心',
+  'Back': '返回',
+
+  // Deck Builder
+  'Slot N': '槽{n}',
+  'New Deck N': '新卡组 {n}',
+  'Enter deck name...': '输入卡组名称...',
+  'N / 30 Cards': '{n} / 30 张卡牌',
+  'Ready': '准备就绪',
+  'N Cards Left': '{n} 张待选',
+  'Saved': '已保存',
+  'Save Config': '保存配置',
+
+  // Loading
+  'Enter Game': '进入游戏',
+
+  // Chat
+  'World Channel': '世界频道',
+  'No messages yet, start chatting': '暂无消息，开始聊天吧',
+  'Type a message...': '输入消息...',
+
+  // Mana Curve
+  'Mana Curve': '法力曲线',
+  'N-cost Cards: M': '{n}费卡牌: {m}张',
+  'N cards': '{n}张',
+
+  // Error Boundary
+  'Error copied to clipboard': '错误日志已复制到剪贴板',
+  'Magic Surge Error': '魔法波动异常',
+  'Unstable magic flow detected. Please try resetting the game state.': '检测到不稳定的魔力流导致连接中断。请尝试重置游戏状态。',
+  'Refresh Page': '刷新页面',
+  'Reset State': '重置状态',
+  'Copy Log': '📋 复制日志',
+
+  // Card Detail
+  'Type': '类型',
+  'Rarity': '稀有度',
+  'Common': '普通',
+  'Rare': '稀有',
+  'Rarity: Mythic': '传说',
+  'Base Damage:': '基础伤害:',
+  'Armor Gain:': '获得护甲:',
+  'Card Flavor Text': '蕴含着古老的元素之力，只有最强大的法师才能驾驭它的全部潜能。',
+
+  // Shop
+  'Insufficient Balance': '余额不足',
+  'Purchase Failed': '购买失败',
+  'Unknown Error': '未知错误',
+  'Transaction Failed': '交易失败',
+  'Purchase Success': '购买成功',
+  'Pack added to inventory, click "Open" to open': '卡包已放入库存，点击"开包"按钮开启',
+  'Item added to inventory': '物品已放入库存',
+  'Purchase Error': '购买出错',
+  'Open Failed': '开启失败',
+  'No packs available': '没有可用的卡包',
+  'Open Error': '开包出错',
+  'Please try again later': '请稍后重试',
+  'Pack': '卡包',
+  'Mystic Shop': '神秘商店',
+  'Card Packs': '卡包抽取',
+  'Value Bundles': '超值礼包',
+  'Inventory: {n}': '库存: {n}',
+  'Owned: Basic Pack': '拥有: 基础卡包',
+  'Click to open now': '点击立即开启',
+  'Open': '开包',
+  'Buy': '购买',
+  'N packs': '{n}个卡包',
+  'N Diamonds': '{n}钻石',
+  'Rare Card': '稀有卡牌',
+  'Purchased': '已购买',
+  'Buy Now {n}': '立即购买 {n} 💎',
+
+  // Results
+  'Continue Journey': '继续征程',
+  'Rise Again': '重振旗鼓',
+
+  // Mulligan
+  'You': '你',
+  'Opponent': '对手',
+  'Selecting...': '正在选择...',
+  'Select Starting Hand': '选择起手牌',
+  'Click cards to replace, then confirm': '点击要替换的牌，然后确认',
+  'seconds': '秒',
+  'Click cards to mark for replacement, or confirm to keep all': '点击卡牌标记要替换的牌，或直接确认保留所有',
+  'Selected N cards to replace': '已选择 {n} 张牌进行替换',
+  'Confirmed': '已确认',
+  'Replace N': '替换 {n} 张',
+  'Keep All': '保留全部',
+
+  // Matchmaking Overlay
+  'Mysterious Mage': '神秘法师',
+  'Searching for opponent...': '正在匹配对手...',
+  'Waited {n}s': '已等待 {n}s',
+  'Current Player': '当前玩家',
+  'Searching...': '寻找中...',
+  'Found Opponent!': '找到对手！',
+  'Entering battle hall': '准备进入对战厅',
+  'Level 10 · Elemental Lord': '等级 10 · 元素领主',
+  'Cancel Match': '取消匹配',
+
+  // Deck List
+  'Deck is empty': '卡组目前是空的',
+  'Switch to card pool to add cards': '切换到"浏览卡池"添加卡牌',
+  'Save Deck': '保存卡组',
+
+  // PvP Sync
+  'Connecting to battle...': '连接战场中...',
+  'Waiting for opponent sync...': '等待对手同步...',
+  'Establishing secure connection...': '建立加密连接...',
+  'Sync complete, generating battlefield...': '同步完成，生成战场...',
+  'Syncing battlefield': '战场同步中',
+
+  // Mode Select
+  'Select Game Mode': '选择游戏模式',
+  'Choose the experience for you': '选择适合你的游戏体验',
+  'Standard Mode': '标准模式',
+  'Primary competitive experience. Balanced card pool.': '竞技体验的首选。包含最平衡的卡牌。',
+  'Core Balanced Mode': '核心平衡模式',
+  'Fair Match': '公平对战',
+  'Dungeon Adventure': '地牢冒险',
+  'Dungeon Flavor Text': '在这片被遗忘的地牢中，只有最强者才能生存...',
+  'Roguelike Exploration': '肉鸽关卡探索',
+  'Acquire Legendary Artifacts': '获得传奇神器',
+  'Build Relics Progressively': '逐步构筑遗物',
+  'Solo Challenge': '单人挑战',
+  'Wild Mode': '狂野模式',
+  'Wild Mode Desc': '包含所有卡牌，释放最终创造力。',
+  'All Cards Unlocked': '全卡牌解锁可用',
+  'Fun Builds': '适合搞怪构筑',
+  'Return to Magic Hall': '返回魔法大厅',
+
+  // Battle Arena
+  'Opponent Disconnected': '对手断开连接',
+  'Waiting for opponent to reconnect...': '等待对手重连中...',
+  'If opponent reconnects in time, battle resumes': '对手在时间内重连将恢复对战',
+  'Opponent did not reconnect in time, Victory': '对手未在时间内重连，判定胜利',
+
+  // Profile
+  'Guest Mode': '游客模式',
+  'Battle Stats': '战绩统计',
+  'Total Games': '总场次',
+  'Wins': '胜利',
+  'Losses': '失败',
+  'Total Earnings': '总收益',
+  'Win Rate Distribution': '胜率分布',
+  'Recent Battles': '最近对战',
+  'No battle records': '暂无对战记录',
+
+  // Dungeon
+  'Current Position': '当前位置',
+
+  // Collection
+  'Spell Codex': '法术典籍',
+  'Collection Progress:': '收集进度:',
+  'Search spells...': '搜索法术...',
+  'Mana Cost': '法力消耗',
+  'Element Faction': '元素派系',
+  'Fire': '火焰',
+  'Ice': '寒冰',
+  'Thunder': '雷电',
+  'Nature': '自然',
+  'Rock': '岩石',
+  'Arcane': '奥术',
+  'Not Owned': '未拥有',
+  'No matching spells found': '没有找到相关法术',
+  'Favorited': '已收藏',
+  'Locked': '未解锁',
+
+  // Assets
+  'Diamonds': '钻石',
+  'Donate for Points': '捐赠获取积分',
+  'Overall Win Rate': '总胜率',
+  'Last 10 Games:': '近10局:',
+
+  // Donate
+  'Please switch to X Layer network': '请先切换到 X Layer 网络',
+  'Network:': '网络:',
+  'Donate Desc': '捐赠代币到基金会地址，每捐赠 1 枚代币 = 1 积分（取整数）',
+  'Token:': '代币:',
+  'Recipient:': '收款:',
+  'Custom amount': '自定义数量',
+  'Points': '积分',
+  'Waiting for signature...': '等待签名...',
+  'Confirming on chain...': '链上确认中...',
+  'Switch to X Layer': '切换到 X Layer 网络',
+  'Confirm donate N tokens': '确认捐赠 {n} 枚代币',
+  'Guest cannot donate, connect wallet': '游客模式无法捐赠，请先连接钱包',
+  'Connect wallet first': '请先连接钱包',
+  'Donate Success': '✅ 捐赠成功！感谢支持！',
+  'Points received': '积分已到账',
+  'View Transaction': '查看交易',
+
+  // Rank
+  'Rank Progress': '天梯进度',
+
+  // Pack Animation
+  'Click to Open': '点击打开',
+
+  // Battle Pass
+  'Current Level': '当前等级',
+  'Upgrade Premium': '升级高级版',
+  'Premium': '高级版',
+  'Experience': '经验值',
+  'Level Rewards': '等级奖励',
+  'Quests': '任务',
+  'Daily Quests': '每日任务',
+  'Weekly Quests': '周常任务',
+  'Claim': '领取',
+
+  // Card Reveal
+  'Click to Reveal': '点击翻开',
+
+  // Rules Modal
+  'How to Play': '玩法说明',
+  'Duel Rules': '对决规则',
+  'Rules HP': '双方初始 **30点生命值**。使用五元素法术相互攻击，生命值归零者判负。',
+  'Rules Mana': '每回合根据法力值上限自然恢复法力（上限随回合增长），合理规划手牌与费用是取胜关键。',
+  'Element Counters': '元素克制',
+  'Rules Counter': '当双方使用的法术存在克制关系时，胜方造成伤害，败方法术失效。',
+  'Fire Element': '火',
+  'Vine Element': '草',
+  'Ice Element': '冰',
+  'Thunder Element': '雷',
+  'Rock Element': '土',
+  'Rules Tie': '（若无克制关系或双方使用同种法术，则进入拼刀判定...）',
+  'Special Mechanics': '特殊机制',
+  'Burn': '灼烧',
+  'Burn Desc': '持续受到回合结束时的伤害。',
+  'Tangle': '缠绕',
+  'Tangle Desc': '下一张法术费用增加(Cost+2)。',
+  'Freeze': '冻结',
+  'Freeze Desc': '跳过下回合的攻击（仍可防御）。',
+  'Charge': '充能',
+  'Charge Desc': '连续使用闪电系法术伤害翻倍。',
+  'Fortify': '坚韧',
+  'Fortify Desc': '获得护甲，抵挡受到的伤害。',
+  'Fatigue / Skip': '断牌/跳过',
+  'Skip Desc': '当手牌耗尽或法力不足以支付任何手牌时，可选择 跳过回合。',
+  'Got it, start dueling!': '我明白了，开始决斗！',
+
+  // Stats Section extra
+  'Close Widget': '收起',
 };

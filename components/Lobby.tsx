@@ -20,6 +20,7 @@ import { useUIStore } from '../stores/useUIStore';
 import { ShoppingBag, Book, Swords, MessageCircle } from 'lucide-react';
 import { MatchmakingOverlay } from './MatchmakingOverlay';
 import { QuestManager } from '../services/QuestManager';
+import { BattlePassService } from '../services/BattlePassService';
 
 
 // Extracted Components
@@ -108,6 +109,10 @@ export const Lobby: React.FC<LobbyProps> = ({
           setQuests(result.quests);
           if (result.reward && onClaimQuestReward) {
               onClaimQuestReward(result.reward);
+          }
+          // [P1] 任务经验同步到战斗通行证
+          if (result.rewardExp) {
+              BattlePassService.addXP(result.rewardExp);
           }
           HapticService.success();
           try { audioBridge.playSfx('victory'); } catch {}
@@ -202,7 +207,7 @@ export const Lobby: React.FC<LobbyProps> = ({
                className="flex items-center gap-2 text-xs text-purple-400 hover:text-purple-300 font-bold uppercase tracking-widest border border-purple-500/30 px-4 py-2 rounded-full hover:bg-purple-900/20 hover:scale-105 active:scale-95 transition-all duration-150 bg-purple-500/10"
             >
                <ShoppingBag size={14} />
-               <span>商店</span>
+               <span>{t('Shop')}</span>
             </button>
          )}
 
@@ -213,7 +218,7 @@ export const Lobby: React.FC<LobbyProps> = ({
                className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 font-bold uppercase tracking-widest border border-blue-500/30 px-4 py-2 rounded-full hover:bg-blue-900/20 hover:scale-105 active:scale-95 transition-all duration-150 bg-blue-500/10"
             >
                <Book size={14} />
-               <span>图鉴</span>
+               <span>{t('Collection')}</span>
             </button>
          )}
          
@@ -243,7 +248,7 @@ export const Lobby: React.FC<LobbyProps> = ({
             className="flex items-center gap-2 text-xs text-green-400 hover:text-green-300 font-bold uppercase tracking-widest border border-green-500/30 px-4 py-2 rounded-full hover:bg-green-900/20 hover:scale-105 active:scale-95 transition-all duration-150 bg-green-500/10"
          >
             <MessageCircle size={14} />
-            <span>聊天</span>
+            <span>{t('Chat')}</span>
          </button>
       </div>
 

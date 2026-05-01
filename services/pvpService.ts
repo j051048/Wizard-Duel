@@ -9,7 +9,7 @@ class PVPService {
     private matchSocket: WebSocket | null = null;
     // 对战连接（整场对战期间保持）
     private gameSocket: WebSocket | null = null;
-    private serverUrl: string = "wss://xwizard.zeabur.app";
+    private serverUrl: string = import.meta.env.VITE_PVP_SERVER_URL || "wss://xwizard.zeabur.app";
 
     // [P0-4] Reconnection state
     private roomId: string | null = null;

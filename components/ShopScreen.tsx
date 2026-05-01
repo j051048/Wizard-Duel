@@ -3,7 +3,7 @@
  * 使用 ShopService 处理商品逻辑，包含限时礼包和限购逻辑
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Package, Gift, Crown, Sparkles, Star, ShoppingBag } from 'lucide-react';
 import { Spell, SpellType } from '../types';
 import { HapticService } from '../services/haptic';
@@ -46,7 +46,21 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
   
   // Pack Opener State
   const [revealedCards, setRevealedCards] = useState<Spell[]>([]);
-  const [pityCounter, setPityCounter] = useState({ rare: 0, mythic: 0, legendary: 0 });
+
+  // [P1] 保底计数器持久化：从 localStorage 读取，跨会话保留进度
+  const PITY_STORAGE_KEY = 'wizard_pity_counters';
+  const [pityCounter, setPityCounter] = useState<{ rare: number; mythic: number; legendary: number }>(() => {
+    try {
+      const saved = localStorage.getItem(PITY_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : { rare: 0, mythic: 0, legendary: 0 };
+    } catch {
+      return { rare: 0, mythic: 0, legendary: 0 };
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem(PITY_STORAGE_KEY, JSON.stringify(pityCounter));
+  }, [pityCounter]);
   
   const toast = useToastStore();
   const user = useUserStore();

@@ -41,7 +41,7 @@ export const generateDescription = (spell: Partial<Spell>): string => {
         
       case 'freeze':
         // C-2: Multi-turn freeze logic
-        const freezeDur = (spell as any).effectDuration || 1;
+        const freezeDur = spell.effectDuration || 1;
         if (freezeDur > 1) {
             parts.push(`如果平局或胜利，冻结对手 ${freezeDur} 回合。`);
         } else {

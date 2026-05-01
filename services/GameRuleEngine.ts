@@ -1,4 +1,4 @@
-import { DuelState, GameActionCommand, StatusEffect, SpellType } from '../types';
+import { DuelState, GameAction, GameActionCommand, StatusEffect, SpellType } from '../types';
 import { checkGameOver, executeSpell, executeAITurn, prepareNextTurn } from './gameLogic';
 import { GameSequenceExecutor } from './sequence';
 import { MINION_ATTACK_DELAY, MINION_COMBAT_START_DELAY } from '../config/timing';
@@ -160,7 +160,7 @@ export class GameRuleEngine {
            commands.push({ type: 'EXECUTE_LOGIC', payload: () => {}, delay: MINION_ATTACK_DELAY });
 
            // [Fix 1.2] Pass instanceId instead of index to avoid index shifting issues
-                      const action = { type: 'MINION_ATTACK', target: 'player', value: id } as any;
+                      const action: GameAction = { type: 'MINION_ATTACK', target: 'player', value: id };
            const result = GameSequenceExecutor.applyAction(currentState, action);
            
            currentState = result.state;
@@ -184,7 +184,7 @@ export class GameRuleEngine {
 
            commands.push({ type: 'WAIT', payload: null, delay: MINION_ATTACK_DELAY });
 
-           const action = { type: 'MINION_ATTACK', target: 'opponent', value: id } as any;
+           const action: GameAction = { type: 'MINION_ATTACK', target: 'opponent', value: id };
            const result = GameSequenceExecutor.applyAction(currentState, action);
            
            currentState = result.state;

@@ -3,6 +3,9 @@ import { Quest, QuestRarity, QuestType } from '../types/quest';
 const STORAGE_KEY_QUESTS = 'wizard_duel_quests_v1';
 const STORAGE_KEY_LAST_REFRESH = 'wizard_duel_quests_last_refresh';
 
+// [P1] 经验奖励：按稀有度分级
+const XP_BY_RARITY = { common: 20, rare: 40, epic: 80, legendary: 150 } as const;
+
 // 任务模板库
 const QUEST_TEMPLATES: Array<Omit<Quest, 'id' | 'current' | 'isClaimed' | 'isCompleted'>> = [
   {
@@ -11,6 +14,7 @@ const QUEST_TEMPLATES: Array<Omit<Quest, 'id' | 'current' | 'isClaimed' | 'isCom
     type: 'win_games',
     target: 1,
     rewardGold: 100,
+    rewardExp: XP_BY_RARITY.common,
     rarity: 'common',
     icon: 'trophy'
   },
@@ -20,6 +24,7 @@ const QUEST_TEMPLATES: Array<Omit<Quest, 'id' | 'current' | 'isClaimed' | 'isCom
     type: 'play_cards',
     target: 10,
     rewardGold: 50,
+    rewardExp: XP_BY_RARITY.common,
     rarity: 'common',
     icon: 'scroll'
   },
@@ -29,6 +34,7 @@ const QUEST_TEMPLATES: Array<Omit<Quest, 'id' | 'current' | 'isClaimed' | 'isCom
     type: 'deal_damage',
     target: 50,
     rewardGold: 60,
+    rewardExp: XP_BY_RARITY.common,
     rarity: 'common',
     icon: 'sword'
   },
@@ -38,6 +44,7 @@ const QUEST_TEMPLATES: Array<Omit<Quest, 'id' | 'current' | 'isClaimed' | 'isCom
     type: 'play_fire',
     target: 3,
     rewardGold: 80,
+    rewardExp: XP_BY_RARITY.rare,
     rarity: 'rare',
     icon: 'flame'
   },
@@ -47,8 +54,39 @@ const QUEST_TEMPLATES: Array<Omit<Quest, 'id' | 'current' | 'isClaimed' | 'isCom
     type: 'play_ice',
     target: 3,
     rewardGold: 80,
+    rewardExp: XP_BY_RARITY.rare,
     rarity: 'rare',
     icon: 'snowflake'
+  },
+  {
+    title: "Stormcaller",
+    description: "Cast 3 Thunder Spells",
+    type: 'play_thunder',
+    target: 3,
+    rewardGold: 80,
+    rewardExp: XP_BY_RARITY.rare,
+    rarity: 'rare',
+    icon: 'zap'
+  },
+  {
+    title: "Naturalist",
+    description: "Cast 3 Nature Spells",
+    type: 'play_nature',
+    target: 3,
+    rewardGold: 80,
+    rewardExp: XP_BY_RARITY.rare,
+    rarity: 'rare',
+    icon: 'leaf'
+  },
+  {
+    title: "Fortifier",
+    description: "Gain 20 Armor",
+    type: 'gain_armor',
+    target: 20,
+    rewardGold: 60,
+    rewardExp: XP_BY_RARITY.common,
+    rarity: 'common',
+    icon: 'shield'
   },
   {
     title: "Grand Magus",
@@ -56,6 +94,7 @@ const QUEST_TEMPLATES: Array<Omit<Quest, 'id' | 'current' | 'isClaimed' | 'isCom
     type: 'win_games',
     target: 3,
     rewardGold: 300,
+    rewardExp: XP_BY_RARITY.epic,
     rarity: 'epic',
     icon: 'crown'
   },
@@ -65,6 +104,7 @@ const QUEST_TEMPLATES: Array<Omit<Quest, 'id' | 'current' | 'isClaimed' | 'isCom
     type: 'deal_damage',
     target: 200,
     rewardGold: 250,
+    rewardExp: XP_BY_RARITY.epic,
     rarity: 'epic',
     icon: 'skull'
   }
@@ -170,7 +210,7 @@ export const QuestManager = {
   /**
    * 领取任务奖励
    */
-  claimReward(questId: string): { success: boolean; reward?: number; quests: Quest[] } {
+  claimReward(questId: string): { success: boolean; reward?: number; rewardExp?: number; quests: Quest[] } {
     const quests = this.loadQuests();
     const questIndex = quests.findIndex(q => q.id === questId);
 
@@ -183,6 +223,6 @@ export const QuestManager = {
     quests[questIndex] = { ...quest, isClaimed: true };
     this.saveQuests(quests);
 
-    return { success: true, reward: quest.rewardGold, quests };
+    return { success: true, reward: quest.rewardGold, rewardExp: quest.rewardExp, quests };
   }
 };

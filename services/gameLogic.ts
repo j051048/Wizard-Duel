@@ -475,7 +475,7 @@ export const executeSpell = (
   const { countered, crit } = evaluateElementInteraction(spellId, targetLastId);
   
   if (countered) {
-    actions.push({ type: 'MESSAGE', target: 'system', description: `🚫 [${spell.name}] 被抵消！` });
+    actions.push({ type: 'MESSAGE', target: 'system', description: `🛡️ [${spell.name}] 被克制！伤害减半，效果取消！` });
   } else if (crit) {
     actions.push({ type: 'MESSAGE', target: 'system', description: `🌊 属性克制！造成暴击！` });
   }
@@ -483,24 +483,23 @@ export const executeSpell = (
   // 4. 基础伤害与连击计算
   let dmg = spell.damage;
   const critMultiplier = crit ? 1.5 : 1.0;
-  if (countered) dmg = 0;
 
   // 连击 (Charge) - 使用 combat 模块
-  if (!countered) {
-    const comboResult = calculateComboBonus(mutableState, caster, spellId, countered);
-    if (comboResult.comboMessage) {
-      actions.push({ type: 'MESSAGE', target: 'system', description: comboResult.comboMessage });
-    }
-    // [Fix 1.5] 暴击 + 连击叠加：dmg = spell.damage * critMultiplier * comboMultiplier
-    dmg = Math.floor(spell.damage * critMultiplier * comboResult.multiplier);
-    // 更新连击状态
-    const updatedState = updateComboState(mutableState, caster, spellId, comboResult.newComboCount);
-    Object.assign(mutableState, updatedState);
-  } else {
-    // 被抵消则重置连击
-    const updatedState = updateComboState(mutableState, caster, spellId, 0);
-    Object.assign(mutableState, updatedState);
+  const comboResult = calculateComboBonus(mutableState, caster, spellId, countered);
+  if (comboResult.comboMessage) {
+    actions.push({ type: 'MESSAGE', target: 'system', description: comboResult.comboMessage });
   }
+  // 暴击 + 连击叠加
+  dmg = Math.floor(spell.damage * critMultiplier * comboResult.multiplier);
+
+  // 被克制：伤害减半（保留基础伤害，效果仍被取消）
+  if (countered) {
+    dmg = Math.floor(dmg * 0.5);
+  }
+
+  // 更新连击状态
+  const updatedState = updateComboState(mutableState, caster, spellId, comboResult.newComboCount);
+  Object.assign(mutableState, updatedState);
 
   // 5. 组合 Actions
   if (dmg > 0) {
