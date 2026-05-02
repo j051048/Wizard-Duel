@@ -76,6 +76,28 @@ export const generateDescription = (spell: Partial<Spell>): string => {
       case 'silence':
          parts.push(`净化！移除自身所有负面状态并抽 1 张牌。`);
          break;
+
+      case 'divine_shield':
+         parts.push(`召唤一个具有圣盾的随从（首次受伤免疫）。`);
+         break;
+
+      case 'deathrattle':
+         parts.push(`召唤一个具有亡语效果的随从（死亡时触发特殊效果）。`);
+         break;
+
+      case 'aura':
+         parts.push(`召唤一个光环随从（持续增强友方单位）。`);
+         break;
+
+      case 'summon':
+         parts.push(`召唤一个随从为你作战。`);
+         break;
+
+      case 'poison':
+         const poisonVal = spell.value || 2;
+         const poisonDur = spell.effectDuration || 3;
+         parts.push(`使目标中毒，每回合受到 ${poisonVal} 点伤害，持续 ${poisonDur} 回合。`);
+         break;
     }
   }
 
@@ -96,6 +118,11 @@ export const generateShortDesc = (spell: Partial<Spell>): string => {
        case 'aoe': return '溅射: 穿透伤害';
        case 'draw': return '过牌: 补充手牌';
        case 'silence': return '净化: 解除状态';
+       case 'divine_shield': return '圣盾: 免疫首次伤害';
+       case 'deathrattle': return '亡语: 死亡触发效果';
+       case 'aura': return '光环: 持续增益';
+       case 'summon': return '召唤: 召唤随从';
+       case 'poison': return '中毒: 持续伤害';
        default: return '';
    }
 }

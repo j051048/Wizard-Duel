@@ -1,10 +1,21 @@
 import { Spell, CardSet, SpellType } from '../types';
+import type { MinionTemplate } from '../types/card';
 import { generateDescription, generateShortDesc } from '../services/descriptionGenerator';
 
-export const MINION_DATA: Record<string, { name: string, atk: number, hp: number, type: string }> = {
-  'rock_golem': { name: '大地巨像', atk: 5, hp: 10, type: 'rock' },
-  'spirit_wolf': { name: '幽灵狼', atk: 3, hp: 3, type: 'vine' },
-  'fire_spirit': { name: '火元素', atk: 4, hp: 2, type: 'fire' },
+// [A-2] 随从模板 — 使用 MinionTemplate 类型，支持关键词/亡语/光环
+export const MINION_DATA: Record<string, MinionTemplate> = {
+  'rock_golem': { name: '大地巨像', atk: 5, hp: 10, type: 'rock', keywords: ['taunt'] },
+  'spirit_wolf': { name: '幽灵狼', atk: 3, hp: 3, type: 'vine', keywords: [] },
+  'fire_spirit': { name: '火元素', atk: 4, hp: 2, type: 'fire', keywords: [] },
+  // [B-1] 新随从
+  'ice_elemental': { name: '冰霜元素', atk: 2, hp: 4, type: 'ice', keywords: ['taunt'] },
+  'thunder_hawk': { name: '雷鹰', atk: 3, hp: 2, type: 'thunder', keywords: ['rush'] },
+  'vine_treant': { name: '古树守卫', atk: 2, hp: 6, type: 'vine', keywords: ['taunt'], onDeath: { type: 'heal', value: 3 } },
+  'shadow_fox': { name: '暗影狐', atk: 4, hp: 3, type: 'neutral', keywords: ['divine_shield'] },
+  'mana_wyrm': { name: '法力龙', atk: 1, hp: 3, type: 'neutral', keywords: [], aura: { type: 'atk_boost', value: 1, target: 'self' } },
+  'plague_rat': { name: '瘟疫鼠', atk: 1, hp: 1, type: 'neutral', keywords: ['poison'], onDeath: { type: 'summon', value: 1, summonId: 'plague_rat_baby' } },
+  'plague_rat_baby': { name: '瘟疫幼鼠', atk: 1, hp: 1, type: 'neutral', keywords: [] },
+  'storm_giant': { name: '风暴巨人', atk: 6, hp: 6, type: 'thunder', keywords: ['windfury'] },
 };
 
 // Helper: Define spell with auto-generated descriptions
@@ -318,10 +329,68 @@ export const SPELLS: Spell[] = [
     description: '跳过本回合。',
     shortDesc: '跳过'
   },
+
+  // ============================================================
+  // [B-2] Expansion 1: 每元素新增卡牌 + 中立卡 + 新随从召唤卡
+  // ============================================================
+
+  // --- FIRE (fire8 ~ fire14) ---
+  defineSpell({ id: 'fire8' as SpellType, name: '小火球', manaCost: 1, damage: 2, rarity: 'common', mechanic: 'burn', cardSet: 'expansion_1' }),
+  defineSpell({ id: 'fire9' as SpellType, name: '烈焰冲击', manaCost: 2, damage: 3, rarity: 'rare', mechanic: 'burn', effectDuration: 1, value: 2, cardSet: 'expansion_1' }),
+  defineSpell({ id: 'fire10' as SpellType, name: '召唤火灵', manaCost: 3, damage: 0, rarity: 'rare', mechanic: 'summon', summonId: 'fire_spirit', cardSet: 'expansion_1' }),
+  defineSpell({ id: 'fire11' as SpellType, name: '焚天烈焰', manaCost: 4, damage: 4, rarity: 'rare', mechanic: 'burn', value: 2, effectDuration: 2, cardSet: 'expansion_1' }),
+  defineSpell({ id: 'fire12' as SpellType, name: '火焰风暴', manaCost: 5, damage: 2, rarity: 'mythic', mechanic: 'aoe', aoeMinionDamage: 2, cardSet: 'expansion_1' }),
+  defineSpell({ id: 'fire13' as SpellType, name: '地狱业火', manaCost: 6, damage: 7, rarity: 'mythic', mechanic: 'burn', value: 3, effectDuration: 1, cardSet: 'expansion_1' }),
+  defineSpell({ id: 'fire14' as SpellType, name: '凤凰涅槃', manaCost: 8, damage: 10, rarity: 'legendary', mechanic: 'burn', value: 4, effectDuration: 2, cardSet: 'expansion_1' }),
+
+  // --- VINE (vine8 ~ vine14) ---
+  defineSpell({ id: 'vine8' as SpellType, name: '荆棘护甲', manaCost: 1, damage: 1, armorGain: 1, rarity: 'common', mechanic: 'fortify', cardSet: 'expansion_1' }),
+  defineSpell({ id: 'vine9' as SpellType, name: '藤蔓缠绕', manaCost: 2, damage: 2, rarity: 'rare', mechanic: 'tangle', value: 1, cardSet: 'expansion_1' }),
+  defineSpell({ id: 'vine10' as SpellType, name: '召唤古树', manaCost: 3, damage: 0, rarity: 'rare', mechanic: 'deathrattle', summonId: 'vine_treant', cardSet: 'expansion_1' }),
+  defineSpell({ id: 'vine11' as SpellType, name: '生命汲取', manaCost: 4, damage: 3, rarity: 'rare', mechanic: 'heal', value: 3, cardSet: 'expansion_1' }),
+  defineSpell({ id: 'vine12' as SpellType, name: '铁壁藤墙', manaCost: 5, damage: 0, armorGain: 6, rarity: 'mythic', mechanic: 'fortify', cardSet: 'expansion_1' }),
+  defineSpell({ id: 'vine13' as SpellType, name: '绞杀藤蔓', manaCost: 6, damage: 5, rarity: 'mythic', mechanic: 'tangle', value: 2, effectDuration: 2, cardSet: 'expansion_1' }),
+  defineSpell({ id: 'vine14' as SpellType, name: '生命之树', manaCost: 8, damage: 0, rarity: 'legendary', mechanic: 'heal', value: 12, cardSet: 'expansion_1' }),
+
+  // --- ICE (ice7 ~ ice12) ---
+  defineSpell({ id: 'ice7' as SpellType, name: '冰刺', manaCost: 1, damage: 1, rarity: 'common', mechanic: 'freeze', effectDuration: 1, cardSet: 'expansion_1' }),
+  defineSpell({ id: 'ice8' as SpellType, name: '寒冰箭', manaCost: 2, damage: 2, rarity: 'rare', mechanic: 'freeze', effectDuration: 1, cardSet: 'expansion_1' }),
+  defineSpell({ id: 'ice9' as SpellType, name: '召唤冰元素', manaCost: 3, damage: 0, rarity: 'rare', mechanic: 'summon', summonId: 'ice_elemental', cardSet: 'expansion_1' }),
+  defineSpell({ id: 'ice10' as SpellType, name: '冰封之拳', manaCost: 4, damage: 4, rarity: 'rare', mechanic: 'freeze', effectDuration: 1, cardSet: 'expansion_1' }),
+  defineSpell({ id: 'ice11' as SpellType, name: '暴风雪', manaCost: 5, damage: 3, rarity: 'mythic', mechanic: 'aoe', cardSet: 'expansion_1' }),
+  defineSpell({ id: 'ice12' as SpellType, name: '绝对零度', manaCost: 7, damage: 8, rarity: 'legendary', mechanic: 'freeze', effectDuration: 2, cardSet: 'expansion_1' }),
+
+  // --- THUNDER (thunder7 ~ thunder12) ---
+  defineSpell({ id: 'thunder7' as SpellType, name: '电弧', manaCost: 1, damage: 1, rarity: 'common', mechanic: 'charge', cardSet: 'expansion_1' }),
+  defineSpell({ id: 'thunder8' as SpellType, name: '闪电链', manaCost: 2, damage: 2, rarity: 'rare', mechanic: 'charge', cardSet: 'expansion_1' }),
+  defineSpell({ id: 'thunder9' as SpellType, name: '召唤雷鹰', manaCost: 3, damage: 0, rarity: 'rare', mechanic: 'charge', summonId: 'thunder_hawk', cardSet: 'expansion_1' }),
+  defineSpell({ id: 'thunder10' as SpellType, name: '雷鸣爆裂', manaCost: 4, damage: 5, rarity: 'rare', mechanic: 'charge', cardSet: 'expansion_1' }),
+  defineSpell({ id: 'thunder11' as SpellType, name: '万雷齐发', manaCost: 5, damage: 7, rarity: 'mythic', mechanic: 'charge', cardSet: 'expansion_1' }),
+  defineSpell({ id: 'thunder12' as SpellType, name: '天罚雷霆', manaCost: 7, damage: 10, rarity: 'legendary', mechanic: 'charge', cardSet: 'expansion_1' }),
+
+  // --- ROCK (rock8 ~ rock13) ---
+  defineSpell({ id: 'rock8' as SpellType, name: '碎石拳', manaCost: 1, damage: 1, armorGain: 2, rarity: 'common', mechanic: 'fortify', cardSet: 'expansion_1' }),
+  defineSpell({ id: 'rock9' as SpellType, name: '岩石重击', manaCost: 2, damage: 2, armorGain: 2, rarity: 'rare', mechanic: 'fortify', cardSet: 'expansion_1' }),
+  defineSpell({ id: 'rock10' as SpellType, name: '召唤岩石元素', manaCost: 3, damage: 0, rarity: 'rare', mechanic: 'summon', summonId: 'rock_golem', cardSet: 'expansion_1' }),
+  defineSpell({ id: 'rock11' as SpellType, name: '岩甲反击', manaCost: 4, damage: 2, armorGain: 5, rarity: 'rare', mechanic: 'fortify', cardSet: 'expansion_1' }),
+  defineSpell({ id: 'rock12' as SpellType, name: '暗影召唤', manaCost: 5, damage: 0, rarity: 'mythic', mechanic: 'divine_shield', summonId: 'shadow_fox', cardSet: 'expansion_1' }),
+  defineSpell({ id: 'rock13' as SpellType, name: '大地之心', manaCost: 7, damage: 5, armorGain: 8, rarity: 'legendary', mechanic: 'fortify', cardSet: 'expansion_1' }),
+
+  // --- NEUTRAL (neutral1 ~ neutral5) ---
+  defineSpell({ id: 'neutral1' as SpellType, name: '奥术智慧', manaCost: 2, damage: 0, rarity: 'common', mechanic: 'draw', value: 2, cardSet: 'expansion_1', color: 'text-cyan-400', borderColor: 'border-cyan-400', shadowColor: 'rgba(34,211,238,0.5)', beats: 'skip' as SpellType }),
+  defineSpell({ id: 'neutral2' as SpellType, name: '铁甲术', manaCost: 2, damage: 0, armorGain: 4, rarity: 'common', mechanic: 'fortify', cardSet: 'expansion_1', color: 'text-slate-400', borderColor: 'border-slate-400', shadowColor: 'rgba(148,163,184,0.5)', beats: 'skip' as SpellType }),
+  defineSpell({ id: 'neutral3' as SpellType, name: '法力涌动', manaCost: 1, damage: 0, rarity: 'rare', mechanic: 'aura', summonId: 'mana_wyrm', cardSet: 'expansion_1', color: 'text-violet-400', borderColor: 'border-violet-400', shadowColor: 'rgba(167,139,250,0.5)', beats: 'skip' as SpellType }),
+  defineSpell({ id: 'neutral4' as SpellType, name: '瘟疫扩散', manaCost: 3, damage: 0, rarity: 'rare', mechanic: 'deathrattle', summonId: 'plague_rat', cardSet: 'expansion_1', color: 'text-lime-400', borderColor: 'border-lime-400', shadowColor: 'rgba(163,230,53,0.5)', beats: 'skip' as SpellType }),
+  defineSpell({ id: 'neutral5' as SpellType, name: '神圣治愈', manaCost: 4, damage: 0, rarity: 'rare', mechanic: 'heal', value: 8, cardSet: 'expansion_1', color: 'text-yellow-300', borderColor: 'border-yellow-300', shadowColor: 'rgba(253,224,71,0.5)', beats: 'skip' as SpellType }),
+
+  // --- SPECIAL ---
+  defineSpell({ id: 'storm_summon' as SpellType, name: '风暴召唤', manaCost: 6, damage: 3, rarity: 'legendary', mechanic: 'charge', summonId: 'storm_giant', cardSet: 'expansion_1' }),
+  defineSpell({ id: 'poison_dart' as SpellType, name: '毒镖', manaCost: 2, damage: 2, rarity: 'rare', mechanic: 'poison', value: 2, effectDuration: 3, cardSet: 'expansion_1', color: 'text-emerald-400', borderColor: 'border-emerald-400', shadowColor: 'rgba(52,211,153,0.5)', beats: 'skip' as SpellType }),
+  defineSpell({ id: 'shield_bash' as SpellType, name: '圣盾冲锋', manaCost: 4, damage: 3, rarity: 'mythic', mechanic: 'divine_shield', summonId: 'shadow_fox', cardSet: 'expansion_1', color: 'text-amber-400', borderColor: 'border-amber-400', shadowColor: 'rgba(251,191,36,0.5)', beats: 'skip' as SpellType }),
 ];
 
-export const STANDARD_SETS: CardSet[] = ['core', 'classic', 'tournament'];
-export const WILD_SETS: CardSet[] = ['core', 'classic', 'tournament', 'legacy'];
+export const STANDARD_SETS: CardSet[] = ['core', 'classic', 'tournament', 'expansion_1'];
+export const WILD_SETS: CardSet[] = ['core', 'classic', 'tournament', 'legacy', 'expansion_1'];
 
 export const PRESET_DECKS: { name: string; cards: SpellType[]; description: string; style: 'aggro' | 'control' | 'combo' }[] = [
   {
@@ -404,6 +473,11 @@ export const getMechanicName = (mechanic: string): string => {
     aoe: 'AOE',
     draw: '抽牌',
     silence: '沉默',
+    divine_shield: '圣盾',
+    deathrattle: '亡语',
+    aura: '光环',
+    summon: '召唤',
+    poison: '中毒',
   };
   return names[mechanic] || mechanic;
 };

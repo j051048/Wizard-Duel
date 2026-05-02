@@ -3,7 +3,7 @@
  * [Phase B-5] 从 types.ts 拆分
  */
 
-import { SpellType, Minion, GameMode } from './card';
+import { SpellType, Minion, MinionTemplate, GameMode } from './card';
 import { AIProfile } from './ai';
 import type { RNGState } from '../utils/seededRandom';
 
@@ -20,7 +20,7 @@ export type DuelPhase =
   | "MINION_COMBAT";
 
 export interface StatusEffect {
-  type: "burn" | "tangle" | "frozen" | "thawed";
+  type: "burn" | "tangle" | "frozen" | "thawed" | "poisoned" | "shielded" | "empowered";
   duration: number;
   value?: number;
 }
@@ -103,7 +103,12 @@ export type ActionType =
   | 'GAME_OVER'
   | 'SUMMON_MINION'
   | 'MINION_ATTACK'
-  | 'ANIMATION_TRIGGER';
+  | 'ANIMATION_TRIGGER'
+  // [A-4] 新增Action类型
+  | 'MINION_BUFF'         // 增加/减少随从属性
+  | 'APPLY_DEATHRATTLE'   // 触发亡语效果
+  | 'DIVINE_SHIELD_BLOCK' // 圣盾伤害免疫
+  | 'AOE_MINION_DAMAGE';  // 对所有敌方随从造成伤害
 
 export interface GameAction {
   type: ActionType;

@@ -1,10 +1,12 @@
 /**
  * Wizard Duel - 卡牌机制定义
- * 
+ *
  * 将所有卡牌机制的效果逻辑抽离为独立模块，便于维护和扩展。
  */
 
 import { DuelState, Spell, GameAction } from '../types';
+import type { MinionTemplate } from '../types/card';
+import { MINION_DATA } from '../data/spells';
 
 // ============ 机制效果生成器类型 ============
 export type MechanicHandler = (
@@ -161,6 +163,92 @@ const luckCoin: MechanicHandler = (state, caster, spell) => {
   }];
 };
 
+// [A-3] 突袭：召唤的随从可立即攻击
+const charge: MechanicHandler = (state, caster, spell, countered) => {
+  if (countered) return [];
+  if (!spell.summonId) return [];
+  const template = MINION_DATA[spell.summonId];
+  if (!template) return [];
+  return [{
+    type: 'SUMMON_MINION',
+    target: caster,
+    value: { ...template, keywords: [...(template.keywords || []), 'rush'], buffs: [] },
+    description: `⚡ ${caster === 'player' ? '你' : '对手'}召唤了突袭随从 ${template.name}！`
+  }];
+};
+
+// [A-3] 圣盾：召唤的随从带有圣盾
+const divineShield: MechanicHandler = (state, caster, spell, countered) => {
+  if (countered) return [];
+  if (!spell.summonId) return [];
+  const template = MINION_DATA[spell.summonId];
+  if (!template) return [];
+  return [{
+    type: 'SUMMON_MINION',
+    target: caster,
+    value: { ...template, keywords: [...(template.keywords || []), 'divine_shield'], hasShield: true, buffs: [] },
+    description: `🛡️ ${caster === 'player' ? '你' : '对手'}召唤了圣盾随从 ${template.name}！`
+  }];
+};
+
+// [A-3] 亡语：召唤的随从带有亡语效果
+const deathrattle: MechanicHandler = (state, caster, spell, countered) => {
+  if (countered) return [];
+  if (!spell.summonId) return [];
+  const template = MINION_DATA[spell.summonId];
+  if (!template) return [];
+  const drEffect = spell.deathrattleEffect || template.onDeath;
+  return [{
+    type: 'SUMMON_MINION',
+    target: caster,
+    value: { ...template, onDeath: drEffect, buffs: [] },
+    description: `💀 ${caster === 'player' ? '你' : '对手'}召唤了亡语随从 ${template.name}！`
+  }];
+};
+
+// [A-3] 光环：召唤的随从带有光环效果
+const aura: MechanicHandler = (state, caster, spell, countered) => {
+  if (countered) return [];
+  if (!spell.summonId) return [];
+  const template = MINION_DATA[spell.summonId];
+  if (!template) return [];
+  return [{
+    type: 'SUMMON_MINION',
+    target: caster,
+    value: { ...template, aura: template.aura, buffs: [] },
+    description: `✨ ${caster === 'player' ? '你' : '对手'}召唤了光环随从 ${template.name}！`
+  }];
+};
+
+// [A-3] 中毒：对目标施加持续伤害
+const poison: MechanicHandler = (state, caster, spell, countered) => {
+  if (countered) return [];
+  const target = caster === 'player' ? 'opponent' : 'player';
+  const val = spell.value || 2;
+  const dur = spell.effectDuration || 3;
+  return [{
+    type: 'ADD_EFFECT',
+    target,
+    value: { type: 'poisoned', duration: dur, value: val },
+    description: `☠️ ${target === 'player' ? '你' : '对手'}中毒了 (每回合-${val}HP, ${dur}回合)`
+  }];
+};
+
+// [A-3] 召唤：通用召唤机制（通过 summonId 从 MINION_DATA 查找）
+const summon: MechanicHandler = (state, caster, spell, countered) => {
+  if (countered) return [];
+  if (!spell.summonId) return [];
+  const template = MINION_DATA[spell.summonId];
+  if (!template) return [];
+  const isRush = spell.rushSummon || false;
+  return [{
+    type: 'SUMMON_MINION',
+    target: caster,
+    value: { ...template, keywords: template.keywords || [], buffs: [], exhausted: !isRush },
+    description: `🔮 ${caster === 'player' ? '你' : '对手'}召唤了 ${template.name}！`
+  }];
+};
+
 // ============ 机制注册表 ============
 
 export const MECHANIC_DEFINITIONS: Record<string, MechanicHandler> = {
@@ -172,6 +260,13 @@ export const MECHANIC_DEFINITIONS: Record<string, MechanicHandler> = {
   draw,
   silence,
   luck_coin: luckCoin, // [P1 Fix #13]
+  // [A-3] 新机制
+  charge,
+  divine_shield: divineShield,
+  deathrattle,
+  aura,
+  poison,
+  summon,
 };
 
 /**

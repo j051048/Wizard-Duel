@@ -1,4 +1,5 @@
 import { DuelState, GameAction, GameCommand, ActionType, TriggerTiming, GameTrigger } from '../types';
+import type { Minion } from '../types/card';
 import { GAME_CONFIG } from '../constants';
 import { getGameRNG } from '../utils/seededRandom';
 
@@ -168,15 +169,22 @@ export class GameSequenceExecutor {
           const target = action.target;
           const minionData = action.value;
           const minions = target === 'player' ? [...newState.playerMinions] : [...newState.opponentMinions];
-          
+
           if (minions.length < 5) {
               // [P0 Fix #2] 使用 SeededRNG 生成确定性 instanceId
               const rng = getGameRNG();
               const instanceId = `m-${newState.roundNumber}-${rng.randomInt(10000, 99999)}`;
+              // [A-2] 确保新字段有默认值
+              const isRush = (minionData.keywords || []).includes('rush');
               minions.push({
                   ...minionData,
                   instanceId,
-                  exhausted: true // 刚召唤出来是疲劳的 (没有冲锋的话)
+                  exhausted: minionData.exhausted !== undefined ? minionData.exhausted : !isRush,
+                  keywords: minionData.keywords || [],
+                  buffs: minionData.buffs || [],
+                  baseAtk: minionData.baseAtk ?? minionData.atk,
+                  baseHp: minionData.baseHp ?? minionData.hp,
+                  hasShield: minionData.hasShield || (minionData.keywords || []).includes('divine_shield'),
               });
               if (target === 'player') newState.playerMinions = minions;
               else newState.opponentMinions = minions;
@@ -256,10 +264,94 @@ export class GameSequenceExecutor {
               const newAttackers = attackerSide.map((m, i) =>
                   i === attackerIdx ? attacker : m
               );
-              
+
               if (isPlayer) newState.playerMinions = newAttackers;
               else newState.opponentMinions = newAttackers;
           }
+          break;
+      }
+
+      // [A-4] 新增: 增加/减少随从属性
+      case 'MINION_BUFF': {
+          const isPlayer = action.target === 'player';
+          const minions = isPlayer ? [...newState.playerMinions] : [...newState.opponentMinions];
+          const buffData = action.value as { instanceId: string; atk: number; hp: number };
+          const idx = minions.findIndex(m => m.instanceId === buffData.instanceId);
+          if (idx >= 0) {
+              const m = { ...minions[idx] };
+              m.atk = Math.max(0, m.atk + buffData.atk);
+              m.hp += buffData.hp;
+              m.maxHp += buffData.hp > 0 ? buffData.hp : 0;
+              m.buffs = [...m.buffs, { atk: buffData.atk, hp: buffData.hp, source: 'spell', duration: -1 }];
+              minions[idx] = m;
+              if (isPlayer) newState.playerMinions = minions;
+              else newState.opponentMinions = minions;
+              log = `✨ ${m.name} 获得 +${buffData.atk}/+${buffData.hp}`;
+          }
+          break;
+      }
+
+      // [A-4] 新增: 亡语效果触发
+      case 'APPLY_DEATHRATTLE': {
+          const diedMinion = action.value as Minion;
+          if (!diedMinion.onDeath) break;
+          const dr = diedMinion.onDeath;
+          if (dr.type === 'damage') {
+              const isPlayer = action.target === 'player';
+              if (isPlayer) {
+                  newState.opponentHP = Math.max(0, newState.opponentHP - dr.value);
+              } else {
+                  newState.playerHP = Math.max(0, newState.playerHP - dr.value);
+              }
+              log = `💀 ${diedMinion.name} 亡语：造成 ${dr.value} 点伤害`;
+          } else if (dr.type === 'heal') {
+              const isPlayer = action.target === 'player';
+              if (isPlayer) {
+                  newState.playerHP = Math.min(30, newState.playerHP + dr.value);
+              } else {
+                  newState.opponentHP = Math.min(30, newState.opponentHP + dr.value);
+              }
+              log = `💀 ${diedMinion.name} 亡语：恢复 ${dr.value} 点生命`;
+          } else if (dr.type === 'summon' && dr.summonId) {
+              // 召唤随从由外部逻辑处理（需要 MINION_DATA）
+              log = `💀 ${diedMinion.name} 亡语：召唤随从`;
+          }
+          break;
+      }
+
+      // [A-4] 新增: 圣盾伤害免疫
+      case 'DIVINE_SHIELD_BLOCK': {
+          const isPlayer = action.target === 'player';
+          const minions = isPlayer ? [...newState.playerMinions] : [...newState.opponentMinions];
+          const instanceId = action.value as string;
+          const idx = minions.findIndex(m => m.instanceId === instanceId);
+          if (idx >= 0 && minions[idx].hasShield) {
+              minions[idx] = { ...minions[idx], hasShield: false };
+              if (isPlayer) newState.playerMinions = minions;
+              else newState.opponentMinions = minions;
+              log = `🛡️ ${minions[idx].name} 的圣盾吸收了伤害！`;
+          }
+          break;
+      }
+
+      // [A-4] 新增: 对所有敌方随从造成伤害
+      case 'AOE_MINION_DAMAGE': {
+          const isPlayer = action.target === 'player';
+          const enemyMinions = isPlayer ? [...newState.opponentMinions] : [...newState.playerMinions];
+          const dmg = action.value as number;
+          const damaged = enemyMinions.map(m => {
+              const newM = { ...m };
+              if (newM.hasShield) {
+                  newM.hasShield = false;
+              } else {
+                  newM.hp -= dmg;
+                  if (newM.hp <= 0) newM.isDying = true;
+              }
+              return newM;
+          });
+          if (isPlayer) newState.opponentMinions = damaged;
+          else newState.playerMinions = damaged;
+          log = `💥 对所有敌方随从造成 ${dmg} 点伤害`;
           break;
       }
     }

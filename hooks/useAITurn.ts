@@ -13,6 +13,7 @@ import { DuelState, GameActionCommand } from '../types';
 import {
   executeAITurn, executeSpell, checkGameOver
 } from '../services/gameLogic';
+import { AIDifficultyConfig, AI_DIFFICULTY_PRESETS } from '../services/ai';
 import { GameRuleEngine } from '../services/GameRuleEngine';
 import { RuleArbiter, ArbiterEvent } from '../services/RuleArbiter';
 import { generateValidationReport } from '../services/validation/antiCheat';
@@ -30,6 +31,8 @@ interface UseAITurnDeps {
   enqueue: (commands: GameActionCommand[], actionId?: string) => void;
   showTurnBanner: (type: 'player' | 'opponent') => void;
   startNewRound: (state: DuelState) => void;
+  /** [Phase C-1] AI 难度配置，默认 normal */
+  aiDifficultyConfig?: AIDifficultyConfig;
 }
 
 export function useAITurn({
@@ -41,6 +44,7 @@ export function useAITurn({
   enqueue,
   showTurnBanner,
   startNewRound,
+  aiDifficultyConfig,
 }: UseAITurnDeps) {
 
   /**
@@ -115,7 +119,8 @@ export function useAITurn({
     commands.push({ type: 'WAIT', payload: null, delay: AI_THINK_DELAY });
 
     // 2. [Fix 1.3] 逐张出牌，每张都用 executeSpell 计算中间状态
-    const { newState: aiResultState, commands: aiCommands } = executeAITurn(state);
+    const aiConfig = aiDifficultyConfig || AI_DIFFICULTY_PRESETS.normal;
+    const { newState: aiResultState, commands: aiCommands } = executeAITurn(state, aiConfig);
 
     let latestState = { ...state };
 
@@ -212,7 +217,7 @@ export function useAITurn({
 
     enqueue(commands, 'ai_turn');
 
-  }, [duelStateRef, phaseRef, isPVPMode, enqueue, showTurnBanner, startNewRound, pvpRoleRef]);
+  }, [duelStateRef, phaseRef, isPVPMode, enqueue, showTurnBanner, startNewRound, pvpRoleRef, aiDifficultyConfig]);
 
   /**
    * [PVP] 处理远程对手结束回合：

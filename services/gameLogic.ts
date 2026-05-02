@@ -27,6 +27,7 @@ import { GameSequenceExecutor } from './sequence';
 import { getMechanicHandler, MECHANIC_DEFINITIONS } from './mechanics';
 import { cloneDuelState } from './stateUtils';
 import { SeededRNG, resetGameRNG, getGameRNG } from '../utils/seededRandom';
+import { AI_DECK_TEMPLATES } from '../data/aiDecks';
 
 // [Phase 2] 重新导出 AI 模块，保持向后兼容
 export { executeAITurn, getAISpell, pickBestSpellForAI } from './ai';
@@ -515,13 +516,14 @@ export const executeSpell = (
       actions.push(...mechanicGenerator(mutableState, caster, spell, countered, crit));
   }
 
-  // [New 6.3] 随从召唤逻辑
-  if (!countered && spell.summonId && MINION_DATA[spell.summonId]) {
+  // [New 6.3] 随从召唤逻辑（仅在mechanic不是专门的召唤机制时执行）
+  const summonMechanics = ['charge', 'divine_shield', 'deathrattle', 'aura', 'summon'];
+  if (!countered && spell.summonId && MINION_DATA[spell.summonId] && !summonMechanics.includes(spell.mechanic)) {
       const minionBase = MINION_DATA[spell.summonId];
       actions.push({
           type: 'SUMMON_MINION',
           target: caster,
-          value: { ...minionBase, id: spell.summonId },
+          value: { ...minionBase, id: spell.summonId, keywords: minionBase.keywords || [], buffs: [] },
           description: `✨ ${isPlayer ? '你' : '对手'}召唤了 ${minionBase.name}！`
       });
   }
@@ -626,6 +628,20 @@ export const AI_PROFILES: AIProfile[] = [
     description: '掌握了禁忌奥秘的强者，能够看穿你的每一次出牌并进行完美反制。',
     avatar: '/avatars/ai-hard.png',
     strategy: 'defensive'
+  },
+  {
+    name: '召唤师',
+    difficulty: 'medium',
+    description: '精通自然之力的召唤师，擅长用随从大军淹没对手。',
+    avatar: '/avatars/ai-summoner.png',
+    strategy: 'summoner'
+  },
+  {
+    name: '宗师',
+    difficulty: 'expert',
+    description: '传说中的棋道宗师，能预判你的每一步棋并做出完美回应。',
+    avatar: '/avatars/ai-grandmaster.png',
+    strategy: 'combo'
   }
 ];
 
@@ -740,18 +756,36 @@ export const createTavernDuelState = (playerDeck: SpellType[], aiProfile: AIProf
 };
 
 const generateTavernAIDeck = (aiProfile: AIProfile, gameMode: GameMode = 'standard', rng?: SeededRNG): SpellType[] => {
+  // [Phase C-4] 优先使用固定卡组模板
+  if (aiProfile.deckTemplate && aiProfile.deckTemplate.length > 0) {
+    return aiProfile.deckTemplate;
+  }
+
+  // [Phase C-4] 根据 strategy 查找匹配的模板
+  const templateMap: Record<string, string> = {
+    balanced: 'balanced_apprentice',
+    aggressive: 'aggressive_battle_mage',
+    defensive: 'defensive_merlin',
+    combo: 'combo_thunder',
+    summoner: 'summoner_nature',
+  };
+  const templateKey = templateMap[aiProfile.strategy];
+  if (templateKey && AI_DECK_TEMPLATES[templateKey]) {
+    return AI_DECK_TEMPLATES[templateKey].cards;
+  }
+
   // [P0 Fix #2] 使用传入的 SeededRNG 或全局 RNG
   const _rng = rng || getGameRNG();
-  
+
   // [P1-23] AI 牌组构建策略优化
   const availableSpells = getCardsForMode(gameMode);
   const baseCards = availableSpells.filter(s => s.id !== 'skip' && !s.id.startsWith('hero_'));
   const deckSize = 20;
 
   // 构建策略：基于费用曲线 + 元素平衡
-  const buildBalancedDeck = (cardPool: typeof baseCards, aggressiveness: number): SpellType[] => {
+  const buildBalancedDeck = (cardPool: typeof baseCards, _aggressiveness: number): SpellType[] => {
     const deck: SpellType[] = [];
-    
+
     // 费用曲线目标分布：低费多、高费少
     const costCurve: Record<number, number> = {
       0: 2,   // 0费 2张
@@ -763,7 +797,7 @@ const generateTavernAIDeck = (aiProfile: AIProfile, gameMode: GameMode = 'standa
       6: 1,   // 6费 1张
       7: 1,   // 7+费 1张
     };
-    
+
     // 根据难度调整
     if (aiProfile.strategy === 'aggressive') {
       costCurve[1] = 5;
@@ -775,7 +809,7 @@ const generateTavernAIDeck = (aiProfile: AIProfile, gameMode: GameMode = 'standa
       costCurve[3] = 4;
       costCurve[4] = 3;
     }
-    
+
     // 按费用分组
     const cardsByCost: Record<number, typeof baseCards> = {};
     cardPool.forEach(card => {
@@ -783,14 +817,14 @@ const generateTavernAIDeck = (aiProfile: AIProfile, gameMode: GameMode = 'standa
       if (!cardsByCost[costKey]) cardsByCost[costKey] = [];
       cardsByCost[costKey].push(card);
     });
-    
+
     // 填充牌组
     for (const [costStr, count] of Object.entries(costCurve)) {
       const cost = parseInt(costStr);
       const pool = cardsByCost[cost] || [];
       if (pool.length === 0) continue;
-      
-            for (let i = 0; i < count && deck.length < deckSize; i++) {
+
+      for (let i = 0; i < count && deck.length < deckSize; i++) {
         const card = _rng.pick(pool);
         // 限制同一张卡牌最多2张（传说1张）
         const currentCount = deck.filter(id => id === card.id).length;
@@ -804,8 +838,8 @@ const generateTavernAIDeck = (aiProfile: AIProfile, gameMode: GameMode = 'standa
         }
       }
     }
-    
-        // 补满到 deckSize
+
+    // 补满到 deckSize
     while (deck.length < deckSize) {
       const card = _rng.pick(cardPool);
       const currentCount = deck.filter(id => id === card.id).length;
@@ -813,7 +847,7 @@ const generateTavernAIDeck = (aiProfile: AIProfile, gameMode: GameMode = 'standa
         deck.push(card.id);
       }
     }
-    
+
     return deck.slice(0, deckSize);
   };
 
@@ -822,13 +856,17 @@ const generateTavernAIDeck = (aiProfile: AIProfile, gameMode: GameMode = 'standa
       // 新手AI：只用基础便宜卡牌
       return buildBalancedDeck(baseCards.filter(c => c.manaCost <= 4 && c.rarity !== 'legendary'), 0.3);
 
-        case 'medium':
+    case 'medium':
       // 中等AI：均衡牌组
       return buildBalancedDeck(baseCards.filter(c => c.rarity !== 'legendary' || _rng.chance(0.3)), 0.5);
 
     case 'hard':
       // 困难AI：使用最强组合
       return buildBalancedDeck(baseCards, 0.8);
+
+    case 'expert':
+      // [Phase C] 专家AI：全卡池
+      return buildBalancedDeck(baseCards, 0.9);
 
     default:
       return buildBalancedDeck(baseCards, 0.5);

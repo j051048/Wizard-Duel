@@ -28,6 +28,8 @@ import { throttle } from '../utils/helpers';
 import { GameFSM } from '../services/GameFSM';
 import { restoreGameRNG } from '../utils/seededRandom';
 import { GameRuleEngine } from '../services/GameRuleEngine';
+import { AI_DIFFICULTY_PRESETS } from '../services/ai';
+import { resolveDifficultyKey } from '../data/aiDecks';
 
 const initialAIStatus: AIStatus = { emote: null, message: null };
 
@@ -166,6 +168,9 @@ export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoo
   // [PVP] 角色引用，用于在各个 Hook 间共享角色信息
   const pvpRoleRef = useRef<'player1' | 'player2' | null>(null);
 
+  // [Phase C-1] AI 难度配置引用，酒馆对战启动时由 AIProfile 设置
+  const aiDifficultyConfigRef = useRef<import('../services/ai').AIDifficultyConfig | undefined>(undefined);
+
   // ============ [#6] 优化的 enqueue 包装 ============
   const safeEnqueue = useCallback((commands: GameActionCommand[], actionId?: string) => {
     // 防止重复触发同一动作
@@ -194,7 +199,7 @@ export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoo
     pvpRoleRef 
   });
 
-  const { playCard, handleMulligan, startDuel, startTavernDuel, startPvpDuel } = usePlayerActions({
+  const { playCard, handleMulligan, startDuel, startTavernDuel: rawStartTavernDuel, startPvpDuel } = usePlayerActions({
     duelStateRef,
     phaseRef,
     isProcessing,
@@ -207,6 +212,15 @@ export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoo
     pvpRoleRef
   });
 
+  // [Phase C-1] 包装 startTavernDuel，同步设置 AI 难度配置
+  const startTavernDuel = useCallback((deck: SpellType[], aiProfile: AIProfile, gameMode: GameMode = 'standard') => {
+    const diffKey = aiProfile.difficultyConfig
+      ? undefined
+      : resolveDifficultyKey(aiProfile.difficulty);
+    aiDifficultyConfigRef.current = aiProfile.difficultyConfig || (diffKey ? AI_DIFFICULTY_PRESETS[diffKey] : AI_DIFFICULTY_PRESETS.normal);
+    rawStartTavernDuel(deck, aiProfile, gameMode);
+  }, [rawStartTavernDuel]);
+
   const { passTurn, handleRemoteEndTurn } = useAITurn({
     duelStateRef,
     phaseRef,
@@ -215,7 +229,8 @@ export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoo
     enqueue: safeEnqueue,
     showTurnBanner,
     startNewRound,
-    pvpRoleRef
+    pvpRoleRef,
+    aiDifficultyConfig: aiDifficultyConfigRef.current,
   });
 
   // [PVP] 处理远程对手出牌：以"对手"身份执行法术结算

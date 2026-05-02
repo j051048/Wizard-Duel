@@ -69,6 +69,37 @@ export function isCardAvailableInMode(cardId: SpellType, gameMode: GameMode): bo
 /**
  * 开包逻辑
  */
+/**
+ * 卡组验证规则
+ * [Phase B-3] 新增：每张卡最多2份，legendary最多1份
+ */
+export function validateDeck(deck: SpellType[]): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  const counts: Record<string, number> = {};
+
+  for (const cardId of deck) {
+    counts[cardId] = (counts[cardId] || 0) + 1;
+  }
+
+  for (const [cardId, count] of Object.entries(counts)) {
+    const card = SPELLS.find(s => s.id === cardId);
+    if (!card) {
+      errors.push(`未知卡牌: ${cardId}`);
+      continue;
+    }
+
+    if (count > 2) {
+      errors.push(`${card.name}(${cardId}) 重复 ${count} 次，最多2份`);
+    }
+
+    if (card.rarity === 'legendary' && count > 1) {
+      errors.push(`${card.name}(${cardId}) 是传说卡，最多1份`);
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
 export const openPack = (currentPity: { rare: number, mythic: number, legendary: number }): { cards: Spell[], newPity: typeof currentPity } => {
   const cards: Spell[] = [];
   let newPity = { ...currentPity };

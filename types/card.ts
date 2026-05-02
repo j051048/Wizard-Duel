@@ -2,15 +2,18 @@
  * 卡牌相关类型定义
  * [Phase B-5] 从 types.ts 拆分
  * [Balance v2.0] 新增低费卡牌类型
+ * [A-1] SpellType 改为 string 以支持数据驱动扩展
  */
 
-export type SpellType = "fire" | "vine" | "ice" | "thunder" | "rock" | "fire2" | "vine2" | "ice2" | "thunder2" | "rock2" | "fire3" | "vine3" | "ice3" | "thunder3" | "rock3" | "fire4" | "vine4" | "ice4" | "thunder4" | "rock4" | "fire5" | "vine5" | "ice5" | "thunder5" | "rock5" | "fire6" | "vine6" | "ice6" | "rock6" | "fire_ultimate" | "vine_ultimate" | "ice_ultimate" | "thunder_ultimate" | "rock_ultimate" | "healing" | "aoe" | "draw" | "silence" | "hero_fire" | "hero_vine" | "hero_ice" | "hero_thunder" | "hero_rock" | "skip" | "thunder6" | "vine7" | "rock7" | "fire7" | "luck_coin";
+// [A-1] 数据驱动：不再手动维护联合类型，新卡只需在 data/spells.ts 中添加 defineSpell()
+export type SpellType = string;
 
 export type Rarity = "common" | "rare" | "mythic" | "legendary";
 
-export type Mechanic = "burn" | "tangle" | "freeze" | "charge" | "fortify" | "heal" | "aoe" | "draw" | "silence" | "skip";
+// [A-3] 新增 charge/divine_shield/deathrattle/aura/summon
+export type Mechanic = "burn" | "tangle" | "freeze" | "charge" | "fortify" | "heal" | "aoe" | "draw" | "silence" | "skip" | "divine_shield" | "deathrattle" | "aura" | "summon" | "poison";
 
-export type CardSet = "core" | "classic" | "tournament" | "legacy";
+export type CardSet = "core" | "classic" | "tournament" | "legacy" | "expansion_1";
 
 export type GameMode = "standard" | "wild" | "dungeon";
 
@@ -26,7 +29,7 @@ export interface Spell {
   manaCost: number;
   damage: number;
   armorGain?: number;
-  /** 
+  /**
    * @deprecated 不再使用，克制关系由 elementSystem 处理
    * @see services/combat/elementSystem.ts
    */
@@ -37,10 +40,43 @@ export interface Spell {
   description: string;
   shortDesc: string;
   summonId?: string;
-  effectDuration?: number; // C-2: For multi-turn effects like freeze
-  value?: number;          // Generic value for heal, draw count, etc.
+  effectDuration?: number;
+  value?: number;
+  // [A-1] 新增：随从相关扩展
+  /** 召唤的随从是否具有突袭（不设exhausted） */
+  rushSummon?: boolean;
+  /** 亡语效果类型 */
+  deathrattleEffect?: DeathrattleEffect;
+  /** 对所有敌方随从造成伤害 */
+  aoeMinionDamage?: number;
 }
 
+// [A-2] 随从关键词系统
+export type MinionKeyword = 'taunt' | 'divine_shield' | 'rush' | 'poison' | 'lifesteal' | 'windfury';
+
+// [A-2] 亡语效果
+export interface DeathrattleEffect {
+  type: 'damage' | 'summon' | 'heal' | 'draw';
+  value: number;
+  summonId?: string; // type='summon' 时使用
+}
+
+// [A-2] 光环效果
+export interface AuraEffect {
+  type: 'atk_boost' | 'hp_boost' | 'cost_reduce';
+  value: number;
+  target: 'self' | 'all_friendly' | 'all_enemy';
+}
+
+// [A-2] 运行时增益
+export interface MinionBuff {
+  atk: number;
+  hp: number;
+  source: string;
+  duration: number; // -1 = 永久
+}
+
+// [A-2] 增强 Minion 类型
 export interface Minion {
   id: string;
   instanceId: string;
@@ -48,14 +84,38 @@ export interface Minion {
   hp: number;
   maxHp: number;
   atk: number;
+  baseAtk: number;   // [A-2] 原始攻击力（用于光环重算）
+  baseHp: number;    // [A-2] 原始生命值
   exhausted: boolean;
   type: string;
+  /** [A-2] 随从关键词 */
+  keywords: MinionKeyword[];
+  /** [A-2] 光环效果 */
+  aura?: AuraEffect;
+  /** [A-2] 亡语效果 */
+  onDeath?: DeathrattleEffect;
+  /** [A-2] 运行时增益 */
+  buffs: MinionBuff[];
+  /** [A-2] 圣盾状态 */
+  hasShield?: boolean;
   /** [P0 Fix #3] 濒死标记：HP<=0 但尚未执行死亡帧处理 */
   isDying?: boolean;
   /** [P0 Fix #3] 亡语效果ID（未来扩展） */
   deathrattle?: string;
-  /** 是否具有嘲讽 */
+  /** 是否具有嘲讽（兼容旧代码） */
   taunt?: boolean;
+}
+
+// [A-2] 随从数据模板（定义在 data/spells.ts 的 MINION_DATA 中）
+export interface MinionTemplate {
+  id?: string; // 可选：通常由 Record 的 key 提供
+  name: string;
+  atk: number;
+  hp: number;
+  type: string;
+  keywords?: MinionKeyword[];
+  aura?: AuraEffect;
+  onDeath?: DeathrattleEffect;
 }
 
 export interface Deck {
