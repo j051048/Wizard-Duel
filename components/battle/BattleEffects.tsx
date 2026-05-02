@@ -5,9 +5,11 @@ interface BattleEffectsProps {
   showBloodFlash: boolean;
   playerHp: number;
   maxHp: number;
+  /** [P2-2] Current combo count (0 = no combo) */
+  comboCount?: number;
 }
 
-const BattleEffects: React.FC<BattleEffectsProps> = ({ showCrit, showBloodFlash, playerHp, maxHp }) => {
+const BattleEffects: React.FC<BattleEffectsProps> = ({ showCrit, showBloodFlash, playerHp, maxHp, comboCount = 0 }) => {
   const hpPercent = maxHp > 0 ? playerHp / maxHp : 1;
   const isLowHp = hpPercent <= 0.3;
   const isCriticalHp = hpPercent <= 0.15;
@@ -53,6 +55,17 @@ const BattleEffects: React.FC<BattleEffectsProps> = ({ showCrit, showBloodFlash,
 
       {showBloodFlash && (
         <div className="fixed inset-0 z-50 pointer-events-none shadow-[inset_0_0_100px_rgba(220,38,38,0.8)] animate-pulse" />
+      )}
+
+      {/* [P2-2] Combo screen-edge glow */}
+      {comboCount >= 2 && (
+        <div
+          className="fixed inset-0 z-35 pointer-events-none"
+          style={{
+            boxShadow: `inset 0 0 ${40 + comboCount * 15}px rgba(168,85,247,${Math.min(0.5, 0.2 + comboCount * 0.1)})`,
+            animation: `gentlePulse ${Math.max(0.3, 1.5 - comboCount * 0.3)}s ease-in-out infinite`,
+          }}
+        />
       )}
     </>
   );

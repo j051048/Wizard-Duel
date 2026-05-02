@@ -143,9 +143,13 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
     const baseX = window.innerWidth * 0.5 + xOffset + jitterX;
     const baseY = isPlayer ? window.innerHeight * 0.70 : window.innerHeight * 0.20;
     const id = Date.now().toString() + Math.random();
-    setFloatingTexts(prev => [...prev, { id, text, type, x: baseX, y: baseY + jitterY, duration: type === 'crit' ? 2.0 : 1.5 }]);
-    setTimeout(() => { setFloatingTexts(prev => prev.filter(item => item.id !== id)); }, type === 'crit' ? 2100 : 1600);
-  }, []);
+    setFloatingTexts(prev => [...prev, { id, text, type, x: baseX, y: baseY + jitterY, duration: (type === 'crit' || type === 'combo') ? 2.0 : 1.5 }]);
+    setTimeout(() => { setFloatingTexts(prev => prev.filter(item => item.id !== id)); }, (type === 'crit' || type === 'combo') ? 2100 : 1600);
+    // Auto-trigger shake for crit and combo
+    if (type === 'crit' || type === 'combo') {
+      triggerShake('default');
+    }
+  }, [triggerShake]);
 
   const triggerHitStop = useCallback((intensity: 'light' | 'medium' | 'heavy' | 'ultra' = 'medium') => {
     const duration = HIT_STOP_DURATION[intensity];
@@ -162,15 +166,22 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
     if (damage >= 10 || isCrit) hitStopIntensity = 'ultra';
     else if (damage >= 6) hitStopIntensity = 'heavy';
     else if (damage >= 3) hitStopIntensity = 'medium';
-    
+
     triggerHitStop(hitStopIntensity);
     HapticService.medium();
     if (isCrit) HapticService.heavy();
     if (isPlayer) { setShowBloodFlash(true); setTimeout(() => setShowBloodFlash(false), 400); }
     addFloatingText(`-${damage}`, isCrit ? 'crit' : 'damage', isPlayer);
-    const x = 50 + (Math.random() - 0.5) * 15; 
+    const x = 50 + (Math.random() - 0.5) * 15;
     const y = isPlayer ? 70 : 30;
     spawnParticles(x, y, isCrit ? 40 : 20, type);
+  }, [addFloatingText, spawnParticles, triggerHitStop]);
+
+  const addComboText = useCallback((comboCount: number, element: ParticleType = 'arcane') => {
+    addFloatingText(`COMBO x${comboCount}!`, 'combo', false);
+    spawnParticles(50, 50, 30, element);
+    triggerHitStop('medium');
+    HapticService.heavy();
   }, [addFloatingText, spawnParticles, triggerHitStop]);
 
   const triggerCrit = useCallback(() => {
@@ -300,6 +311,7 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
     floatingTexts,
     addFloatingText,
     addDamageNumber,
+    addComboText,
     triggerCrit,
     triggerShake,
     spawnProjectile,

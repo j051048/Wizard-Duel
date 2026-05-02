@@ -12,7 +12,8 @@ import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion';
 import { SpellType, GameLoopState } from '../types';
 import { GAME_CONFIG } from '../constants';
-import { getPlayableCards, getSpellById } from '../services/gameLogic';
+import { getPlayableCards, getSpellById, spellNeedsTarget } from '../services/gameLogic';
+import { getElementType } from '../services/combat/elementSystem';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { calculateSpellProjection } from '../services/projection';
 import { useSettings } from '../context/SettingsContext';
@@ -40,6 +41,9 @@ import { HandArea } from './battle/hand/HandArea';
 import { DragDropZone } from './battle/board/DragDropZone';
 import { FloatingTextOverlay } from './battle/feedback/FloatingText';
 import { FloatingActionLog } from './battle/FloatingActionLog';
+import { DebuffOverlay } from './battle/DebuffOverlay';
+import { TargetSelector } from './battle/TargetSelector';
+import { HeroSkillSelection } from './battle/HeroSkillSelection';
 import { audioBridge } from '../hooks/useAudioManager';
 
 // Hooks
@@ -60,6 +64,9 @@ interface BattleArenaProps {
   isTavernMode?: boolean;
   setTargeting: (data: GameLoopState['targetingData']) => void;
   pvpRoomId?: string;
+  // [P3-2] Hero skill callbacks
+  onSelectHeroSkill?: (skillId: string) => void;
+  onUseHeroSkill?: () => void;
   // [PVP] 远程操作回调（对手的操作以对手身份执行，不走玩家出牌逻辑）
   onRemotePlayCard?: (spellId: SpellType) => void;
   onRemoteEndTurn?: () => void;
@@ -79,6 +86,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   isOpponentShaking = false,
   setTargeting,
   pvpRoomId,
+  onSelectHeroSkill,
+  onUseHeroSkill,
   onRemotePlayCard,
   onRemoteEndTurn,
   getSerializedState,
@@ -100,6 +109,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   const disconnectTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [detailSpell, setDetailSpell] = useState<SpellType | null>(null);
+  // [P1-1] Target selection state
+  const [pendingTargetSpell, setPendingTargetSpell] = useState<SpellType | null>(null);
 
   // [P0+P1] PVP 模式由 pvpRoomId 是否有值来决定，不再硬编码
   const isPVPMode = !!pvpRoomId;
@@ -148,6 +159,27 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       duelState.playerCostMod
     );
   }, [duelState]);
+
+  // [P3-2] Compute main element from player's hand
+  const mainElement = useMemo(() => {
+    if (!duelState) return undefined;
+    const counts: Record<string, number> = {};
+    for (const spellId of duelState.playerHand) {
+      const el = getElementType(spellId);
+      if (el !== 'neutral') {
+        counts[el] = (counts[el] || 0) + 1;
+      }
+    }
+    let maxEl: string | undefined;
+    let maxCount = 0;
+    for (const [el, count] of Object.entries(counts)) {
+      if (count > maxCount) {
+        maxCount = count;
+        maxEl = el;
+      }
+    }
+    return maxEl;
+  }, [duelState?.playerHand]);
 
   const { dragState, startDrag, dragX, dragY } = useDragToPlay(
     (id, confirmed) => handlePlayCard(id, confirmed),
@@ -368,6 +400,12 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   const handlePlayCard = (spellId: SpellType, isConfirmed: boolean = false) => {
     if (!duelState) return;
 
+    // [P1-1] Target selection: if spell needs a target, show TargetSelector
+    if (spellNeedsTarget(spellId) && duelState.opponentMinions.length > 0) {
+      setPendingTargetSpell(spellId);
+      return; // Don't play yet — wait for target selection
+    }
+
     // [P0 新手引导] 只要出过一张牌，就永久关闭引导
     if (shouldShowTutorial) {
       setHasShownTutorial(true);
@@ -393,6 +431,34 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
     onPlayCard(spellId, isConfirmed);
   };
+
+  // [P1-1] Target selection: handle target chosen from TargetSelector
+  const handleTargetSelected = useCallback((target: { type: 'hero' | 'minion'; id?: string }) => {
+    if (!pendingTargetSpell) return;
+    const spellId = pendingTargetSpell;
+    setPendingTargetSpell(null);
+
+    // [P0 新手引导] 只要出过一张牌，就永久关闭引导
+    if (shouldShowTutorial) setHasShownTutorial(true);
+
+    setHoveredSpellId(null);
+    setTargeting(null);
+    spawnProjectile('player');
+
+    // For now, just play the card normally — the target selection is a UX enhancement
+    // The actual targeting is applied at the game logic layer
+    if (isPVPMode && !isRemoteActionRef.current) {
+      pvpService.sendAction({
+        type: 'ACTION',
+        action: { type: 'PLAY_CARD', spellId, isConfirmed: true, playerId: playerIdRef.current, timestamp: Date.now() },
+      });
+    }
+    onPlayCard(spellId, true);
+  }, [pendingTargetSpell, shouldShowTutorial, isPVPMode, spawnProjectile, setTargeting, onPlayCard]);
+
+  const handleTargetCancel = useCallback(() => {
+    setPendingTargetSpell(null);
+  }, []);
 
   // [P0 修复] 长按检测与拖拽冲突修复：检查是否正在拖拽
   // (handleCardPressStart 已移除，因不再通过 BattleHand 传递)
@@ -450,6 +516,24 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           style={{ objectPosition: 'center 40%' }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-slate-950/80" />
+        {/* [P2-3] Dynamic battlefield theme based on opponent element */}
+        {(() => {
+          const opponentElement = duelState?.opponentLastSpell ? getElementType(duelState.opponentLastSpell) : null;
+          const themeGradients: Record<string, string> = {
+            fire: 'linear-gradient(180deg, rgba(127,29,29,0.2) 0%, transparent 50%, rgba(120,53,15,0.15) 100%)',
+            ice: 'linear-gradient(180deg, rgba(30,58,138,0.2) 0%, transparent 50%, rgba(22,78,99,0.15) 100%)',
+            thunder: 'linear-gradient(180deg, rgba(88,28,135,0.2) 0%, transparent 50%, rgba(49,46,129,0.15) 100%)',
+            vine: 'linear-gradient(180deg, rgba(20,83,45,0.2) 0%, transparent 50%, rgba(22,101,52,0.15) 100%)',
+            rock: 'linear-gradient(180deg, rgba(68,64,60,0.2) 0%, transparent 50%, rgba(41,37,36,0.15) 100%)',
+          };
+          const gradient = opponentElement && themeGradients[opponentElement];
+          return gradient ? (
+            <div
+              className="absolute inset-0 pointer-events-none transition-all duration-1000"
+              style={{ background: gradient }}
+            />
+          ) : null;
+        })()}
       </div>
 
       <FloatingTextOverlay items={floatingTexts} />
@@ -475,6 +559,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
       {/* Opponent Area */}
       <div className="w-full flex justify-center items-start pt-4 md:pt-6 z-20 relative safe-area-top">
+        <DebuffOverlay effects={duelState.opponentEffects} position="opponent" isMobile={isMobile} />
         <OpponentHUD
           duelState={duelState}
           aiStatus={aiStatus}
@@ -512,15 +597,19 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       <DragDropZone dragState={dragState} />
 
       {/* Player Area Layer */}
-      <PlayerHUD
-        duelState={duelState}
-        phase={phase}
-        isProcessing={gameLoopState.isProcessing}
-        isPlayerShaking={isPlayerShaking}
-        projection={projection}
-        onPlayCard={handlePlayCard}
-        onPass={handleEndTurn}
-      />
+      <div className="relative">
+        <DebuffOverlay effects={duelState.playerEffects} position="player" isMobile={isMobile} />
+        <PlayerHUD
+          duelState={duelState}
+          phase={phase}
+          isProcessing={gameLoopState.isProcessing}
+          isPlayerShaking={isPlayerShaking}
+          projection={projection}
+          onPlayCard={handlePlayCard}
+          onPass={handleEndTurn}
+          onUseHeroSkill={onUseHeroSkill}
+        />
+      </div>
 
       {/* Hand Area (Bottom Layer) */}
       <HandArea
@@ -587,6 +676,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         showBloodFlash={showBloodFlash}
         playerHp={duelState.playerHP}
         maxHp={GAME_CONFIG.maxHP}
+        comboCount={duelState.playerConsecutiveThunder}
       />
 
       {/* [P2 Fix #19] Floating Action Log — 常驻最近5条 */}
@@ -631,6 +721,27 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       {detailSpell && (
         <CardDetailModal spell={getSpellById(detailSpell)} onClose={() => setDetailSpell(null)} />
       )}
+
+      {/* [P1-1] Target selection overlay */}
+      <TargetSelector
+        isActive={!!pendingTargetSpell}
+        spellId={pendingTargetSpell}
+        opponentMinions={duelState?.opponentMinions || []}
+        onSelectTarget={handleTargetSelected}
+        onCancel={handleTargetCancel}
+        isMobile={isMobile}
+      />
+
+      {/* [P3-2] Hero Skill Selection overlay */}
+      <HeroSkillSelection
+        isActive={phase === 'SKILL_SELECT_PHASE'}
+        mainElement={mainElement}
+        onSelect={(skillId) => {
+          audioBridge.playSfx('hero_skill');
+          onSelectHeroSkill?.(skillId);
+        }}
+        isMobile={isMobile}
+      />
     </div>
   );
 };

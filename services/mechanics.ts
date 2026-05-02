@@ -249,6 +249,21 @@ const summon: MechanicHandler = (state, caster, spell, countered) => {
   }];
 };
 
+// [P3-1] 秘密机制 handler：打出秘密牌时，将秘密挂载到 caster 的 secrets 数组
+const secret: MechanicHandler = (state, caster, spell, countered) => {
+  if (countered) return [];
+  const isPlayer = caster === 'player';
+  const secretId = spell.id;
+
+  // 构建 GameAction，但这里只返回一条 MESSAGE；
+  // 实际的秘密注册逻辑在 GameSequenceExecutor 或 gameLogic 层处理
+  return [{
+    type: 'MESSAGE',
+    target: 'system',
+    description: `❓ ${isPlayer ? '你' : '对手'}设置了一个秘密！`,
+  }];
+};
+
 // ============ 机制注册表 ============
 
 export const MECHANIC_DEFINITIONS: Record<string, MechanicHandler> = {
@@ -267,6 +282,7 @@ export const MECHANIC_DEFINITIONS: Record<string, MechanicHandler> = {
   aura,
   poison,
   summon,
+  secret,
 };
 
 /**

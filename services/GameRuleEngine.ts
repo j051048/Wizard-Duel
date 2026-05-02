@@ -76,6 +76,10 @@ export class GameRuleEngine {
         // [P0 Fix #3] 统一死亡帧：在所有 Action 执行后处理濒死随从
     const deathFrameResult = GameSequenceExecutor.resolveDeathFrame(tempState);
     tempState = deathFrameResult.state;
+
+    // [P3-1] Resolve ON_OPPONENT_PLAY triggers (secrets)
+    const opponentPlayContext = { spellId, caster };
+    tempState = GameSequenceExecutor.resolveTriggers(tempState, 'ON_OPPONENT_PLAY', opponentPlayContext, 0, caster);
     deathFrameResult.logs.forEach(log => {
         commands.push({ type: 'ADD_MESSAGE', payload: log });
     });

@@ -354,6 +354,30 @@ export class GameSequenceExecutor {
           log = `💥 对所有敌方随从造成 ${dmg} 点伤害`;
           break;
       }
+
+      // [P1-1] 对指定随从造成伤害
+      case 'MINION_DAMAGE': {
+          const { instanceId, amount } = action.value as { instanceId: string; amount: number };
+          const isPlayer = action.target === 'player';
+          // 对手随从 = isPlayer 时的目标
+          const minions = isPlayer ? [...newState.opponentMinions] : [...newState.playerMinions];
+          const idx = minions.findIndex(m => m.instanceId === instanceId);
+          if (idx >= 0) {
+              const m = { ...minions[idx] };
+              if (m.hasShield) {
+                  m.hasShield = false;
+                  log = `🛡️ ${m.name} 的圣盾吸收了 ${amount} 点伤害！`;
+              } else {
+                  m.hp -= amount;
+                  if (m.hp <= 0) m.isDying = true;
+                  log = `💥 对 ${m.name} 造成 ${amount} 点伤害`;
+              }
+              minions[idx] = m;
+              if (isPlayer) newState.opponentMinions = minions;
+              else newState.playerMinions = minions;
+          }
+          break;
+      }
     }
 
             // [P0 Fix 3.1] 触发检查 - 使用返回值而非直接修改

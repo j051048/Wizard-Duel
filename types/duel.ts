@@ -3,13 +3,14 @@
  * [Phase B-5] 从 types.ts 拆分
  */
 
-import { SpellType, Minion, MinionTemplate, GameMode } from './card';
+import { SpellType, Minion, MinionTemplate, GameMode, SpellTarget } from './card';
 import { AIProfile } from './ai';
 import type { RNGState } from '../utils/seededRandom';
 
 export type DuelPhase =
   | "DRAFT_PHASE"
   | "MULLIGAN_PHASE"
+  | "SKILL_SELECT_PHASE"  // [P3-2] 英雄技能选择
   | "PLAYER_TURN"
   | "OPPONENT_TURN"
   | "WAITING_FOR_OPPONENT" // [PVP] PVP 模式下等待对手操作
@@ -25,7 +26,7 @@ export interface StatusEffect {
   value?: number;
 }
 
-export type TriggerTiming = 'ON_CAST' | 'ON_DAMAGE' | 'ON_TURN_START' | 'ON_TURN_END' | 'ON_BEFORE_PLAY' | 'ON_DEATH';
+export type TriggerTiming = 'ON_CAST' | 'ON_DAMAGE' | 'ON_TURN_START' | 'ON_TURN_END' | 'ON_BEFORE_PLAY' | 'ON_DEATH' | 'ON_OPPONENT_PLAY';
 
 export interface GameTrigger {
   id: string;
@@ -37,6 +38,17 @@ export interface GameTrigger {
   condition?: (state: DuelState, context?: any) => boolean;
   action: (state: DuelState, context?: any) => GameAction[];
   isOnce?: boolean;
+}
+
+/** [P3-1] 秘密/陷阱 */
+export interface Secret {
+  id: string;          // 关联的法术 ID
+  owner: 'player' | 'opponent';
+  triggerTiming: TriggerTiming;
+  /** 触发条件（可选，默认总是触发） */
+  condition?: (state: DuelState, context?: any) => boolean;
+  /** 触发后执行的 action 列表 */
+  actions: GameAction[];
 }
 
 /**
@@ -90,6 +102,19 @@ export interface DuelState {
   rngState?: RNGState;
   /** [P0 Fix #1] 全局触发器入场计数器 */
   triggerOrderCounter: number;
+
+  /** [P1-1] 目标选择：等待玩家选择目标 */
+  pendingTarget?: SpellTarget;
+  /** [P1-1] 目标选择：正在选择目标的法术 */
+  targetingSpell?: SpellType;
+
+  /** [P3-1] 秘密/陷阱 */
+  playerSecrets?: Secret[];
+  opponentSecrets?: Secret[];
+
+  /** [P3-2] 英雄技能选择 */
+  selectedHeroSkill?: string;
+  opponentSelectedHeroSkill?: string;
 }
 
 export type ActionType =
@@ -108,7 +133,8 @@ export type ActionType =
   | 'MINION_BUFF'         // 增加/减少随从属性
   | 'APPLY_DEATHRATTLE'   // 触发亡语效果
   | 'DIVINE_SHIELD_BLOCK' // 圣盾伤害免疫
-  | 'AOE_MINION_DAMAGE';  // 对所有敌方随从造成伤害
+  | 'AOE_MINION_DAMAGE'  // 对所有敌方随从造成伤害
+  | 'MINION_DAMAGE';      // [P1-1] 对指定随从造成伤害 (value={instanceId, amount})
 
 export interface GameAction {
   type: ActionType;

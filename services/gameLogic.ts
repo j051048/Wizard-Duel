@@ -15,9 +15,10 @@
  * - 回合管理 -> services/combat/turnManager.ts
  */
 
-import { 
-  DuelState, SpellType, Spell, GameMode, StatusEffect, AIProfile, GameCommand, GameAction
+import {
+  DuelState, SpellType, Spell, GameMode, StatusEffect, AIProfile, GameCommand, GameAction, GameTrigger, TriggerTiming
 } from '../types.ts';
+import type { SpellTarget } from '../types/card';
 import { 
   SPELLS, GAME_CONFIG, createDeck, getCardsForMode,
   CRIT_CHANCE, WIN_MULTIPLIER, CRIT_MULTIPLIER, shuffleArray, getMechanicName,
@@ -382,6 +383,60 @@ import {
   updateComboState
 } from './combat';
 
+// [P3-1] 秘密触发器工厂
+const createSecretTrigger = (
+  spellId: SpellType,
+  owner: 'player' | 'opponent',
+  orderCounter: number
+): GameTrigger | null => {
+  const secretConfigs: Record<string, { timing: TriggerTiming; actions: (ctx?: any) => GameAction[] }> = {
+    secret_fire: {
+      timing: 'ON_OPPONENT_PLAY',
+      actions: () => [{ type: 'HP_CHANGE', target: owner === 'player' ? 'opponent' : 'player', value: -3, description: '🔥 火焰陷阱触发！造成 3 点伤害' }],
+    },
+    secret_ice: {
+      timing: 'ON_OPPONENT_PLAY',
+      actions: () => [{ type: 'ADD_EFFECT', target: owner === 'player' ? 'opponent' : 'player', value: { type: 'frozen', duration: 1 }, description: '❄️ 冰霜陷阱触发！对手被冻结' }],
+    },
+    secret_thunder: {
+      timing: 'ON_OPPONENT_PLAY',
+      actions: (ctx) => {
+        // Only trigger if opponent's spell costs >= 4
+        if (ctx?.spellCost >= 4) {
+          return [
+            { type: 'DRAW_CARD', target: owner, description: '⚡ 雷电陷阱触发！抽 2 张牌' },
+            { type: 'DRAW_CARD', target: owner },
+          ];
+        }
+        return [];
+      },
+    },
+    secret_vine: {
+      timing: 'ON_DAMAGE',
+      actions: () => [{ type: 'HP_CHANGE', target: owner, value: 4, description: '🌿 荆棘陷阱触发！恢复 4 点生命值' }],
+    },
+    secret_rock: {
+      timing: 'ON_OPPONENT_PLAY',
+      actions: () => [{ type: 'ARMOR_CHANGE', target: owner, value: 5, description: '🪨 岩石陷阱触发！获得 5 点护甲' }],
+    },
+  };
+
+  const config = secretConfigs[spellId];
+  if (!config) return null;
+
+  return {
+    id: `secret_${spellId}_${Date.now()}`,
+    timing: config.timing,
+    createdAt: orderCounter,
+    owner,
+    isOnce: true,
+    condition: spellId === 'secret_thunder'
+      ? (_state, ctx) => (ctx?.spellCost ?? 0) >= 4
+      : undefined,
+    action: (_state, ctx) => config.actions(ctx),
+  };
+};
+
 export const executeSpell = (
   state: Readonly<DuelState>,
   caster: 'player' | 'opponent',
@@ -516,6 +571,16 @@ export const executeSpell = (
       actions.push(...mechanicGenerator(mutableState, caster, spell, countered, crit));
   }
 
+  // [P3-1] 秘密注册：当 mechanic='secret' 时，注册 GameTrigger
+  if (spell.mechanic === 'secret' && !countered) {
+    const secretTrigger = createSecretTrigger(spellId, caster, mutableState.triggerOrderCounter + 1);
+    if (secretTrigger) {
+      const triggerArray = isPlayer ? mutableState.playerTriggers : mutableState.opponentTriggers;
+      triggerArray.push(secretTrigger);
+      mutableState.triggerOrderCounter++;
+    }
+  }
+
   // [New 6.3] 随从召唤逻辑（仅在mechanic不是专门的召唤机制时执行）
   const summonMechanics = ['charge', 'divine_shield', 'deathrattle', 'aura', 'summon'];
   if (!countered && spell.summonId && MINION_DATA[spell.summonId] && !summonMechanics.includes(spell.mechanic)) {
@@ -538,6 +603,54 @@ export const executeSpell = (
   return { newState, logs, command: cmd };
 };
 
+/**
+ * [P1-1] 目标选择：带目标的法术执行
+ * 当 spell.targetMode !== 'auto' 且目标为 minion 时，
+ * 将 HP_CHANGE action 替换为 MINION_DAMAGE action
+ */
+export const executeSpellWithTarget = (
+  state: Readonly<DuelState>,
+  caster: 'player' | 'opponent',
+  spellId: SpellType,
+  target: SpellTarget
+): { newState: DuelState, logs: string[], command: GameCommand } => {
+  const result = executeSpell(state, caster, spellId);
+  const isPlayer = caster === 'player';
+
+  // 只有 minion 目标需要替换 HP_CHANGE actions
+  if (target.type === 'minion' && target.id) {
+    const newActions = result.command.actions.map(action => {
+      if (action.type === 'HP_CHANGE' && action.target === (isPlayer ? 'opponent' : 'player') && action.value < 0) {
+        return {
+          type: 'MINION_DAMAGE' as const,
+          target: caster,
+          value: { instanceId: target.id, amount: Math.abs(action.value) },
+          description: `🎯 指向 ${target.id} 造成 ${Math.abs(action.value)} 点伤害`,
+        };
+      }
+      return action;
+    });
+    result.command.actions = newActions;
+
+    // Re-execute with modified actions
+    const cmd = { ...result.command, actions: newActions };
+    const { state: newState, logs } = GameSequenceExecutor.executeCommand(
+      cloneDuelState(state),
+      cmd
+    );
+    return { newState, logs, command: cmd };
+  }
+
+  return result;
+};
+
+/**
+ * [P1-1] Check if a spell requires target selection
+ */
+export const spellNeedsTarget = (spellId: SpellType): boolean => {
+  const spell = getSpellById(spellId);
+  return spell.targetMode !== undefined && spell.targetMode !== 'auto';
+};
 
 // [Phase 2] AI 逻辑已迁移到 services/ai.ts
 // 通过顶部的 export { executeAITurn, getAISpell, pickBestSpellForAI } from './ai' 重新导出

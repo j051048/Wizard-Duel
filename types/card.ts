@@ -11,11 +11,19 @@ export type SpellType = string;
 export type Rarity = "common" | "rare" | "mythic" | "legendary";
 
 // [A-3] 新增 charge/divine_shield/deathrattle/aura/summon
-export type Mechanic = "burn" | "tangle" | "freeze" | "charge" | "fortify" | "heal" | "aoe" | "draw" | "silence" | "skip" | "divine_shield" | "deathrattle" | "aura" | "summon" | "poison";
+export type Mechanic = "burn" | "tangle" | "freeze" | "charge" | "fortify" | "heal" | "aoe" | "draw" | "silence" | "skip" | "divine_shield" | "deathrattle" | "aura" | "summon" | "poison" | "secret";
 
 export type CardSet = "core" | "classic" | "tournament" | "legacy" | "expansion_1";
 
 export type GameMode = "standard" | "wild" | "dungeon";
+
+// [P1-1] Target selection system
+export type TargetMode = 'auto' | 'hero_or_minion' | 'minion_only' | 'hero_only';
+
+export interface SpellTarget {
+  type: 'hero' | 'minion';
+  id?: string; // minion instanceId when targeting a minion
+}
 
 export interface Spell {
   id: SpellType;
@@ -49,6 +57,8 @@ export interface Spell {
   deathrattleEffect?: DeathrattleEffect;
   /** 对所有敌方随从造成伤害 */
   aoeMinionDamage?: number;
+  /** [P1-1] 目标选择模式 */
+  targetMode?: TargetMode;
 }
 
 // [A-2] 随从关键词系统
@@ -124,4 +134,19 @@ export interface Deck {
   cards: SpellType[];
   createdAt: number;
   lastUsed: number;
+}
+
+// [P3-2] 英雄技能树
+export interface HeroSkill {
+  id: string;
+  name: string;
+  description: string;
+  emoji: string;
+  manaCost: number;
+  mechanic: Mechanic;
+  damage?: number;
+  armorGain?: number;
+  heal?: number;
+  draw?: number;
+  element: string;
 }

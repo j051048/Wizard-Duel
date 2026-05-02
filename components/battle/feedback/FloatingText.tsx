@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export type FloatingTextType = 'damage' | 'heal' | 'armor' | 'crit' | 'mana' | 'status';
+export type FloatingTextType = 'damage' | 'heal' | 'armor' | 'crit' | 'mana' | 'status' | 'combo';
 
 export interface FloatingTextItem {
   id: string;
@@ -37,12 +37,22 @@ const FloatingText: React.FC<{ item: FloatingTextItem }> = ({ item }) => {
     switch (item.type) {
       case 'crit':
         return {
-          color: 'text-red-500',
-          shadow: 'drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]',
-          scale: [0.5, 1.8, 1.2],  // 暴击更大的弹跳
-          yOffset: -140,  // 飘得更高
+          color: 'text-yellow-400',
+          shadow: 'drop-shadow-[0_0_12px_rgba(255,215,0,0.9)]',
+          scale: [0.5, 1.8, 1.2],
+          yOffset: -140,
           emoji: '💥',
-          fontSize: 'text-5xl font-extrabold',  // 更大字体
+          fontSize: 'text-5xl font-extrabold',
+          shake: true
+        };
+      case 'combo':
+        return {
+          color: 'text-purple-400',
+          shadow: 'drop-shadow-[0_0_15px_rgba(168,85,247,0.9)]',
+          scale: [0.3, 2.0, 1.4],
+          yOffset: -120,
+          emoji: '⚡',
+          fontSize: 'text-4xl font-extrabold',
           shake: true
         };
       case 'heal':
@@ -99,8 +109,8 @@ const FloatingText: React.FC<{ item: FloatingTextItem }> = ({ item }) => {
     }
   }, [item.type]);
 
-  // [P0 UX] 延长显示时间：暴击 2.5s，普通 2s
-  const duration = item.type === 'crit' ? 2.5 : (item.duration || 2.0);
+  // [P0 UX] 延长显示时间：暴击/combo 2.5s，普通 2s
+  const duration = (item.type === 'crit' || item.type === 'combo') ? 2.5 : (item.duration || 2.0);
 
   return (
     <motion.div

@@ -65,6 +65,7 @@ export function useTurnManager(
     } else if (newPhase === 'MULLIGAN_PHASE') {
       startTimer(MULLIGAN_DURATION);
     } else {
+      // SKILL_SELECT_PHASE and others: no timer
       stopTimer();
     }
   }, [startTimer, stopTimer]);

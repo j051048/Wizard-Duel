@@ -25,47 +25,71 @@ const getAudioContext = () => {
     return globalAudioCtx;
 };
 
+// SFX mapping with optional rate/volume overrides for pitch-variant reuse
+interface SfxMapping {
+  src: string;
+  rate?: number;   // playbackRate (1.0 = normal)
+  volume?: number; // volume multiplier (1.0 = use global sfxVolume)
+}
+
+const sfxFile = (src: string, rate?: number, volume?: number): SfxMapping => ({ src, rate, volume });
+
 const AUDIO_CONFIG = {
   bgm: {
     lobby: '/audio/bgm-lobby.mp3',
     battle: '/audio/bgm-battle_tavern.mp3',
   },
   sfx: {
-    cardPlay: '/audio/sfx-card-play.mp3',
-    hit: '/audio/sfx-hit.mp3',
-    block: '/audio/sfx-block.mp3',
-    victory: '/audio/sfx-victory.mp3',
-    defeat: '/audio/sfx-defeat.mp3',
-    // Additional SFX (mapped to existing audio files)
-    turn_start: '/audio/sfx-card-play.mp3',
-    turn_end: '/audio/sfx-block.mp3',
-    card_draw: '/audio/sfx-card-play.mp3',
-    button_click: '/audio/sfx-card-play.mp3',
-    damage: '/audio/sfx-hit.mp3',
-    heal: '/audio/sfx-block.mp3',
-    freeze: '/audio/sfx-block.mp3',
-    burn: '/audio/sfx-hit.mp3',
-    crit: '/audio/sfx-hit.mp3',
-    combo: '/audio/sfx-card-play.mp3',
-    counter: '/audio/sfx-block.mp3',
-    projectile: '/audio/sfx-hit.mp3',
-    shield: '/audio/sfx-block.mp3',
-    level_up: '/audio/sfx-victory.mp3',
-    pack_open: '/audio/sfx-card-play.mp3',
-    card_reveal: '/audio/sfx-card-play.mp3',
-        spell: {
+    cardPlay: sfxFile('/audio/sfx-card-play.mp3'),
+    hit: sfxFile('/audio/sfx-hit.mp3'),
+    block: sfxFile('/audio/sfx-block.mp3'),
+    victory: sfxFile('/audio/sfx-victory.mp3'),
+    defeat: sfxFile('/audio/sfx-defeat.mp3'),
+    turn_start: sfxFile('/audio/sfx-card-play.mp3', 0.9, 0.6),
+    turn_end: sfxFile('/audio/sfx-block.mp3', 0.8, 0.4),
+    card_draw: sfxFile('/audio/sfx-card-play.mp3', 1.2, 0.5),
+    button_click: sfxFile('/audio/sfx-card-play.mp3', 1.1, 0.3),
+    damage: sfxFile('/audio/sfx-hit.mp3'),
+    heal: sfxFile('/audio/sfx-block.mp3', 1.1, 0.7),
+    freeze: sfxFile('/audio/sfx-block.mp3', 0.9, 0.8),
+    burn: sfxFile('/audio/sfx-hit.mp3', 1.1, 0.7),
+    crit: sfxFile('/audio/sfx-hit.mp3', 0.7, 1.0),
+    combo: sfxFile('/audio/sfx-card-play.mp3', 1.5, 0.8),
+    counter: sfxFile('/audio/sfx-block.mp3', 1.2, 0.8),
+    projectile: sfxFile('/audio/sfx-hit.mp3'),
+    shield: sfxFile('/audio/sfx-block.mp3'),
+    level_up: sfxFile('/audio/sfx-victory.mp3'),
+    pack_open: sfxFile('/audio/sfx-card-play.mp3'),
+    card_reveal: sfxFile('/audio/sfx-card-play.mp3'),
+    // [P0-3] New SFX mappings
+    minion_attack: sfxFile('/audio/sfx-hit.mp3', 1.2, 0.8),
+    minion_death: sfxFile('/audio/sfx-block.mp3', 0.8, 0.6),
+    status_burn: sfxFile('/audio/sfx-spell-fire.mp3', 1.1, 0.6),
+    status_freeze: sfxFile('/audio/sfx-spell-ice.mp3', 0.9, 0.6),
+    status_poison: sfxFile('/audio/sfx-spell-vine.mp3', 1.0, 0.6),
+    hero_skill: sfxFile('/audio/sfx-card-play.mp3', 0.7, 0.9),
+    combo_streak: sfxFile('/audio/sfx-hit.mp3', 1.5, 0.8),
+    shield_break: sfxFile('/audio/sfx-block.mp3', 1.3, 0.9),
+    crit_hit: sfxFile('/audio/sfx-hit.mp3', 0.7, 1.0),
+    secret_trigger: sfxFile('/audio/sfx-spell-thunder.mp3', 1.0, 1.0),
+    secret_play: sfxFile('/audio/sfx-card-play.mp3', 0.8, 0.7),
+    summon: sfxFile('/audio/sfx-spell-rock.mp3', 1.0, 0.8),
+    deathrattle: sfxFile('/audio/sfx-spell-fire.mp3', 0.6, 0.9),
+    silence_sfx: sfxFile('/audio/sfx-block.mp3', 1.4, 0.7),
+    aoe_hit: sfxFile('/audio/sfx-spell-fire.mp3', 0.9, 1.0),
+    divine_shield_block: sfxFile('/audio/sfx-block.mp3', 1.5, 0.9),
+    tangle: sfxFile('/audio/sfx-spell-vine.mp3', 0.8, 0.7),
+    spell: {
       fire: '/audio/sfx-spell-fire.mp3',
       vine: '/audio/sfx-spell-vine.mp3',
       ice: '/audio/sfx-spell-ice.mp3',
       thunder: '/audio/sfx-spell-thunder.mp3',
       rock: '/audio/sfx-spell-rock.mp3',
       skip: '/audio/sfx-card-play.mp3',
-      // 特殊卡牌音效映射到已有音效
       healing: '/audio/sfx-spell-ice.mp3',
       aoe: '/audio/sfx-spell-fire.mp3',
       draw: '/audio/sfx-card-play.mp3',
       silence: '/audio/sfx-spell-rock.mp3',
-      // 英雄技能使用对应元素音效
       hero_fire: '/audio/sfx-spell-fire.mp3',
       hero_vine: '/audio/sfx-spell-vine.mp3',
       hero_ice: '/audio/sfx-spell-ice.mp3',
@@ -73,14 +97,17 @@ const AUDIO_CONFIG = {
       hero_rock: '/audio/sfx-spell-rock.mp3',
     } as Record<string, string>,
   },
-  // 音效冷却时间配置（毫秒）- 已调整以减少噪音
   cooldowns: {
-    cardPlay: 500,    // 出牌音效冷却 (原200)
-    hit: 600,         // 命中音效冷却 (原300)
-    block: 600,       // 格挡音效冷却 (原300)
-    spell: 800,       // 法术音效冷却 (原400)
-    victory: 2000,    // 胜利音效冷却
-    defeat: 2000,     // 失败音效冷却
+    cardPlay: 500,
+    hit: 600,
+    block: 600,
+    spell: 800,
+    victory: 2000,
+    defeat: 2000,
+    minion_attack: 400,
+    minion_death: 500,
+    crit_hit: 800,
+    combo_streak: 600,
   } as Record<string, number>,
 };
 
@@ -216,7 +243,7 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
     }
   }, []);
 
-  // 播放音效（带冷却和优先级）
+  // 播放音效（带冷却、优先级、rate/volume 覆盖）
   const playSfx = useCallback((effect: string) => {
     if (isMuted) return;
 
@@ -231,7 +258,10 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
       return; // 低优先级音效被跳过
     }
 
-    const src = (AUDIO_CONFIG.sfx as any)[effect];
+    const mapping: SfxMapping | undefined = (AUDIO_CONFIG.sfx as any)[effect];
+    if (!mapping) return;
+
+    const src = mapping.src;
     if (!src) return;
 
     try {
@@ -241,11 +271,12 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
         if (!audio.paused && priority < 5) {
           return;
         }
-        
+
         audio.currentTime = 0;
-        audio.volume = sfxVolume;
+        audio.volume = sfxVolume * (mapping.volume ?? 1);
+        audio.playbackRate = mapping.rate ?? 1;
         audio.play().catch(() => {});
-        
+
         activeSfxCountRef.current++;
         setCooldown(effect);
       }

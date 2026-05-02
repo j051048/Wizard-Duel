@@ -22,14 +22,16 @@ export interface ComboConfig {
   icon: string;           // 连击图标
 }
 
-/** 
+/**
  * [P1 Fix #11] 通用元素连击配置
- * 可在此扩展更多元素的连击规则
+ * [P2-2] 新增 vine/rock 连击
  */
 export const COMBO_CONFIGS: ComboConfig[] = [
   { element: 'thunder', maxStack: 2, bonusPerStack: 0.5, name: '闪电连击', icon: '⚡' },
   { element: 'fire', maxStack: 3, bonusPerStack: 0.3, name: '燃烧连击', icon: '🔥' },
   { element: 'ice', maxStack: 2, bonusPerStack: 0.25, name: '冰霜连击', icon: '❄️' },
+  { element: 'vine', maxStack: 2, bonusPerStack: 0.25, name: '自然连击', icon: '🌿' },
+  { element: 'rock', maxStack: 2, bonusPerStack: 0.3, name: '岩石连击', icon: '🪨' },
 ];
 
 // ============ 连击状态 ============

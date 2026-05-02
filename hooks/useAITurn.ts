@@ -13,6 +13,7 @@ import { DuelState, GameActionCommand } from '../types';
 import {
   executeAITurn, executeSpell, checkGameOver
 } from '../services/gameLogic';
+import { getHeroSkillById } from '../data/heroSkills';
 import { AIDifficultyConfig, AI_DIFFICULTY_PRESETS } from '../services/ai';
 import { GameRuleEngine } from '../services/GameRuleEngine';
 import { RuleArbiter, ArbiterEvent } from '../services/RuleArbiter';
@@ -118,11 +119,57 @@ export function useAITurn({
     commands.push({ type: 'SET_AI_STATUS', payload: { emote: 'thinking', message: '让我想想...' }, delay: AI_EMOTE_DELAY });
     commands.push({ type: 'WAIT', payload: null, delay: AI_THINK_DELAY });
 
+    // [P3-2] AI hero skill usage: use skill if available, affordable, and not yet used
+    let latestState = { ...state };
+    if (state.opponentSelectedHeroSkill && !state.opponentHeroSkillUsed) {
+      const aiSkill = getHeroSkillById(state.opponentSelectedHeroSkill);
+      if (aiSkill && state.opponentMana >= aiSkill.manaCost) {
+        latestState = {
+          ...latestState,
+          opponentMana: latestState.opponentMana - aiSkill.manaCost,
+          opponentHeroSkillUsed: true,
+        };
+        if (aiSkill.damage) {
+          latestState = { ...latestState, playerHP: latestState.playerHP - aiSkill.damage };
+          commands.push({ type: 'ADD_MESSAGE', payload: `${aiSkill.emoji} 对手使用「${aiSkill.name}」造成 ${aiSkill.damage} 点伤害！` });
+        }
+        if (aiSkill.armorGain) {
+          latestState = { ...latestState, opponentArmor: latestState.opponentArmor + aiSkill.armorGain };
+          commands.push({ type: 'ADD_MESSAGE', payload: `${aiSkill.emoji} 对手使用「${aiSkill.name}」获得 ${aiSkill.armorGain} 点护甲` });
+        }
+        if (aiSkill.heal) {
+          latestState = { ...latestState, opponentHP: Math.min(30, latestState.opponentHP + aiSkill.heal) };
+          commands.push({ type: 'ADD_MESSAGE', payload: `${aiSkill.emoji} 对手使用「${aiSkill.name}」恢复 ${aiSkill.heal} 点生命` });
+        }
+        if (aiSkill.draw) {
+          let deck = [...latestState.opponentDeck];
+          let hand = [...latestState.opponentHand];
+          for (let i = 0; i < aiSkill.draw && deck.length > 0; i++) {
+            hand.push(deck[0]);
+            deck = deck.slice(1);
+          }
+          latestState = { ...latestState, opponentDeck: deck, opponentHand: hand, opponentHandSize: hand.length };
+          commands.push({ type: 'ADD_MESSAGE', payload: `${aiSkill.emoji} 对手抽了 ${aiSkill.draw} 张牌` });
+        }
+        commands.push({ type: 'UPDATE_STATE', payload: latestState });
+        if (checkGameOver(latestState)) {
+          commands.push({
+            type: 'UPDATE_UI', payload: {
+              isGameOver: true,
+              gameResult: latestState.playerHP <= 0 ? 'LOSS' : 'WIN',
+              resultText: latestState.playerHP <= 0 ? 'LOSS' : 'WIN',
+            }
+          });
+          commands.push({ type: 'SET_PHASE', payload: 'ROUND_RESET' });
+          enqueue(commands, 'ai_turn_skill');
+          return;
+        }
+      }
+    }
+
     // 2. [Fix 1.3] 逐张出牌，每张都用 executeSpell 计算中间状态
     const aiConfig = aiDifficultyConfig || AI_DIFFICULTY_PRESETS.normal;
-    const { newState: aiResultState, commands: aiCommands } = executeAITurn(state, aiConfig);
-
-    let latestState = { ...state };
+    const { newState: aiResultState, commands: aiCommands } = executeAITurn(latestState, aiConfig);
 
     for (let i = 0; i < aiCommands.length; i++) {
       const cmd = aiCommands[i];

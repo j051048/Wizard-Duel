@@ -5,7 +5,7 @@
  * 
  * 状态转移图：
  * 
- *   DRAFT_PHASE ──► MULLIGAN_PHASE ──► PLAYER_TURN
+ *   DRAFT_PHASE ──► MULLIGAN_PHASE ──► SKILL_SELECT_PHASE ──► PLAYER_TURN
  *                                         │
  *                    ┌────────────────────┘
  *                    ▼
@@ -30,7 +30,8 @@ import { DuelPhase } from '../types';
 /** 定义合法的状态转移 */
 const VALID_TRANSITIONS: Record<DuelPhase, DuelPhase[]> = {
   'DRAFT_PHASE': ['MULLIGAN_PHASE'],
-  'MULLIGAN_PHASE': ['PLAYER_TURN', 'TURN_TRANSITION'],
+  'MULLIGAN_PHASE': ['SKILL_SELECT_PHASE', 'PLAYER_TURN', 'TURN_TRANSITION'],
+  'SKILL_SELECT_PHASE': ['PLAYER_TURN', 'ROUND_RESET'],
   'PLAYER_TURN': ['TRIGGER_RESOLVE', 'DEATH_CHECK', 'OPPONENT_TURN', 'WAITING_FOR_OPPONENT', 'ROUND_RESET', 'TURN_TRANSITION'],
   'OPPONENT_TURN': ['TRIGGER_RESOLVE', 'DEATH_CHECK', 'MINION_COMBAT', 'ROUND_RESET', 'TURN_TRANSITION'],
   'WAITING_FOR_OPPONENT': ['PLAYER_TURN', 'TRIGGER_RESOLVE', 'DEATH_CHECK', 'TURN_TRANSITION', 'ROUND_RESET'], // [PVP]

@@ -84,7 +84,7 @@ export const SPELLS: Spell[] = [
   }),
   defineSpell({
     id: 'thunder', name: '闪电箭', manaCost: 2, damage: 3, rarity: 'common', mechanic: 'charge', cardSet: 'core',
-    artSrc: '/cards/thunder-chainlightning.webp'
+    artSrc: '/cards/thunder-chainlightning.webp', targetMode: 'hero_or_minion'
   }),
   defineSpell({
     id: 'rock', name: '铁皮术', manaCost: 1, armorGain: 3, rarity: 'common', mechanic: 'fortify', cardSet: 'core',
@@ -94,7 +94,7 @@ export const SPELLS: Spell[] = [
   // ============ Classic Set (Extension 1) ============
   defineSpell({
     id: 'fire2', name: '火球术', manaCost: 3, damage: 5, rarity: 'common', mechanic: 'burn', cardSet: 'classic',
-    artSrc: '/cards/fire-fireball.webp'
+    artSrc: '/cards/fire-fireball.webp', targetMode: 'hero_or_minion'
   }),
   defineSpell({
     id: 'vine2', name: '纠缠根须', manaCost: 1, damage: 2, rarity: 'common', mechanic: 'tangle', cardSet: 'classic',
@@ -106,7 +106,7 @@ export const SPELLS: Spell[] = [
   }),
   defineSpell({
     id: 'thunder2', name: '连锁闪电', manaCost: 3, damage: 3, rarity: 'rare', mechanic: 'charge', cardSet: 'classic',
-    artSrc: '/cards/thunder-chain.webp'
+    artSrc: '/cards/thunder-chain.webp', targetMode: 'hero_or_minion'
   }),
   defineSpell({
     id: 'rock2', name: '石墙', manaCost: 2, armorGain: 7, rarity: 'rare', mechanic: 'fortify', cardSet: 'classic',
@@ -387,6 +387,33 @@ export const SPELLS: Spell[] = [
   defineSpell({ id: 'storm_summon' as SpellType, name: '风暴召唤', manaCost: 6, damage: 3, rarity: 'legendary', mechanic: 'charge', summonId: 'storm_giant', cardSet: 'expansion_1' }),
   defineSpell({ id: 'poison_dart' as SpellType, name: '毒镖', manaCost: 2, damage: 2, rarity: 'rare', mechanic: 'poison', value: 2, effectDuration: 3, cardSet: 'expansion_1', color: 'text-emerald-400', borderColor: 'border-emerald-400', shadowColor: 'rgba(52,211,153,0.5)', beats: 'skip' as SpellType }),
   defineSpell({ id: 'shield_bash' as SpellType, name: '圣盾冲锋', manaCost: 4, damage: 3, rarity: 'mythic', mechanic: 'divine_shield', summonId: 'shadow_fox', cardSet: 'expansion_1', color: 'text-amber-400', borderColor: 'border-amber-400', shadowColor: 'rgba(251,191,36,0.5)', beats: 'skip' as SpellType }),
+
+  // --- [P3-1] SECRETS (1 per element) ---
+  defineSpell({
+    id: 'secret_fire' as SpellType, name: '火焰陷阱', manaCost: 2, damage: 0, rarity: 'rare', mechanic: 'secret', cardSet: 'expansion_1',
+    description: '秘密：对手出牌时，对其造成 3 点伤害', shortDesc: '对手出牌 → 3伤',
+    color: 'text-orange-400', borderColor: 'border-orange-400', shadowColor: 'rgba(249,115,22,0.5)', beats: 'skip' as SpellType
+  }),
+  defineSpell({
+    id: 'secret_ice' as SpellType, name: '冰霜陷阱', manaCost: 2, damage: 0, rarity: 'rare', mechanic: 'secret', cardSet: 'expansion_1',
+    description: '秘密：对手出牌时，冻结其 1 回合', shortDesc: '对手出牌 → 冻结',
+    color: 'text-cyan-400', borderColor: 'border-cyan-400', shadowColor: 'rgba(34,211,238,0.5)', beats: 'skip' as SpellType
+  }),
+  defineSpell({
+    id: 'secret_thunder' as SpellType, name: '雷电陷阱', manaCost: 2, damage: 0, rarity: 'rare', mechanic: 'secret', cardSet: 'expansion_1',
+    description: '秘密：对手出牌时，如果该牌费用 >= 4，抽 2 张牌', shortDesc: '对手出高费 → 抽2牌',
+    color: 'text-yellow-400', borderColor: 'border-yellow-400', shadowColor: 'rgba(250,204,21,0.5)', beats: 'skip' as SpellType
+  }),
+  defineSpell({
+    id: 'secret_vine' as SpellType, name: '荆棘陷阱', manaCost: 2, damage: 0, rarity: 'rare', mechanic: 'secret', cardSet: 'expansion_1',
+    description: '秘密：自己受到伤害时，恢复 4 点生命值', shortDesc: '受伤 → 回4HP',
+    color: 'text-green-400', borderColor: 'border-green-400', shadowColor: 'rgba(74,222,128,0.5)', beats: 'skip' as SpellType
+  }),
+  defineSpell({
+    id: 'secret_rock' as SpellType, name: '岩石陷阱', manaCost: 2, damage: 0, rarity: 'rare', mechanic: 'secret', cardSet: 'expansion_1',
+    description: '秘密：对手出牌时，获得 5 点护甲', shortDesc: '对手出牌 → +5甲',
+    color: 'text-slate-400', borderColor: 'border-slate-400', shadowColor: 'rgba(148,163,184,0.5)', beats: 'skip' as SpellType
+  }),
 ];
 
 export const STANDARD_SETS: CardSet[] = ['core', 'classic', 'tournament', 'expansion_1'];

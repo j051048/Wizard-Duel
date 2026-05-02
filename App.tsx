@@ -504,6 +504,8 @@ function App() {
                 isPlayerShaking={ui.isPlayerShaking}
                 isOpponentShaking={ui.isOpponentShaking}
                 setTargeting={gameLoopActions.setTargeting}
+                onSelectHeroSkill={gameLoopActions.selectHeroSkill}
+                onUseHeroSkill={gameLoopActions.useHeroSkill}
               />
             ) : (
               <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-50">

@@ -17,6 +17,9 @@ const EFFECT_DESCRIPTIONS: Record<string, string> = {
   thawed: '免疫冻结效果（刚解除冻结）',
   charge: '下一次同属性法术伤害翻倍',
   fortify: '获得额外护甲',
+  poisoned: '每回合受到毒素伤害',
+  shielded: '护盾保护，免疫一次伤害',
+  empowered: '法术伤害增强',
 };
 
 export const StatusEffectBadge: React.FC<StatusEffectBadgeProps> = ({ effect }) => {
@@ -26,6 +29,9 @@ export const StatusEffectBadge: React.FC<StatusEffectBadgeProps> = ({ effect }) 
       case 'tangle': return 'bg-green-950/80 border-green-500/50 text-green-200';
       case 'frozen': return 'bg-cyan-950/80 border-cyan-500/50 text-cyan-200';
       case 'thawed': return 'bg-blue-900/80 border-blue-400/50 text-blue-200';
+      case 'poisoned': return 'bg-lime-950/80 border-lime-500/50 text-lime-200';
+      case 'shielded': return 'bg-blue-950/80 border-blue-400/50 text-blue-200';
+      case 'empowered': return 'bg-amber-950/80 border-amber-400/50 text-amber-200';
       default: return 'bg-gray-900/80 border-gray-500/50 text-gray-200';
     }
   };
@@ -46,6 +52,9 @@ export const StatusEffectBadge: React.FC<StatusEffectBadgeProps> = ({ effect }) 
       case 'tangle': return '🌿';
       case 'frozen': return '❄️';
       case 'thawed': return '💧';
+      case 'poisoned': return '☠️';
+      case 'shielded': return '🛡️';
+      case 'empowered': return '✨';
       default: return '✨';
     }
   };

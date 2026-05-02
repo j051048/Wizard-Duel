@@ -47,6 +47,9 @@ export interface GameLoopActions {
   setTargeting: (data: GameLoopState['targetingData']) => void;
   handleMulligan: (indicesToReplace: number[]) => void;
   startFirstTurn: (currentState: DuelState) => void;
+  // [P3-2] Hero skill actions
+  selectHeroSkill: (skillId: string) => void;
+  useHeroSkill: () => boolean;
   // [PVP] 远程操作处理
   handleRemotePlayCard: (spellId: SpellType) => void;
   handleRemoteEndTurn: () => void;
@@ -199,7 +202,7 @@ export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoo
     pvpRoleRef 
   });
 
-  const { playCard, handleMulligan, startDuel, startTavernDuel: rawStartTavernDuel, startPvpDuel } = usePlayerActions({
+  const { playCard, handleMulligan, startDuel, startTavernDuel: rawStartTavernDuel, startPvpDuel, selectHeroSkill, useHeroSkill } = usePlayerActions({
     duelStateRef,
     phaseRef,
     isProcessing,
@@ -403,6 +406,8 @@ export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoo
       reset,
       setTargeting,
       handleMulligan,
+      selectHeroSkill,
+      useHeroSkill,
       startFirstTurn: startNewRound,
       handleRemotePlayCard,
       handleRemoteEndTurn,

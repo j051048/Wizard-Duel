@@ -10,11 +10,13 @@ import React, { useCallback } from 'react';
 import { 
   SpellType, DuelState, GameMode, AIProfile, GameActionCommand, AIStatus
 } from '../types';
-import { 
+import {
   createInitialDuelState, createTavernDuelState, canAffordSpell, createPvpDuelState
 } from '../services/gameLogic';
-import { GameRuleEngine } from '../services/GameRuleEngine';
+import { getHeroSkillById, getSkillChoices } from '../data/heroSkills';
 import { getGameRNG } from '../utils/seededRandom';
+import { GameRuleEngine } from '../services/GameRuleEngine';
+import { getElementType } from '../services/combat/elementSystem';
 import { validateCardPlay } from '../services/validation/antiCheat';
 import {
   PHASE_TRANSITION_DELAY, BANNER_WAIT_DELAY, ROUND_TRANSITION_DELAY
@@ -108,11 +110,61 @@ export function usePlayerActions({
 
     const commands: GameActionCommand[] = [
       { type: 'UPDATE_STATE', payload: newState },
-      // [Fix] 根据角色决定显示哪个 Banner
+      // [P3-2] After mulligan, transition to skill selection phase
+      {
+        type: 'EXECUTE_LOGIC',
+        payload: () => setPhase('SKILL_SELECT_PHASE'),
+        delay: PHASE_TRANSITION_DELAY
+      }
+    ];
+
+    setUiState((prev: any) => ({ ...prev, effectMessages: [] }));
+    enqueue(commands, 'mulligan');
+  }, [duelStateRef, enqueue, setDuelState, setUiState, setPhase]);
+
+  /** [P3-2] 英雄技能选择完成后开始对战 */
+  const selectHeroSkill = useCallback((skillId: string) => {
+    const state = duelStateRef.current;
+    if (!state) return;
+
+    // Validate skill exists
+    const skill = getHeroSkillById(skillId);
+    if (!skill) {
+      console.warn('[selectHeroSkill] Invalid skill ID:', skillId);
+      return;
+    }
+
+    // Determine opponent's main element from their hand
+    const opponentElementCounts: Record<string, number> = {};
+    for (const spellId of state.opponentHand) {
+      const el = getElementType(spellId);
+      if (el !== 'neutral') {
+        opponentElementCounts[el] = (opponentElementCounts[el] || 0) + 1;
+      }
+    }
+    let opponentMainElement: string | undefined;
+    let maxCount = 0;
+    for (const [el, count] of Object.entries(opponentElementCounts)) {
+      if (count > maxCount) { maxCount = count; opponentMainElement = el; }
+    }
+
+    // Pick a random skill from the opponent's main element
+    const opponentChoices = getSkillChoices(opponentMainElement);
+    const opponentSkill = opponentChoices[0]; // First choice is from main element
+    const opponentSkillId = opponentSkill?.id || 'skill_burn_shot';
+
+    const newState: DuelState = {
+      ...state,
+      selectedHeroSkill: skillId,
+      opponentSelectedHeroSkill: opponentSkillId,
+    };
+    setDuelState(newState);
+
+    const commands: GameActionCommand[] = [
+      { type: 'UPDATE_STATE', payload: newState },
       { type: 'EXECUTE_LOGIC', payload: () => showTurnBanner(pvpRoleRef?.current === 'player2' ? 'opponent' : 'player'), delay: PHASE_TRANSITION_DELAY },
       { type: 'WAIT', payload: null, delay: BANNER_WAIT_DELAY },
-      // [Fix] 根据角色决定消息
-      { type: 'ADD_MESSAGE', payload: pvpRoleRef?.current === 'player2' ? '等待对手...' : '对战开始！你的回合。' },
+      { type: 'ADD_MESSAGE', payload: `英雄技能「${skill.name}」已就绪！` },
       {
         type: 'EXECUTE_LOGIC',
         payload: () => startNewRound({ ...newState, roundNumber: 0 }),
@@ -120,9 +172,72 @@ export function usePlayerActions({
       }
     ];
 
-    setUiState((prev: any) => ({ ...prev, effectMessages: [] }));
-    enqueue(commands, 'mulligan');
+    setUiState((prev: any) => ({ ...prev, effectMessages: [`已选择英雄技能：${skill.emoji} ${skill.name}`] }));
+    enqueue(commands, 'select_skill');
   }, [duelStateRef, enqueue, showTurnBanner, setDuelState, setUiState, startNewRound, pvpRoleRef]);
+
+  /** [P3-2] 使用英雄技能（每回合一次，2 费） */
+  const useHeroSkill = useCallback((): boolean => {
+    const state = duelStateRef.current;
+    if (!state || phaseRef.current !== 'PLAYER_TURN' || isProcessing) return false;
+    if (!state.selectedHeroSkill) return false;
+    if (state.heroSkillsUsed) {
+      setUiState((prev: any) => ({
+        ...prev,
+        effectMessages: [...prev.effectMessages, '本回合已使用过英雄技能']
+      }));
+      return false;
+    }
+
+    const skill = getHeroSkillById(state.selectedHeroSkill);
+    if (!skill) return false;
+
+    const effectiveCost = Math.max(0, skill.manaCost + state.playerCostMod);
+    if (state.playerMana < effectiveCost) {
+      setUiState((prev: any) => ({
+        ...prev,
+        effectMessages: [...prev.effectMessages, '法力不足']
+      }));
+      return false;
+    }
+
+    // Build actions for the skill
+    const actions: GameActionCommand[] = [];
+    let newState: DuelState = {
+      ...state,
+      playerMana: state.playerMana - effectiveCost,
+      heroSkillsUsed: true,
+    };
+
+    if (skill.damage) {
+      newState = { ...newState, opponentHP: newState.opponentHP - skill.damage };
+      actions.push({ type: 'ADD_MESSAGE', payload: `${skill.emoji} ${skill.name} 造成 ${skill.damage} 点伤害！` });
+    }
+    if (skill.armorGain) {
+      newState = { ...newState, playerArmor: newState.playerArmor + skill.armorGain };
+      actions.push({ type: 'ADD_MESSAGE', payload: `${skill.emoji} ${skill.name} 获得 ${skill.armorGain} 点护甲` });
+    }
+    if (skill.heal) {
+      newState = { ...newState, playerHP: Math.min(30, newState.playerHP + skill.heal) };
+      actions.push({ type: 'ADD_MESSAGE', payload: `${skill.emoji} ${skill.name} 恢复 ${skill.heal} 点生命` });
+    }
+    if (skill.draw) {
+      const drawn: SpellType[] = [];
+      let deck = [...newState.playerDeck];
+      let hand = [...newState.playerHand];
+      for (let i = 0; i < skill.draw && deck.length > 0; i++) {
+        drawn.push(deck[0]);
+        hand.push(deck[0]);
+        deck = deck.slice(1);
+      }
+      newState = { ...newState, playerDeck: deck, playerHand: hand };
+      actions.push({ type: 'ADD_MESSAGE', payload: `${skill.emoji} 抽了 ${drawn.length} 张牌` });
+    }
+
+    actions.unshift({ type: 'UPDATE_STATE', payload: newState });
+    enqueue(actions, `hero_skill_${skill.id}_${Date.now()}`);
+    return true;
+  }, [duelStateRef, phaseRef, isProcessing, enqueue, setUiState]);
 
   /** 初始化标准对战 */
   const startDuel = useCallback((playerDeck: SpellType[], _opponentDeck: SpellType[], gameMode: GameMode = 'standard') => {
@@ -177,5 +292,7 @@ export function usePlayerActions({
     startDuel,
     startTavernDuel,
     startPvpDuel,
+    selectHeroSkill,
+    useHeroSkill,
   };
 }
