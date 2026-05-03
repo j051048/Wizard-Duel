@@ -1,17 +1,17 @@
 /**
  * useGameEndHandler - 游戏结束处理
- * 
+ *
  * [#5 App.tsx 瘦身] 从 App.tsx 提取游戏结束逻辑
- * 
+ *
  * 职责：
  * - 监听游戏结束状态
  * - 处理结算、排名更新、任务进度
- * - 调用 API 进行结算
+ * - 调用 API 进行结算（fire-and-forget，不阻塞 UI）
  */
 
 import { useEffect, useCallback, useRef } from 'react';
 import { DuelState } from '../types/duel';
-import { SpellType } from '../types'; // Corrected import path for SpellType
+import { SpellType } from '../types';
 import { ApiService } from '../services/api';
 import { useUserStore } from '../stores/useUserStore';
 import { useUIStore } from '../stores/useUIStore';
@@ -42,7 +42,88 @@ export function useGameEndHandler({
   const isProcessingRef = useRef(false);
 
   /**
-   * 核心结算逻辑
+   * 异步保存到 Supabase（fire-and-forget，不阻塞 UI）
+   */
+  const saveToSupabase = useCallback(async (
+    result: 'WIN' | 'LOSS',
+    scoreDelta: number,
+    opponentHP: number
+  ) => {
+    const user = useUserStore.getState();
+    const ui = useUIStore.getState();
+
+    if (!user.activeAddress) return;
+
+    const supabaseUid = user.supabaseUserId;
+
+    try {
+      const { supabase, isSupabaseConfigured, saveBattleResult } = await import('../services/supabase');
+
+      let sessionUserId = supabaseUid;
+      if (!sessionUserId && isSupabaseConfigured) {
+        const { data: { session } } = await supabase.auth.getSession();
+        sessionUserId = session?.user?.id ?? null;
+      }
+
+      if (sessionUserId && isSupabaseConfigured) {
+        const mock = calculatePayout(ui.selectedBet, result);
+
+        const rpcResult = await saveBattleResult({
+          user_id: sessionUserId,
+          opponent_name: gameLoopState.duelState?.aiProfile?.name || 'Unknown',
+          result: result.toLowerCase() as 'win' | 'loss' | 'draw',
+          turns: gameLoopState.duelState?.roundNumber || 0,
+          gold_earned: mock.payout,
+          xp_earned: result === 'WIN' ? 50 : 10,
+          score_delta: scoreDelta
+        });
+
+        if (rpcResult?.success) {
+          user.setBalance(rpcResult.new_balance);
+          user.setRankScore(rpcResult.new_score);
+          const rpcRank = getRankByScore(rpcResult.new_score);
+          user.setUserRank(rpcRank);
+          // Update finalResult with server-authoritative data
+          const currentResult = useUIStore.getState().finalResult;
+          if (currentResult) {
+            useUIStore.getState().setFinalResult({
+              ...currentResult,
+              payout: rpcResult.new_balance - user.balance + currentResult.payout,
+            });
+          }
+          console.log(`[Battle] Supabase RPC 成功: score=${rpcResult.new_score}, rank=${rpcResult.new_rank}`);
+        }
+
+        user.loadUserData(user.activeAddress).catch(() => {});
+        return;
+      }
+    } catch (supabaseErr) {
+      console.warn('[Battle] Supabase save skipped:', supabaseErr);
+    }
+
+    // Fallback: localStorage API
+    try {
+      const pCard = (gameLoopState.playerCard || 'fire') as SpellType;
+      const oCard = (gameLoopState.opponentCard || 'fire') as SpellType;
+      const { newScore, newRank } = calculateRankUpdate(user.rankScore, result, user.winStreak);
+      const res = await ApiService.settleGame(
+        user.activeAddress,
+        ui.selectedBet,
+        result,
+        pCard,
+        oCard,
+        { finalPlayerHP: 100, finalOpponentHP: opponentHP },
+        newScore,
+        newRank
+      );
+      user.setBalance(res.newBalance);
+    } catch (e) {
+      console.warn('[Battle] Fallback settlement failed:', e);
+    }
+  }, [gameLoopState]);
+
+  /**
+   * 核心结算逻辑 — 乐观更新 UI，后台异步保存
    */
   const processGameEnd = useCallback(async (
     result: 'WIN' | 'LOSS',
@@ -51,7 +132,6 @@ export function useGameEndHandler({
     opponentMaxMana: number,
     opponentHP: number
   ) => {
-    // 防止重复处理
     if (isProcessingRef.current) return;
     isProcessingRef.current = true;
 
@@ -65,7 +145,7 @@ export function useGameEndHandler({
     const newStreak = result === 'WIN' ? user.winStreak + 1 : 0;
     user.setWinStreak(newStreak);
 
-    // [P1] 首胜奖励：每天第一次胜利额外获得 50 金币
+    // 首胜奖励
     let firstWinBonus = 0;
     if (result === 'WIN') {
       const today = new Date().toDateString();
@@ -76,7 +156,7 @@ export function useGameEndHandler({
       }
     }
 
-    // [P1] 金币救济：余额低于 50 时，每天首次登录补 30 金币
+    // 金币救济
     let reliefBonus = 0;
     if (user.balance < 50) {
       const today = new Date().toDateString();
@@ -95,134 +175,51 @@ export function useGameEndHandler({
     const damage = opponentMaxMana - opponentHP;
     if (damage > 0) QuestManager.updateProgress('deal_damage', damage);
 
-    // [P1] 战斗通行证经验：胜利 50 XP，失败 10 XP
+    // 战斗通行证经验
     const bpXP = result === 'WIN' ? 50 : 10;
     BattlePassService.addXP(bpXP);
-    BattlePassService.onBattleComplete(
-      result === 'WIN',
-      [], // usedElements — not tracked client-side yet
-      {}  // damage by element — not tracked client-side yet
-    );
+    BattlePassService.onBattleComplete(result === 'WIN', [], {});
 
-    // 计算排名更新（客户端先乐观计算）
-    let { newScore, newRank, scoreDelta } = calculateRankUpdate(user.rankScore, result, newStreak);
+    // 排名更新（客户端乐观计算）
+    const { newScore, newRank, scoreDelta } = calculateRankUpdate(user.rankScore, result, newStreak);
     user.setRankScore(newScore);
     user.setUserRank(newRank);
 
-    try {
-      let finalPayout = 0;
-      let finalIsCrit = false;
+    // ===== 立即计算 payout 并显示 UI（不等待 Supabase） =====
+    const mock = calculatePayout(ui.selectedBet, result);
+    let finalPayout = mock.payout;
+    const finalIsCrit = mock.isCrit;
 
-            if (user.activeAddress) {
-        // 尝试保存到 Supabase（可选，失败则回退）
-        let supabaseSaved = false;
-        const supabaseUid = user.supabaseUserId;
-
-        try {
-          const { supabase, isSupabaseConfigured, saveBattleResult } = await import('../services/supabase');
-          
-          // 使用 store 中缓存的 supabaseUserId，或者回退到 session 查询
-          let sessionUserId = supabaseUid;
-          if (!sessionUserId && isSupabaseConfigured) {
-            const { data: { session } } = await supabase.auth.getSession();
-            sessionUserId = session?.user?.id ?? null;
-          }
-          
-          if (sessionUserId && isSupabaseConfigured) {
-            const mock = calculatePayout(ui.selectedBet, result);
-            
-            // [P0 Fix #3] 调用原子化 settlement RPC
-            // 包含：金币结算、经验增加、积分变动、战绩记录
-            const rpcResult = await saveBattleResult({
-              user_id: sessionUserId,
-              opponent_name: gameLoopState.duelState?.aiProfile?.name || 'Unknown',
-              result: result.toLowerCase() as 'win' | 'loss' | 'draw',
-              turns: gameLoopState.duelState?.roundNumber || 0,
-              gold_earned: mock.payout,
-              xp_earned: result === 'WIN' ? 50 : 10,
-              score_delta: scoreDelta // 传递客户端计算的 ELO 变化
-            });
-
-            // 立即使用 RPC 返回的最新数据更新 store
-            if (rpcResult?.success) {
-              user.setBalance(rpcResult.new_balance);
-              user.setRankScore(rpcResult.new_score);
-              const rpcRank = getRankByScore(rpcResult.new_score);
-              user.setUserRank(rpcRank);
-              // 用服务端的权威数据覆盖客户端的乐观计算
-              newScore = rpcResult.new_score;
-              newRank = rpcRank;
-              console.log(`[Battle] RPC 成功: score=${rpcResult.new_score}, rank=${rpcResult.new_rank}`);
-            }
-            
-            finalPayout = mock.payout;
-            finalIsCrit = mock.isCrit;
-            supabaseSaved = true;
-            
-            // 异步加载完整数据（不阻塞结算UI）
-            user.loadUserData(user.activeAddress!).catch(() => {});
-          }
-        } catch (supabaseErr) {
-          console.warn('Supabase save skipped:', supabaseErr);
-        }
-
-        if (!supabaseSaved) {
-          // 回退到现有的 API 结算（localStorage mock）
-          const res = await ApiService.settleGame(
-            user.activeAddress,
-            ui.selectedBet,
-            result,
-            playerCard,
-            opponentCard,
-            {
-              finalPlayerHP: 100,
-              finalOpponentHP: opponentHP
-            },
-            newScore,
-            newRank
-          );
-          user.setBalance(res.newBalance); // 本地模式直接设置
-          // [Fix] RPC失败回退模式下，不要重新拉取数据，否则会覆盖本地的乐观更新
-          // user.loadUserData(user.activeAddress!);
-          finalPayout = res.payout;
-          finalIsCrit = res.isCrit;
-        }
-      } else {
-        const mock = calculatePayout(ui.selectedBet, result);
-        finalPayout = mock.payout;
-        finalIsCrit = mock.isCrit;
-      }
-
-      // [P1] 应用首胜和救济金奖励
-      const bonusTotal = firstWinBonus + reliefBonus;
-      if (bonusTotal > 0) {
-        user.setBalance(user.balance + bonusTotal);
-        finalPayout += bonusTotal;
-      }
-
-      ui.setFinalResult({
-        result,
-        player: playerCard,
-        opponent: opponentCard,
-        payout: finalPayout,
-        isCrit: finalIsCrit,
-        rankUpdates: { scoreDelta, newScore, newRank }
-      });
-      ui.setGameState('RESULT');
-    } catch (e) {
-      console.error('Settlement failed:', e);
-      onResetGame();
-    } finally {
-      isProcessingRef.current = false;
+    // 应用首胜和救济金奖励
+    const bonusTotal = firstWinBonus + reliefBonus;
+    if (bonusTotal > 0) {
+      user.setBalance(user.balance + bonusTotal);
+      finalPayout += bonusTotal;
     }
-  }, [onGameEndFeedback, onResetGame]);
+
+    // 立即显示结算页面
+    ui.setFinalResult({
+      result,
+      player: playerCard,
+      opponent: opponentCard,
+      payout: finalPayout,
+      isCrit: finalIsCrit,
+      rankUpdates: { scoreDelta, newScore, newRank }
+    });
+    ui.setGameState('RESULT');
+
+    isProcessingRef.current = false;
+
+    // ===== 后台异步保存到 Supabase（不阻塞 UI） =====
+    saveToSupabase(result, scoreDelta, opponentHP).catch(() => {});
+  }, [onGameEndFeedback, saveToSupabase]);
 
   /**
    * 监听游戏结束状态
    */
   useEffect(() => {
     const ui = useUIStore.getState();
-    
+
     if (
       gameLoopState.isGameOver &&
       gameLoopState.gameResult &&

@@ -59,8 +59,8 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
   const borderColor = hpPercentage <= 0.25 ? '#ef4444' : hpPercentage <= 0.5 ? '#f59e0b' : (isPlayer ? '#3b82f6' : '#dc2626');
 
   return (
-    <div className={`relative group transition-all duration-300 ${isShaking ? 'animate-shake-strong' : ''}`}>
-      
+    <div className={`relative group transition-all duration-300 ${isShaking ? 'hero-damaged' : ''} ${showHeal ? 'hero-healed' : ''}`}>
+
       <div className={`
         relative flex items-center gap-3 p-2 pr-4
         bg-gradient-to-r ${isPlayer ? 'from-slate-900/95 via-slate-800/90 to-slate-900/80' : 'from-red-950/95 via-slate-900/90 to-slate-900/80'}

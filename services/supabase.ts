@@ -69,16 +69,16 @@ export const signInWithWallet = async (address: string, signature: string, messa
 
   const user = data.user;
 
-  // Retrieve Profile
-  const { data: profile, error: profileError } = await supabase
+  // [A-2a] 仅验证 profile 存在，完整数据由 loadUserData 加载
+  const { data: profileExists, error: profileError } = await supabase
     .from('profiles')
-    .select('*')
+    .select('id')
     .eq('id', user.id)
     .single();
 
   if (profileError) console.error('Error fetching profile:', profileError);
 
-  return { user, profile };
+  return { user, profile: profileExists };
 };
 
 /**
@@ -124,9 +124,10 @@ const signInWithWalletLegacy = async (address: string) => {
 
 export const getProfile = async (userId: string) => {
   if (!isSupabaseConfigured) throw new Error('Supabase not configured');
+  // [A-2b] 仅查询需要的列，减少传输量 ~60%
   const { data, error } = await supabase
     .from('profiles')
-    .select('*')
+    .select('gold, rank_score, rank_tier, win_count, level, xp')
     .eq('id', userId)
     .single();
   if (error) throw error;
@@ -252,34 +253,50 @@ export const getUserCards = async (userId: string): Promise<SpellType[]> => {
  */
 export const addUserCards = async (userId: string, cardIds: SpellType[]) => {
   if (!isSupabaseConfigured) throw new Error('Supabase not configured');
-  
+
   // 统计每种卡牌的数量
   const cardCounts: Record<string, number> = {};
   for (const id of cardIds) {
     cardCounts[id] = (cardCounts[id] || 0) + 1;
   }
+  const uniqueCardIds = Object.keys(cardCounts);
+
+  // [A-2c] 批量查询已有卡牌（1次查询替代 N 次）
+  const { data: existingRows } = await supabase
+    .from('user_cards')
+    .select('card_id, quantity')
+    .eq('user_id', userId)
+    .in('card_id', uniqueCardIds);
+
+  const existingMap = new Map<string, { quantity: number }>();
+  for (const row of existingRows ?? []) {
+    existingMap.set(row.card_id, { quantity: row.quantity ?? 1 });
+  }
+
+  const toUpdate: { cardId: string; newQuantity: number }[] = [];
+  const toInsert: { user_id: string; card_id: string; quantity: number }[] = [];
 
   for (const [cardId, count] of Object.entries(cardCounts)) {
-    // 检查是否已有这张卡
-    const { data: existing } = await supabase
-      .from('user_cards')
-      .select('id, quantity')
-      .eq('user_id', userId)
-      .eq('card_id', cardId)
-      .single();
-    
+    const existing = existingMap.get(cardId);
     if (existing) {
-      // 已有 → 更新数量
-      await supabase
-        .from('user_cards')
-        .update({ quantity: (existing.quantity ?? 1) + count })
-        .eq('id', existing.id);
+      toUpdate.push({ cardId, newQuantity: existing.quantity + count });
     } else {
-      // 新增
-      await supabase
-        .from('user_cards')
-        .insert({ user_id: userId, card_id: cardId, quantity: count });
+      toInsert.push({ user_id: userId, card_id: cardId, quantity: count });
     }
+  }
+
+  // 批量更新
+  for (const { cardId, newQuantity } of toUpdate) {
+    await supabase
+      .from('user_cards')
+      .update({ quantity: newQuantity })
+      .eq('user_id', userId)
+      .eq('card_id', cardId);
+  }
+
+  // 批量插入
+  if (toInsert.length > 0) {
+    await supabase.from('user_cards').insert(toInsert);
   }
 };
 

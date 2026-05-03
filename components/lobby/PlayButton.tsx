@@ -28,7 +28,7 @@ const PlayButton: React.FC<PlayButtonProps> = ({
         className={`
           w-full relative group ${isMobile ? 'h-14' : 'h-16 md:h-20'} rounded-full flex items-center justify-center overflow-hidden transition-all duration-500
           ${canStart && selectedDeck
-            ? 'shadow-[0_0_40px_rgba(147,51,234,0.4)] hover:shadow-[0_0_60px_rgba(147,51,234,0.7)] hover:scale-[1.02]' 
+            ? 'breathe-glow hover:shadow-[0_0_60px_rgba(147,51,234,0.7)] hover:scale-[1.02]'
             : 'bg-gray-900 border border-white/5 cursor-not-allowed opacity-50'
           }
         `}

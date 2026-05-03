@@ -25,8 +25,10 @@ export const ManaDisplay: React.FC<ManaDisplayProps> = ({ current, max }) => {
     prevMaxRef.current = max;
   }, [current, max]);
 
+  const isAllFull = current === max && max > 0;
+
   return (
-    <div className="flex gap-1 items-center justify-center py-1">
+    <div className={`flex gap-1 items-center justify-center py-1 ${isAllFull ? 'mana-full-glow' : ''}`}>
       {Array.from({ length: max }).map((_, i) => {
         const isFull = i < current;
         // 充能动画延迟：逐颗从左到右点亮

@@ -61,8 +61,8 @@ export const HealthBar: React.FC<HealthBarProps> = ({ current, max, isPlayer }) 
   }, [percentage]);
 
   return (
-    <div className="relative w-full h-full flex items-center pr-2">
-      <div className="w-full h-3 md:h-5 bg-black/80 rounded-full overflow-hidden shadow-[inset_0_2px_10px_rgba(0,0,0,0.8)] border border-white/5 backdrop-blur-md">
+    <div className={`relative w-full h-full flex items-center pr-2 ${isLow ? 'hp-low-pulse' : ''}`}>
+      <div className={`w-full h-3 md:h-5 bg-black/80 rounded-full overflow-hidden shadow-[inset_0_2px_10px_rgba(0,0,0,0.8)] backdrop-blur-md ${isLow ? 'border border-red-500/40' : 'border border-white/5'}`}>
         
         <div 
           className="absolute inset-y-0 left-0 bg-white/40 transition-all duration-300 ease-out z-0"

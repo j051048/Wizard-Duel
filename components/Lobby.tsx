@@ -123,10 +123,10 @@ export const Lobby: React.FC<LobbyProps> = ({
 
   return (
     <div className="min-h-full relative no-select overflow-hidden flex flex-col">
-      {/* Immersive Background */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center pointer-events-none transform scale-105"
-        style={{ backgroundImage: "url('/lobby-bg.webp')", willChange: 'opacity' }}
+      {/* Immersive Background — B-5: 微视差浮动 */}
+      <div
+        className="absolute inset-0 bg-cover bg-center pointer-events-none lobby-bg-float"
+        style={{ backgroundImage: "url('/lobby-bg.webp')", willChange: 'transform' }}
       >
         <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/90 via-purple-900/40 to-black" />
       </div>
@@ -150,18 +150,18 @@ export const Lobby: React.FC<LobbyProps> = ({
 
       {/* CENTER STAGE: DECK CAROUSEL */}
       <div className={`relative z-10 flex-1 flex flex-col items-center justify-center ${isMobile ? 'mt-0' : '-mt-10'}`}>
-         
-         {/* Introduction / Season Text */}
-         <div className="text-center mb-6 animate-fade-in-up">
+
+         {/* Introduction / Season Text — B-5: 标题模糊渐入 */}
+         <div className="text-center mb-6 lobby-title-enter">
             <h1 className="text-4xl md:text-6xl font-wizard text-transparent bg-clip-text bg-gradient-to-b from-white to-purple-300 drop-shadow-[0_5px_15px_rgba(168,85,247,0.4)]">
                {t('Wizard Duel')}
             </h1>
-            <p className="text-purple-200/60 text-xs tracking-[0.5em] font-tech uppercase mt-2">{t('Season 1: Elemental Rising')}</p>
+            <p className="text-purple-200/60 text-xs tracking-[0.5em] font-tech uppercase mt-2 lobby-subtitle-enter">{t('Season 1: Elemental Rising')}</p>
          </div>
 
-         {/* Daily Goal Widget */}
-         <div className="w-full max-w-md px-4 mb-4 z-20">
-             <DailyGoalWidget 
+         {/* Daily Goal Widget — B-5: 依次滑入 */}
+         <div className="w-full max-w-md px-4 mb-4 z-20 lobby-section-enter" style={{ animationDelay: '0.15s' }}>
+             <DailyGoalWidget
                 quests={quests}
                 onClaim={handleClaimQuest}
                 t={t}
@@ -169,17 +169,19 @@ export const Lobby: React.FC<LobbyProps> = ({
          </div>
 
          {/* The Deck Display */}
-         <DeckCarousel
-           decks={decks}
-           selectedDeck={selectedDeck}
-           onOpenDeckBuilder={onOpenDeckBuilder}
-           onSelectDeck={onSelectDeck}
-           isLoading={isLoading}
-           t={t}
-         />
+         <div className="lobby-section-enter" style={{ animationDelay: '0.3s' }}>
+           <DeckCarousel
+             decks={decks}
+             selectedDeck={selectedDeck}
+             onOpenDeckBuilder={onOpenDeckBuilder}
+             onSelectDeck={onSelectDeck}
+             isLoading={isLoading}
+             t={t}
+           />
+         </div>
 
          {/* Bottom Controls Container */}
-         <div className="w-full max-w-lg px-6 flex flex-col items-center gap-6">
+         <div className="w-full max-w-lg px-6 flex flex-col items-center gap-6 lobby-section-enter" style={{ animationDelay: '0.45s' }}>
             <WagerSelector
               selectedBet={selectedBet}
               balance={balance}
@@ -198,8 +200,8 @@ export const Lobby: React.FC<LobbyProps> = ({
 
       </div>
 
-      {/* FOOTER: EXTRA MODES */}
-      <div className="relative z-10 p-4 flex justify-center gap-4 pb-8 flex-wrap">
+      {/* FOOTER: EXTRA MODES — B-5: 依次滑入 */}
+      <div className="relative z-10 p-4 flex justify-center gap-4 pb-8 flex-wrap lobby-section-enter" style={{ animationDelay: '0.6s' }}>
          {/* 商店入口 */}
          {onOpenShop && (
             <button 

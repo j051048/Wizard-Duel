@@ -51,6 +51,44 @@ import { useDragToPlay } from '../hooks/useDragToPlay';
 import { useBattleAnimations } from '../hooks/useBattleAnimations';
 import { useTranslation } from '../i18n';
 
+/** B-6: 环境粒子组件 */
+const EnvironmentParticles: React.FC<{ element: string | null }> = ({ element }) => {
+  const particles = React.useMemo(() => {
+    if (!element || element === 'neutral') return [];
+    const count = 15;
+    return Array.from({ length: count }, (_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 100}%`,
+      size: 3 + Math.random() * 4,
+      delay: `${Math.random() * 6}s`,
+      drift: `${(Math.random() - 0.5) * 60}px`,
+    }));
+  }, [element]);
+
+  if (!element || particles.length === 0) return null;
+  const cls = `env-particle env-particle-${element}`;
+
+  return (
+    <div className="absolute inset-0 pointer-events-none z-[1]">
+      {particles.map(p => (
+        <div
+          key={p.id}
+          className={cls}
+          style={{
+            left: p.left,
+            top: p.top,
+            width: p.size,
+            height: p.size,
+            animationDelay: p.delay,
+            '--drift': p.drift,
+          } as React.CSSProperties}
+        />
+      ))}
+    </div>
+  );
+};
+
 interface BattleArenaProps {
   gameLoopState: GameLoopState;
   selectedBet: number;
@@ -498,9 +536,10 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   return (
     <div
       className={`
-      fixed inset-0 w-full h-full bg-slate-950 no-select flex flex-col z-40 overflow-hidden 
+      fixed inset-0 w-full h-full bg-slate-950 no-select flex flex-col z-40 overflow-hidden
             ${shakeClass}
       ${isPlayerTurnGlow ? 'ring-4 ring-amber-500/30 ring-inset' : ''}
+      ${gameLoopState.isGameOver ? 'bullet-time' : ''}
     `}
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
@@ -534,6 +573,9 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
             />
           ) : null;
         })()}
+
+        {/* B-6: 环境粒子层 */}
+        {!isLowQuality && duelState && <EnvironmentParticles element={duelState.opponentLastSpell ? getElementType(duelState.opponentLastSpell) : null} />}
       </div>
 
       <FloatingTextOverlay items={floatingTexts} />

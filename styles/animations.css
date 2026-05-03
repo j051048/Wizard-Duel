@@ -450,3 +450,274 @@
 .aura-glow {
   filter: drop-shadow(0 0 10px currentColor);
 }
+
+/* ============ B-2 卡牌对决动画 ============ */
+
+/* 玩家卡牌从下方飞入 */
+@keyframes playerCardEnter {
+  0% {
+    transform: translateY(80px) scale(0.6) rotate(-5deg);
+    opacity: 0;
+    filter: brightness(0.5);
+  }
+  60% {
+    transform: translateY(-8px) scale(1.08) rotate(1deg);
+    opacity: 1;
+    filter: brightness(1.3);
+  }
+  100% {
+    transform: translateY(0) scale(1) rotate(0);
+    opacity: 1;
+    filter: brightness(1);
+  }
+}
+
+.player-card-enter {
+  animation: playerCardEnter 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 对手卡牌从上方飞入 (增强版) */
+@keyframes opponentCardEnter {
+  0% {
+    transform: translateY(-80px) scale(0.6) rotate(5deg);
+    opacity: 0;
+    filter: brightness(0.5);
+  }
+  60% {
+    transform: translateY(8px) scale(1.08) rotate(-1deg);
+    opacity: 1;
+    filter: brightness(1.3);
+  }
+  100% {
+    transform: translateY(0) scale(1) rotate(0);
+    opacity: 1;
+    filter: brightness(1);
+  }
+}
+
+.opponent-card-fly-in {
+  animation: opponentCardEnter 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 碰撞闪光 */
+@keyframes duelClashFlash {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.5);
+    filter: brightness(3);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.5);
+    filter: brightness(1);
+  }
+}
+
+.duel-clash-flash {
+  animation: duelClashFlash 0.4s ease-out forwards;
+  pointer-events: none;
+}
+
+/* 卡牌对决区域震动 */
+@keyframes duelAreaShake {
+  0%, 100% { transform: translate(0, 0); }
+  15% { transform: translate(-3px, -2px); }
+  30% { transform: translate(4px, 1px); }
+  45% { transform: translate(-2px, 3px); }
+  60% { transform: translate(3px, -1px); }
+  75% { transform: translate(-1px, 2px); }
+}
+
+.duel-area-shake {
+  animation: duelAreaShake 0.3s ease-out;
+}
+
+/* ============ B-5 Lobby 入场动画 ============ */
+
+/* 标题模糊渐入 */
+@keyframes lobbyTitleEnter {
+  0% {
+    opacity: 0;
+    filter: blur(20px);
+    transform: translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+.lobby-title-enter {
+  animation: lobbyTitleEnter 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* 副标题淡入 */
+@keyframes lobbySubtitleEnter {
+  0% {
+    opacity: 0;
+    letter-spacing: 1em;
+  }
+  100% {
+    opacity: 1;
+    letter-spacing: 0.5em;
+  }
+}
+
+.lobby-subtitle-enter {
+  animation: lobbySubtitleEnter 1s ease-out 0.3s both;
+}
+
+/* 区块依次滑入 */
+@keyframes lobbySectionEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lobby-section-enter {
+  opacity: 0;
+  animation: lobbySectionEnter 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* 按钮呼吸光效 */
+@keyframes breatheGlow {
+  0%, 100% {
+    box-shadow: 0 0 30px rgba(147, 51, 234, 0.3), 0 0 60px rgba(147, 51, 234, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 50px rgba(147, 51, 234, 0.5), 0 0 100px rgba(147, 51, 234, 0.2);
+  }
+}
+
+.breathe-glow {
+  animation: breatheGlow 3s ease-in-out infinite;
+}
+
+/* 背景微视差动画 */
+@keyframes bgParallax {
+  0% { transform: scale(1.05) translate(0, 0); }
+  50% { transform: scale(1.08) translate(-5px, -3px); }
+  100% { transform: scale(1.05) translate(0, 0); }
+}
+
+.lobby-bg-float {
+  animation: bgParallax 20s ease-in-out infinite;
+}
+
+/* ============ B-6 战场氛围增强 ============ */
+
+/* 低血量红色脉冲边缘 */
+@keyframes hpLowPulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.7));
+  }
+}
+
+.hp-low-pulse {
+  animation: hpLowPulse 1.5s ease-in-out infinite;
+}
+
+/* 满法力水晶脉冲 */
+@keyframes manaFullGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 6px rgba(168, 85, 247, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 16px rgba(168, 85, 247, 0.8));
+  }
+}
+
+.mana-full-glow {
+  animation: manaFullGlow 2s ease-in-out infinite;
+}
+
+/* 环境粒子 - 火焰火星 */
+@keyframes envFireSpark {
+  0% {
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-100vh) translateX(var(--drift, 20px)) scale(0.3);
+    opacity: 0;
+  }
+}
+
+/* 环境粒子 - 冰霜雪花 */
+@keyframes envIceSnow {
+  0% {
+    transform: translateY(-10px) translateX(0) rotate(0deg);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(100vh) translateX(var(--drift, 30px)) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* 环境粒子 - 雷电电弧 */
+@keyframes envThunderArc {
+  0%, 100% {
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.8;
+  }
+  20% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.6;
+  }
+  40% {
+    opacity: 0;
+  }
+}
+
+.env-particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.env-particle-fire {
+  background: radial-gradient(circle, #fbbf24, #f97316);
+  animation: envFireSpark 4s ease-out infinite;
+}
+
+.env-particle-ice {
+  background: radial-gradient(circle, #e0f2fe, #a5f3fc);
+  animation: envIceSnow 6s linear infinite;
+}
+
+.env-particle-thunder {
+  width: 2px !important;
+  height: 8px !important;
+  border-radius: 1px;
+  background: #fde047;
+  box-shadow: 0 0 6px #fde047;
+  animation: envThunderArc 3s linear infinite;
+}
+
+.env-particle-vine {
+  background: radial-gradient(circle, #86efac, #4ade80);
+  animation: envFireSpark 5s ease-out infinite;
+}
+
+.env-particle-rock {
+  background: radial-gradient(circle, #d6d3d1, #a8a29e);
+  animation: envIceSnow 7s linear infinite;
+}
