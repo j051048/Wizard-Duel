@@ -748,6 +748,69 @@ export const AI_PROFILES: AIProfile[] = [
     description: '传说中的棋道宗师，能预判你的每一步棋并做出完美回应。',
     avatar: '/avatars/ai-grandmaster.png',
     strategy: 'combo'
+  },
+  {
+    name: '治疗师',
+    difficulty: 'easy',
+    description: '温和的自然治疗师，擅长用藤蔓法术持续恢复生命值，以持久战拖垮对手。',
+    avatar: '/avatars/ai-healer.png',
+    strategy: 'healer',
+    deckTemplate: AI_DECK_TEMPLATES.healer_vine?.cards
+  },
+  {
+    name: '毒师',
+    difficulty: 'medium',
+    description: '来自沼泽的毒术大师，精通缠绕与剧毒之术，让对手在缓慢衰竭中倒下。',
+    avatar: '/avatars/ai-disruption.png',
+    strategy: 'disruption',
+    deckTemplate: AI_DECK_TEMPLATES.disruption_poison?.cards
+  },
+  {
+    name: '时空法师',
+    difficulty: 'hard',
+    description: '操纵时间与空间的神秘法师，用冰霜和沉默封锁对手行动，直至牌库枯竭。',
+    avatar: '/avatars/ai-mill.png',
+    strategy: 'mill',
+    deckTemplate: AI_DECK_TEMPLATES.mill_ice?.cards
+  },
+  {
+    name: '元素使',
+    difficulty: 'medium',
+    description: '精通五元素的全能法师，能根据战场形势灵活切换攻防节奏。',
+    avatar: '/avatars/ai-midrange.png',
+    strategy: 'midrange'
+  },
+  {
+    name: '火焰领主',
+    difficulty: 'expert',
+    description: '烈焰的化身，掌控灼热凤凰与末日之火，一切皆在其炽焰下化为灰烬。',
+    avatar: '/avatars/ai-fire-lord.png',
+    strategy: 'aggressive',
+    deckTemplate: AI_DECK_TEMPLATES.boss_fire_lord?.cards
+  },
+  {
+    name: '冰霜女巫',
+    difficulty: 'expert',
+    description: '永恒寒冬的女主人，极致冰霜控制配合圣盾随从，构筑起无法逾越的冰墙。',
+    avatar: '/avatars/ai-frost-witch.png',
+    strategy: 'defensive',
+    deckTemplate: AI_DECK_TEMPLATES.boss_frost_witch?.cards
+  },
+  {
+    name: '岩石守卫',
+    difficulty: 'expert',
+    description: '远古岩石巨灵的化身，以极限护甲和嘲讽随从筑起铜墙铁壁，永不陷落。',
+    avatar: '/avatars/ai-rock-guardian.png',
+    strategy: 'summoner',
+    deckTemplate: AI_DECK_TEMPLATES.boss_rock_guardian?.cards
+  },
+  {
+    name: '暗影刺客',
+    difficulty: 'hard',
+    description: '隐匿于暗影中的雷电刺客，以雷系和岩石连击瞬间爆发，一击致命。',
+    avatar: '/avatars/ai-assassin.png',
+    strategy: 'aggressive',
+    deckTemplate: AI_DECK_TEMPLATES.assassin_thunder?.cards
   }
 ];
 
@@ -787,6 +850,59 @@ export const getTavernAIDecision = (
       if (defensiveCards.length > 0) return defensiveCards[0].id;
 
       // 如果没有防御卡，选择其他卡
+      return getGameRNG().pick(availableCards);
+
+    case 'healer':
+      // 优先治疗，其次护甲，最后藤蔓元素
+      const healCards = availableCards
+        .filter(id => getSpellById(id).mechanic === 'heal');
+      if (healCards.length > 0) return healCards[0];
+      const fortifyCards = availableCards
+        .filter(id => getSpellById(id).mechanic === 'fortify');
+      if (fortifyCards.length > 0) return fortifyCards[0];
+      const vineCards = availableCards
+        .filter(id => getElementType(id) === 'vine');
+      if (vineCards.length > 0) return getGameRNG().pick(vineCards);
+      return getGameRNG().pick(availableCards);
+
+    case 'disruption':
+      // 优先缠绕，其次毒伤，最后沉默
+      const tangleCards = availableCards
+        .map(id => getSpellById(id))
+        .filter(spell => spell.mechanic === 'tangle');
+      if (tangleCards.length > 0) return tangleCards[0].id;
+      const poisonCards = availableCards
+        .map(id => getSpellById(id))
+        .filter(spell => spell.mechanic === 'poison');
+      if (poisonCards.length > 0) return poisonCards[0].id;
+      const silenceCards = availableCards
+        .map(id => getSpellById(id))
+        .filter(spell => spell.mechanic === 'silence');
+      if (silenceCards.length > 0) return silenceCards[0].id;
+      return getGameRNG().pick(availableCards);
+
+    case 'mill':
+      // 优先沉默，其次冻结，最后抽牌
+      const millSilenceCards = availableCards
+        .map(id => getSpellById(id))
+        .filter(spell => spell.mechanic === 'silence');
+      if (millSilenceCards.length > 0) return millSilenceCards[0].id;
+      const freezeCards = availableCards
+        .map(id => getSpellById(id))
+        .filter(spell => spell.mechanic === 'freeze');
+      if (freezeCards.length > 0) return freezeCards[0].id;
+      const drawCards = availableCards
+        .map(id => getSpellById(id))
+        .filter(spell => spell.mechanic === 'draw');
+      if (drawCards.length > 0) return drawCards[0].id;
+      return getGameRNG().pick(availableCards);
+
+    case 'midrange':
+      // 均衡打法，优先选择 2-4 费卡牌
+      const midrangeCards = availableCards
+        .map(id => ({ id, spell: getSpellById(id) }))
+        .filter(({ spell }) => spell.manaCost >= 2 && spell.manaCost <= 4);
+      if (midrangeCards.length > 0) return getGameRNG().pick(midrangeCards).id;
       return getGameRNG().pick(availableCards);
 
     case 'balanced':
@@ -874,6 +990,10 @@ const generateTavernAIDeck = (aiProfile: AIProfile, gameMode: GameMode = 'standa
     defensive: 'defensive_merlin',
     combo: 'combo_thunder',
     summoner: 'summoner_nature',
+    healer: 'healer_vine',
+    disruption: 'disruption_poison',
+    mill: 'mill_ice',
+    midrange: 'balanced_apprentice',
   };
   const templateKey = templateMap[aiProfile.strategy];
   if (templateKey && AI_DECK_TEMPLATES[templateKey]) {

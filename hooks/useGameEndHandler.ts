@@ -19,6 +19,9 @@ import { calculateRankUpdate, getRankByScore } from '../services/rankSystem';
 import { QuestManager } from '../services/QuestManager';
 import { calculatePayout } from '../services/gameLogic';
 import { BattlePassService } from '../services/BattlePassService';
+import { AchievementService } from '../services/AchievementService';
+import { useToastStore } from '../stores/useToastStore';
+import { audioBridge } from './useAudioManager';
 
 interface GameLoopState {
   isGameOver: boolean;
@@ -179,6 +182,23 @@ export function useGameEndHandler({
     const bpXP = result === 'WIN' ? 50 : 10;
     BattlePassService.addXP(bpXP);
     BattlePassService.onBattleComplete(result === 'WIN', [], {});
+
+    // 成就系统检查
+    const ds = gameLoopState.duelState;
+    const achievementResult = AchievementService.check({
+      won: result === 'WIN',
+      winStreak: newStreak,
+      damageDealt: damage,
+      damageTaken: ds ? Math.max(0, 30 - ds.playerHP) : 0,
+      maxCombo: ds?.playerConsecutiveThunder,
+      mainElement: playerCard.split('_')[0],
+    });
+    if (achievementResult.unlocked.length > 0) {
+      const toastApi = useToastStore.getState();
+      const names = achievementResult.unlocked.map(a => a.name).join('、');
+      toastApi.success('成就解锁！', names);
+      audioBridge.playSfx('achievement_unlock');
+    }
 
     // 排名更新（客户端乐观计算）
     const { newScore, newRank, scoreDelta } = calculateRankUpdate(user.rankScore, result, newStreak);

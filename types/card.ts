@@ -11,9 +11,9 @@ export type SpellType = string;
 export type Rarity = "common" | "rare" | "mythic" | "legendary";
 
 // [A-3] 新增 charge/divine_shield/deathrattle/aura/summon
-export type Mechanic = "burn" | "tangle" | "freeze" | "charge" | "fortify" | "heal" | "aoe" | "draw" | "silence" | "skip" | "divine_shield" | "deathrattle" | "aura" | "summon" | "poison" | "secret";
+export type Mechanic = "burn" | "tangle" | "freeze" | "charge" | "fortify" | "heal" | "aoe" | "draw" | "silence" | "skip" | "divine_shield" | "deathrattle" | "aura" | "summon" | "poison" | "secret" | "lifesteal" | "discover" | "transform" | "cleave";
 
-export type CardSet = "core" | "classic" | "tournament" | "legacy" | "expansion_1";
+export type CardSet = "core" | "classic" | "tournament" | "legacy" | "expansion_1" | "expansion_2";
 
 export type GameMode = "standard" | "wild" | "dungeon";
 
@@ -57,7 +57,7 @@ export interface Spell {
 }
 
 // [A-2] 随从关键词系统
-export type MinionKeyword = 'taunt' | 'divine_shield' | 'rush' | 'poison' | 'lifesteal' | 'windfury';
+export type MinionKeyword = 'taunt' | 'divine_shield' | 'rush' | 'poison' | 'lifesteal' | 'windfury' | 'cleave' | 'discover';
 
 // [A-2] 亡语效果
 export interface DeathrattleEffect {

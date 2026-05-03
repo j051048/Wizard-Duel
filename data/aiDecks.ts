@@ -126,6 +126,53 @@ export const AI_DECK_TEMPLATES: Record<string, AIDeckTemplate> = {
       'rock12', 'rock13', 'rock_ultimate', 'ice', 'ice4', 'vine4', 'vine5', 'neutral2',
     ],
   },
+
+  // --- 新增 AI 卡组模板 ---
+  healer_vine: {
+    id: 'healer_vine',
+    name: '治愈藤蔓之牌',
+    description: '藤蔓系治愈续航牌组，大量治疗和持续恢复',
+    cards: [
+      'vine', 'vine2', 'vine3', 'vine4', 'vine5', 'vine6',
+      'vine7', 'vine8', 'vine9', 'vine10', 'vine11', 'vine12',
+      'vine13', 'vine14', 'ice', 'ice3', 'rock', 'rock4',
+      'healing', 'neutral5',
+    ],
+  },
+
+  disruption_poison: {
+    id: 'disruption_poison',
+    name: '剧毒干扰之牌',
+    description: '藤蔓+毒系控制牌组，缠绕与持续伤害',
+    cards: [
+      'vine', 'vine2', 'vine4', 'vine9', 'vine13', 'poison_dart',
+      'ice', 'ice2', 'ice3', 'ice4', 'ice5', 'ice6', 'ice7',
+      'rock', 'rock2', 'rock4', 'rock5', 'silence', 'neutral4', 'neutral2',
+    ],
+  },
+
+  mill_ice: {
+    id: 'mill_ice',
+    name: '时空疲劳之牌',
+    description: '冰系沉默疲劳牌组，大量控制和牌库消耗',
+    cards: [
+      'ice', 'ice', 'ice2', 'ice2', 'ice3', 'ice4', 'ice5',
+      'ice6', 'ice7', 'ice8', 'ice9', 'ice10', 'ice11', 'ice12',
+      'silence', 'rock', 'rock4', 'rock5', 'vine4', 'vine5',
+    ],
+  },
+
+  assassin_thunder: {
+    id: 'assassin_thunder',
+    name: '暗影雷击之牌',
+    description: '雷系+岩石爆发牌组，高伤瞬间击杀',
+    cards: [
+      'thunder', 'thunder', 'thunder2', 'thunder2', 'thunder3',
+      'thunder4', 'thunder5', 'thunder6', 'thunder7', 'thunder8',
+      'rock', 'rock', 'rock2', 'rock3', 'rock4', 'rock5', 'rock8',
+      'fire', 'fire2', 'ice',
+    ],
+  },
 };
 
 /**

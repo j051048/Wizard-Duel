@@ -140,6 +140,15 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
   // States
   const [hoveredSpellId, setHoveredSpellId] = useState<SpellType | null>(null);
+  const hoverCooldownRef = useRef(false);
+  const handleSetHoveredSpellId = (id: SpellType | null) => {
+    setHoveredSpellId(id);
+    if (id && !isMuted && !hoverCooldownRef.current) {
+      audioBridge.playSfx('card_hover');
+      hoverCooldownRef.current = true;
+      setTimeout(() => { hoverCooldownRef.current = false; }, 200);
+    }
+  };
   const [hasShownTutorial, setHasShownTutorial] = useState(false);
   // [P0-4] Opponent disconnect tracking
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
@@ -683,7 +692,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         dragState={dragState}
         startDrag={startDrag}
         onCardPressEnd={handleCardPressEnd}
-        setHoveredSpellId={setHoveredSpellId}
+        setHoveredSpellId={handleSetHoveredSpellId}
         handlePlayCard={handlePlayCard}
         shouldShowTutorial={shouldShowTutorial}
       />

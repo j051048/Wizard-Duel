@@ -11,7 +11,7 @@ import { audioBridge } from '../hooks/useAudioManager';
 import { useToastStore } from '../stores/useToastStore';
 import { useShallow } from 'zustand/react/shallow';
 import { PackOpener } from './shop/PackOpener';
-import { ShopService, Product } from '../services/ShopService';
+import { ShopService, Product, CosmeticProduct, COSMETICS } from '../services/ShopService';
 import { openPack } from '../constants'; // Legacy import, kept for Guest fallback if needed
 import { SecureGameService } from '../services/SecureGameService';
 import { useUserStore } from '../stores/useUserStore';
@@ -31,7 +31,8 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({ onBack }) => {
       addCardsToInventory: s.addCardsToInventory,
     }))
   );
-  const [activeTab, setActiveTab] = useState<'packs' | 'bundles'>('packs');
+  const [activeTab, setActiveTab] = useState<'packs' | 'bundles' | 'cosmetics'>('packs');
+  const [purchasedCosmetics, setPurchasedCosmetics] = useState<string[]>(() => ShopService.getPurchasedCosmetics());
   const [openingProduct, setOpeningProduct] = useState<Product | null>(null);
   const [inventoryPackOpening, setInventoryPackOpening] = useState<string | null>(null);
   
@@ -269,11 +270,17 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({ onBack }) => {
          >
            卡包抽取
          </button>
-         <button 
+         <button
            onClick={() => setActiveTab('bundles')}
            className={`px-6 py-2 rounded-full font-bold transition-all whitespace-nowrap ${activeTab === 'bundles' ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30' : 'bg-white/5 text-gray-400'}`}
          >
            超值礼包
+         </button>
+         <button
+           onClick={() => setActiveTab('cosmetics')}
+           className={`px-6 py-2 rounded-full font-bold transition-all whitespace-nowrap ${activeTab === 'cosmetics' ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-600/30' : 'bg-white/5 text-gray-400'}`}
+         >
+           外观道具
          </button>
       </div>
 
@@ -382,6 +389,54 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({ onBack }) => {
                     </button>
                 </div>
              );
+        })}
+
+        {/* [P3.2] Cosmetics Tab */}
+        {activeTab === 'cosmetics' && COSMETICS.map(cosmetic => {
+          const isPurchased = purchasedCosmetics.includes(cosmetic.id);
+          const canAfford = balance >= cosmetic.price;
+          const handleBuyCosmetic = () => {
+            if (isPurchased || !canAfford) return;
+            const result = ShopService.purchaseCosmetic(cosmetic.id, balance);
+            if (result.success) {
+              setBalance(result.newBalance);
+              setPurchasedCosmetics(ShopService.getPurchasedCosmetics());
+              toast.success('购买成功', `${cosmetic.name} 已解锁`);
+              HapticService.success();
+            } else {
+              toast.error('购买失败', '余额不足或已拥有');
+              HapticService.failure();
+            }
+          };
+          return (
+            <div key={cosmetic.id} className={`bg-slate-900 border border-white/10 rounded-2xl p-6 flex flex-col items-center gap-4 relative overflow-hidden ${isPurchased ? 'opacity-60 grayscale' : ''}`}>
+              <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-cyan-900/40 to-blue-900/40 flex items-center justify-center border border-cyan-500/20">
+                <span className="text-4xl">{cosmetic.previewEmoji}</span>
+              </div>
+              <div className="text-center">
+                <h3 className="font-bold text-lg text-white">{cosmetic.name}</h3>
+                <p className="text-sm text-gray-400 mt-1">{cosmetic.description}</p>
+                <p className="text-xs text-gray-500 mt-1 capitalize">
+                  {cosmetic.type === 'card_back' ? '卡背' : cosmetic.type === 'emote_pack' ? '表情包' : '头像框'}
+                </p>
+              </div>
+              {isPurchased ? (
+                <div className="w-full py-3 bg-gray-700 text-gray-400 rounded-xl font-bold text-center">
+                  已拥有
+                </div>
+              ) : (
+                <button
+                  onClick={handleBuyCosmetic}
+                  disabled={!canAfford}
+                  className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95
+                    ${canAfford ? 'bg-cyan-600 text-white hover:bg-cyan-500' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}
+                  `}
+                >
+                  <span className="text-cyan-200">{cosmetic.price}</span> 💎 购买
+                </button>
+              )}
+            </div>
+          );
         })}
       </div>
     </div>

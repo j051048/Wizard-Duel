@@ -2,6 +2,25 @@
 
 export type ProductType = 'pack' | 'bundle' | 'currency';
 
+// [P3.2] Cosmetic product types
+export interface CosmeticProduct {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  type: 'card_back' | 'emote_pack' | 'avatar_frame';
+  previewEmoji: string;
+}
+
+export const COSMETICS: CosmeticProduct[] = [
+  { id: 'cardback_flame', name: '烈焰卡背', description: '燃烧的火焰卡背', price: 500, type: 'card_back', previewEmoji: '🔥' },
+  { id: 'cardback_frost', name: '寒冰卡背', description: '冰晶闪烁的卡背', price: 500, type: 'card_back', previewEmoji: '❄️' },
+  { id: 'emote_pack_2', name: '表情包 Vol.2', description: '6个全新表情', price: 300, type: 'emote_pack', previewEmoji: '😎' },
+  { id: 'avatar_frame_gold', name: '黄金头像框', description: '华丽的金色头像框', price: 800, type: 'avatar_frame', previewEmoji: '🏅' },
+];
+
+const COSMETIC_PURCHASES_KEY = 'wizard_cosmetic_purchases_v1';
+
 export interface Product {
     id: string;
     type: ProductType;
@@ -282,5 +301,31 @@ export class ShopService {
             cost: product.price,
             rewards: product.items
         };
+    }
+
+    // [P3.2] Cosmetic shop methods
+    static getCosmeticProducts(): CosmeticProduct[] {
+        return COSMETICS;
+    }
+
+    static purchaseCosmetic(id: string, balance: number): { success: boolean; newBalance: number } {
+        const product = COSMETICS.find(c => c.id === id);
+        if (!product) return { success: false, newBalance: balance };
+        if (balance < product.price) return { success: false, newBalance: balance };
+        // Check if already purchased
+        const purchased = this.getPurchasedCosmetics();
+        if (purchased.includes(id)) return { success: false, newBalance: balance };
+        // Deduct and save
+        const newBalance = balance - product.price;
+        purchased.push(id);
+        try { localStorage.setItem(COSMETIC_PURCHASES_KEY, JSON.stringify(purchased)); } catch { /* ignore */ }
+        return { success: true, newBalance };
+    }
+
+    static getPurchasedCosmetics(): string[] {
+        try {
+            const raw = localStorage.getItem(COSMETIC_PURCHASES_KEY);
+            return raw ? JSON.parse(raw) : [];
+        } catch { return []; }
     }
 }

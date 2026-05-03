@@ -249,6 +249,52 @@ const summon: MechanicHandler = (state, caster, spell, countered) => {
   }];
 };
 
+// [Expansion 2] 吸血：伤害吸取生命值
+const lifesteal: MechanicHandler = (state, caster, spell, countered) => {
+  if (countered) return [];
+  const healAmount = spell.damage || 2;
+  return [{
+    type: 'HEAL',
+    target: caster,
+    value: healAmount,
+    description: `🩸 ${caster === 'player' ? '你' : '对手'}吸取了 ${healAmount} 点生命值`
+  }];
+};
+
+// [Expansion 2] 发现：展示3张随机法术供玩家选择
+const discover: MechanicHandler = (state, caster, spell, countered) => {
+  if (countered) return [];
+  return [{
+    type: 'DISCOVER',
+    target: caster,
+    value: 3,
+    description: `🔍 发现：选择一张卡牌加入手牌`
+  }];
+};
+
+// [Expansion 2] 变形：将目标随从变为0/1绵羊
+const transform: MechanicHandler = (state, caster, spell, countered) => {
+  if (countered) return [];
+  const target = caster === 'player' ? 'opponent' : 'player';
+  return [{
+    type: 'TRANSFORM_MINION',
+    target,
+    value: 'sheep',
+    description: `🐑 ${target === 'player' ? '你' : '对手'}的随从变形为绵羊！`
+  }];
+};
+
+// [Expansion 2] 横扫：随从对相邻随从造成伤害
+const cleave: MechanicHandler = (state, caster, spell, countered) => {
+  if (countered) return [];
+  const target = caster === 'player' ? 'opponent' : 'player';
+  return [{
+    type: 'CLEAVE',
+    target,
+    description: `⚔️ 横扫攻击！`
+  }];
+};
+
 // [P3-1] 秘密机制 handler：打出秘密牌时，将秘密挂载到 caster 的 secrets 数组
 const secret: MechanicHandler = (state, caster, spell, countered) => {
   if (countered) return [];
@@ -282,6 +328,11 @@ export const MECHANIC_DEFINITIONS: Record<string, MechanicHandler> = {
   aura,
   poison,
   summon,
+  // [Expansion 2] 新机制
+  lifesteal,
+  discover,
+  transform,
+  cleave,
   secret,
 };
 

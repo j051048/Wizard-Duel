@@ -27,6 +27,8 @@ const KEYWORD_ICONS: Record<MinionKeyword, string> = {
   poison: '☠️',
   lifesteal: '🧛',
   windfury: '🌪️',
+  cleave: '⚔️',
+  discover: '🔍',
 };
 
 const KEYWORD_LABELS: Record<MinionKeyword, string> = {
@@ -36,6 +38,8 @@ const KEYWORD_LABELS: Record<MinionKeyword, string> = {
   poison: '剧毒',
   lifesteal: '吸血',
   windfury: '风怒',
+  cleave: '横扫',
+  discover: '发现',
 };
 
 const ANIM_CLASS_MAP: Record<MinionAnimState, string> = {

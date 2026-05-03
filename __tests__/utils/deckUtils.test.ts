@@ -44,7 +44,7 @@ describe('Deck Utils', () => {
 
     // All cards should be from standard sets
     cards.forEach(card => {
-      expect(['core', 'classic', 'tournament', 'expansion_1']).toContain(card.cardSet || 'core');
+      expect(['core', 'classic', 'tournament', 'expansion_1', 'expansion_2']).toContain(card.cardSet || 'core');
     });
   });
 

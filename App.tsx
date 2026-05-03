@@ -45,6 +45,8 @@ const CollectionBook = React.lazy(() => import('./components/CollectionBook'));
 const UserProfilePage = React.lazy(() => import('./components/UserProfilePage'));
 const BattlePassPage = React.lazy(() => import('./components/shop/BattlePassPage'));
 const PvpStateSync = React.lazy(() => import('./components/PvpStateSync').then(m => ({ default: m.PvpStateSync })));
+const AchievementPanel = React.lazy(() => import('./components/AchievementPanel'));
+const RankedLadder = React.lazy(() => import('./components/RankedLadder'));
 
 // Immediate Components
 import { ResultsModal } from './components/ResultsModal';
@@ -367,6 +369,16 @@ function App() {
               }}
               balance={user.balance}
             />
+          )}
+
+          {/* Achievements */}
+          {ui.gameState === 'ACHIEVEMENTS' && (
+            <AchievementPanel onBack={() => ui.setGameState('LOBBY')} />
+          )}
+
+          {/* Ranked Ladder */}
+          {ui.gameState === 'RANKED' && (
+            <RankedLadder onBack={() => ui.setGameState('LOBBY')} />
           )}
 
 

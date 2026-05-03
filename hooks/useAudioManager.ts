@@ -84,6 +84,19 @@ const AUDIO_CONFIG = {
     aoe_hit: sfxFile('/audio/sfx-spell-fire.mp3', 0.9, 1.0),
     divine_shield_block: sfxFile('/audio/sfx-block.mp3', 1.5, 0.9),
     tangle: sfxFile('/audio/sfx-spell-vine.mp3', 0.8, 0.7),
+    // [P2.1] Audio SFX expansion
+    card_hover: sfxFile('/audio/sfx-card-play.mp3', 1.4, 0.1),
+    card_play_fire: sfxFile('/audio/sfx-spell-fire.mp3', 1.0, 0.9),
+    card_play_vine: sfxFile('/audio/sfx-spell-vine.mp3', 1.0, 0.9),
+    card_play_ice: sfxFile('/audio/sfx-spell-ice.mp3', 1.0, 0.9),
+    card_play_thunder: sfxFile('/audio/sfx-spell-thunder.mp3', 1.0, 0.9),
+    card_play_rock: sfxFile('/audio/sfx-spell-rock.mp3', 1.0, 0.9),
+    pack_open_special: sfxFile('/audio/sfx-victory.mp3', 1.2, 1.0),
+    achievement_unlock: sfxFile('/audio/sfx-victory.mp3', 0.8, 1.0),
+    rank_up: sfxFile('/audio/sfx-victory.mp3', 1.0, 1.0),
+    discover_select: sfxFile('/audio/sfx-card-play.mp3', 1.1, 0.7),
+    combo_x5: sfxFile('/audio/sfx-hit.mp3', 2.0, 1.0),
+    lifesteal: sfxFile('/audio/sfx-spell-vine.mp3', 0.7, 0.8),
     spell: {
       fire: '/audio/sfx-spell-fire.mp3',
       vine: '/audio/sfx-spell-vine.mp3',
@@ -113,6 +126,12 @@ const AUDIO_CONFIG = {
     minion_death: 500,
     crit_hit: 800,
     combo_streak: 600,
+    card_hover: 200,
+    achievement_unlock: 2000,
+    rank_up: 2000,
+    pack_open_special: 2000,
+    combo_x5: 800,
+    discover_select: 400,
   } as Record<string, number>,
 };
 

@@ -19,7 +19,7 @@ import { useUserStore } from '../stores/useUserStore';
 import { useUIStore } from '../stores/useUIStore';
 import { useToastStore } from '../stores/useToastStore';
 import { useShallow } from 'zustand/react/shallow';
-import { ShoppingBag, Book, Swords, MessageCircle, Settings, CheckCircle, Sparkles } from 'lucide-react';
+import { ShoppingBag, Book, Swords, MessageCircle, Settings, CheckCircle, Sparkles, Trophy, TrendingUp } from 'lucide-react';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { MatchmakingOverlay } from './MatchmakingOverlay';
 import { QuestManager } from '../services/QuestManager';
@@ -257,8 +257,26 @@ export const Lobby: React.FC<LobbyProps> = ({
             <span>{t('PvP Mode')}</span>
          </button>
 
+         {/* 排位入口 */}
+            <button
+               onClick={() => setGameState('RANKED')}
+               className="flex items-center gap-2 text-xs text-orange-400 hover:text-orange-300 font-bold uppercase tracking-widest border border-orange-500/30 px-4 py-2 rounded-full hover:bg-orange-900/20 hover:scale-105 active:scale-95 transition-all duration-150 bg-orange-500/10"
+            >
+               <TrendingUp size={14} />
+               <span>{t('Ranked') || '排位赛'}</span>
+            </button>
+
+         {/* 成就入口 */}
+            <button
+               onClick={() => setGameState('ACHIEVEMENTS')}
+               className="flex items-center gap-2 text-xs text-yellow-400 hover:text-yellow-300 font-bold uppercase tracking-widest border border-yellow-500/30 px-4 py-2 rounded-full hover:bg-yellow-900/20 hover:scale-105 active:scale-95 transition-all duration-150 bg-yellow-500/10"
+            >
+               <Trophy size={14} />
+               <span>{t('Achievements') || '成就'}</span>
+            </button>
+
          {/* 聊天按钮 */}
-         <button 
+         <button
             onClick={() => setIsChatOpen(!isChatOpen)}
             className="flex items-center gap-2 text-xs text-green-400 hover:text-green-300 font-bold uppercase tracking-widest border border-green-500/30 px-4 py-2 rounded-full hover:bg-green-900/20 hover:scale-105 active:scale-95 transition-all duration-150 bg-green-500/10"
          >

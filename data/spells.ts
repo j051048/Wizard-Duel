@@ -16,6 +16,16 @@ export const MINION_DATA: Record<string, MinionTemplate> = {
   'plague_rat': { name: '瘟疫鼠', atk: 1, hp: 1, type: 'neutral', keywords: ['poison'], onDeath: { type: 'summon', value: 1, summonId: 'plague_rat_baby' } },
   'plague_rat_baby': { name: '瘟疫幼鼠', atk: 1, hp: 1, type: 'neutral', keywords: [] },
   'storm_giant': { name: '风暴巨人', atk: 6, hp: 6, type: 'thunder', keywords: ['windfury'] },
+  // [Expansion 2] 通用随从
+  'sheep': { name: '绵羊', atk: 0, hp: 1, type: 'neutral', keywords: [] },
+  'dire_wolf': { name: '恐狼', atk: 4, hp: 3, type: 'vine', keywords: ['cleave'] },
+  'vampire_bat': { name: '吸血蝙蝠', atk: 2, hp: 2, type: 'neutral', keywords: ['lifesteal'] },
+  'arcane_scholar': { name: '奥术学者', atk: 1, hp: 3, type: 'neutral', keywords: [] },
+  // [Expansion 2] 召唤随从
+  'phoenix_bird': { name: '火凤凰', atk: 4, hp: 2, type: 'fire', keywords: ['lifesteal'] },
+  'ice_colossus': { name: '冰霜巨像', atk: 3, hp: 7, type: 'ice', keywords: ['taunt'] },
+  'thunder_elemental': { name: '雷元素', atk: 3, hp: 3, type: 'thunder', keywords: ['rush'] },
+  'rock_serpent': { name: '岩石巨蟒', atk: 4, hp: 5, type: 'rock', keywords: ['taunt'] },
 };
 
 // Helper: Define spell with auto-generated descriptions
@@ -383,10 +393,63 @@ export const SPELLS: Spell[] = [
     id: 'secret_rock' as SpellType, name: '岩石陷阱', manaCost: 2, damage: 0, rarity: 'rare', mechanic: 'secret', cardSet: 'expansion_1',
     description: '秘密：对手出牌时，获得 5 点护甲', shortDesc: '对手出牌 → +5甲',
     color: 'text-slate-400', borderColor: 'border-slate-400', shadowColor: 'rgba(148,163,184,0.5)'  }),
+
+  // ============================================================
+  // [Expansion 2] 新扩展包 — 每元素5张 + 双元素2张 + 传说3张
+  // ============================================================
+
+  // --- FIRE (fire15 ~ fire19) ---
+  defineSpell({ id: 'fire15' as SpellType, name: '烈焰鞭笞', manaCost: 1, damage: 2, rarity: 'common', mechanic: 'burn', cardSet: 'expansion_2' }),
+  defineSpell({ id: 'fire16' as SpellType, name: '熔岩喷涌', manaCost: 2, damage: 3, rarity: 'rare', mechanic: 'burn', value: 1, cardSet: 'expansion_2' }),
+  defineSpell({ id: 'fire17' as SpellType, name: '召唤火凤凰', manaCost: 3, damage: 0, rarity: 'rare', mechanic: 'summon', summonId: 'phoenix_bird', cardSet: 'expansion_2' }),
+  defineSpell({ id: 'fire18' as SpellType, name: '连环火球', manaCost: 5, damage: 6, rarity: 'mythic', mechanic: 'burn', value: 3, effectDuration: 2, cardSet: 'expansion_2' }),
+  defineSpell({ id: 'fire19' as SpellType, name: '焚世之火', manaCost: 7, damage: 9, rarity: 'legendary', mechanic: 'aoe', aoeMinionDamage: 3, cardSet: 'expansion_2' }),
+
+  // --- VINE (vine15 ~ vine19) ---
+  defineSpell({ id: 'vine15' as SpellType, name: '荆棘鞭笞', manaCost: 1, damage: 1, rarity: 'common', mechanic: 'tangle', value: 1, cardSet: 'expansion_2' }),
+  defineSpell({ id: 'vine16' as SpellType, name: '生命回复', manaCost: 2, damage: 0, rarity: 'rare', mechanic: 'heal', value: 4, cardSet: 'expansion_2' }),
+  defineSpell({ id: 'vine17' as SpellType, name: '召唤恐狼', manaCost: 3, damage: 0, rarity: 'rare', mechanic: 'summon', summonId: 'dire_wolf', cardSet: 'expansion_2' }),
+  defineSpell({ id: 'vine18' as SpellType, name: '自然愈合', manaCost: 4, damage: 2, rarity: 'mythic', mechanic: 'heal', value: 5, cardSet: 'expansion_2' }),
+  defineSpell({ id: 'vine19' as SpellType, name: '世界树之心', manaCost: 8, damage: 0, rarity: 'legendary', mechanic: 'heal', value: 15, cardSet: 'expansion_2' }),
+
+  // --- ICE (ice13 ~ ice17) ---
+  defineSpell({ id: 'ice13' as SpellType, name: '冰锥术', manaCost: 1, damage: 1, rarity: 'common', mechanic: 'freeze', effectDuration: 1, cardSet: 'expansion_2' }),
+  defineSpell({ id: 'ice14' as SpellType, name: '寒霜新星', manaCost: 2, damage: 2, rarity: 'rare', mechanic: 'freeze', effectDuration: 1, cardSet: 'expansion_2' }),
+  defineSpell({ id: 'ice15' as SpellType, name: '冰霜巨像', manaCost: 3, damage: 0, rarity: 'rare', mechanic: 'summon', summonId: 'ice_colossus', cardSet: 'expansion_2' }),
+  defineSpell({ id: 'ice16' as SpellType, name: '极寒之触', manaCost: 5, damage: 4, rarity: 'mythic', mechanic: 'transform', cardSet: 'expansion_2', description: '将敌方一个随从变为绵羊', shortDesc: '变形: 变为绵羊' }),
+  defineSpell({ id: 'ice17' as SpellType, name: '永冬之寒', manaCost: 7, damage: 7, rarity: 'legendary', mechanic: 'freeze', effectDuration: 2, cardSet: 'expansion_2' }),
+
+  // --- THUNDER (thunder13 ~ thunder17) ---
+  defineSpell({ id: 'thunder13' as SpellType, name: '电光一闪', manaCost: 1, damage: 2, rarity: 'common', mechanic: 'charge', cardSet: 'expansion_2' }),
+  defineSpell({ id: 'thunder14' as SpellType, name: '连锁闪电', manaCost: 2, damage: 3, rarity: 'rare', mechanic: 'charge', cardSet: 'expansion_2' }),
+  defineSpell({ id: 'thunder15' as SpellType, name: '召唤雷元素', manaCost: 3, damage: 0, rarity: 'rare', mechanic: 'charge', summonId: 'thunder_elemental', cardSet: 'expansion_2' }),
+  defineSpell({ id: 'thunder16' as SpellType, name: '雷神之怒', manaCost: 5, damage: 7, rarity: 'mythic', mechanic: 'charge', cardSet: 'expansion_2' }),
+  defineSpell({ id: 'thunder17' as SpellType, name: '诸神黄昏', manaCost: 8, damage: 12, rarity: 'legendary', mechanic: 'charge', cardSet: 'expansion_2' }),
+
+  // --- ROCK (rock14 ~ rock18) ---
+  defineSpell({ id: 'rock14' as SpellType, name: '碎裂', manaCost: 1, damage: 1, armorGain: 2, rarity: 'common', mechanic: 'fortify', cardSet: 'expansion_2' }),
+  defineSpell({ id: 'rock15' as SpellType, name: '岩石屏障', manaCost: 2, damage: 0, armorGain: 5, rarity: 'rare', mechanic: 'fortify', cardSet: 'expansion_2' }),
+  defineSpell({ id: 'rock16' as SpellType, name: '召唤岩石巨蟒', manaCost: 3, damage: 0, rarity: 'rare', mechanic: 'summon', summonId: 'rock_serpent', cardSet: 'expansion_2' }),
+  defineSpell({ id: 'rock17' as SpellType, name: '地裂冲击', manaCost: 5, damage: 3, armorGain: 3, rarity: 'mythic', mechanic: 'cleave', cardSet: 'expansion_2' }),
+  defineSpell({ id: 'rock18' as SpellType, name: '大地之母', manaCost: 8, damage: 6, armorGain: 10, rarity: 'legendary', mechanic: 'fortify', cardSet: 'expansion_2' }),
+
+  // --- DUAL-ELEMENT ---
+  defineSpell({
+    id: 'dual_fire_thunder' as SpellType, name: '雷火交加', manaCost: 4, damage: 5, rarity: 'rare', mechanic: 'charge',
+    value: 2, effectDuration: 1, cardSet: 'expansion_2',
+    description: '造成5点伤害，附带2点灼烧', shortDesc: '5伤 + 2灼烧',
+    color: 'text-purple-400', borderColor: 'border-purple-400', shadowColor: 'rgba(167,139,250,0.5)',
+  }),
+  defineSpell({
+    id: 'dual_ice_vine' as SpellType, name: '霜藤交织', manaCost: 4, damage: 3, rarity: 'rare', mechanic: 'freeze',
+    value: 3, effectDuration: 1, armorGain: 3, cardSet: 'expansion_2',
+    description: '造成3点伤害并冻结，获得3点护甲', shortDesc: '3伤+冻结+3甲',
+    color: 'text-purple-400', borderColor: 'border-purple-400', shadowColor: 'rgba(167,139,250,0.5)',
+  }),
 ];
 
-export const STANDARD_SETS: CardSet[] = ['core', 'classic', 'tournament', 'expansion_1'];
-export const WILD_SETS: CardSet[] = ['core', 'classic', 'tournament', 'legacy', 'expansion_1'];
+export const STANDARD_SETS: CardSet[] = ['core', 'classic', 'tournament', 'expansion_1', 'expansion_2'];
+export const WILD_SETS: CardSet[] = ['core', 'classic', 'tournament', 'legacy', 'expansion_1', 'expansion_2'];
 
 export const PRESET_DECKS: { name: string; cards: SpellType[]; description: string; style: 'aggro' | 'control' | 'combo' }[] = [
   {
@@ -474,6 +537,10 @@ export const getMechanicName = (mechanic: string): string => {
     aura: '光环',
     summon: '召唤',
     poison: '中毒',
+    lifesteal: '吸血',
+    discover: '发现',
+    transform: '变形',
+    cleave: '横扫',
   };
   return names[mechanic] || mechanic;
 };

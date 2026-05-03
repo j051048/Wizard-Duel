@@ -4,7 +4,7 @@
 
 export type QuestRarity = 'common' | 'rare' | 'epic' | 'legendary';
 
-export type QuestType = 
+export type QuestType =
   | 'play_cards'       // 使用任意卡牌
   | 'win_games'        // 赢得对战
   | 'deal_damage'      // 造成伤害
@@ -12,7 +12,27 @@ export type QuestType =
   | 'play_fire'        // 使用火系法术
   | 'play_ice'         // 使用冰系法术
   | 'play_thunder'     // 使用雷系法术
-  | 'play_nature';     // 使用自然法术
+  | 'play_nature'      // 使用自然法术
+  // [P3.3] Quest Pool Expansion
+  | 'win_element_fire'
+  | 'win_element_ice'
+  | 'win_element_thunder'
+  | 'win_element_vine'
+  | 'win_element_rock'
+  | 'use_mechanic_burn'
+  | 'use_mechanic_freeze'
+  | 'use_mechanic_heal'
+  | 'summon_minions'
+  | 'combo_count'
+  | 'win_streak'
+  | 'low_hp_win'
+  | 'play_legendary'
+  | 'dungeon_room'
+  | 'first_blood'
+  | 'single_game_damage'
+  | 'perfect_game'
+  | 'counter_element'
+  | 'total_games';
 
 export interface Quest {
   id: string;

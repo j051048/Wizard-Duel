@@ -134,7 +134,11 @@ export type ActionType =
   | 'APPLY_DEATHRATTLE'   // 触发亡语效果
   | 'DIVINE_SHIELD_BLOCK' // 圣盾伤害免疫
   | 'AOE_MINION_DAMAGE'  // 对所有敌方随从造成伤害
-  | 'MINION_DAMAGE';      // [P1-1] 对指定随从造成伤害 (value={instanceId, amount})
+  | 'MINION_DAMAGE'      // [P1-1] 对指定随从造成伤害 (value={instanceId, amount})
+  | 'HEAL'               // 吸血/直接治疗
+  | 'DISCOVER'           // 发现：从3张卡中选择1张
+  | 'TRANSFORM_MINION'   // 变形：将随从变形为指定形态
+  | 'CLEAVE';            // 横扫：对相邻随从造成伤害
 
 export interface GameAction {
   type: ActionType;

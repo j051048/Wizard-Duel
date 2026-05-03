@@ -107,6 +107,220 @@ const QUEST_TEMPLATES: Array<Omit<Quest, 'id' | 'current' | 'isClaimed' | 'isCom
     rewardExp: XP_BY_RARITY.epic,
     rarity: 'epic',
     icon: 'skull'
+  },
+
+  // [P3.3] Quest Pool Expansion — 20 new templates
+
+  // --- Element-specific win quests ---
+  {
+    title: "火焰胜利",
+    description: "使用火系法术获胜3次",
+    type: 'win_element_fire',
+    target: 3,
+    rewardGold: 80,
+    rewardExp: XP_BY_RARITY.rare,
+    rarity: 'rare',
+    icon: 'flame'
+  },
+  {
+    title: "寒冰胜利",
+    description: "使用冰系法术获胜3次",
+    type: 'win_element_ice',
+    target: 3,
+    rewardGold: 80,
+    rewardExp: XP_BY_RARITY.rare,
+    rarity: 'rare',
+    icon: 'snowflake'
+  },
+  {
+    title: "雷霆胜利",
+    description: "使用雷系法术获胜3次",
+    type: 'win_element_thunder',
+    target: 3,
+    rewardGold: 80,
+    rewardExp: XP_BY_RARITY.rare,
+    rarity: 'rare',
+    icon: 'zap'
+  },
+  {
+    title: "自然胜利",
+    description: "使用藤系法术获胜3次",
+    type: 'win_element_vine',
+    target: 3,
+    rewardGold: 80,
+    rewardExp: XP_BY_RARITY.rare,
+    rarity: 'rare',
+    icon: 'leaf'
+  },
+  {
+    title: "岩石胜利",
+    description: "使用岩石法术获胜3次",
+    type: 'win_element_rock',
+    target: 3,
+    rewardGold: 80,
+    rewardExp: XP_BY_RARITY.rare,
+    rarity: 'rare',
+    icon: 'shield'
+  },
+
+  // --- Keyword / mechanic quests ---
+  {
+    title: "烈焰掌控",
+    description: "使用灼烧效果5次",
+    type: 'use_mechanic_burn',
+    target: 5,
+    rewardGold: 60,
+    rewardExp: XP_BY_RARITY.common,
+    rarity: 'common',
+    icon: 'flame'
+  },
+  {
+    title: "冰封之力",
+    description: "使用冻结效果5次",
+    type: 'use_mechanic_freeze',
+    target: 5,
+    rewardGold: 60,
+    rewardExp: XP_BY_RARITY.common,
+    rarity: 'common',
+    icon: 'snowflake'
+  },
+  {
+    title: "生命之泉",
+    description: "使用治疗效果5次",
+    type: 'use_mechanic_heal',
+    target: 5,
+    rewardGold: 50,
+    rewardExp: XP_BY_RARITY.common,
+    rarity: 'common',
+    icon: 'heart'
+  },
+  {
+    title: "召唤大师",
+    description: "召唤10个随从",
+    type: 'summon_minions',
+    target: 10,
+    rewardGold: 70,
+    rewardExp: XP_BY_RARITY.common,
+    rarity: 'common',
+    icon: 'scroll'
+  },
+
+  // --- Combo / streak quests ---
+  {
+    title: "连击达人",
+    description: "达成3连击",
+    type: 'combo_count',
+    target: 3,
+    rewardGold: 60,
+    rewardExp: XP_BY_RARITY.common,
+    rarity: 'common',
+    icon: 'zap'
+  },
+  {
+    title: "三连胜",
+    description: "连胜3场",
+    type: 'win_streak',
+    target: 3,
+    rewardGold: 200,
+    rewardExp: XP_BY_RARITY.epic,
+    rarity: 'epic',
+    icon: 'trophy'
+  },
+  {
+    title: "绝地反击",
+    description: "在10HP以下获胜1次",
+    type: 'low_hp_win',
+    target: 1,
+    rewardGold: 150,
+    rewardExp: XP_BY_RARITY.epic,
+    rarity: 'epic',
+    icon: 'skull'
+  },
+
+  // --- Legendary / high-value quests ---
+  {
+    title: "传说降临",
+    description: "使用传说卡牌3次",
+    type: 'play_legendary',
+    target: 3,
+    rewardGold: 250,
+    rewardExp: XP_BY_RARITY.epic,
+    rarity: 'epic',
+    icon: 'crown'
+  },
+
+  // --- Dungeon ---
+  {
+    title: "地牢探索",
+    description: "通关1个地牢房间",
+    type: 'dungeon_room',
+    target: 1,
+    rewardGold: 40,
+    rewardExp: XP_BY_RARITY.common,
+    rarity: 'common',
+    icon: 'scroll'
+  },
+
+  // --- Specialty quests ---
+  {
+    title: "先发制人",
+    description: "在对手之前获胜（先手获胜）",
+    type: 'first_blood',
+    target: 1,
+    rewardGold: 30,
+    rewardExp: XP_BY_RARITY.common,
+    rarity: 'common',
+    icon: 'sword'
+  },
+  {
+    title: "坚不可摧",
+    description: "累计获得30点护甲",
+    type: 'gain_armor',
+    target: 30,
+    rewardGold: 60,
+    rewardExp: XP_BY_RARITY.common,
+    rarity: 'common',
+    icon: 'shield'
+  },
+  {
+    title: "毁灭风暴",
+    description: "单场造成50+伤害",
+    type: 'single_game_damage',
+    target: 50,
+    rewardGold: 100,
+    rewardExp: XP_BY_RARITY.rare,
+    rarity: 'rare',
+    icon: 'skull'
+  },
+  {
+    title: "完美胜利",
+    description: "不受伤获胜1次",
+    type: 'perfect_game',
+    target: 1,
+    rewardGold: 300,
+    rewardExp: XP_BY_RARITY.epic,
+    rarity: 'epic',
+    icon: 'crown'
+  },
+  {
+    title: "元素克制",
+    description: "使用克制元素获胜3次",
+    type: 'counter_element',
+    target: 3,
+    rewardGold: 100,
+    rewardExp: XP_BY_RARITY.rare,
+    rarity: 'rare',
+    icon: 'zap'
+  },
+  {
+    title: "勤勉决斗者",
+    description: "完成3场对战",
+    type: 'total_games',
+    target: 3,
+    rewardGold: 50,
+    rewardExp: XP_BY_RARITY.common,
+    rarity: 'common',
+    icon: 'trophy'
   }
 ];
 

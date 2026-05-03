@@ -98,6 +98,23 @@ export const generateDescription = (spell: Partial<Spell>): string => {
          const poisonDur = spell.effectDuration || 3;
          parts.push(`使目标中毒，每回合受到 ${poisonVal} 点伤害，持续 ${poisonDur} 回合。`);
          break;
+
+      case 'lifesteal':
+         const lifestealVal = spell.damage || 2;
+         parts.push(`造成 ${lifestealVal} 点伤害并恢复等量生命值。`);
+         break;
+
+      case 'discover':
+         parts.push(`发现：从3张随机卡牌中选择1张加入手牌。`);
+         break;
+
+      case 'transform':
+         parts.push(`将敌方一个随从变为0/1绵羊。`);
+         break;
+
+      case 'cleave':
+         parts.push(`对目标及其相邻随从造成伤害。`);
+         break;
     }
   }
 
@@ -123,6 +140,10 @@ export const generateShortDesc = (spell: Partial<Spell>): string => {
        case 'aura': return '光环: 持续增益';
        case 'summon': return '召唤: 召唤随从';
        case 'poison': return '中毒: 持续伤害';
+       case 'lifesteal': return '吸血: 伤害回复生命';
+       case 'discover': return '发现: 选择一张卡牌';
+       case 'transform': return '变形: 变为绵羊';
+       case 'cleave': return '横扫: 伤害相邻随从';
        default: return '';
    }
 }

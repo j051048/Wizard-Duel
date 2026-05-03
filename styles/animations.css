@@ -739,3 +739,25 @@
   background: radial-gradient(circle, #d6d3d1, #a8a29e);
   animation: envIceSnow 7s linear infinite;
 }
+
+/* ============ Scenery Particle Float ============ */
+@keyframes sceneryFloat {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-40px) translateX(15px);
+  }
+}
+
+.scenery-particle {
+  animation: sceneryFloat var(--duration, 6s) ease-in-out infinite;
+  filter: blur(0.5px);
+}

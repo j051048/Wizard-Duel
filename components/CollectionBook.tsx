@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Filter, Search, Grid, LayoutList } from 'lucide-react';
+import { ArrowLeft, Filter, Search, Grid, LayoutList, Gift, Trophy } from 'lucide-react';
 import { ALL_SPELLS } from '../data/spells';
 import { SpellType, Spell } from '../types';
 import { useUserStore } from '../stores/useUserStore';
@@ -11,12 +11,48 @@ interface CollectionBookProps {
   onBack: () => void;
 }
 
+interface CollectionMilestone {
+  id: string;
+  threshold: number;
+  label: string;
+  reward: string;
+  rewardType: 'mana' | 'pack' | 'dust' | 'legendary_pack';
+  rewardAmount: number;
+  emoji: string;
+  claimed: boolean;
+}
+
+const MILESTONES_STORAGE_KEY = 'wizard_collection_milestones_v1';
+
 export const CollectionBook: React.FC<CollectionBookProps> = ({ onBack }) => {
-  const { inventory } = useUserStore();
+  const { inventory, addPacks, setBalance, balance } = useUserStore();
   const [filterMana, setFilterMana] = useState<number | null>(null);
   const [filterElement, setFilterElement] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSpell, setSelectedSpell] = useState<Spell | null>(null);
+  const [claimingMilestone, setClaimingMilestone] = useState<CollectionMilestone | null>(null);
+
+  // Milestone state
+  const totalUniqueCards = useMemo(() => Object.keys(ALL_SPELLS).length, []);
+  const ownedUniqueCards = useMemo(() => {
+    return Object.keys(ALL_SPELLS).filter(id => inventory.includes(id)).length;
+  }, [inventory]);
+  const collectionPercent = totalUniqueCards > 0 ? ownedUniqueCards / totalUniqueCards : 0;
+
+  const milestones = useMemo<CollectionMilestone[]>(() => {
+    const saved: Record<string, boolean> = (() => {
+      try {
+        const raw = localStorage.getItem(MILESTONES_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch { return {}; }
+    })();
+    return [
+      { id: 'm25', threshold: 0.25, label: '25% 收集', reward: '+100 法力', rewardType: 'mana' as const, rewardAmount: 100, emoji: '🌟', claimed: !!saved['m25'] },
+      { id: 'm50', threshold: 0.50, label: '50% 收集', reward: '1 卡包', rewardType: 'pack' as const, rewardAmount: 1, emoji: '📦', claimed: !!saved['m50'] },
+      { id: 'm75', threshold: 0.75, label: '75% 收集', reward: '+200 法力', rewardType: 'dust' as const, rewardAmount: 200, emoji: '✨', claimed: !!saved['m75'] },
+      { id: 'm100', threshold: 1.00, label: '100% 收集', reward: '1 传说卡包', rewardType: 'legendary_pack' as const, rewardAmount: 1, emoji: '👑', claimed: !!saved['m100'] },
+    ];
+  }, []);
 
   // Group spells by ownership logic (simplified: all valid spells are 'obtainable')
   const spells = useMemo(() => Object.values(ALL_SPELLS), []);
@@ -50,23 +86,94 @@ export const CollectionBook: React.FC<CollectionBookProps> = ({ onBack }) => {
   const ownedCount = filteredSpells.filter(s => inventory.includes(s.id)).length;
   const totalCount = filteredSpells.length;
 
+  const claimMilestone = (m: CollectionMilestone) => {
+    HapticService.medium();
+    // Update localStorage
+    try {
+      const raw = localStorage.getItem(MILESTONES_STORAGE_KEY);
+      const saved: Record<string, boolean> = raw ? JSON.parse(raw) : {};
+      saved[m.id] = true;
+      localStorage.setItem(MILESTONES_STORAGE_KEY, JSON.stringify(saved));
+    } catch { /* ignore */ }
+    // Grant reward
+    switch (m.rewardType) {
+      case 'mana':
+      case 'dust':
+        useUserStore.getState().setBalance(useUserStore.getState().balance + m.rewardAmount);
+        break;
+      case 'pack':
+        addPacks('standard', m.rewardAmount);
+        break;
+      case 'legendary_pack':
+        addPacks('legendary', m.rewardAmount);
+        break;
+    }
+    setClaimingMilestone(null);
+    HapticService.success();
+    window.location.reload(); // Reload to refresh milestone claimed state
+  };
+
+  const nextMilestone = milestones.find(m => !m.claimed);
+  const prevMilestone = [...milestones].reverse().find(m => m.claimed || collectionPercent >= m.threshold);
+  const progressPercent = nextMilestone
+    ? Math.min(1, (collectionPercent - (prevMilestone?.threshold ?? 0)) / (nextMilestone.threshold - (prevMilestone?.threshold ?? 0)))
+    : 1;
+
   return (
     <div className="fixed inset-0 bg-slate-950 z-50 overflow-hidden flex flex-col">
       {/* Header */}
-      <div className="relative z-10 bg-slate-900/80 backdrop-blur-md border-b border-white/10 p-4 flex items-center justify-between shadow-lg">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => { HapticService.light(); onBack(); }}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors text-white"
-          >
-            <ArrowLeft size={24} />
-          </button>
-          <h1 className="text-2xl font-wizard text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500">
-            法术典籍
-          </h1>
-          <div className="px-3 py-1 bg-slate-800 rounded-full border border-slate-700 text-xs font-mono text-slate-400">
-            收集进度: <span className="text-amber-400">{ownedCount}</span> / {totalCount}
+      <div className="relative z-10 bg-slate-900/80 backdrop-blur-md border-b border-white/10 p-4 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => { HapticService.light(); onBack(); }}
+              className="p-2 hover:bg-white/10 rounded-full transition-colors text-white"
+            >
+              <ArrowLeft size={24} />
+            </button>
+            <h1 className="text-2xl font-wizard text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500">
+              法术典籍
+            </h1>
+            <div className="px-3 py-1 bg-slate-800 rounded-full border border-slate-700 text-xs font-mono text-slate-400">
+              收集进度: <span className="text-amber-400">{ownedCount}</span> / {totalCount}
+            </div>
           </div>
+        </div>
+        {/* Milestone Progress Bar */}
+        <div className="mt-3 flex items-center gap-2">
+          {milestones.map((m) => {
+            const isAchieved = collectionPercent >= m.threshold;
+            const isNext = !m.claimed && isAchieved;
+            return (
+              <button
+                key={m.id}
+                onClick={() => { if (isNext) setClaimingMilestone(m); }}
+                disabled={!isNext}
+                className={`
+                  px-2.5 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5
+                  ${m.claimed ? 'bg-green-900/50 text-green-300 opacity-70' :
+                    isAchieved ? 'bg-amber-600/50 text-amber-200 animate-pulse cursor-pointer hover:bg-amber-600' :
+                    'bg-slate-800 text-slate-500'}
+                `}
+                title={m.claimed ? `已领取: ${m.reward}` : `${m.label} - ${m.reward}`}
+              >
+                <span>{m.emoji}</span>
+                <span className="hidden sm:inline">{m.label}</span>
+                {m.claimed && <span className="text-green-400">✓</span>}
+              </button>
+            );
+          })}
+          <div className="flex-1" />
+          <span className="text-xs font-mono text-slate-500">{(collectionPercent * 100).toFixed(0)}%</span>
+        </div>
+        <div className="mt-1.5 h-1 bg-slate-800 rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${collectionPercent * 100}%`,
+              background: collectionPercent >= 1 ? '#fbbf24' : collectionPercent >= 0.75 ? '#a855f7' : collectionPercent >= 0.5 ? '#3b82f6' : '#6b7280',
+            }}
+          />
         </div>
       </div>
 
@@ -225,6 +332,37 @@ export const CollectionBook: React.FC<CollectionBookProps> = ({ onBack }) => {
                   </motion.div>
               </div>
           )}
+      </AnimatePresence>
+
+      {/* Milestone Claim Modal */}
+      <AnimatePresence>
+        {claimingMilestone && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              onClick={() => setClaimingMilestone(null)}
+            />
+            <motion.div
+              initial={{ scale: 0.7, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.7, opacity: 0 }}
+              className="relative z-10 bg-slate-900 border border-amber-500/30 rounded-2xl p-8 flex flex-col items-center gap-4 max-w-sm w-full"
+            >
+              <div className="text-5xl">{claimingMilestone.emoji}</div>
+              <h2 className="text-2xl font-bold text-amber-300">{claimingMilestone.label} 达成！</h2>
+              <p className="text-slate-300 text-center">{claimingMilestone.reward}</p>
+              <button
+                onClick={() => claimMilestone(claimingMilestone)}
+                className="w-full py-3 mt-2 bg-gradient-to-r from-amber-500 to-yellow-600 text-black font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all"
+              >
+                领取奖励
+              </button>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
     </div>
   );

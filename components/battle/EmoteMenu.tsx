@@ -21,6 +21,12 @@ const EMOTES: Emote[] = [
   { id: 'wow', text: '哇哦！', emoji: '😮' },
   { id: 'oops', text: '失误了...', emoji: '😅' },
   { id: 'threaten', text: '你的末日到了！', emoji: '😈' },
+  { id: 'laugh', text: '哈哈！', emoji: '😂' },
+  { id: 'cry', text: '太惨了...', emoji: '😢' },
+  { id: 'angry', text: '可恶！', emoji: '😤' },
+  { id: 'thinking', text: '让我想想...', emoji: '🤔' },
+  { id: 'gg', text: 'Good Game!', emoji: '🤝' },
+  { id: 'surprised', text: '什么！？', emoji: '🤯' },
 ];
 
 interface EmoteMenuProps {
