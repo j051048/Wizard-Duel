@@ -79,10 +79,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginComplete }) => 
         const signature = await signMessage(config, { message });
         
         if (signature) {
-          // 2. 尝试 Supabase 登录（可选，失败不阻塞）
+          // 2. 尝试 Supabase 登录（15秒超时，失败不阻塞）
           try {
             const { signInWithWallet } = await import('../services/supabase');
-            await signInWithWallet(address, signature, message);
+            const loginPromise = signInWithWallet(address, signature, message);
+            const timeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Login timeout')), 15000)
+            );
+            await Promise.race([loginPromise, timeoutPromise]);
           } catch (supabaseErr) {
             console.warn('Supabase login skipped (not configured or unavailable):', supabaseErr);
           }

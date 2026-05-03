@@ -9,7 +9,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -21,7 +20,7 @@ serve(async (req) => {
       throw new Error("Missing address or signature");
     }
 
-    // 1. Verify the signature
+    // 1. Verify signature
     const msgToVerify = message || `Welcome to Wizard Duel!\n\nVerify your wallet to enter the arena.\n\nTimestamp: ${Date.now()}`;
 
     const isValid = await verifyMessage({
@@ -34,20 +33,16 @@ serve(async (req) => {
       throw new Error("Invalid signature");
     }
 
-    // 2. Initialize Supabase Admin Client
+    // 2. Init admin client
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 3. User Management
-    //    Email is deterministic from wallet address, so we can use it
-    //    as the single source of truth instead of the slow listUsers() fallback.
     const email = `${address.toLowerCase()}@wizardduel.game`;
     const tempPassword = crypto.randomUUID() + crypto.randomUUID();
-
     let userId: string;
 
-    // Try to find existing profile by wallet_address (fast path)
+    // 3. Check if profile exists (fast path — O(1) lookup)
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('id')
@@ -55,44 +50,52 @@ serve(async (req) => {
       .single();
 
     if (profile) {
-      // ── Returning user: profile found by wallet ──
+      // ── Returning user: fast path ──
+      // Profile exists → we know the auth user ID → skip expensive operations
       userId = profile.id;
-      await supabaseAdmin.auth.admin.updateUserById(userId, {
-        password: tempPassword,
-        user_metadata: { wallet_address: address.toLowerCase() },
-      });
     } else {
-      // ── New user OR returning user with null wallet_address ──
-      //    Use generateLink to atomically create-or-find the Auth user.
-      //    This replaces the old createUser + listUsers() fallback.
-      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-        type: 'signup',
+      // ── New user or orphaned auth account ──
+      // Try creating auth user. If email is taken, use listUsers with page_size=1 filter.
+      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email,
         password: tempPassword,
-      });
-
-      if (linkError) {
-        // generateLink with type 'signup' returns the existing user if email is taken
-        // but also returns an error. We can still use the user from the response.
-        console.warn('generateLink warning (expected for existing users):', linkError.message);
-      }
-
-      if (linkData?.user) {
-        userId = linkData.user.id;
-      } else {
-        // Extremely rare: generateLink completely failed.
-        // Last resort: try signInWithPassword with a known password won't work.
-        // Throw a clear error so the client can retry.
-        throw new Error("Could not create or find user account");
-      }
-
-      // Update password (in case the user already existed with a different password)
-      await supabaseAdmin.auth.admin.updateUserById(userId, {
-        password: tempPassword,
+        email_confirm: true,
         user_metadata: { wallet_address: address.toLowerCase() },
       });
 
-      // Ensure profile row exists and wallet_address is set
+      if (newUser?.user) {
+        // Brand new user created
+        userId = newUser.user.id;
+      } else {
+        // Email already registered — find existing user ID
+        // Use listUsers with page_size to minimize payload (still O(n) internally,
+        // but returns only 1 page). For projects with <10k users this is acceptable.
+        let foundUserId: string | null = null;
+        let page = 1;
+        const perPage = 1000;
+
+        while (!foundUserId && page <= 10) {
+          const { data: usersPage } = await supabaseAdmin.auth.admin.listUsers({
+            page,
+            perPage,
+          });
+          if (!usersPage?.users?.length) break;
+          const match = usersPage.users.find(u => u.email === email);
+          if (match) {
+            foundUserId = match.id;
+            break;
+          }
+          if (usersPage.users.length < perPage) break; // last page
+          page++;
+        }
+
+        if (!foundUserId) {
+          throw new Error("Could not create or find user account");
+        }
+        userId = foundUserId;
+      }
+
+      // Ensure profile row exists
       const { data: existingProfile } = await supabaseAdmin
         .from('profiles')
         .select('id')
@@ -114,7 +117,12 @@ serve(async (req) => {
       }
     }
 
-    // 4. Sign In to get Session
+    // 4. Rotate password + sign in (needed to get a fresh session token)
+    await supabaseAdmin.auth.admin.updateUserById(userId, {
+      password: tempPassword,
+      user_metadata: { wallet_address: address.toLowerCase() },
+    });
+
     const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.signInWithPassword({
       email,
       password: tempPassword,
