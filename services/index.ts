@@ -8,7 +8,7 @@
 export * from './gameLogic';
 
 // AI 决策（同时从 gameLogic 重新导出，此处额外标注）
-export { pickBestSpellForAI, executeAITurn, getAISpell } from './ai';
+export { pickBestSpellForAI, executeAITurn } from './ai';
 
 // 卡牌机制
 export { getMechanicHandler, MECHANIC_DEFINITIONS } from './mechanics';

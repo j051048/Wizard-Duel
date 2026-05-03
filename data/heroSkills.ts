@@ -4,6 +4,7 @@
  */
 
 import type { HeroSkill } from '../types/card';
+import { getGameRNG } from '../utils/seededRandom';
 
 export const HERO_SKILLS: HeroSkill[] = [
   // === FIRE ===
@@ -179,22 +180,23 @@ export const getSkillChoices = (mainElement?: string): HeroSkill[] => {
   const choices: HeroSkill[] = [];
 
   // Always include the main element's skills
+  const rng = getGameRNG();
+
   if (mainElement) {
     const mainSkills = getSkillsForElement(mainElement);
     if (mainSkills.length > 0) {
-      choices.push(mainSkills[Math.floor(Math.random() * mainSkills.length)]);
+      choices.push(rng.pick(mainSkills));
     }
   }
 
   // Fill remaining slots with random other element skills
-  const otherElements = ['fire', 'ice', 'thunder', 'vine', 'rock'].filter(e => e !== mainElement);
-  const shuffled = otherElements.sort(() => Math.random() - 0.5);
+  const otherElements = rng.shuffle(['fire', 'ice', 'thunder', 'vine', 'rock'].filter(e => e !== mainElement));
 
-  for (const el of shuffled) {
+  for (const el of otherElements) {
     if (choices.length >= 3) break;
     const skills = getSkillsForElement(el);
     if (skills.length > 0) {
-      choices.push(skills[Math.floor(Math.random() * skills.length)]);
+      choices.push(rng.pick(skills));
     }
   }
 
@@ -202,7 +204,7 @@ export const getSkillChoices = (mainElement?: string): HeroSkill[] => {
   while (choices.length < 3) {
     const remaining = HERO_SKILLS.filter(s => !choices.some(c => c.id === s.id));
     if (remaining.length === 0) break;
-    choices.push(remaining[Math.floor(Math.random() * remaining.length)]);
+    choices.push(rng.pick(remaining));
   }
 
   return choices.slice(0, 3);

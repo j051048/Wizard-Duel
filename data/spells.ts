@@ -32,34 +32,29 @@ const defineSpell = (s: Partial<Spell> & { id: SpellType; name: string; manaCost
   // Color presets based on ID prefix
   if (s.id.startsWith('fire')) {
       s.emoji = s.emoji || '🔥';
-      s.color = 'text-red-500'; 
+      s.color = 'text-red-500';
       s.borderColor = 'border-red-500';
       s.shadowColor = 'rgba(239,68,68,0.5)';
-      s.beats = 'vine';
   } else if (s.id.startsWith('vine')) {
       s.emoji = s.emoji || '🌿';
       s.color = 'text-green-500';
       s.borderColor = 'border-green-500';
       s.shadowColor = 'rgba(34,197,94,0.5)';
-      s.beats = 'ice';
   } else if (s.id.startsWith('ice')) {
       s.emoji = s.emoji || '❄️';
       s.color = 'text-cyan-400';
       s.borderColor = 'border-cyan-400';
       s.shadowColor = 'rgba(34,211,238,0.5)';
-      s.beats = 'thunder';
   } else if (s.id.startsWith('thunder')) {
       s.emoji = s.emoji || '⚡';
       s.color = 'text-yellow-400';
       s.borderColor = 'border-yellow-400';
       s.shadowColor = 'rgba(250,204,21,0.5)';
-      s.beats = 'rock';
   } else if (s.id.startsWith('rock')) {
       s.emoji = s.emoji || '🪨';
       s.color = 'text-stone-400';
       s.borderColor = 'border-stone-400';
       s.shadowColor = 'rgba(168,162,158,0.5)';
-      s.beats = 'fire';
   }
 
   const spell = { ...defaults, ...s, cardSet: s.cardSet || 'core' } as Spell;
@@ -252,22 +247,22 @@ export const SPELLS: Spell[] = [
   defineSpell({
     id: 'healing', name: '治疗波', manaCost: 2, value: 4, damage: 0, rarity: 'rare', mechanic: 'heal', cardSet: 'tournament',
     artSrc: '/cards/healing-wave.webp', 
-    beats: 'fire', color: 'text-blue-500', borderColor: 'border-blue-500', shadowColor: 'rgba(59,130,246,0.5)', emoji: '💙'
+    color: 'text-blue-500', borderColor: 'border-blue-500', shadowColor: 'rgba(59,130,246,0.5)', emoji: '💙'
   }),
   defineSpell({
     id: 'aoe', name: '奥术爆炸', manaCost: 4, damage: 3, rarity: 'rare', mechanic: 'aoe', cardSet: 'tournament',
     artSrc: '/cards/aoe-explosion.webp',
-    beats: 'vine', color: 'text-purple-500', borderColor: 'border-purple-500', shadowColor: 'rgba(147,51,234,0.5)', emoji: '💥'
+    color: 'text-purple-500', borderColor: 'border-purple-500', shadowColor: 'rgba(147,51,234,0.5)', emoji: '💥'
   }),
   defineSpell({
     id: 'draw', name: '奥术智慧', manaCost: 3, damage: 0, value: 2, rarity: 'rare', mechanic: 'draw', cardSet: 'tournament',
     artSrc: '/cards/draw-intellect.webp',
-    beats: 'silence', color: 'text-indigo-500', borderColor: 'border-indigo-500', shadowColor: 'rgba(99,102,241,0.5)', emoji: '📚'
+    color: 'text-indigo-500', borderColor: 'border-indigo-500', shadowColor: 'rgba(99,102,241,0.5)', emoji: '📚'
   }),
   defineSpell({
     id: 'silence', name: '沉默', manaCost: 1, damage: 0, rarity: 'common', mechanic: 'silence', cardSet: 'tournament',
     artSrc: '/cards/silence.webp',
-    beats: 'healing', color: 'text-gray-500', borderColor: 'border-gray-500', shadowColor: 'rgba(107,114,128,0.5)', emoji: '🤫'
+    color: 'text-gray-500', borderColor: 'border-gray-500', shadowColor: 'rgba(107,114,128,0.5)', emoji: '🤫'
   }),
 
   // ============ Hero Skills ============
@@ -293,42 +288,21 @@ export const SPELLS: Spell[] = [
   }),
   
     // ============ [P1 Fix #13] Luck Coin 幸运币 ============
-  {
-    id: 'luck_coin' as SpellType,
-    name: '幸运币',
-    emoji: '🪙',
-    artSrc: '/cards/luck-coin.webp',
-    color: 'text-yellow-400',
-    borderColor: 'border-yellow-400',
-    shadowColor: 'rgba(250,204,21,0.5)',
-    beats: 'skip' as SpellType,
-    manaCost: 0,
-    damage: 0,
-    rarity: 'common',
-    mechanic: 'heal', // 使用 heal 机制但实际效果是 +1 法力
-    cardSet: 'core' as CardSet,
-    description: '获得1点临时法力水晶。后手补偿。',
-    shortDesc: '+1法力',
-    value: 0, // 不治疗
-  },
+  defineSpell({
+    id: 'luck_coin' as SpellType, name: '幸运币', manaCost: 0, rarity: 'common', mechanic: 'heal',
+    emoji: '🪙', artSrc: '/cards/luck-coin.webp',
+    color: 'text-yellow-400', borderColor: 'border-yellow-400', shadowColor: 'rgba(250,204,21,0.5)',
+    description: '获得1点临时法力水晶。后手补偿。', shortDesc: '+1法力', value: 0,
+  }),
 
   // ============ Skip ============
-  { 
-    id: 'skip', 
-    name: '跳过回合', 
-    emoji: '🏳️', 
-    artSrc: '/cards/skip-turn.webp', 
-    color: 'text-gray-400', 
-    borderColor: 'border-gray-400',
-    shadowColor: 'rgba(156,163,175,0.5)',
-    beats: 'skip' as SpellType,
-    manaCost: 0, 
-    damage: 0, 
-    rarity: 'common',
-    mechanic: 'skip',
+  defineSpell({
+    id: 'skip' as SpellType, name: '跳过回合', manaCost: 0, rarity: 'common', mechanic: 'skip',
+    emoji: '🏳️', artSrc: '/cards/skip-turn.webp',
+    color: 'text-gray-400', borderColor: 'border-gray-400', shadowColor: 'rgba(156,163,175,0.5)',
     description: '跳过本回合。',
     shortDesc: '跳过'
-  },
+  }),
 
   // ============================================================
   // [B-2] Expansion 1: 每元素新增卡牌 + 中立卡 + 新随从召唤卡
@@ -377,43 +351,38 @@ export const SPELLS: Spell[] = [
   defineSpell({ id: 'rock13' as SpellType, name: '大地之心', manaCost: 7, damage: 5, armorGain: 8, rarity: 'legendary', mechanic: 'fortify', cardSet: 'expansion_1' }),
 
   // --- NEUTRAL (neutral1 ~ neutral5) ---
-  defineSpell({ id: 'neutral1' as SpellType, name: '奥术智慧', manaCost: 2, damage: 0, rarity: 'common', mechanic: 'draw', value: 2, cardSet: 'expansion_1', color: 'text-cyan-400', borderColor: 'border-cyan-400', shadowColor: 'rgba(34,211,238,0.5)', beats: 'skip' as SpellType }),
-  defineSpell({ id: 'neutral2' as SpellType, name: '铁甲术', manaCost: 2, damage: 0, armorGain: 4, rarity: 'common', mechanic: 'fortify', cardSet: 'expansion_1', color: 'text-slate-400', borderColor: 'border-slate-400', shadowColor: 'rgba(148,163,184,0.5)', beats: 'skip' as SpellType }),
-  defineSpell({ id: 'neutral3' as SpellType, name: '法力涌动', manaCost: 1, damage: 0, rarity: 'rare', mechanic: 'aura', summonId: 'mana_wyrm', cardSet: 'expansion_1', color: 'text-violet-400', borderColor: 'border-violet-400', shadowColor: 'rgba(167,139,250,0.5)', beats: 'skip' as SpellType }),
-  defineSpell({ id: 'neutral4' as SpellType, name: '瘟疫扩散', manaCost: 3, damage: 0, rarity: 'rare', mechanic: 'deathrattle', summonId: 'plague_rat', cardSet: 'expansion_1', color: 'text-lime-400', borderColor: 'border-lime-400', shadowColor: 'rgba(163,230,53,0.5)', beats: 'skip' as SpellType }),
-  defineSpell({ id: 'neutral5' as SpellType, name: '神圣治愈', manaCost: 4, damage: 0, rarity: 'rare', mechanic: 'heal', value: 8, cardSet: 'expansion_1', color: 'text-yellow-300', borderColor: 'border-yellow-300', shadowColor: 'rgba(253,224,71,0.5)', beats: 'skip' as SpellType }),
+  defineSpell({ id: 'neutral1' as SpellType, name: '奥术智慧', manaCost: 2, damage: 0, rarity: 'common', mechanic: 'draw', value: 2, cardSet: 'expansion_1', color: 'text-cyan-400', borderColor: 'border-cyan-400', shadowColor: 'rgba(34,211,238,0.5)' }),
+  defineSpell({ id: 'neutral2' as SpellType, name: '铁甲术', manaCost: 2, damage: 0, armorGain: 4, rarity: 'common', mechanic: 'fortify', cardSet: 'expansion_1', color: 'text-slate-400', borderColor: 'border-slate-400', shadowColor: 'rgba(148,163,184,0.5)' }),
+  defineSpell({ id: 'neutral3' as SpellType, name: '法力涌动', manaCost: 1, damage: 0, rarity: 'rare', mechanic: 'aura', summonId: 'mana_wyrm', cardSet: 'expansion_1', color: 'text-violet-400', borderColor: 'border-violet-400', shadowColor: 'rgba(167,139,250,0.5)' }),
+  defineSpell({ id: 'neutral4' as SpellType, name: '瘟疫扩散', manaCost: 3, damage: 0, rarity: 'rare', mechanic: 'deathrattle', summonId: 'plague_rat', cardSet: 'expansion_1', color: 'text-lime-400', borderColor: 'border-lime-400', shadowColor: 'rgba(163,230,53,0.5)' }),
+  defineSpell({ id: 'neutral5' as SpellType, name: '神圣治愈', manaCost: 4, damage: 0, rarity: 'rare', mechanic: 'heal', value: 8, cardSet: 'expansion_1', color: 'text-yellow-300', borderColor: 'border-yellow-300', shadowColor: 'rgba(253,224,71,0.5)' }),
 
   // --- SPECIAL ---
   defineSpell({ id: 'storm_summon' as SpellType, name: '风暴召唤', manaCost: 6, damage: 3, rarity: 'legendary', mechanic: 'charge', summonId: 'storm_giant', cardSet: 'expansion_1' }),
-  defineSpell({ id: 'poison_dart' as SpellType, name: '毒镖', manaCost: 2, damage: 2, rarity: 'rare', mechanic: 'poison', value: 2, effectDuration: 3, cardSet: 'expansion_1', color: 'text-emerald-400', borderColor: 'border-emerald-400', shadowColor: 'rgba(52,211,153,0.5)', beats: 'skip' as SpellType }),
-  defineSpell({ id: 'shield_bash' as SpellType, name: '圣盾冲锋', manaCost: 4, damage: 3, rarity: 'mythic', mechanic: 'divine_shield', summonId: 'shadow_fox', cardSet: 'expansion_1', color: 'text-amber-400', borderColor: 'border-amber-400', shadowColor: 'rgba(251,191,36,0.5)', beats: 'skip' as SpellType }),
+  defineSpell({ id: 'poison_dart' as SpellType, name: '毒镖', manaCost: 2, damage: 2, rarity: 'rare', mechanic: 'poison', value: 2, effectDuration: 3, cardSet: 'expansion_1', color: 'text-emerald-400', borderColor: 'border-emerald-400', shadowColor: 'rgba(52,211,153,0.5)' }),
+  defineSpell({ id: 'shield_bash' as SpellType, name: '圣盾冲锋', manaCost: 4, damage: 3, rarity: 'mythic', mechanic: 'divine_shield', summonId: 'shadow_fox', cardSet: 'expansion_1', color: 'text-amber-400', borderColor: 'border-amber-400', shadowColor: 'rgba(251,191,36,0.5)' }),
 
   // --- [P3-1] SECRETS (1 per element) ---
   defineSpell({
     id: 'secret_fire' as SpellType, name: '火焰陷阱', manaCost: 2, damage: 0, rarity: 'rare', mechanic: 'secret', cardSet: 'expansion_1',
     description: '秘密：对手出牌时，对其造成 3 点伤害', shortDesc: '对手出牌 → 3伤',
-    color: 'text-orange-400', borderColor: 'border-orange-400', shadowColor: 'rgba(249,115,22,0.5)', beats: 'skip' as SpellType
-  }),
+    color: 'text-orange-400', borderColor: 'border-orange-400', shadowColor: 'rgba(249,115,22,0.5)'  }),
   defineSpell({
     id: 'secret_ice' as SpellType, name: '冰霜陷阱', manaCost: 2, damage: 0, rarity: 'rare', mechanic: 'secret', cardSet: 'expansion_1',
     description: '秘密：对手出牌时，冻结其 1 回合', shortDesc: '对手出牌 → 冻结',
-    color: 'text-cyan-400', borderColor: 'border-cyan-400', shadowColor: 'rgba(34,211,238,0.5)', beats: 'skip' as SpellType
-  }),
+    color: 'text-cyan-400', borderColor: 'border-cyan-400', shadowColor: 'rgba(34,211,238,0.5)'  }),
   defineSpell({
     id: 'secret_thunder' as SpellType, name: '雷电陷阱', manaCost: 2, damage: 0, rarity: 'rare', mechanic: 'secret', cardSet: 'expansion_1',
     description: '秘密：对手出牌时，如果该牌费用 >= 4，抽 2 张牌', shortDesc: '对手出高费 → 抽2牌',
-    color: 'text-yellow-400', borderColor: 'border-yellow-400', shadowColor: 'rgba(250,204,21,0.5)', beats: 'skip' as SpellType
-  }),
+    color: 'text-yellow-400', borderColor: 'border-yellow-400', shadowColor: 'rgba(250,204,21,0.5)'  }),
   defineSpell({
     id: 'secret_vine' as SpellType, name: '荆棘陷阱', manaCost: 2, damage: 0, rarity: 'rare', mechanic: 'secret', cardSet: 'expansion_1',
     description: '秘密：自己受到伤害时，恢复 4 点生命值', shortDesc: '受伤 → 回4HP',
-    color: 'text-green-400', borderColor: 'border-green-400', shadowColor: 'rgba(74,222,128,0.5)', beats: 'skip' as SpellType
-  }),
+    color: 'text-green-400', borderColor: 'border-green-400', shadowColor: 'rgba(74,222,128,0.5)'  }),
   defineSpell({
     id: 'secret_rock' as SpellType, name: '岩石陷阱', manaCost: 2, damage: 0, rarity: 'rare', mechanic: 'secret', cardSet: 'expansion_1',
     description: '秘密：对手出牌时，获得 5 点护甲', shortDesc: '对手出牌 → +5甲',
-    color: 'text-slate-400', borderColor: 'border-slate-400', shadowColor: 'rgba(148,163,184,0.5)', beats: 'skip' as SpellType
-  }),
+    color: 'text-slate-400', borderColor: 'border-slate-400', shadowColor: 'rgba(148,163,184,0.5)'  }),
 ];
 
 export const STANDARD_SETS: CardSet[] = ['core', 'classic', 'tournament', 'expansion_1'];

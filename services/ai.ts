@@ -8,6 +8,7 @@ import { DuelState, SpellType, GameCommand } from '../types';
 import { getSpellById, canAffordSpell, executeSpell, checkGameOver } from './gameLogic';
 import { cloneDuelState } from './stateUtils';
 import { getElementType, doesElementBeat } from './combat/elementSystem';
+import { getGameRNG } from '../utils/seededRandom';
 import type { Minion } from '../types';
 
 // ============ [Phase C-1] 难度配置 ============
@@ -388,11 +389,11 @@ export const pickBestSpellForAI = (
       ? Math.min(candidateSpells.length, 5)
       : Math.min(3, candidateSpells.length);
     const topChoices = candidateSpells.slice(0, poolSize);
-    return topChoices[Math.floor(Math.random() * topChoices.length)];
+    return getGameRNG().pick(topChoices);
   }
 
   // --- Step 7: Fallback random ---
-  return affordable[Math.floor(Math.random() * affordable.length)];
+  return getGameRNG().pick(affordable);
 };
 
 // ============ AI 回合执行 ============
@@ -460,11 +461,3 @@ export const executeAITurn = (
   return { newState: currentState, logs, commands };
 };
 
-// ============ 兼容旧接口 ============
-
-/**
- * @deprecated 使用 pickBestSpellForAI 替代
- */
-export const getAISpell = (state: DuelState): SpellType => {
-  return pickBestSpellForAI(state) || 'rock';
-};

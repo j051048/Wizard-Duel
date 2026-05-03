@@ -94,10 +94,7 @@ export default defineConfig(({ mode }) => {
           }
         })
       ],
-      define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
-      },
+      define: {},
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
@@ -111,10 +108,20 @@ export default defineConfig(({ mode }) => {
               'vendor-web3': ['wagmi', 'viem', '@tanstack/react-query'],
               'vendor-animation': ['framer-motion'],
               'vendor-supabase': ['@supabase/supabase-js'],
+              'vendor-game-logic': [
+                './services/gameLogic.ts',
+                './services/ai.ts',
+                './services/combat/elementSystem.ts',
+                './services/combat/damageCalculation.ts',
+                './services/combat/comboSystem.ts',
+                './services/combat/turnManager.ts',
+                './services/mechanics.ts',
+                './services/sequence.ts',
+              ],
             },
           },
         },
-        chunkSizeWarningLimit: 800,
+        chunkSizeWarningLimit: 500,
       },
       esbuild: {
         legalComments: 'none',

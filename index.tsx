@@ -33,7 +33,7 @@ const xLayer = defineChain({
 });
 
 import ErrorBoundary from './components/ErrorBoundary';
-import { SettingsProvider } from './context/SettingsContext';
+
 import './index.css';
 
 // Wagmi Configuration
@@ -58,9 +58,7 @@ ReactDOM.createRoot(rootElement).render(
       <ErrorBoundary>
         <WagmiProvider config={config}>
           <QueryClientProvider client={queryClient}>
-            <SettingsProvider>
               <App />
-            </SettingsProvider>
           </QueryClientProvider>
         </WagmiProvider>
       </ErrorBoundary>

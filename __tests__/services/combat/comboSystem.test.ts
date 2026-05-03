@@ -5,7 +5,6 @@
 import { describe, it, expect } from 'vitest';
 import type { SpellType } from '../../../types';
 import {
-  isThunderSpell,
   calculateComboBonus
 } from '../../../services/combat/comboSystem';
 import type { DuelState } from '../../../types';
@@ -45,14 +44,6 @@ describe('Combo System', () => {
     isTutorial: false,
     triggerOrderCounter: 0,
   };
-
-  it('should identify thunder spells correctly', () => {
-    expect(isThunderSpell('thunder')).toBe(true);
-    expect(isThunderSpell('thunder2')).toBe(true);
-    expect(isThunderSpell('fire')).toBe(false);
-    expect(isThunderSpell('hero_thunder')).toBe(false); // Hero skills excluded
-    expect(isThunderSpell(null)).toBe(false);
-  });
 
   it('should calculate combo bonus for first thunder spell', () => {
     const state = { ...mockState, playerLastSpell: 'thunder' as SpellType };

@@ -61,6 +61,11 @@ const AUDIO_CONFIG = {
     level_up: sfxFile('/audio/sfx-victory.mp3'),
     pack_open: sfxFile('/audio/sfx-card-play.mp3'),
     card_reveal: sfxFile('/audio/sfx-card-play.mp3'),
+    // [P0.3] UI interaction SFX
+    page_transition: sfxFile('/audio/sfx-card-play.mp3', 0.7, 0.25),
+    modal_open: sfxFile('/audio/sfx-block.mp3', 1.3, 0.3),
+    modal_close: sfxFile('/audio/sfx-block.mp3', 0.9, 0.2),
+    pack_hover: sfxFile('/audio/sfx-card-play.mp3', 1.6, 0.15),
     // [P0-3] New SFX mappings
     minion_attack: sfxFile('/audio/sfx-hit.mp3', 1.2, 0.8),
     minion_death: sfxFile('/audio/sfx-block.mp3', 0.8, 0.6),
@@ -128,13 +133,18 @@ export interface AudioManagerState {
   isPlaying: boolean;
 }
 
+export interface SfxOverrides {
+  rate?: number;
+  volume?: number;
+}
+
 export interface AudioManagerActions {
   toggleMute: () => void;
   setBgmVolume: (volume: number) => void;
   setSfxVolume: (volume: number) => void;
   playBgm: (track: 'lobby' | 'battle') => void;
   stopBgm: () => void;
-  playSfx: (effect: string) => void;
+  playSfx: (effect: string, overrides?: SfxOverrides) => void;
   playSpellSfx: (spellType: SpellType) => void;
   updateBattleBGM: (playerHP: number, opponentHP: number, maxHP: number) => void;
 }
@@ -142,7 +152,7 @@ export interface AudioManagerActions {
 // Module-level bridge for non-hook consumers (TurnBanner, Lobby, etc.)
 // Populated by the hook on first render
 export const audioBridge = {
-  playSfx: (_effect: string) => {},
+  playSfx: (_effect: string, _overrides?: SfxOverrides) => {},
   updateBattleBGM: (_playerHP: number, _opponentHP: number, _maxHP: number) => {},
 };
 
@@ -244,7 +254,7 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
   }, []);
 
   // 播放音效（带冷却、优先级、rate/volume 覆盖）
-  const playSfx = useCallback((effect: string) => {
+  const playSfx = useCallback((effect: string, overrides?: SfxOverrides) => {
     if (isMuted) return;
 
     // 检查冷却
@@ -273,8 +283,8 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
         }
 
         audio.currentTime = 0;
-        audio.volume = sfxVolume * (mapping.volume ?? 1);
-        audio.playbackRate = mapping.rate ?? 1;
+        audio.volume = sfxVolume * (overrides?.volume ?? mapping.volume ?? 1);
+        audio.playbackRate = overrides?.rate ?? mapping.rate ?? 1;
         audio.play().catch(() => {});
 
         activeSfxCountRef.current++;

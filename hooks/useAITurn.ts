@@ -19,9 +19,10 @@ import { GameRuleEngine } from '../services/GameRuleEngine';
 import { RuleArbiter, ArbiterEvent } from '../services/RuleArbiter';
 import { generateValidationReport } from '../services/validation/antiCheat';
 import {
-  AI_THINK_DELAY, AI_CARD_PLAY_DELAY, AI_EMOTE_DELAY,
+  AI_THINK_DELAY, AI_THINK_VARIANCE, AI_CARD_PLAY_DELAY, AI_EMOTE_DELAY,
   PHASE_TRANSITION_DELAY, BANNER_WAIT_DELAY, ROUND_TRANSITION_DELAY
 } from '../config/timing';
+import { getGameRNG } from '../utils/seededRandom';
 
 interface UseAITurnDeps {
   duelStateRef: React.MutableRefObject<DuelState | null>;
@@ -117,7 +118,8 @@ export function useAITurn({
     commands.push({ type: 'UPDATE_UI', payload: { playerCard: null } });
     commands.push({ type: 'ADD_MESSAGE', payload: '对手回合...' });
     commands.push({ type: 'SET_AI_STATUS', payload: { emote: 'thinking', message: '让我想想...' }, delay: AI_EMOTE_DELAY });
-    commands.push({ type: 'WAIT', payload: null, delay: AI_THINK_DELAY });
+    const thinkDelay = AI_THINK_DELAY + getGameRNG().randomInt(-AI_THINK_VARIANCE / 2, AI_THINK_VARIANCE / 2 + 1);
+    commands.push({ type: 'WAIT', payload: null, delay: thinkDelay });
 
     // [P3-2] AI hero skill usage: use skill if available, affordable, and not yet used
     let latestState = { ...state };

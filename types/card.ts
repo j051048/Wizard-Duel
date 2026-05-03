@@ -37,11 +37,6 @@ export interface Spell {
   manaCost: number;
   damage: number;
   armorGain?: number;
-  /**
-   * @deprecated 不再使用，克制关系由 elementSystem 处理
-   * @see services/combat/elementSystem.ts
-   */
-  beats: SpellType;
   rarity: Rarity;
   mechanic: Mechanic;
   cardSet?: CardSet;

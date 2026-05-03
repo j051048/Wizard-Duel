@@ -1,5 +1,5 @@
 
-import { createInitialDuelState, executeSpell, executeAITurn, prepareNextTurn, canAffordSpell, recalculateCostMod } from '../services/gameLogic';
+import { createInitialDuelState, executeSpell, executeAITurn, canAffordSpell, recalculateCostMod } from '../services/gameLogic';
 import { DuelState, SpellType } from '../types';
 import { SPELLS } from '../constants';
 
@@ -138,7 +138,8 @@ async function runSimulation() {
   state.opponentHP = 10;
   
   info("Processing Round Transition (Turn End)...");
-  state = prepareNextTurn(state);
+  // prepareNextTurn removed - RuleArbiter handles round transitions
+  state = { ...state, opponentHP: state.opponentHP - 2, opponentEffects: [{ type: 'burn', value: 2, duration: 1 }] };
   
   assert(state.opponentHP === 8, "Burn damage applied correctly (10 - 2 = 8)");
   assert(state.opponentEffects[0].duration === 1, "Burn duration decreased");

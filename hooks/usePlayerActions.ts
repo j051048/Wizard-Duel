@@ -7,8 +7,8 @@
  */
 
 import React, { useCallback } from 'react';
-import { 
-  SpellType, DuelState, GameMode, AIProfile, GameActionCommand, AIStatus
+import {
+  SpellType, DuelState, DuelPhase, GameMode, AIProfile, GameActionCommand, AIStatus
 } from '../types';
 import {
   createInitialDuelState, createTavernDuelState, canAffordSpell, createPvpDuelState
@@ -31,8 +31,17 @@ interface UsePlayerActionsDeps {
   enqueue: (commands: GameActionCommand[], actionId?: string) => void;
   showTurnBanner: (type: 'player' | 'opponent') => void;
   setDuelState: (state: DuelState | null) => void;
-  setPhase: (phase: any) => void;
-  setUiState: React.Dispatch<React.SetStateAction<any>>;
+  setPhase: (phase: DuelPhase) => void;
+  setUiState: React.Dispatch<React.SetStateAction<{
+    playerCard: SpellType | null;
+    opponentCard: SpellType | null;
+    resultText: string;
+    effectMessages: string[];
+    isGameOver: boolean;
+    gameResult: 'WIN' | 'LOSS' | 'DRAW' | null;
+    aiStatus: AIStatus;
+    targetingData: { isTargeting: boolean; sourceIndex?: number; startX: number; startY: number; endX: number; endY: number } | null;
+  }>>;
   startNewRound: (state: DuelState) => void;
   pvpRoleRef?: React.MutableRefObject<'player1' | 'player2' | null>;
 }

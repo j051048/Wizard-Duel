@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { BattleRecord, Deck, GameMode, Rank, Language } from '../types';
+import { Deck, GameMode, Language } from '../types';
 import { Quest } from '../types/quest';
 import { TRANSLATIONS } from '../translations';
 import { RulesModal } from './RulesModal';
@@ -17,7 +17,10 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import { GlobalChat } from './GlobalChat';
 import { useUserStore } from '../stores/useUserStore';
 import { useUIStore } from '../stores/useUIStore';
-import { ShoppingBag, Book, Swords, MessageCircle } from 'lucide-react';
+import { useToastStore } from '../stores/useToastStore';
+import { useShallow } from 'zustand/react/shallow';
+import { ShoppingBag, Book, Swords, MessageCircle, Settings, CheckCircle, Sparkles } from 'lucide-react';
+import { useSettingsStore } from '../stores/useSettingsStore';
 import { MatchmakingOverlay } from './MatchmakingOverlay';
 import { QuestManager } from '../services/QuestManager';
 import { BattlePassService } from '../services/BattlePassService';
@@ -31,84 +34,56 @@ import PlayButton from './lobby/PlayButton';
 import { DailyGoalWidget } from './lobby/DailyGoalWidget';
 
 interface LobbyProps {
-  balance: number;
-  userRank: Rank;
-  rankScore: number;
-  selectedBet: number;
-  onSelectBet: (bet: number) => void;
   onStartDuel: () => void;
-  history: BattleRecord[];
+  onPvpStart: (role: 'player1' | 'player2', seed?: number) => void;
   isMuted: boolean;
   onToggleMute: () => void;
-  isLoading?: boolean;
-  decks: Deck[];
-  selectedDeck: Deck | null;
-  onOpenDeckBuilder: () => void;
-  onSelectDeck: (deck: Deck) => void;
-  onOpenTavernMode?: () => void;
-  onOpenShop?: () => void;
-  onOpenCollection?: () => void;
-    onClaimQuestReward?: (amount: number) => void; // 新增：领取奖励回调
-  onOpenProfile?: () => void;
-  gameMode?: GameMode;
-  onOpenModeSelect?: () => void;
-  language: Language;
-  onLanguageChange: (lang: Language) => void;
-  onPvpStart: (role: 'player1' | 'player2', seed?: number) => void;
 }
 
 export const Lobby: React.FC<LobbyProps> = ({
-  balance,
-  userRank,
-  rankScore,
-  selectedBet,
-  onSelectBet,
   onStartDuel,
-  // history, // unused
-  isMuted,
-
-  onToggleMute,
-  isLoading = false,
-  decks,
-  selectedDeck,
-  onOpenDeckBuilder,
-  onSelectDeck,
-  onOpenTavernMode,
-  onOpenShop,
-  onOpenCollection,
-    onClaimQuestReward,
-  onOpenProfile,
-  gameMode = 'standard',
-  onOpenModeSelect,
-  language,
-  onLanguageChange,
   onPvpStart,
+  isMuted,
+  onToggleMute,
 }) => {
   const isMobile = useIsMobile();
+
+  // Read directly from stores — no prop drilling
+  const { balance, userRank, rankScore, decks, selectedDeck, setSelectedDeck, isLoading } = useUserStore(
+    useShallow(s => ({ balance: s.balance, userRank: s.userRank, rankScore: s.rankScore, decks: s.decks, selectedDeck: s.selectedDeck, setSelectedDeck: s.setSelectedDeck, isLoading: s.isLoading }))
+  );
+  const { selectedBet, setSelectedBet, gameMode, language, setLanguage, setGameState, showSettings, setShowSettings } = useUIStore(
+    useShallow(s => ({ selectedBet: s.selectedBet, setSelectedBet: s.setSelectedBet, gameMode: s.gameMode, language: s.language, setLanguage: s.setLanguage, setGameState: s.setGameState, showSettings: s.showSettings, setShowSettings: s.setShowSettings }))
+  );
+  const { quality, setQuality, isLowQuality } = useSettingsStore();
+  const { setBalance, balance: currentBalance } = useUserStore(useShallow(s => ({ setBalance: s.setBalance, balance: s.balance })));
+  const toast = useToastStore(s => ({ success: s.success }));
+
   const [isRulesOpen, setIsRulesOpen] = useState(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [isQuestModalOpen, setIsQuestModalOpen] = useState(false);
   const [quests, setQuests] = useState<Quest[]>([]);
-  
+
   const canStart = balance >= selectedBet;
 
   const t = (key: string) => TRANSLATIONS[language][key] || key;
   const activeAddress = useUserStore(state => state.activeAddress);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isMatchmaking, setIsMatchmaking] = useState(false);
-  
+
   // 初始化任务
   useEffect(() => {
     setQuests(QuestManager.init());
   }, []);
-  
-  // 领取任务奖励
+
+  // 领取任务奖励 — 直接更新 store，不依赖回调 prop
   const handleClaimQuest = (questId: string) => {
       const result = QuestManager.claimReward(questId);
       if (result.success) {
           setQuests(result.quests);
-          if (result.reward && onClaimQuestReward) {
-              onClaimQuestReward(result.reward);
+          if (result.reward) {
+              setBalance(currentBalance + result.reward);
+              toast.success('奖励到账', `获得 ${result.reward} 法力值！`);
           }
           // [P1] 任务经验同步到战斗通行证
           if (result.rewardExp) {
@@ -123,6 +98,50 @@ export const Lobby: React.FC<LobbyProps> = ({
 
   return (
     <div className="min-h-full relative no-select overflow-hidden flex flex-col">
+      {/* Lobby Header — moved from App.tsx to reduce prop drilling */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-md border-b border-white/10 px-4 py-3 flex justify-between items-center safe-area-top">
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg">
+            <Sparkles size={20} className="text-white" />
+          </div>
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/70"
+          >
+            <Settings size={20} />
+          </button>
+        </div>
+        <div className="flex items-center gap-3">
+          {isLowQuality && (
+            <span className="text-[10px] bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded border border-amber-500/30 font-bold uppercase">
+              省电模式
+            </span>
+          )}
+          <div className="bg-black/60 border border-purple-500/30 rounded-xl px-4 py-2 flex items-center gap-2">
+            <span className="text-purple-400 text-xs uppercase font-bold text-nowrap">{TRANSLATIONS[language]?.['GOLD'] || '钻石'}</span>
+            <span className="font-mono font-bold text-white">{isLoading ? '...' : balance}</span>
+          </div>
+        </div>
+        {showSettings && (
+          <div className="absolute top-full left-4 mt-2 w-48 bg-slate-900 border border-white/10 rounded-xl shadow-2xl p-2 z-[60] animate-in fade-in slide-in-from-top-2">
+            <div className="text-[10px] text-gray-400 font-bold uppercase px-2 mb-1 tracking-wider">画面设置</div>
+            <button onClick={() => { quality !== 'high' && setQuality('high'); setShowSettings(false); }} className={`w-full flex items-center justify-between p-2 rounded-lg text-sm transition-colors ${quality === 'high' ? 'bg-purple-600/20 text-purple-300' : 'hover:bg-white/5'}`}>
+              <span>高画质 (全特效)</span>
+              {quality === 'high' && <CheckCircle size={14} />}
+            </button>
+            <button onClick={() => { quality !== 'low' && setQuality('low'); setShowSettings(false); }} className={`w-full flex items-center justify-between p-2 rounded-lg text-sm transition-colors ${quality === 'low' ? 'bg-purple-600/20 text-purple-300' : 'hover:bg-white/5'}`}>
+              <span>低画质 (更流畅)</span>
+              {quality === 'low' && <CheckCircle size={14} />}
+            </button>
+          </div>
+        )}
+      </header>
+
+      {/* Click-outside overlay for settings */}
+      {showSettings && (
+        <div className="fixed inset-0 z-[55]" onClick={() => setShowSettings(false)} />
+      )}
+
       {/* Immersive Background — B-5: 微视差浮动 */}
       <div
         className="absolute inset-0 bg-cover bg-center pointer-events-none lobby-bg-float"
@@ -138,12 +157,12 @@ export const Lobby: React.FC<LobbyProps> = ({
         isMuted={isMuted}
         onToggleMute={onToggleMute}
         language={language}
-        onLanguageChange={onLanguageChange}
+        onLanguageChange={setLanguage}
         gameMode={gameMode}
-        onOpenModeSelect={onOpenModeSelect}
-        onOpenTutorial={() => setIsTutorialOpen(true)}
-                onOpenQuests={() => setIsQuestModalOpen(true)}
-        onOpenProfile={onOpenProfile}
+        onOpenModeSelect={() => setGameState('MODE_SELECT')}
+        onOpenTutorial={() => { setIsTutorialOpen(true); audioBridge.playSfx('modal_open'); }}
+                onOpenQuests={() => { setIsQuestModalOpen(true); audioBridge.playSfx('modal_open'); }}
+        onOpenProfile={() => setGameState('PROFILE')}
         hasPendingQuests={hasPendingQuests}
         t={t}
       />
@@ -173,8 +192,8 @@ export const Lobby: React.FC<LobbyProps> = ({
            <DeckCarousel
              decks={decks}
              selectedDeck={selectedDeck}
-             onOpenDeckBuilder={onOpenDeckBuilder}
-             onSelectDeck={onSelectDeck}
+             onOpenDeckBuilder={() => setGameState('DECK_BUILDER')}
+             onSelectDeck={setSelectedDeck}
              isLoading={isLoading}
              t={t}
            />
@@ -185,7 +204,7 @@ export const Lobby: React.FC<LobbyProps> = ({
             <WagerSelector
               selectedBet={selectedBet}
               balance={balance}
-              onSelectBet={onSelectBet}
+              onSelectBet={setSelectedBet}
               t={t}
             />
 
@@ -203,37 +222,31 @@ export const Lobby: React.FC<LobbyProps> = ({
       {/* FOOTER: EXTRA MODES — B-5: 依次滑入 */}
       <div className="relative z-10 p-4 flex justify-center gap-4 pb-8 flex-wrap lobby-section-enter" style={{ animationDelay: '0.6s' }}>
          {/* 商店入口 */}
-         {onOpenShop && (
-            <button 
-               onClick={onOpenShop}
+            <button
+               onClick={() => setGameState('SHOP')}
                className="flex items-center gap-2 text-xs text-purple-400 hover:text-purple-300 font-bold uppercase tracking-widest border border-purple-500/30 px-4 py-2 rounded-full hover:bg-purple-900/20 hover:scale-105 active:scale-95 transition-all duration-150 bg-purple-500/10"
             >
                <ShoppingBag size={14} />
                <span>{t('Shop')}</span>
             </button>
-         )}
 
          {/* 收藏入口 */}
-         {onOpenCollection && (
-            <button 
-               onClick={onOpenCollection}
+            <button
+               onClick={() => setGameState('COLLECTION')}
                className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 font-bold uppercase tracking-widest border border-blue-500/30 px-4 py-2 rounded-full hover:bg-blue-900/20 hover:scale-105 active:scale-95 transition-all duration-150 bg-blue-500/10"
             >
                <Book size={14} />
                <span>{t('Collection')}</span>
             </button>
-         )}
-         
+
          {/* 酒馆入口 */}
-         {onOpenTavernMode && (
-            <button 
-               onClick={onOpenTavernMode}
+            <button
+               onClick={() => setGameState('TAVERN')}
                className="flex items-center gap-2 text-xs text-amber-500/80 hover:text-amber-400 font-bold uppercase tracking-widest border border-amber-500/20 px-4 py-2 rounded-full hover:bg-amber-900/20 hover:scale-105 active:scale-95 transition-all duration-150 opacity-70 hover:opacity-100"
             >
                <span>🍺</span>
                <span>{t('Visit Tavern')}</span>
             </button>
-         )}
 
          {/* PvP 对战入口 */}
          <button 
@@ -259,7 +272,7 @@ export const Lobby: React.FC<LobbyProps> = ({
         userId={activeAddress || 'guest'} 
         username={activeAddress?.slice(0, 8) || 'Guest'} 
         isOpen={isChatOpen} 
-        onClose={() => setIsChatOpen(false)} 
+        onClose={() => { setIsChatOpen(false); audioBridge.playSfx('modal_close'); }}
       />
 
       {/* 匹配遮罩层 */}
@@ -267,7 +280,7 @@ export const Lobby: React.FC<LobbyProps> = ({
         userId={activeAddress || 'guest'}
         username={activeAddress?.slice(0, 8) || 'Guest'}
         isOpen={isMatchmaking}
-        onClose={() => setIsMatchmaking(false)}
+        onClose={() => { setIsMatchmaking(false); audioBridge.playSfx('modal_close'); }}
         onMatchFound={(roomId, opponent, role, seed) => {
           console.log('Match Found!', roomId, opponent, role, seed);
           setIsMatchmaking(false);
@@ -281,11 +294,11 @@ export const Lobby: React.FC<LobbyProps> = ({
       />
 
             {/* Global Modals */}
-      <RulesModal isOpen={isRulesOpen} onClose={() => setIsRulesOpen(false)} />
-      <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
-      <QuestModal 
-        isOpen={isQuestModalOpen} 
-        onClose={() => setIsQuestModalOpen(false)} 
+      <RulesModal isOpen={isRulesOpen} onClose={() => { setIsRulesOpen(false); audioBridge.playSfx('modal_close'); }} />
+      <TutorialModal isOpen={isTutorialOpen} onClose={() => { setIsTutorialOpen(false); audioBridge.playSfx('modal_close'); }} />
+      <QuestModal
+        isOpen={isQuestModalOpen}
+        onClose={() => { setIsQuestModalOpen(false); audioBridge.playSfx('modal_close'); }}
         quests={quests}
         onClaim={handleClaimQuest}
         t={t}

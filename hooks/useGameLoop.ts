@@ -240,25 +240,15 @@ export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoo
   const handleRemotePlayCard = useCallback((spellId: SpellType) => {
     const state = duelStateRef.current;
     if (!state) return;
-    
+
     console.log(`🌐 [PVP] 执行对手远程出牌: ${spellId}`);
-    
+
     // 设置对手出牌 UI
     setUiState(prev => ({ ...prev, opponentCard: spellId }));
-    
-    // [关键修复] PVP 模式下本地 opponentHand 与远程实际不同步
-    // castSpell → executeSpell 内部会校验手牌是否持有该卡 (casterHasCard)
-    // 如果 opponentHand 中没有这张卡，castSpell 会返回 noop（不执行伤害）
-    // 解决方案：在调用前将该卡强制注入 opponentHand，确保校验通过
-    const patchedState: typeof state = {
-      ...state,
-      opponentHand: state.opponentHand.includes(spellId)
-        ? state.opponentHand
-        : [...state.opponentHand, spellId],
-    };
-    
-    // 以对手身份执行法术结算
-    const { commands: engineCommands } = GameRuleEngine.castSpell(patchedState, spellId, 'opponent');
+
+    // PVP 模式下本地 opponentHand 与远程实际不同步（隐藏信息）
+    // skipHandCheck 跳过 casterHasCard 校验，直接执行法术效果
+    const { commands: engineCommands } = GameRuleEngine.castSpell(state, spellId, 'opponent', { skipHandCheck: true });
     safeEnqueue([...engineCommands], `remote_play_${spellId}_${Date.now()}`);
   }, [duelStateRef, safeEnqueue, setUiState]);
   

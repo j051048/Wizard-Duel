@@ -18,7 +18,6 @@ const makeSpell = (overrides: Partial<Spell>): Spell => ({
   color: 'text-red-500',
   borderColor: 'border-red-500',
   shadowColor: 'rgba(239,68,68,0.5)',
-  beats: 'vine' as SpellType,
   manaCost: 2,
   damage: 4,
   armorGain: 0,

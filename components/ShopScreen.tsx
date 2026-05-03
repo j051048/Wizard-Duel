@@ -7,7 +7,9 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Package, Gift, Crown, Sparkles, Star, ShoppingBag } from 'lucide-react';
 import { Spell, SpellType } from '../types';
 import { HapticService } from '../services/haptic';
+import { audioBridge } from '../hooks/useAudioManager';
 import { useToastStore } from '../stores/useToastStore';
+import { useShallow } from 'zustand/react/shallow';
 import { PackOpener } from './shop/PackOpener';
 import { ShopService, Product } from '../services/ShopService';
 import { openPack } from '../constants'; // Legacy import, kept for Guest fallback if needed
@@ -16,30 +18,19 @@ import { useUserStore } from '../stores/useUserStore';
 import { SPELLS } from '../data/spells';
 
 interface ShopScreenProps {
-  balance: number;
   onBack: () => void;
-  onUpdateBalance: (newBalance: number) => void;
-  onAddCards?: (cards: SpellType[]) => void;
-  purchasedBundles?: Record<string, number>; // productId -> timestamp
-  onPurchaseBundle?: (bundleId: string) => void;
-  packInventory?: Record<string, number>;
-  setPackInventory?: (inventory: Record<string, number>) => void;
-  onAddPacks?: (packId: string, count: number) => void;
-  onConsumePack?: (packId: string) => boolean;
 }
 
-export const ShopScreen: React.FC<ShopScreenProps> = ({
-  balance,
-  onBack,
-  onUpdateBalance,
-  onAddCards,
-  purchasedBundles = {},
-  onPurchaseBundle,
-  packInventory = {},
-  setPackInventory,
-  onAddPacks,
-  onConsumePack: _onConsumePack // 未使用但保留接口兼容
-}) => {
+export const ShopScreen: React.FC<ShopScreenProps> = ({ onBack }) => {
+  const { balance, setBalance, packInventory, setPackInventory, addPacks, consumePack, purchasedBundles, purchaseBundle, addCardsToInventory } = useUserStore(
+    useShallow(s => ({
+      balance: s.balance, setBalance: s.setBalance,
+      packInventory: s.packInventory, setPackInventory: s.setPackInventory,
+      addPacks: s.addPacks, consumePack: s.consumePack,
+      purchasedBundles: s.purchasedBundles, purchaseBundle: s.purchaseBundle,
+      addCardsToInventory: s.addCardsToInventory,
+    }))
+  );
   const [activeTab, setActiveTab] = useState<'packs' | 'bundles'>('packs');
   const [openingProduct, setOpeningProduct] = useState<Product | null>(null);
   const [inventoryPackOpening, setInventoryPackOpening] = useState<string | null>(null);
@@ -104,10 +95,10 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
                  toast.error('交易失败', goldRes.error);
                  return;
              }
-             onUpdateBalance(goldRes.newBalance);
+             setBalance(goldRes.newBalance);
         } else {
              // Guest/Offline fallback
-             onUpdateBalance(balance - product.price);
+             setBalance(balance - product.price);
         }
         
         HapticService.medium();
@@ -130,7 +121,7 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
              }
              
              // 更新本地库存
-             onAddPacks?.(packId, 1);
+             addPacks(packId, 1);
              toast.success('购买成功', '卡包已放入库存，点击"开包"按钮开启');
              HapticService.success();
              return; // 购买完成，不直接开包
@@ -143,9 +134,9 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
                      // Mana reward (add back)
                      if (user.supabaseUserId) {
                          SecureGameService.adjustGold(user.supabaseUserId, reward.count, 'bundle_reward');
-                         onUpdateBalance(balance - product.price + reward.count);
+                         setBalance(balance - product.price + reward.count);
                      } else {
-                         onUpdateBalance(balance - product.price + reward.count);
+                         setBalance(balance - product.price + reward.count);
                      }
                  } else if (reward.type === 'card') {
                       const spell = SPELLS.find(s => s.id === reward.id);
@@ -156,18 +147,19 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
 
         // 5. Finalize (Add to Inventory)
         if (packsToAdd.length > 0) {
-             packsToAdd.forEach(p => onAddPacks?.(p.id, p.count));
+             packsToAdd.forEach(p => addPacks(p.id, p.count));
         }
         if (cardsOpened.length > 0) {
-             onAddCards?.(cardsOpened.map(c => c.id));
+             addCardsToInventory(cardsOpened.map(c => c.id));
+             toast.success('卡牌已添加', `${cardsOpened.length} 张卡牌已加入收藏`);
              setRevealedCards(cardsOpened);
-             setOpeningProduct(product); 
+             setOpeningProduct(product);
         } else if (packsToAdd.length > 0) {
              toast.success('购买成功', '物品已放入库存');
         }
 
         if (product.type === 'bundle') {
-             onPurchaseBundle?.(product.id);
+             purchaseBundle(product.id);
         }
 
     } catch (err: any) {
@@ -194,13 +186,13 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
                           delete newPackInventory[packId];
                       }
                   }
-                  setPackInventory?.(newPackInventory);
+                  setPackInventory(newPackInventory);
                   
                   // Convert results
                   const cards = openRes.cards.map(c => pickCardOfRarity(c.rarity));
                   
                   setRevealedCards(cards);
-                  onAddCards?.(cards.map(c => c.id));
+                  addCardsToInventory(cards.map(c => c.id));
                   setInventoryPackOpening(packId); 
               } else {
                   toast.error('开启失败', openRes.error);
@@ -222,10 +214,10 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
               if (newPackInventory[packId] === 0) {
                   delete newPackInventory[packId];
               }
-              setPackInventory?.(newPackInventory);
+              setPackInventory(newPackInventory);
               
               setRevealedCards(cards);
-              onAddCards?.(cards.map(c => c.id));
+              addCardsToInventory(cards.map(c => c.id));
               setInventoryPackOpening(packId); 
           }
       } catch (err) {
@@ -294,7 +286,7 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
             {/* Inventory Packs */}
             {Object.entries(packInventory).map(([packId, count]) => (
                 (count as number) > 0 && (
-                <div key={`inv-${packId}`} className="relative bg-slate-900/50 border border-green-500/50 rounded-xl p-6 flex flex-col items-center gap-4 group hover:bg-slate-900 transition-colors">
+                <div key={`inv-${packId}`} onMouseEnter={() => audioBridge.playSfx('pack_hover')} className="relative bg-slate-900/50 border border-green-500/50 rounded-xl p-6 flex flex-col items-center gap-4 group hover:bg-slate-900 transition-colors">
                     <div className="absolute top-2 right-2 bg-green-500 text-xs font-bold px-2 py-1 rounded text-black">
                         库存: {count}
                     </div>
@@ -316,7 +308,7 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
             ))}
 
             {products.map(pack => (
-                <div key={pack.id} className={`bg-gradient-to-b from-${pack.badgeColor?.split('-')[1] || 'blue'}-500/5 to-transparent border border-white/10 hover:border-${pack.badgeColor?.split('-')[1] || 'blue'}-500 rounded-2xl p-6 flex flex-col items-center gap-4 transition-all group relative overflow-hidden`}>
+                <div key={pack.id} onMouseEnter={() => audioBridge.playSfx('pack_hover')} className={`bg-gradient-to-b from-${pack.badgeColor?.split('-')[1] || 'blue'}-500/5 to-transparent border border-white/10 hover:border-${pack.badgeColor?.split('-')[1] || 'blue'}-500 rounded-2xl p-6 flex flex-col items-center gap-4 transition-all group relative overflow-hidden`}>
                     
                     <div className={`w-20 h-20 rounded-xl bg-gradient-to-br from-gray-800 to-gray-700 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-500`}>
                         {GetProductIcon(pack)}

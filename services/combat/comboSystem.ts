@@ -157,9 +157,3 @@ export const updateComboState = (
   }
 };
 
-// ============ 兼容旧代码 ============
-
-/** @deprecated 使用 canTriggerCombo 替代 */
-export const isThunderSpell = (spellId: string | null): boolean => {
-  return spellId !== null && spellId.startsWith('thunder') && !spellId.startsWith('hero_');
-};

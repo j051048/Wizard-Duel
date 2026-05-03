@@ -13,19 +13,16 @@
  */
 
 import React, { useEffect, Component, type ReactNode } from 'react';
-import { Sparkles, Settings, CheckCircle } from 'lucide-react';
 
 // Types
 import { SpellType } from './types/card';
 import { DungeonNode } from './types/dungeon';
-import { TRANSLATIONS } from './translations';
-import { Language } from './types';
 
 // Hooks
 import { usePreloader } from './hooks/usePreloader';
 import { useGameLoop } from './hooks/useGameLoop';
 import { useAudioManager } from './hooks/useAudioManager';
-import { useSettings } from './context/SettingsContext';
+import { useSettingsStore } from './stores/useSettingsStore';
 import { useScreenOrientation } from './hooks/useScreenOrientation';
 import { useTutorial } from './hooks/useTutorial';
 import { useAppRouting } from './hooks/useAppRouting';
@@ -108,7 +105,7 @@ class LazyLoadErrorBoundary extends Component<{ children: ReactNode }, ErrorBoun
 
 
 function App() {
-  const { quality, setQuality, isLowQuality } = useSettings();
+  const { isLowQuality } = useSettingsStore();
 
   // ============ Stores ============
   const user = useUserStore(useShallow(state => ({
@@ -140,8 +137,6 @@ function App() {
     gameState: state.gameState,
     gameMode: state.gameMode,
     selectedBet: state.selectedBet,
-    language: state.language,
-    showSettings: state.showSettings,
     isResourcesLoaded: state.isResourcesLoaded,
     isGuest: state.isGuest,
     dungeonRun: state.dungeonRun,
@@ -154,15 +149,9 @@ function App() {
     pvpRole: state.pvpRole,
     pvpSeed: state.pvpSeed,
     setGameState: state.setGameState,
-    setGameMode: state.setGameMode,
-    setSelectedBet: state.setSelectedBet,
-    setLanguage: state.setLanguage,
-    setShowSettings: state.setShowSettings,
     setIsResourcesLoaded: state.setIsResourcesLoaded,
-    setIsGuest: state.setIsGuest,
     setDungeonRun: state.setDungeonRun,
     setPendingTavernDuel: state.setPendingTavernDuel,
-    setFinalResult: state.setFinalResult,
     showConfirmDialog: state.showConfirmDialog,
     hideConfirmDialog: state.hideConfirmDialog,
     setPvpRoomId: state.setPvpRoomId,
@@ -254,57 +243,16 @@ function App() {
       {/* Orientation Warning */}
       {isMobileLandscape && <OrientationWarning />}
 
-      {/* Lobby Header */}
-      {ui.gameState === 'LOBBY' && (
-        <LobbyHeader
-          quality={quality}
-          setQuality={setQuality}
-          isLowQuality={isLowQuality}
-          balance={user.balance}
-          isLoading={user.isLoading}
-          showSettings={ui.showSettings}
-          setShowSettings={ui.setShowSettings}
-          language={ui.language}
-        />
-      )}
-
-      {ui.showSettings && (
-        <div className="fixed inset-0 z-[55]" onClick={() => ui.setShowSettings(false)} />
-      )}
-
       {/* Main Content */}
       <main className={ui.gameState === 'LOBBY' ? 'pt-16' : ''}>
         
         {/* Lobby */}
         {ui.gameState === 'LOBBY' && (
           <Lobby
-            balance={user.balance}
-            userRank={user.userRank}
-            rankScore={user.rankScore}
-            selectedBet={ui.selectedBet}
-            onSelectBet={ui.setSelectedBet}
             onStartDuel={routing.handleStartDuel}
             onPvpStart={routing.handlePvpStart}
-            onOpenShop={() => ui.setGameState('SHOP')}
-            onOpenCollection={() => ui.setGameState('COLLECTION')}
-            history={user.history}
             isMuted={audioState.isMuted}
             onToggleMute={audioActions.toggleMute}
-            isLoading={user.isLoading}
-            decks={user.decks}
-            selectedDeck={user.selectedDeck}
-            onOpenDeckBuilder={() => ui.setGameState('DECK_BUILDER')}
-            onSelectDeck={user.setSelectedDeck}
-            onOpenTavernMode={() => ui.setGameState('TAVERN')}
-            gameMode={ui.gameMode}
-            onOpenModeSelect={() => ui.setGameState('MODE_SELECT')}
-            language={ui.language}
-            onLanguageChange={ui.setLanguage}
-                        onClaimQuestReward={(amount: number) => {
-              user.setBalance(user.balance + amount);
-              toast.success('奖励到账', `获得 ${amount} 法力值！`);
-            }}
-            onOpenProfile={() => ui.setGameState('PROFILE')}
           />
         )}
 
@@ -382,19 +330,7 @@ function App() {
           {/* Shop */}
           {ui.gameState === 'SHOP' && (
             <ShopScreen
-              balance={user.balance}
               onBack={() => ui.setGameState('LOBBY')}
-              onUpdateBalance={user.setBalance}
-              onAddCards={(cardIds: SpellType[]) => {
-                user.addCardsToInventory(cardIds);
-                toast.success('卡牌已添加', `${cardIds.length} 张卡牌已加入收藏`);
-              }}
-              purchasedBundles={user.purchasedBundles}
-              onPurchaseBundle={user.purchaseBundle}
-              packInventory={user.packInventory}
-              setPackInventory={user.setPackInventory}
-              onAddPacks={user.addPacks}
-              onConsumePack={user.consumePack}
             />
           )}
 
@@ -559,75 +495,5 @@ function App() {
 }
 
 // ============ Sub-Components ============
-
-interface LobbyHeaderProps {
-  quality: 'high' | 'low';
-  setQuality: (q: 'high' | 'low') => void;
-  isLowQuality: boolean;
-  balance: number;
-  isLoading: boolean;
-  showSettings: boolean;
-  setShowSettings: (v: boolean) => void;
-  language: Language;
-}
-
-const LobbyHeader: React.FC<LobbyHeaderProps> = ({
-  quality,
-  setQuality,
-  isLowQuality,
-  balance,
-  isLoading,
-  showSettings,
-  setShowSettings,
-  language,
-}) => (
-  <header className="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-md border-b border-white/10 px-4 py-3 flex justify-between items-center safe-area-top">
-    <div className="flex items-center gap-2">
-      <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg">
-        <Sparkles size={20} className="text-white" />
-      </div>
-      <button
-        onClick={() => setShowSettings(!showSettings)}
-        className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/70"
-      >
-        <Settings size={20} />
-      </button>
-    </div>
-
-    <div className="flex items-center gap-3">
-      {isLowQuality && (
-        <span className="text-[10px] bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded border border-amber-500/30 font-bold uppercase">
-          省电模式
-        </span>
-      )}
-      <div className="bg-black/60 border border-purple-500/30 rounded-xl px-4 py-2 flex items-center gap-2">
-        <span className="text-purple-400 text-xs uppercase font-bold text-nowrap">{TRANSLATIONS[language]?.['GOLD'] || '钻石'}</span>
-        <span className="font-mono font-bold text-white">{isLoading ? '...' : balance}</span>
-      </div>
-    </div>
-
-    {showSettings && (
-      <div className="absolute top-full left-4 mt-2 w-48 bg-slate-900 border border-white/10 rounded-xl shadow-2xl p-2 z-[60] animate-in fade-in slide-in-from-top-2">
-        <div className="text-[10px] text-gray-400 font-bold uppercase px-2 mb-1 tracking-wider">
-          画面设置
-        </div>
-        <button
-          onClick={() => { setQuality('high'); setShowSettings(false); }}
-          className={`w-full flex items-center justify-between p-2 rounded-lg text-sm transition-colors ${quality === 'high' ? 'bg-purple-600/20 text-purple-300' : 'hover:bg-white/5'}`}
-        >
-          <span>高画质 (全特效)</span>
-          {quality === 'high' && <CheckCircle size={14} />}
-        </button>
-        <button
-          onClick={() => { setQuality('low'); setShowSettings(false); }}
-          className={`w-full flex items-center justify-between p-2 rounded-lg text-sm transition-colors ${quality === 'low' ? 'bg-purple-600/20 text-purple-300' : 'hover:bg-white/5'}`}
-        >
-          <span>低画质 (更流畅)</span>
-          {quality === 'low' && <CheckCircle size={14} />}
-        </button>
-      </div>
-    )}
-  </header>
-);
 
 export default App;

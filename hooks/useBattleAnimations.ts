@@ -68,6 +68,7 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
   const [isHitStopped, setIsHitStopped] = useState(false);
   const [showCritEffect, setShowCritEffect] = useState(false);
   const [showBloodFlash, setShowBloodFlash] = useState(false);
+  const [counterFlashElement, setCounterFlashElement] = useState<string | null>(null);
   const [shakeClass, setShakeClass] = useState('');
   const shakeTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -189,6 +190,11 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
     setTimeout(() => setShowCritEffect(false), 800);
   }, []);
 
+  const triggerCounterFlash = useCallback((element: string) => {
+    setCounterFlashElement(element);
+    setTimeout(() => setCounterFlashElement(null), 400);
+  }, []);
+
   const spawnProjectile = useCallback((type: 'player' | 'opp') => {
     if (isLowQuality) return;
     const startY = type === 'player' ? 90 : 10;
@@ -307,12 +313,14 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
     canvasRef,
     showCritEffect,
     showBloodFlash,
+    counterFlashElement,
     shakeClass,
     floatingTexts,
     addFloatingText,
     addDamageNumber,
     addComboText,
     triggerCrit,
+    triggerCounterFlash,
     triggerShake,
     spawnProjectile,
     updateDragTrail

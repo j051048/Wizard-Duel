@@ -1,5 +1,13 @@
 import React from 'react';
 
+const ELEMENT_COLORS: Record<string, string> = {
+  fire: 'rgba(239, 68, 68, 0.4)',
+  ice: 'rgba(34, 211, 238, 0.4)',
+  thunder: 'rgba(250, 204, 21, 0.4)',
+  vine: 'rgba(34, 197, 94, 0.4)',
+  rock: 'rgba(168, 162, 158, 0.4)',
+};
+
 interface BattleEffectsProps {
   showCrit: boolean;
   showBloodFlash: boolean;
@@ -7,9 +15,11 @@ interface BattleEffectsProps {
   maxHp: number;
   /** [P2-2] Current combo count (0 = no combo) */
   comboCount?: number;
+  /** Element counter flash overlay */
+  counterFlashElement?: string | null;
 }
 
-const BattleEffects: React.FC<BattleEffectsProps> = ({ showCrit, showBloodFlash, playerHp, maxHp, comboCount = 0 }) => {
+const BattleEffects: React.FC<BattleEffectsProps> = ({ showCrit, showBloodFlash, playerHp, maxHp, comboCount = 0, counterFlashElement }) => {
   const hpPercent = maxHp > 0 ? playerHp / maxHp : 1;
   const isLowHp = hpPercent <= 0.3;
   const isCriticalHp = hpPercent <= 0.15;
@@ -64,6 +74,17 @@ const BattleEffects: React.FC<BattleEffectsProps> = ({ showCrit, showBloodFlash,
           style={{
             boxShadow: `inset 0 0 ${40 + comboCount * 15}px rgba(168,85,247,${Math.min(0.5, 0.2 + comboCount * 0.1)})`,
             animation: `gentlePulse ${Math.max(0.3, 1.5 - comboCount * 0.3)}s ease-in-out infinite`,
+          }}
+        />
+      )}
+
+      {/* Element counter flash overlay */}
+      {counterFlashElement && (
+        <div
+          className="fixed inset-0 z-45 pointer-events-none"
+          style={{
+            backgroundColor: ELEMENT_COLORS[counterFlashElement] || 'rgba(255,255,255,0.3)',
+            animation: 'critFlash 0.4s ease-out forwards',
           }}
         />
       )}

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { GameState, GameMode, Language, SpellType, Rank } from '../types';
+import { GameState, GameMode, Language, SpellType, Rank, AIProfile } from '../types';
 import { DungeonRunState } from '../types/dungeon';
+import { audioBridge } from '../hooks/useAudioManager';
 
 // 确认弹窗配置
 interface ConfirmDialogConfig {
@@ -36,7 +37,7 @@ interface UIState {
   isLoggedIn: boolean;
   isGuest: boolean;
   dungeonRun: DungeonRunState | null;
-  pendingTavernDuel: any | null;
+  pendingTavernDuel: AIProfile | null;
   finalResult: FinalResult | null;
   isPlayerShaking: boolean;
   isOpponentShaking: boolean;
@@ -58,7 +59,7 @@ interface UIState {
   setIsLoggedIn: (loggedIn: boolean) => void;
   setIsGuest: (guest: boolean) => void;
   setDungeonRun: (run: DungeonRunState | null | ((prev: DungeonRunState | null) => DungeonRunState | null)) => void;
-  setPendingTavernDuel: (duel: any | null) => void;
+  setPendingTavernDuel: (duel: AIProfile | null) => void;
   setFinalResult: (result: FinalResult | null) => void;
   setIsPlayerShaking: (shaking: boolean) => void;
   setIsOpponentShaking: (shaking: boolean) => void;
@@ -100,7 +101,14 @@ export const useUIStore = create<UIState>((set) => ({
   pvpRole: null,
   pvpSeed: null,
 
-  setGameState: (gameState) => set({ gameState }),
+  setGameState: (gameState) => {
+    set((state) => {
+      if (state.gameState !== gameState) {
+        audioBridge.playSfx('page_transition');
+      }
+      return { gameState };
+    });
+  },
   setGameMode: (gameMode) => set({ gameMode }),
   setSelectedBet: (selectedBet) => set({ selectedBet }),
   setLanguage: (language) => set({ language }),
@@ -119,10 +127,14 @@ export const useUIStore = create<UIState>((set) => ({
   setPvpRole: (pvpRole) => set({ pvpRole }),
   setPvpSeed: (pvpSeed) => set({ pvpSeed }),
 
-  showConfirmDialog: (config) => set({
-    confirmDialog: { ...defaultConfirmDialog, ...config, isOpen: true }
-  }),
-  hideConfirmDialog: () => set({ confirmDialog: defaultConfirmDialog }),
+  showConfirmDialog: (config) => {
+    audioBridge.playSfx('modal_open');
+    set({ confirmDialog: { ...defaultConfirmDialog, ...config, isOpen: true } });
+  },
+  hideConfirmDialog: () => {
+    audioBridge.playSfx('modal_close');
+    set({ confirmDialog: defaultConfirmDialog });
+  },
 
   resetResult: () => set({ finalResult: null })
 }));

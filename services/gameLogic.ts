@@ -31,7 +31,7 @@ import { SeededRNG, resetGameRNG, getGameRNG } from '../utils/seededRandom';
 import { AI_DECK_TEMPLATES } from '../data/aiDecks';
 
 // [Phase 2] 重新导出 AI 模块，保持向后兼容
-export { executeAITurn, getAISpell, pickBestSpellForAI } from './ai';
+export { executeAITurn, pickBestSpellForAI } from './ai';
 
 // [Phase 3] 重新导出战斗模块，保持向后兼容
 export {
@@ -41,7 +41,6 @@ export {
   calculateSpellCost,
   calculateComboBonus,
   updateComboState,
-  prepareNextTurn,
   checkGameOver,
   recalculateCostMod
 } from './combat';
@@ -440,7 +439,8 @@ const createSecretTrigger = (
 export const executeSpell = (
   state: Readonly<DuelState>,
   caster: 'player' | 'opponent',
-  spellId: SpellType
+  spellId: SpellType,
+  options?: { skipHandCheck?: boolean }
 ): { newState: DuelState, logs: string[], command: GameCommand } => {
   const spell = getSpellById(spellId);
   const isPlayer = caster === 'player';
@@ -475,7 +475,8 @@ export const executeSpell = (
   } else if (spellId !== 'skip') {
     // [P0 Critical Fix] 手牌持有校验 - 防止双重触发导致的超额扣费
     // 只有当卡牌确实在手牌中时才执行扣费和效果
-    if (!casterHasCard(mutableState, isPlayer, spellId)) {
+    // PVP 模式下对手手牌信息不可见，通过 skipHandCheck 跳过校验
+    if (!options?.skipHandCheck && !casterHasCard(mutableState, isPlayer, spellId)) {
         // 卡牌不在手牌中，可能是重复点击或延迟导致的
         // 默默失败或返回无操作，不扣费
         return {
@@ -679,14 +680,6 @@ export const calculatePayout = (
   return { payout, isCrit };
 };
 
-/**
- * @deprecated
- */
-export const getRandomSpell = (playerSpellId?: SpellType): SpellType => {
-  // [P0 Fix #2] 使用确定性 RNG
-  const rng = getGameRNG();
-  return rng.pick(SPELLS.slice(0, 10)).id;
-};
 
 export const determineWinner = (p: SpellType, o: SpellType): 'WIN' | 'LOSS' | 'DRAW' => {
   const playerSpell = getSpellById(p);

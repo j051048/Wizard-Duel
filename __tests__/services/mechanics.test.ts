@@ -40,7 +40,6 @@ const createMockSpell = (overrides: Partial<Spell> = {}): Spell => ({
   mechanic: 'burn',
   description: 'test',
   shortDesc: 'test',
-  beats: 'ice' as any,
   ...overrides,
 });
 

@@ -16,7 +16,7 @@ import { getPlayableCards, getSpellById, spellNeedsTarget } from '../services/ga
 import { getElementType } from '../services/combat/elementSystem';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { calculateSpellProjection } from '../services/projection';
-import { useSettings } from '../context/SettingsContext';
+import { useSettingsStore } from '../stores/useSettingsStore';
 import { pvpService } from '../services/pvpService';
 import { useUserStore } from '../stores/useUserStore';
 
@@ -136,7 +136,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
   const isMobile = useIsMobile();
   const { t } = useTranslation();
-  const { isLowQuality } = useSettings();
+  const { isLowQuality } = useSettingsStore();
 
   // States
   const [hoveredSpellId, setHoveredSpellId] = useState<SpellType | null>(null);
@@ -179,9 +179,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     canvasRef,
     showCritEffect,
     showBloodFlash,
+    counterFlashElement,
     floatingTexts,
     addDamageNumber,
     triggerCrit,
+    triggerCounterFlash,
     triggerShake,
     spawnProjectile,
     shakeClass,
@@ -263,6 +265,15 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
       if (isCrit) triggerCrit();
 
+      // Element counter flash
+      if (lastMsg.includes('克制')) {
+        if (lastMsg.includes('🔥')) triggerCounterFlash('fire');
+        else if (lastMsg.includes('❄️')) triggerCounterFlash('ice');
+        else if (lastMsg.includes('⚡')) triggerCounterFlash('thunder');
+        else if (lastMsg.includes('🌿')) triggerCounterFlash('vine');
+        else if (lastMsg.includes('🪨')) triggerCounterFlash('rock');
+      }
+
       const match = lastMsg.match(/(\d+)\s*点伤害/);
       if (match) {
         const damage = parseInt(match[1]);
@@ -279,7 +290,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         triggerShake(pType);
       }
     }
-  }, [effectMessages, triggerCrit, addDamageNumber, triggerShake]);
+  }, [effectMessages, triggerCrit, triggerCounterFlash, addDamageNumber, triggerShake]);
 
   const prevOppCard = useRef<SpellType | null>(null);
   useEffect(() => {
@@ -400,6 +411,15 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       audioBridge.updateBattleBGM(duelState.playerHP, duelState.opponentHP, GAME_CONFIG.maxHP);
     }
   }, [duelState?.playerHP, duelState?.opponentHP, isMuted]);
+
+  // [P0.4] Combo audio escalation — playbackRate increases per combo stack
+  useEffect(() => {
+    const combo = duelState?.playerConsecutiveThunder ?? 0;
+    if (combo >= 2 && !isMuted) {
+      const baseRate = 1.0 + (combo - 1) * 0.15; // x2=1.15, x3=1.30, x4=1.45
+      audioBridge.playSfx('combo_streak', { rate: baseRate });
+    }
+  }, [duelState?.playerConsecutiveThunder, isMuted]);
 
   // [P0-4] Opponent disconnect countdown (30s → surrender)
   useEffect(() => {
@@ -719,6 +739,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         playerHp={duelState.playerHP}
         maxHp={GAME_CONFIG.maxHP}
         comboCount={duelState.playerConsecutiveThunder}
+        counterFlashElement={counterFlashElement}
       />
 
       {/* [P2 Fix #19] Floating Action Log — 常驻最近5条 */}

@@ -16,6 +16,8 @@ export const TURN_BANNER_DEFAULT_DURATION = 1500;
 // ============ AI 节奏 ============
 /** AI 思考初始等待时间 (ms) */
 export const AI_THINK_DELAY = 1500;
+/** AI 思考时间随机波动范围 (±ms)，让 AI 更像人类 */
+export const AI_THINK_VARIANCE = 800;
 /** AI 每张牌之间的间隔 (ms) */
 export const AI_CARD_PLAY_DELAY = 1500;
 /** AI 思考气泡切换延迟 (ms) */

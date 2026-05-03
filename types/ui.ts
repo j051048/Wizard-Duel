@@ -57,11 +57,16 @@ export interface PlayerData {
 
 // ============ Game Loop State ============
 
-export interface GameActionCommand {
-  type: 'UPDATE_STATE' | 'ADD_MESSAGE' | 'SET_PHASE' | 'SET_AI_STATUS' | 'PLAY_ANIMATION' | 'WAIT' | 'UPDATE_UI' | 'EXECUTE_LOGIC' | 'SET_TARGETING';
-  payload: any;
-  delay?: number;
-}
+export type GameActionCommand =
+  | { type: 'UPDATE_STATE'; payload: Partial<DuelState>; delay?: number }
+  | { type: 'ADD_MESSAGE'; payload: string; delay?: number }
+  | { type: 'SET_PHASE'; payload: DuelPhase; delay?: number }
+  | { type: 'SET_AI_STATUS'; payload: Partial<AIStatus>; delay?: number }
+  | { type: 'PLAY_ANIMATION'; payload: { animation: string; target?: string }; delay?: number }
+  | { type: 'WAIT'; payload: null; delay?: number }
+  | { type: 'UPDATE_UI'; payload: Partial<Omit<GameLoopState, 'duelState' | 'phase'>>; delay?: number }
+  | { type: 'EXECUTE_LOGIC'; payload: () => void; delay?: number }
+  | { type: 'SET_TARGETING'; payload: GameLoopState['targetingData']; delay?: number };
 
 export interface GameLoopState {
   duelState: DuelState | null;

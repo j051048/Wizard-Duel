@@ -261,42 +261,31 @@ export const addUserCards = async (userId: string, cardIds: SpellType[]) => {
   }
   const uniqueCardIds = Object.keys(cardCounts);
 
-  // [A-2c] 批量查询已有卡牌（1次查询替代 N 次）
+  // 查询已有卡牌以计算合并后的数量（2次请求：1 SELECT + 1 UPSERT）
   const { data: existingRows } = await supabase
     .from('user_cards')
     .select('card_id, quantity')
     .eq('user_id', userId)
     .in('card_id', uniqueCardIds);
 
-  const existingMap = new Map<string, { quantity: number }>();
+  const existingMap = new Map<string, number>();
   for (const row of existingRows ?? []) {
-    existingMap.set(row.card_id, { quantity: row.quantity ?? 1 });
+    existingMap.set(row.card_id, row.quantity ?? 1);
   }
 
-  const toUpdate: { cardId: string; newQuantity: number }[] = [];
-  const toInsert: { user_id: string; card_id: string; quantity: number }[] = [];
+  // 构建最终行：已有卡牌累加数量，新卡牌直接插入
+  const rows = Object.entries(cardCounts).map(([cardId, count]) => ({
+    user_id: userId,
+    card_id: cardId,
+    quantity: (existingMap.get(cardId) ?? 0) + count,
+  }));
 
-  for (const [cardId, count] of Object.entries(cardCounts)) {
-    const existing = existingMap.get(cardId);
-    if (existing) {
-      toUpdate.push({ cardId, newQuantity: existing.quantity + count });
-    } else {
-      toInsert.push({ user_id: userId, card_id: cardId, quantity: count });
-    }
-  }
-
-  // 批量更新
-  for (const { cardId, newQuantity } of toUpdate) {
-    await supabase
+  // 单次 upsert 处理所有行（需要 (user_id, card_id) 唯一约束）
+  if (rows.length > 0) {
+    const { error } = await supabase
       .from('user_cards')
-      .update({ quantity: newQuantity })
-      .eq('user_id', userId)
-      .eq('card_id', cardId);
-  }
-
-  // 批量插入
-  if (toInsert.length > 0) {
-    await supabase.from('user_cards').insert(toInsert);
+      .upsert(rows, { onConflict: 'user_id,card_id', ignoreDuplicates: false });
+    if (error) throw error;
   }
 };
 
@@ -313,13 +302,12 @@ export const setUserCards = async (userId: string, cardIds: SpellType[]) => {
     cardCounts[id] = (cardCounts[id] || 0) + 1;
   }
 
-  // 删除旧数据
+  // 删除旧数据，然后 upsert 新数据（upsert 兜底：如果 delete 因并发失败，upsert 仍能正确合并）
   await supabase
     .from('user_cards')
     .delete()
     .eq('user_id', userId);
 
-  // 批量插入
   const rows = Object.entries(cardCounts).map(([cardId, quantity]) => ({
     user_id: userId,
     card_id: cardId,
@@ -329,7 +317,7 @@ export const setUserCards = async (userId: string, cardIds: SpellType[]) => {
   if (rows.length > 0) {
     const { error } = await supabase
       .from('user_cards')
-      .insert(rows);
+      .upsert(rows, { onConflict: 'user_id,card_id', ignoreDuplicates: false });
     if (error) throw error;
   }
 };
@@ -365,35 +353,13 @@ export const getUserDecks = async (userId: string): Promise<Deck[]> => {
 export const saveUserDeck = async (userId: string, deck: Deck) => {
   if (!isSupabaseConfigured) throw new Error('Supabase not configured');
 
-  // 尝试更新现有卡组
-  const { data: existing } = await supabase
+  const { error } = await supabase
     .from('decks')
-    .select('id')
-    .eq('id', deck.id)
-    .eq('user_id', userId)
-    .single();
-
-  if (existing) {
-    const { error } = await supabase
-      .from('decks')
-      .update({
-        name: deck.name,
-        cards: deck.cards,
-      })
-      .eq('id', deck.id)
-      .eq('user_id', userId);
-    if (error) throw error;
-  } else {
-    const { error } = await supabase
-      .from('decks')
-      .insert({
-        id: deck.id,
-        user_id: userId,
-        name: deck.name,
-        cards: deck.cards,
-      });
-    if (error) throw error;
-  }
+    .upsert(
+      { id: deck.id, user_id: userId, name: deck.name, cards: deck.cards },
+      { onConflict: 'id' }
+    );
+  if (error) throw error;
 };
 
 /**
@@ -506,13 +472,12 @@ export const consumeUserPack = async (userId: string, packId: string): Promise<b
 export const setUserPacks = async (userId: string, packs: Record<string, number>) => {
   if (!isSupabaseConfigured) throw new Error('Supabase not configured');
 
-  // 删除旧数据
+  // 删除旧数据，然后 upsert（兜底并发安全）
   await supabase
     .from('user_packs')
     .delete()
     .eq('user_id', userId);
 
-  // 批量插入
   const rows = Object.entries(packs)
     .filter(([_, qty]) => qty > 0)
     .map(([packId, quantity]) => ({
@@ -524,7 +489,7 @@ export const setUserPacks = async (userId: string, packs: Record<string, number>
   if (rows.length > 0) {
     const { error } = await supabase
       .from('user_packs')
-      .insert(rows);
+      .upsert(rows, { onConflict: 'user_id,pack_id', ignoreDuplicates: false });
     if (error) throw error;
   }
 };
