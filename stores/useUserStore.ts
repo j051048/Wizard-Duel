@@ -178,11 +178,16 @@ export const useUserStore = create<UserState>((set, get) => ({
           const userId = session.user.id;
           set({ supabaseUserId: userId });
 
-          // -- Profile（金币、经验、胜负）
-          const profile = await getProfile(userId);
+          // -- 并行加载全部数据（Profile + 卡牌 + 卡组 + 卡包）
+          const [profile, cards, decks, packs] = await Promise.all([
+            getProfile(userId),
+            getUserCards(userId),
+            getUserDecks(userId),
+            getUserPacks(userId),
+          ]);
+
           if (profile) {
             const score = profile.rank_score ?? 0;
-            // 直接使用数据库中的 rank_tier，兜底时用 getRankByScore 根据积分计算
             const rank = (profile.rank_tier as Rank) || getRankByScore(score);
             set({
               balance: profile.gold || 0,
@@ -192,21 +197,14 @@ export const useUserStore = create<UserState>((set, get) => ({
             });
           }
 
-          // -- 卡牌收藏（从 user_cards 表）
-          const cards = await getUserCards(userId);
           set({ inventory: cards });
 
-          // -- 卡组（从 decks 表）
-          const decks = await getUserDecks(userId);
           set({ decks });
           if (decks.length > 0 && !get().selectedDeck) {
             set({ selectedDeck: decks[0] });
           }
 
-          // -- 卡包库存（从 user_packs 表）
-          const packs = await getUserPacks(userId);
           set({ packInventory: packs });
-          // 同步写入 localStorage 作为离线备份
           try { localStorage.setItem('wizard_duel_packs', JSON.stringify(packs)); } catch { /* ignore */ }
 
           supabaseLoaded = true;

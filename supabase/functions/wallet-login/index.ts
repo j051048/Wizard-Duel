@@ -16,40 +16,19 @@ serve(async (req) => {
 
   try {
     const { address, signature, message } = await req.json();
-    
+
     if (!address || !signature) {
       throw new Error("Missing address or signature");
     }
 
     // 1. Verify the signature
-    let isValid = false;
-    try {
-      // Validate signature using viem
-      // If message is provided, verify against it.
-      // If not provided (legacy call), we might fail or assume a default message if agreed upon.
-      // Ideally, the frontend sends the message it signed.
-      const msgToVerify = message || `Welcome to Wizard Duel!
+    const msgToVerify = message || `Welcome to Wizard Duel!\n\nVerify your wallet to enter the arena.\n\nTimestamp: ${Date.now()}`;
 
-Verify your wallet to enter the arena.
-
-Timestamp: ${Date.now()}`; // WARNING: Timestamp check needs the exact string. If frontend uses dynamic timestamp, it MUST pass the message.
-      
-      // Since we updated frontend to pass 'message', we should use it.
-      if (!message) {
-         // If no message passed, we can't strictly verify if the content varies.
-         // But for now, we'll try to verify.
-         // If verification fails below, it throws.
-      }
-
-      isValid = await verifyMessage({
-        address: address as `0x${string}`,
-        message: msgToVerify, 
-        signature: signature as `0x${string}`,
-      });
-    } catch (e) {
-      console.error("Verification error:", e);
-      throw new Error("Signature verification failed");
-    }
+    const isValid = await verifyMessage({
+      address: address as `0x${string}`,
+      message: msgToVerify,
+      signature: signature as `0x${string}`,
+    });
 
     if (!isValid) {
       throw new Error("Invalid signature");
@@ -61,12 +40,14 @@ Timestamp: ${Date.now()}`; // WARNING: Timestamp check needs the exact string. I
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     // 3. User Management
+    //    Email is deterministic from wallet address, so we can use it
+    //    as the single source of truth instead of the slow listUsers() fallback.
     const email = `${address.toLowerCase()}@wizardduel.game`;
-    const tempPassword = crypto.randomUUID() + crypto.randomUUID(); // Secure random password for this session
-    
+    const tempPassword = crypto.randomUUID() + crypto.randomUUID();
+
     let userId: string;
 
-    // Check if profile exists with this wallet address
+    // Try to find existing profile by wallet_address (fast path)
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('id')
@@ -74,88 +55,63 @@ Timestamp: ${Date.now()}`; // WARNING: Timestamp check needs the exact string. I
       .single();
 
     if (profile) {
-      // User likely exists. Update password to allow sign-in.
+      // ── Returning user: profile found by wallet ──
       userId = profile.id;
-      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, { 
+      await supabaseAdmin.auth.admin.updateUserById(userId, {
         password: tempPassword,
-        user_metadata: { wallet_address: address.toLowerCase() } // Ensure metadata is synced
+        user_metadata: { wallet_address: address.toLowerCase() },
       });
-      
-      if (updateError) {
-        // If update fails (e.g. user deleted but profile stuck?), we might need to handle edge cases.
-        // But usually this works.
-        console.error("Update user error:", updateError);
-        throw new Error("Failed to update user credentials");
-      }
     } else {
-       // Profile not found via wallet_address.
-       // Attempt to create new Auth User.
-       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-         email,
-         password: tempPassword,
-         email_confirm: true, // Auto confirm
-         user_metadata: { wallet_address: address.toLowerCase() }
-       });
-       
-       if (createError) {
-         // If "Email already registered", it means the Auth User exists but Profile was not found by wallet_address.
-         // This implies the Profile might exist but `wallet_address` column is null.
-         // We need to find the user ID to link them.
-         
-         // Since we can't query Auth by email easily via API without `listUsers` (which is slow),
-         // we might try to sign in with the OLD password? No, we don't know it.
-         
-         // Fallback strategy: 
-         // If createUser fails, we can't easily recover the ID in this script without listUsers.
-         // Let's assume for this MVP that if createUser fails, we try to find via listUsers (acceptable for low volume).
-         
-         const { data: usersResponse } = await supabaseAdmin.auth.admin.listUsers();
-         const existingUser = usersResponse.users.find(u => u.email === email);
-         
-         if (existingUser) {
-           userId = existingUser.id;
-           // Update password
-           await supabaseAdmin.auth.admin.updateUserById(userId, { password: tempPassword });
-           
-           // Create/Link Profile
-           // Check if profile has ID
-           const { data: p2 } = await supabaseAdmin.from('profiles').select('id').eq('id', userId).single();
-           if (!p2) {
-             await supabaseAdmin.from('profiles').insert({
-                id: userId,
-                wallet_address: address.toLowerCase(),
-                username: `Wizard_${address.slice(0, 6)}`,
-                gold: 100
-             });
-           } else {
-             // Profile exists but wallet_address was null or wrong
-             await supabaseAdmin.from('profiles').update({ wallet_address: address.toLowerCase() }).eq('id', userId);
-           }
-         } else {
-            throw new Error("User creation failed and user not found");
-         }
-       } else {
-         // New User Created Successfully
-         userId = newUser.user.id;
-         
-         // Create Profile (if not handled by Database Trigger)
-         // Ideally triggers handle this, but we explicitly set wallet_address
-         const { error: profileError } = await supabaseAdmin.from('profiles').insert({
-            id: userId,
-            wallet_address: address.toLowerCase(),
-            username: `Wizard_${address.slice(0, 6)}`,
-            gold: 100
-         });
-         
-         if (profileError) {
-             // If trigger already created it, update it
-             if (profileError.code === '23505') { // Unique violation on ID
-                 await supabaseAdmin.from('profiles').update({ wallet_address: address.toLowerCase() }).eq('id', userId);
-             } else {
-                 console.error("Profile creation error:", profileError);
-             }
-         }
-       }
+      // ── New user OR returning user with null wallet_address ──
+      //    Use generateLink to atomically create-or-find the Auth user.
+      //    This replaces the old createUser + listUsers() fallback.
+      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'signup',
+        email,
+        password: tempPassword,
+      });
+
+      if (linkError) {
+        // generateLink with type 'signup' returns the existing user if email is taken
+        // but also returns an error. We can still use the user from the response.
+        console.warn('generateLink warning (expected for existing users):', linkError.message);
+      }
+
+      if (linkData?.user) {
+        userId = linkData.user.id;
+      } else {
+        // Extremely rare: generateLink completely failed.
+        // Last resort: try signInWithPassword with a known password won't work.
+        // Throw a clear error so the client can retry.
+        throw new Error("Could not create or find user account");
+      }
+
+      // Update password (in case the user already existed with a different password)
+      await supabaseAdmin.auth.admin.updateUserById(userId, {
+        password: tempPassword,
+        user_metadata: { wallet_address: address.toLowerCase() },
+      });
+
+      // Ensure profile row exists and wallet_address is set
+      const { data: existingProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .single();
+
+      if (!existingProfile) {
+        await supabaseAdmin.from('profiles').insert({
+          id: userId,
+          wallet_address: address.toLowerCase(),
+          username: `Wizard_${address.slice(0, 6)}`,
+          gold: 100,
+        });
+      } else {
+        await supabaseAdmin
+          .from('profiles')
+          .update({ wallet_address: address.toLowerCase() })
+          .eq('id', userId);
+      }
     }
 
     // 4. Sign In to get Session
