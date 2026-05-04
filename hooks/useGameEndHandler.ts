@@ -43,10 +43,12 @@ export function useGameEndHandler({
   onResetGame,
 }: UseGameEndHandlerDeps) {
   const isProcessingRef = useRef(false);
+  const gameLoopStateRef = useRef(gameLoopState);
+  gameLoopStateRef.current = gameLoopState;
 
-  /**
-   * 异步保存到 Supabase（fire-and-forget，不阻塞 UI）
-   */
+  const onGameEndFeedbackRef = useRef(onGameEndFeedback);
+  onGameEndFeedbackRef.current = onGameEndFeedback;
+
   const saveToSupabase = useCallback(async (
     result: 'WIN' | 'LOSS',
     scoreDelta: number,
@@ -54,6 +56,7 @@ export function useGameEndHandler({
   ) => {
     const user = useUserStore.getState();
     const ui = useUIStore.getState();
+    const gs = gameLoopStateRef.current;
 
     if (!user.activeAddress) return;
 
@@ -73,9 +76,9 @@ export function useGameEndHandler({
 
         const rpcResult = await saveBattleResult({
           user_id: sessionUserId,
-          opponent_name: gameLoopState.duelState?.aiProfile?.name || 'Unknown',
+          opponent_name: gs.duelState?.aiProfile?.name || 'Unknown',
           result: result.toLowerCase() as 'win' | 'loss' | 'draw',
-          turns: gameLoopState.duelState?.roundNumber || 0,
+          turns: gs.duelState?.roundNumber || 0,
           gold_earned: mock.payout,
           xp_earned: result === 'WIN' ? 50 : 10,
           score_delta: scoreDelta
@@ -86,7 +89,6 @@ export function useGameEndHandler({
           user.setRankScore(rpcResult.new_score);
           const rpcRank = getRankByScore(rpcResult.new_score);
           user.setUserRank(rpcRank);
-          // Update finalResult with server-authoritative data
           const currentResult = useUIStore.getState().finalResult;
           if (currentResult) {
             useUIStore.getState().setFinalResult({
@@ -104,10 +106,9 @@ export function useGameEndHandler({
       console.warn('[Battle] Supabase save skipped:', supabaseErr);
     }
 
-    // Fallback: localStorage API
     try {
-      const pCard = (gameLoopState.playerCard || 'fire') as SpellType;
-      const oCard = (gameLoopState.opponentCard || 'fire') as SpellType;
+      const pCard = (gs.playerCard || 'fire') as SpellType;
+      const oCard = (gs.opponentCard || 'fire') as SpellType;
       const { newScore, newRank } = calculateRankUpdate(user.rankScore, result, user.winStreak);
       const res = await ApiService.settleGame(
         user.activeAddress,
@@ -123,11 +124,8 @@ export function useGameEndHandler({
     } catch (e) {
       console.warn('[Battle] Fallback settlement failed:', e);
     }
-  }, [gameLoopState]);
+  }, []);
 
-  /**
-   * 核心结算逻辑 — 乐观更新 UI，后台异步保存
-   */
   const processGameEnd = useCallback(async (
     result: 'WIN' | 'LOSS',
     playerCard: SpellType,
@@ -140,15 +138,13 @@ export function useGameEndHandler({
 
     const user = useUserStore.getState();
     const ui = useUIStore.getState();
+    const gs = gameLoopStateRef.current;
 
-    // 触发反馈
-    onGameEndFeedback(result);
+    onGameEndFeedbackRef.current(result);
 
-    // 更新连胜
     const newStreak = result === 'WIN' ? user.winStreak + 1 : 0;
     user.setWinStreak(newStreak);
 
-    // 首胜奖励
     let firstWinBonus = 0;
     if (result === 'WIN') {
       const today = new Date().toDateString();
@@ -159,7 +155,6 @@ export function useGameEndHandler({
       }
     }
 
-    // 金币救济
     let reliefBonus = 0;
     if (user.balance < 50) {
       const today = new Date().toDateString();
@@ -170,7 +165,6 @@ export function useGameEndHandler({
       }
     }
 
-    // 更新任务进度
     QuestManager.updateProgress('play_cards', 1);
     if (result === 'WIN') {
       QuestManager.updateProgress('win_games', 1);
@@ -178,13 +172,11 @@ export function useGameEndHandler({
     const damage = opponentMaxMana - opponentHP;
     if (damage > 0) QuestManager.updateProgress('deal_damage', damage);
 
-    // 战斗通行证经验
     const bpXP = result === 'WIN' ? 50 : 10;
     BattlePassService.addXP(bpXP);
     BattlePassService.onBattleComplete(result === 'WIN', [], {});
 
-    // 成就系统检查
-    const ds = gameLoopState.duelState;
+    const ds = gs.duelState;
     const achievementResult = AchievementService.check({
       won: result === 'WIN',
       winStreak: newStreak,
@@ -200,24 +192,20 @@ export function useGameEndHandler({
       audioBridge.playSfx('achievement_unlock');
     }
 
-    // 排名更新（客户端乐观计算）
     const { newScore, newRank, scoreDelta } = calculateRankUpdate(user.rankScore, result, newStreak);
     user.setRankScore(newScore);
     user.setUserRank(newRank);
 
-    // ===== 立即计算 payout 并显示 UI（不等待 Supabase） =====
     const mock = calculatePayout(ui.selectedBet, result);
     let finalPayout = mock.payout;
     const finalIsCrit = mock.isCrit;
 
-    // 应用首胜和救济金奖励
     const bonusTotal = firstWinBonus + reliefBonus;
     if (bonusTotal > 0) {
       user.setBalance(user.balance + bonusTotal);
       finalPayout += bonusTotal;
     }
 
-    // 立即显示结算页面
     ui.setFinalResult({
       result,
       player: playerCard,
@@ -230,13 +218,9 @@ export function useGameEndHandler({
 
     isProcessingRef.current = false;
 
-    // ===== 后台异步保存到 Supabase（不阻塞 UI） =====
     saveToSupabase(result, scoreDelta, opponentHP).catch(() => {});
-  }, [onGameEndFeedback, saveToSupabase]);
+  }, [saveToSupabase]);
 
-  /**
-   * 监听游戏结束状态
-   */
   useEffect(() => {
     const ui = useUIStore.getState();
 

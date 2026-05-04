@@ -109,8 +109,8 @@ class LazyLoadErrorBoundary extends Component<{ children: ReactNode }, ErrorBoun
 function App() {
   const { isLowQuality } = useSettingsStore();
 
-  // ============ Stores ============
-  const user = useUserStore(useShallow(state => ({
+  // ============ Stores: Data (triggers re-render on change) ============
+  const userData = useUserStore(useShallow(state => ({
     activeAddress: state.activeAddress,
     balance: state.balance,
     isLoading: state.isLoading,
@@ -121,21 +121,8 @@ function App() {
     selectedDeck: state.selectedDeck,
     packInventory: state.packInventory,
     purchasedBundles: state.purchasedBundles,
-
-    // Actions
-    setActiveAddress: state.setActiveAddress,
-    loadUserData: state.loadUserData,
-    loadLeaderboard: state.loadLeaderboard,
-    setBalance: state.setBalance,
-    saveDeck: state.saveDeck,
-    setSelectedDeck: state.setSelectedDeck,
-    addCardsToInventory: state.addCardsToInventory,
-    purchaseBundle: state.purchaseBundle,
-    addPacks: state.addPacks,
-    consumePack: state.consumePack,
-    setPackInventory: state.setPackInventory
   })));
-  const ui = useUIStore(useShallow(state => ({
+  const uiData = useUIStore(useShallow(state => ({
     gameState: state.gameState,
     gameMode: state.gameMode,
     selectedBet: state.selectedBet,
@@ -150,6 +137,26 @@ function App() {
     pvpRoomId: state.pvpRoomId,
     pvpRole: state.pvpRole,
     pvpSeed: state.pvpSeed,
+  })));
+  const toastData = useToastStore(useShallow(state => ({
+    toasts: state.toasts,
+  })));
+
+  // ============ Stores: Actions (stable refs, never cause re-render) ============
+  const userActions = useUserStore(state => ({
+    setActiveAddress: state.setActiveAddress,
+    loadUserData: state.loadUserData,
+    loadLeaderboard: state.loadLeaderboard,
+    setBalance: state.setBalance,
+    saveDeck: state.saveDeck,
+    setSelectedDeck: state.setSelectedDeck,
+    addCardsToInventory: state.addCardsToInventory,
+    purchaseBundle: state.purchaseBundle,
+    addPacks: state.addPacks,
+    consumePack: state.consumePack,
+    setPackInventory: state.setPackInventory
+  }));
+  const uiActions = useUIStore(state => ({
     setGameState: state.setGameState,
     setIsResourcesLoaded: state.setIsResourcesLoaded,
     setDungeonRun: state.setDungeonRun,
@@ -159,25 +166,24 @@ function App() {
     setPvpRoomId: state.setPvpRoomId,
     setPvpRole: state.setPvpRole,
     setPvpSeed: state.setPvpSeed,
-  })));
-  const toast = useToastStore(useShallow(state => ({
-    toasts: state.toasts,
+  }));
+  const toastActions = useToastStore(state => ({
     removeToast: state.removeToast,
     success: state.success,
     warning: state.warning,
     error: state.error,
     info: state.info,
-  })));
+  }));
 
   // ============ Core Hooks ============
   const { progress, startPreloading } = usePreloader();
-  const [gameLoopState, gameLoopActions] = useGameLoop(!!ui.pvpRoomId);
+  const [gameLoopState, gameLoopActions] = useGameLoop(!!uiData.pvpRoomId);
   const [audioState, audioActions] = useAudioManager();
   const { isMobileLandscape } = useScreenOrientation();
 
   // ============ Extracted Hooks ============
   const routing = useAppRouting({ gameLoopActions, audioActions });
-  
+
   const feedback = useGameFeedback({
     effectMessages: gameLoopState.effectMessages,
     audioActions,
@@ -191,26 +197,23 @@ function App() {
 
   const tutorial = useTutorial(
     true,
-    ui.gameState,
+    uiData.gameState,
     gameLoopState.phase,
     gameLoopState.duelState?.roundNumber || 0
   );
 
   // ============ Initialization ============
   useEffect(() => {
-    // 强制清理旧版本缓存与存档
     const version = "v2026.02.13.PVP.01";
     const storedVer = localStorage.getItem('app_version');
     if (storedVer !== version) {
         console.log('🚀 [VERSION_RECOVERY] 检测到新版本 PVP 补丁，正在重置本地存储...');
-        // 清理战斗状态、RNG状态等
         localStorage.removeItem('wizard_duel_state');
         localStorage.removeItem('wizard_rng_state');
         localStorage.setItem('app_version', version);
     }
     startPreloading();
 
-    // Restore existing Supabase session on page refresh (skip login screen)
     (async () => {
       try {
         const { supabase, isSupabaseConfigured } = await import('./services/supabase');
@@ -231,25 +234,22 @@ function App() {
     })();
   }, [startPreloading]);
 
-  // loadUserData is now called directly in handleLoginComplete (useAppRouting)
-  // instead of via useEffect watching activeAddress — avoids re-render cascading
-
   const handleResourcesLoaded = () => {
-    ui.setIsResourcesLoaded(true);
+    uiActions.setIsResourcesLoaded(true);
     audioActions.playBgm('lobby');
   };
 
   // ============ Render: Loading ============
-  if (!ui.isResourcesLoaded) {
+  if (!uiData.isResourcesLoaded) {
     return <LoadingScreen progress={progress} onComplete={handleResourcesLoaded} />;
   }
 
   // ============ Render: Login ============
-  if (ui.gameState === 'LOGIN') {
+  if (uiData.gameState === 'LOGIN') {
     return (
       <>
         <LoginScreen onLoginComplete={routing.handleLoginComplete} />
-        <ToastContainer toasts={toast.toasts} onDismiss={toast.removeToast} />
+        <ToastContainer toasts={toastData.toasts} onDismiss={toastActions.removeToast} />
       </>
     );
   }
@@ -257,15 +257,12 @@ function App() {
   // ============ Render: Main App ============
   return (
     <div className={`h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-slate-950 text-white font-tech selection:bg-purple-500/30 touch-pan-y ${isLowQuality ? 'low-quality' : ''}`}>
-      
-      {/* Orientation Warning */}
+
       {isMobileLandscape && <OrientationWarning />}
 
-      {/* Main Content */}
-      <main className={ui.gameState === 'LOBBY' ? 'pt-16' : ''}>
-        
-        {/* Lobby */}
-        {ui.gameState === 'LOBBY' && (
+      <main className={uiData.gameState === 'LOBBY' ? 'pt-16' : ''}>
+
+        {uiData.gameState === 'LOBBY' && (
           <Lobby
             onStartDuel={routing.handleStartDuel}
             onPvpStart={routing.handlePvpStart}
@@ -274,142 +271,127 @@ function App() {
           />
         )}
 
-        {/* Mode Select */}
-        {ui.gameState === 'MODE_SELECT' && (
+        {uiData.gameState === 'MODE_SELECT' && (
           <ModeSelect
             onSelectMode={routing.handleSelectMode}
-            onBackToLobby={() => ui.setGameState('LOBBY')}
+            onBackToLobby={() => uiActions.setGameState('LOBBY')}
           />
         )}
 
-        {/* Matchmaking */}
-        {ui.gameState === 'MATCHMAKING' && (
+        {uiData.gameState === 'MATCHMAKING' && (
           <MatchmakingAnimation
             onComplete={routing.handleMatchmakingComplete}
-            opponentName={ui.pendingTavernDuel?.name}
-            opponentAvatar={ui.pendingTavernDuel?.avatar}
-            isTavernMode={!!ui.pendingTavernDuel}
+            opponentName={uiData.pendingTavernDuel?.name}
+            opponentAvatar={uiData.pendingTavernDuel?.avatar}
+            isTavernMode={!!uiData.pendingTavernDuel}
           />
         )}
 
-        {/* Lazy Loaded Views */}
         <LazyLoadErrorBoundary>
         <React.Suspense fallback={<LoadingScreen progress={{ percentage: 100, isComplete: false, loaded: 1, total: 1, currentItem: '加载中...', errors: [] }} />}>
-          
-          {/* Tavern Mode */}
-          {ui.gameState === 'TAVERN' && (
+
+          {uiData.gameState === 'TAVERN' && (
             <TavernMode
               onStartTavernDuel={(ai: any) => {
-                if (!user.selectedDeck) {
-                  toast.warning('需要牌组', '请先选择牌组！');
+                if (!userData.selectedDeck) {
+                  toastActions.warning('需要牌组', '请先选择牌组！');
                   return;
                 }
-                ui.setPendingTavernDuel(ai);
-                ui.setGameState('MATCHMAKING');
+                uiActions.setPendingTavernDuel(ai);
+                uiActions.setGameState('MATCHMAKING');
               }}
-              onBackToLobby={() => ui.setGameState('LOBBY')}
+              onBackToLobby={() => uiActions.setGameState('LOBBY')}
               playerStats={{ tavernWins: 0, tavernLosses: 0, bestStreak: 0 }}
             />
           )}
 
-          {/* Dungeon Map */}
-          {ui.gameState === 'DUNGEON_MAP' && ui.dungeonRun && (
+          {uiData.gameState === 'DUNGEON_MAP' && uiData.dungeonRun && (
             <DungeonMap
-              runState={ui.dungeonRun}
+              runState={uiData.dungeonRun}
               onSelectNode={(node: DungeonNode) => {
                 if (['BATTLE', 'ELITE', 'BOSS'].includes(node.type)) {
                   const diff = node.type === 'BOSS' ? 'hard' : node.type === 'ELITE' ? 'medium' : 'easy';
                   const opp = AI_PROFILES.find(p => p.difficulty === diff) || AI_PROFILES[0];
-                  ui.setPendingTavernDuel(opp);
-                  ui.setGameState('MATCHMAKING');
+                  uiActions.setPendingTavernDuel(opp);
+                  uiActions.setGameState('MATCHMAKING');
                 } else if (node.type === 'REST') {
-                  const updated = DungeonService.updateHP(ui.dungeonRun!, Math.floor(ui.dungeonRun!.maxHP * 0.3));
-                  ui.setDungeonRun(DungeonService.advanceNode(updated));
-                  toast.success('休息完成', '恢复了 30% 生命值！');
+                  const updated = DungeonService.updateHP(uiData.dungeonRun!, Math.floor(uiData.dungeonRun!.maxHP * 0.3));
+                  uiActions.setDungeonRun(DungeonService.advanceNode(updated));
+                  toastActions.success('休息完成', '恢复了 30% 生命值！');
                 } else {
-                  ui.setDungeonRun(DungeonService.advanceNode(ui.dungeonRun!));
+                  uiActions.setDungeonRun(DungeonService.advanceNode(uiData.dungeonRun!));
                 }
               }}
             />
           )}
 
-          {/* Deck Builder */}
-          {ui.gameState === 'DECK_BUILDER' && (
+          {uiData.gameState === 'DECK_BUILDER' && (
             <DeckBuilder
-              onBack={() => ui.setGameState('LOBBY')}
-              onSaveDeck={user.saveDeck}
-              onSelectDeck={user.setSelectedDeck}
-              existingDecks={user.decks}
-              selectedDeck={user.selectedDeck}
-              gameMode={ui.gameMode}
+              onBack={() => uiActions.setGameState('LOBBY')}
+              onSaveDeck={userActions.saveDeck}
+              onSelectDeck={userActions.setSelectedDeck}
+              existingDecks={userData.decks}
+              selectedDeck={userData.selectedDeck}
+              gameMode={uiData.gameMode}
             />
           )}
 
-          {/* Shop */}
-          {ui.gameState === 'SHOP' && (
+          {uiData.gameState === 'SHOP' && (
             <ShopScreen
-              onBack={() => ui.setGameState('LOBBY')}
+              onBack={() => uiActions.setGameState('LOBBY')}
             />
           )}
 
-                    {/* Collection */}
-          {ui.gameState === 'COLLECTION' && (
-            <CollectionBook onBack={() => ui.setGameState('LOBBY')} />
+          {uiData.gameState === 'COLLECTION' && (
+            <CollectionBook onBack={() => uiActions.setGameState('LOBBY')} />
           )}
 
-          {/* User Profile */}
-          {ui.gameState === 'PROFILE' && (
+          {uiData.gameState === 'PROFILE' && (
             <UserProfilePage
-              onBack={() => ui.setGameState('LOBBY')}
-              balance={user.balance}
-              userRank={user.userRank}
-              rankScore={user.rankScore}
-              history={user.history}
-              activeAddress={user.activeAddress}
-              isGuest={ui.isGuest}
-              onUpdateBalance={user.setBalance}
+              onBack={() => uiActions.setGameState('LOBBY')}
+              balance={userData.balance}
+              userRank={userData.userRank}
+              rankScore={userData.rankScore}
+              history={userData.history}
+              activeAddress={userData.activeAddress}
+              isGuest={uiData.isGuest}
+              onUpdateBalance={userActions.setBalance}
               onUpdateName={(name: string) => {
                 localStorage.setItem('wizard_display_name', name);
-                toast.success('昵称已更新', name);
+                toastActions.success('昵称已更新', name);
               }}
-              displayName={localStorage.getItem('wizard_display_name') || (user.activeAddress ? `Wizard_${user.activeAddress.slice(0, 6)}` : '游客法师')}
+              displayName={localStorage.getItem('wizard_display_name') || (userData.activeAddress ? `Wizard_${userData.activeAddress.slice(0, 6)}` : '游客法师')}
             />
           )}
 
-          {/* Battle Pass */}
-          {ui.gameState === 'BATTLE_PASS' && (
+          {uiData.gameState === 'BATTLE_PASS' && (
             <BattlePassPage
-              onBack={() => ui.setGameState('LOBBY')}
+              onBack={() => uiActions.setGameState('LOBBY')}
               onPurchasePremium={() => {
-                toast.info('即将推出', '高级通行证即将上线！');
+                toastActions.info('即将推出', '高级通行证即将上线！');
               }}
-              balance={user.balance}
+              balance={userData.balance}
             />
           )}
 
-          {/* Achievements */}
-          {ui.gameState === 'ACHIEVEMENTS' && (
-            <AchievementPanel onBack={() => ui.setGameState('LOBBY')} />
+          {uiData.gameState === 'ACHIEVEMENTS' && (
+            <AchievementPanel onBack={() => uiActions.setGameState('LOBBY')} />
           )}
 
-          {/* Ranked Ladder */}
-          {ui.gameState === 'RANKED' && (
-            <RankedLadder onBack={() => ui.setGameState('LOBBY')} />
+          {uiData.gameState === 'RANKED' && (
+            <RankedLadder onBack={() => uiActions.setGameState('LOBBY')} />
           )}
 
-
-          {/* PVP State Sync */}
-          {ui.gameState === 'PVP_SYNC' && ui.pvpRole && ui.pvpSeed !== null && user.selectedDeck && (
-            <PvpStateSync 
-              role={ui.pvpRole}
-              seed={ui.pvpSeed}
-              myDeck={user.selectedDeck.cards}
+          {uiData.gameState === 'PVP_SYNC' && uiData.pvpRole && uiData.pvpSeed !== null && userData.selectedDeck && (
+            <PvpStateSync
+              role={uiData.pvpRole}
+              seed={uiData.pvpSeed}
+              myDeck={userData.selectedDeck.cards}
               onSyncComplete={routing.handlePvpSyncComplete}
             />
           )}
 
-          {/* Mulligan */}
-          {ui.gameState === 'MULLIGAN' && gameLoopState.duelState && (
+          {uiData.gameState === 'MULLIGAN' && gameLoopState.duelState && (
             <MulliganScreen
               initialHand={gameLoopState.duelState.playerHand}
               opponentName={gameLoopState.duelState.aiProfile?.name}
@@ -417,19 +399,18 @@ function App() {
               onConfirm={(indices: number[]) => {
                 gameLoopActions.handleMulligan(indices);
                 tutorial.handleAction('MULLIGAN');
-                ui.setGameState('DUEL');
+                uiActions.setGameState('DUEL');
               }}
               timeLimit={30}
             />
           )}
 
-          {/* Battle */}
-          {ui.gameState === 'DUEL' && (
+          {uiData.gameState === 'DUEL' && (
             gameLoopState.duelState ? (
               <BattleArena
                 gameLoopState={gameLoopState}
-                selectedBet={ui.selectedBet}
-                pvpRoomId={ui.pvpRoomId || undefined}
+                selectedBet={uiData.selectedBet}
+                pvpRoomId={uiData.pvpRoomId || undefined}
                 onRemotePlayCard={gameLoopActions.handleRemotePlayCard}
                 onRemoteEndTurn={gameLoopActions.handleRemoteEndTurn}
                 getSerializedState={gameLoopActions.getSerializedState}
@@ -447,7 +428,7 @@ function App() {
                   tutorial.handleAction('END_TURN');
                 }}
                 onSurrender={() => {
-                  ui.showConfirmDialog({
+                  uiActions.showConfirmDialog({
                     title: '确认投降',
                     message: '投降将判定为失败，确定要放弃这场对战吗？',
                     confirmText: '投降',
@@ -455,18 +436,18 @@ function App() {
                     type: 'danger',
                     onConfirm: () => {
                       gameLoopActions.reset();
-                      ui.setPvpRoomId(null);
-                      ui.setGameState('LOBBY');
+                      uiActions.setPvpRoomId(null);
+                      uiActions.setGameState('LOBBY');
                       audioActions.playBgm('lobby');
-                      ui.hideConfirmDialog();
-                      toast.info('对战结束', '你选择了投降');
+                      uiActions.hideConfirmDialog();
+                      toastActions.info('对战结束', '你选择了投降');
                     }
                   });
                 }}
                 isMuted={audioState.isMuted}
                 onToggleMute={audioActions.toggleMute}
-                isPlayerShaking={ui.isPlayerShaking}
-                isOpponentShaking={ui.isOpponentShaking}
+                isPlayerShaking={uiData.isPlayerShaking}
+                isOpponentShaking={uiData.isOpponentShaking}
                 setTargeting={gameLoopActions.setTargeting}
                 onSelectHeroSkill={gameLoopActions.selectHeroSkill}
                 onUseHeroSkill={gameLoopActions.useHeroSkill}
@@ -479,36 +460,34 @@ function App() {
             )
           )}
 
-          {/* Results */}
-          {ui.finalResult && (
+          {uiData.finalResult && (
             <ResultsModal
-              result={ui.finalResult.result}
-              playerSpell={ui.finalResult.player}
-              opponentSpell={ui.finalResult.opponent}
-              payout={ui.finalResult.payout}
-              bet={ui.selectedBet}
-              isCrit={ui.finalResult.isCrit}
+              result={uiData.finalResult.result}
+              playerSpell={uiData.finalResult.player}
+              opponentSpell={uiData.finalResult.opponent}
+              payout={uiData.finalResult.payout}
+              bet={uiData.selectedBet}
+              isCrit={uiData.finalResult.isCrit}
               onClose={routing.handleResetGame}
               isTavernMode={gameLoopState.duelState?.isTavernMode}
-              rankUpdates={ui.finalResult.rankUpdates}
+              rankUpdates={uiData.finalResult.rankUpdates}
             />
           )}
         </React.Suspense>
         </LazyLoadErrorBoundary>
       </main>
 
-      {/* Global Components */}
-      <ToastContainer toasts={toast.toasts} onDismiss={toast.removeToast} />
-      
+      <ToastContainer toasts={toastData.toasts} onDismiss={toastActions.removeToast} />
+
       <ConfirmDialog
-        isOpen={ui.confirmDialog.isOpen}
-        title={ui.confirmDialog.title}
-        message={ui.confirmDialog.message}
-        confirmText={ui.confirmDialog.confirmText}
-        cancelText={ui.confirmDialog.cancelText}
-        type={ui.confirmDialog.type}
-        onConfirm={() => ui.confirmDialog.onConfirm?.()}
-        onCancel={ui.hideConfirmDialog}
+        isOpen={uiData.confirmDialog.isOpen}
+        title={uiData.confirmDialog.title}
+        message={uiData.confirmDialog.message}
+        confirmText={uiData.confirmDialog.confirmText}
+        cancelText={uiData.confirmDialog.cancelText}
+        type={uiData.confirmDialog.type}
+        onConfirm={() => uiData.confirmDialog.onConfirm?.()}
+        onCancel={uiActions.hideConfirmDialog}
       />
 
       {tutorial.activeStep && (
