@@ -123,7 +123,11 @@ export function useAppRouting({ gameLoopActions, audioActions }: UseAppRoutingDe
    * 登录完成处理
    */
   const handleLoginComplete = useCallback((address: string, isGuest: boolean) => {
-    useUserStore.getState().setActiveAddress(address);
+    const userStore = useUserStore.getState();
+    userStore.setActiveAddress(address);
+    // Load user data directly (no useEffect dependency on activeAddress)
+    userStore.loadUserData(address);
+    userStore.loadLeaderboard();
     const ui = useUIStore.getState();
     ui.setIsLoggedIn(true);
     ui.setIsGuest(isGuest);

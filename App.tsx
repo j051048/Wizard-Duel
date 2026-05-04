@@ -12,7 +12,7 @@
  * - useGameEndHandler: 游戏结束处理
  */
 
-import React, { useEffect, useRef, Component, type ReactNode } from 'react';
+import React, { useEffect, Component, type ReactNode } from 'react';
 
 // Types
 import { SpellType } from './types/card';
@@ -209,17 +209,30 @@ function App() {
         localStorage.setItem('app_version', version);
     }
     startPreloading();
+
+    // Restore existing Supabase session on page refresh (skip login screen)
+    (async () => {
+      try {
+        const { supabase, isSupabaseConfigured } = await import('./services/supabase');
+        if (!isSupabaseConfigured) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const walletAddr = session.user.user_metadata?.wallet_address;
+          if (walletAddr) {
+            const store = useUserStore.getState();
+            store.setActiveAddress(walletAddr);
+            store.setSupabaseUserId(session.user.id);
+            store.loadUserData(walletAddr);
+            store.loadLeaderboard();
+            useUIStore.getState().setGameState('LOBBY');
+          }
+        }
+      } catch { /* no session — show login */ }
+    })();
   }, [startPreloading]);
 
-  const lastLoadedAddrRef = useRef<string | null>(null);
-  useEffect(() => {
-    const addr = user.activeAddress;
-    if (addr && addr !== lastLoadedAddrRef.current) {
-      lastLoadedAddrRef.current = addr;
-      user.loadUserData(addr);
-      user.loadLeaderboard();
-    }
-  }, [user.activeAddress]);
+  // loadUserData is now called directly in handleLoginComplete (useAppRouting)
+  // instead of via useEffect watching activeAddress — avoids re-render cascading
 
   const handleResourcesLoaded = () => {
     ui.setIsResourcesLoaded(true);
