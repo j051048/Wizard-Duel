@@ -49,14 +49,13 @@ export const Lobby: React.FC<LobbyProps> = ({
   const isMobile = useIsMobile();
 
   // Read directly from stores — no prop drilling
-  const { balance, userRank, rankScore, decks, selectedDeck, setSelectedDeck, isLoading } = useUserStore(
-    useShallow(s => ({ balance: s.balance, userRank: s.userRank, rankScore: s.rankScore, decks: s.decks, selectedDeck: s.selectedDeck, setSelectedDeck: s.setSelectedDeck, isLoading: s.isLoading }))
+  const { balance, userRank, rankScore, decks, selectedDeck, setSelectedDeck, setBalance, isLoading } = useUserStore(
+    useShallow(s => ({ balance: s.balance, userRank: s.userRank, rankScore: s.rankScore, decks: s.decks, selectedDeck: s.selectedDeck, setSelectedDeck: s.setSelectedDeck, setBalance: s.setBalance, isLoading: s.isLoading }))
   );
   const { selectedBet, setSelectedBet, gameMode, language, setLanguage, setGameState, showSettings, setShowSettings } = useUIStore(
     useShallow(s => ({ selectedBet: s.selectedBet, setSelectedBet: s.setSelectedBet, gameMode: s.gameMode, language: s.language, setLanguage: s.setLanguage, setGameState: s.setGameState, showSettings: s.showSettings, setShowSettings: s.setShowSettings }))
   );
   const { quality, setQuality, isLowQuality } = useSettingsStore();
-  const { setBalance, balance: currentBalance } = useUserStore(useShallow(s => ({ setBalance: s.setBalance, balance: s.balance })));
   const toast = useToastStore(s => ({ success: s.success }));
 
   const [isRulesOpen, setIsRulesOpen] = useState(false);
@@ -82,7 +81,7 @@ export const Lobby: React.FC<LobbyProps> = ({
       if (result.success) {
           setQuests(result.quests);
           if (result.reward) {
-              setBalance(currentBalance + result.reward);
+              setBalance(balance + result.reward);
               toast.success('奖励到账', `获得 ${result.reward} 法力值！`);
           }
           // [P1] 任务经验同步到战斗通行证

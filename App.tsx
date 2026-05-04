@@ -12,7 +12,7 @@
  * - useGameEndHandler: 游戏结束处理
  */
 
-import React, { useEffect, Component, type ReactNode } from 'react';
+import React, { useEffect, useRef, Component, type ReactNode } from 'react';
 
 // Types
 import { SpellType } from './types/card';
@@ -211,9 +211,12 @@ function App() {
     startPreloading();
   }, [startPreloading]);
 
+  const lastLoadedAddrRef = useRef<string | null>(null);
   useEffect(() => {
-    if (user.activeAddress) {
-      user.loadUserData(user.activeAddress);
+    const addr = user.activeAddress;
+    if (addr && addr !== lastLoadedAddrRef.current) {
+      lastLoadedAddrRef.current = addr;
+      user.loadUserData(addr);
       user.loadLeaderboard();
     }
   }, [user.activeAddress]);

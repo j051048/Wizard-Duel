@@ -59,15 +59,17 @@ export const signInWithWallet = async (address: string, signature: string, messa
     return signInWithWalletLegacy(address);
   }
 
-  if (!data.session) {
+  // Edge Function returns { data: { session, user }, error } — handle both nesting levels
+  const session = data.data?.session || data.session;
+  const user = data.data?.user || data.user;
+
+  if (!session) {
     throw new Error('Failed to retrieve session from login function');
   }
 
   // Set the session
-  const { error: sessionError } = await supabase.auth.setSession(data.session);
+  const { error: sessionError } = await supabase.auth.setSession(session);
   if (sessionError) throw sessionError;
-
-  const user = data.user;
 
   // [A-2a] 仅验证 profile 存在，完整数据由 loadUserData 加载
   const { data: profileExists, error: profileError } = await supabase

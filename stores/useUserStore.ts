@@ -160,6 +160,8 @@ export const useUserStore = create<UserState>((set, get) => ({
    * 加载用户数据 — 优先从 Supabase，回退到 localStorage/Mock
    */
   loadUserData: async (address: string) => {
+    // Prevent concurrent loads
+    if (get().isLoading) return;
     set({ isLoading: true });
     try {
       // ========== 1. 尝试从 Supabase 加载全部数据 ==========
