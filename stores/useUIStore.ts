@@ -102,12 +102,11 @@ export const useUIStore = create<UIState>((set) => ({
   pvpSeed: null,
 
   setGameState: (gameState) => {
-    set((state) => {
-      if (state.gameState !== gameState) {
-        audioBridge.playSfx('page_transition');
-      }
-      return { gameState };
-    });
+    const prev = useUIStore.getState().gameState;
+    set({ gameState });
+    if (prev !== gameState) {
+      audioBridge.playSfx('page_transition');
+    }
   },
   setGameMode: (gameMode) => set({ gameMode }),
   setSelectedBet: (selectedBet) => set({ selectedBet }),

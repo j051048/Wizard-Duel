@@ -21,7 +21,6 @@ interface UseGameFeedbackDeps {
 }
 
 export function useGameFeedback({ effectMessages, audioActions }: UseGameFeedbackDeps) {
-  const ui = useUIStore();
   const prevMessagesLengthRef = useRef(0);
 
   /**
@@ -33,31 +32,34 @@ export function useGameFeedback({ effectMessages, audioActions }: UseGameFeedbac
       prevMessagesLengthRef.current = effectMessages.length;
       return;
     }
-    
+
     const lastMsg = effectMessages[effectMessages.length - 1];
     prevMessagesLengthRef.current = effectMessages.length;
-    
+
     if (!lastMsg) return;
+
+    // Access stable store actions via getState() to avoid subscribing to the entire store
+    const { setIsPlayerShaking, setIsOpponentShaking } = useUIStore.getState();
 
     // 玩家受到伤害
     if (lastMsg.includes('受到')) {
-      ui.setIsPlayerShaking(true);
+      setIsPlayerShaking(true);
       audioActions.playSfx('hit');
       HapticService.heavy();
-      setTimeout(() => ui.setIsPlayerShaking(false), 500);
-    } 
+      setTimeout(() => setIsPlayerShaking(false), 500);
+    }
     // 对手受到伤害
     else if (lastMsg.includes('造成')) {
-      ui.setIsOpponentShaking(true);
+      setIsOpponentShaking(true);
       audioActions.playSfx('hit');
       HapticService.light();
-      setTimeout(() => ui.setIsOpponentShaking(false), 500);
+      setTimeout(() => setIsOpponentShaking(false), 500);
     }
     // 暴击效果
     else if (lastMsg.includes('暴击') || lastMsg.includes('克制')) {
       HapticService.medium();
     }
-  }, [effectMessages, audioActions, ui]);
+  }, [effectMessages, audioActions]);
 
   /**
    * 游戏结束反馈
