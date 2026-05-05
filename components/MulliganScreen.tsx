@@ -10,6 +10,8 @@ import { getSpellById } from '../services/gameLogic';
 import { RefreshCcw, Check, Clock } from 'lucide-react';
 import { HapticService } from '../services/haptic';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { useTutorial } from '../hooks/useTutorial';
+import { TutorialOverlay } from './battle/TutorialOverlay';
 
 interface MulliganScreenProps {
   initialHand: SpellType[];
@@ -32,6 +34,12 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [showAnimation, setShowAnimation] = useState(true);
+
+  // [P0 Tutorial] First-battle tutorial during mulligan
+  const [isFirstBattle] = useState(() => {
+    try { return !localStorage.getItem('wizard_duel_tutorial_v2'); } catch { return false; }
+  });
+  const tutorial = useTutorial(isFirstBattle, 'MULLIGAN', 'MULLIGAN_PHASE', 0);
   
   // [P0 Fix A-5] 使用 ref 存储最新的 selectedIndices 和 isConfirmed，
   // 避免 setInterval 闭包中引用过期值
@@ -95,7 +103,10 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
     
     setIsConfirmed(true);
     HapticService.medium();
-    
+
+    // [P0 Tutorial] Notify tutorial system
+    tutorial.handleAction('MULLIGAN');
+
     // 延迟回调，播放确认动画
     setTimeout(() => {
       onConfirm(Array.from(selectedIndices));
@@ -268,12 +279,21 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
         />
         {/* 燃烧效果 */}
         {isLowTime && (
-          <div 
+          <div
             className="absolute top-0 h-full w-8 bg-gradient-to-r from-transparent to-yellow-500/50 animate-pulse"
             style={{ left: `${(timeLeft / timeLimit) * 100}%`, marginLeft: '-16px' }}
           />
         )}
       </div>
+
+      {/* [P0 Tutorial] First-battle tutorial overlay */}
+      {tutorial.isActive && tutorial.activeStep && (
+        <TutorialOverlay
+          step={tutorial.activeStep}
+          onNext={tutorial.nextStep}
+          onSkip={tutorial.skipTutorial}
+        />
+      )}
     </div>
   );
 };

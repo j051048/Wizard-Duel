@@ -15,11 +15,12 @@ import { HapticService } from '../services/haptic';
 import { audioBridge } from '../hooks/useAudioManager';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { GlobalChat } from './GlobalChat';
+import CheckInPanel from './CheckInPanel';
 import { useUserStore } from '../stores/useUserStore';
 import { useUIStore } from '../stores/useUIStore';
 import { useToastStore } from '../stores/useToastStore';
 import { useShallow } from 'zustand/react/shallow';
-import { ShoppingBag, Book, Swords, MessageCircle, Trophy, TrendingUp } from 'lucide-react';
+import { ShoppingBag, Book, Swords, MessageCircle, Trophy, TrendingUp, Users, CalendarCheck } from 'lucide-react';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { MatchmakingOverlay } from './MatchmakingOverlay';
 import { QuestManager } from '../services/QuestManager';
@@ -79,6 +80,7 @@ export const Lobby: React.FC<LobbyProps> = ({
   const t = (key: string) => TRANSLATIONS[language][key] || key;
   const activeAddress = useUserStore(state => state.activeAddress);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isCheckInOpen, setIsCheckInOpen] = useState(false);
   const [isMatchmaking, setIsMatchmaking] = useState(false);
 
   // 初始化任务
@@ -255,6 +257,26 @@ export const Lobby: React.FC<LobbyProps> = ({
                <span>{t('Achievements') || '成就'}</span>
             </button>
 
+         {/* 签到入口 */}
+         <button
+            onClick={() => setIsCheckInOpen(true)}
+            aria-label="每日签到"
+            className="flex items-center gap-2 text-xs text-emerald-400 hover:text-emerald-300 font-bold uppercase tracking-widest border border-emerald-500/30 px-4 py-2 rounded-full hover:bg-emerald-900/20 hover:scale-105 active:scale-95 transition-all duration-150 bg-emerald-500/10"
+         >
+            <CalendarCheck size={14} />
+            <span>{t('Check In') || '签到'}</span>
+         </button>
+
+         {/* 好友入口 */}
+         <button
+            onClick={() => setGameState('FRIENDS')}
+            aria-label="好友系统"
+            className="flex items-center gap-2 text-xs text-cyan-400 hover:text-cyan-300 font-bold uppercase tracking-widest border border-cyan-500/30 px-4 py-2 rounded-full hover:bg-cyan-900/20 hover:scale-105 active:scale-95 transition-all duration-150 bg-cyan-500/10"
+         >
+            <Users size={14} />
+            <span>{t('Friends') || '好友'}</span>
+         </button>
+
          {/* 聊天按钮 */}
          <button
             onClick={() => setIsChatOpen(!isChatOpen)}
@@ -266,11 +288,22 @@ export const Lobby: React.FC<LobbyProps> = ({
       </div>
 
       {/* 实时聊天组件 */}
-      <GlobalChat 
-        userId={activeAddress || 'guest'} 
-        username={activeAddress?.slice(0, 8) || 'Guest'} 
-        isOpen={isChatOpen} 
+      <GlobalChat
+        userId={activeAddress || 'guest'}
+        username={activeAddress?.slice(0, 8) || 'Guest'}
+        isOpen={isChatOpen}
         onClose={() => { setIsChatOpen(false); audioBridge.playSfx('modal_close'); }}
+      />
+
+      {/* 每日签到面板 */}
+      <CheckInPanel
+        isOpen={isCheckInOpen}
+        onClose={() => { setIsCheckInOpen(false); audioBridge.playSfx('modal_close'); }}
+        onClaim={(gems) => {
+          const currentBalance = useUserStore.getState().balance || 0;
+          useUserStore.getState().setBalance(currentBalance + gems);
+          toast.success('签到成功', `获得 ${gems} 宝石！`);
+        }}
       />
 
       {/* 匹配遮罩层 */}

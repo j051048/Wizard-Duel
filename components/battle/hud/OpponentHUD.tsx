@@ -155,7 +155,7 @@ export const OpponentHUD: React.FC<OpponentHUDProps> = ({
 
   /* ====== 桌面端：原有完整布局 ====== */
   return (
-    <div className="flex flex-col items-center relative z-20">
+    <div id="opponent-last-spell" className="flex flex-col items-center relative z-20">
        {/* 对手信息框 */}
        <PlayerFrame 
           isPlayer={false}

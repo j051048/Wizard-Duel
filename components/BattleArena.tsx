@@ -10,7 +10,7 @@
 
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { SpellType, GameLoopState } from '../types';
+import { SpellType, GameLoopState, DuelPhase } from '../types';
 import { GAME_CONFIG } from '../constants';
 import { getPlayableCards, getSpellById, spellNeedsTarget } from '../services/gameLogic';
 import { getElementType } from '../services/combat/elementSystem';
@@ -44,12 +44,15 @@ import { FloatingActionLog } from './battle/FloatingActionLog';
 import { DebuffOverlay } from './battle/DebuffOverlay';
 import { TargetSelector } from './battle/TargetSelector';
 import { HeroSkillSelection } from './battle/HeroSkillSelection';
+import BattleSummary, { BattleStats } from './battle/BattleSummary';
 import { audioBridge } from '../hooks/useAudioManager';
 
 // Hooks
 import { useDragToPlay } from '../hooks/useDragToPlay';
 import { useBattleAnimations } from '../hooks/useBattleAnimations';
 import { useTranslation } from '../i18n';
+import { useTutorial } from '../hooks/useTutorial';
+import { TutorialOverlay } from './battle/TutorialOverlay';
 
 /** B-6: 环境粒子组件 */
 const EnvironmentParticles: React.FC<{ element: string | null }> = ({ element }) => {
@@ -199,6 +202,20 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     updateDragTrail,
   } = useBattleAnimations(isLowQuality);
 
+  // [P0 Tutorial] First-battle tutorial system
+  const [isFirstBattle] = useState(() => {
+    try { return !localStorage.getItem('wizard_duel_tutorial_v2'); } catch { return false; }
+  });
+  const tutorial = useTutorial(isFirstBattle && !isPVPMode, 'DUEL', phase as DuelPhase, duelState?.roundNumber || 0);
+
+  // [P3] Battle stats tracking
+  const battleStatsRef = useRef<BattleStats>({
+    totalDamageDealt: 0, totalDamageReceived: 0, highestSingleHit: 0,
+    cardsPlayed: 0, burnTicks: 0, freezeCount: 0, chargeCombo: 0,
+    armorGained: 0, turnsPlayed: 0,
+  });
+  const [showSummary, setShowSummary] = useState(false);
+
   const playableCards = useMemo(() => {
     if (!duelState) return [];
     return getPlayableCards(
@@ -265,6 +282,48 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     phase === 'PLAYER_TURN' &&
     !gameLoopState.isProcessing &&
     playableCards.length > 0;
+
+  // [P3] Track battle stats from effect messages + [P3] keyword SFX
+  useEffect(() => {
+    if (effectMessages.length === 0) return;
+    const lastMsg = effectMessages[effectMessages.length - 1];
+
+    // Stats tracking
+    const dmgMatch = lastMsg.match(/(\d+)点伤害/);
+    if (dmgMatch) {
+      const dmg = parseInt(dmgMatch[1]);
+      battleStatsRef.current.totalDamageDealt += dmg;
+      battleStatsRef.current.highestSingleHit = Math.max(battleStatsRef.current.highestSingleHit, dmg);
+    }
+    if (lastMsg.includes('灼烧')) battleStatsRef.current.burnTicks++;
+    if (lastMsg.includes('冻结')) battleStatsRef.current.freezeCount++;
+    if (lastMsg.includes('护甲')) battleStatsRef.current.armorGained += 3;
+    if (lastMsg.includes('连击') || lastMsg.includes('充能')) battleStatsRef.current.chargeCombo++;
+
+    // [P3] Keyword SFX
+    if (!isMuted) {
+      if (lastMsg.includes('灼烧')) audioBridge.playSfx('status_burn');
+      else if (lastMsg.includes('冻结')) audioBridge.playSfx('status_freeze');
+      else if (lastMsg.includes('缠绕')) audioBridge.playSfx('tangle');
+      else if (lastMsg.includes('护甲')) audioBridge.playSfx('shield');
+      else if (lastMsg.includes('治疗')) audioBridge.playSfx('heal');
+      else if (lastMsg.includes('克制')) audioBridge.playSfx('counter');
+      else if (lastMsg.includes('暴击')) audioBridge.playSfx('crit_hit');
+      else if (lastMsg.includes('连击')) audioBridge.playSfx('combo_streak');
+      else if (lastMsg.includes('中毒')) audioBridge.playSfx('status_poison');
+      else if (lastMsg.includes('召唤')) audioBridge.playSfx('summon');
+    }
+  }, [effectMessages, isMuted]);
+
+  // [P3] Show summary when game is over
+  useEffect(() => {
+    if (gameLoopState.isGameOver && gameLoopState.gameResult) {
+      battleStatsRef.current.turnsPlayed = duelState?.roundNumber || 0;
+      battleStatsRef.current.cardsPlayed = Math.max(1, (duelState?.roundNumber || 1) * 2);
+      const timer = setTimeout(() => setShowSummary(true), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [gameLoopState.isGameOver, gameLoopState.gameResult, duelState?.roundNumber]);
 
   // Effects Monitoring
   useEffect(() => {
@@ -478,6 +537,9 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       setHasShownTutorial(true);
     }
 
+    // [P0 Tutorial] Notify tutorial system
+    tutorial.handleAction('PLAY_CARD');
+
     setHoveredSpellId(null);
     setTargeting(null);
     spawnProjectile('player');
@@ -507,6 +569,9 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
     // [P0 新手引导] 只要出过一张牌，就永久关闭引导
     if (shouldShowTutorial) setHasShownTutorial(true);
+
+    // [P0 Tutorial] Notify tutorial system
+    tutorial.handleAction('PLAY_CARD');
 
     setHoveredSpellId(null);
     setTargeting(null);
@@ -540,6 +605,9 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
   // [PVP] 结束回合处理函数
   const handleEndTurn = useCallback(() => {
+    // [P0 Tutorial] Notify tutorial system
+    tutorial.handleAction('END_TURN');
+
     // [PVP] 只有本地操作才广播给对手，避免无限循环
     if (isPVPMode && !isRemoteActionRef.current && phase === 'PLAYER_TURN') {
       pvpService.sendAction({
@@ -814,6 +882,24 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         }}
         isMobile={isMobile}
       />
+
+      {/* [P0 Tutorial] First-battle tutorial overlay */}
+      {tutorial.isActive && tutorial.activeStep && (
+        <TutorialOverlay
+          step={tutorial.activeStep}
+          onNext={tutorial.nextStep}
+          onSkip={tutorial.skipTutorial}
+        />
+      )}
+
+      {/* [P3] Battle Summary overlay */}
+      {showSummary && gameLoopState.gameResult && (
+        <BattleSummary
+          result={gameLoopState.gameResult}
+          stats={battleStatsRef.current}
+          onClose={() => { setShowSummary(false); onSurrender(); }}
+        />
+      )}
     </div>
   );
 };

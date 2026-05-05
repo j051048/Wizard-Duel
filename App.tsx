@@ -47,6 +47,7 @@ const BattlePassPage = React.lazy(() => import('./components/shop/BattlePassPage
 const PvpStateSync = React.lazy(() => import('./components/PvpStateSync').then(m => ({ default: m.PvpStateSync })));
 const AchievementPanel = React.lazy(() => import('./components/AchievementPanel'));
 const RankedLadder = React.lazy(() => import('./components/RankedLadder'));
+const FriendsPage = React.lazy(() => import('./components/social/FriendsPage'));
 
 // Immediate Components
 import { ResultsModal } from './components/ResultsModal';
@@ -368,7 +369,21 @@ function App() {
             <BattlePassPage
               onBack={() => uiActions.setGameState('LOBBY')}
               onPurchasePremium={() => {
-                toastActions.info('即将推出', '高级通行证即将上线！');
+                const premiumCost = 680; // 680 gems
+                if ((userData.balance || 0) < premiumCost) {
+                  toastActions.error('宝石不足', `需要 ${premiumCost} 宝石，当前余额 ${userData.balance || 0}`);
+                  return;
+                }
+                // Lazy import to avoid circular deps
+                import('./services/BattlePassService').then(({ BattlePassService }) => {
+                  const success = BattlePassService.purchasePremium();
+                  if (success) {
+                    userActions.setBalance((userData.balance || 0) - premiumCost);
+                    toastActions.success('购买成功！', '已解锁高级通行证，领取专属奖励！');
+                  } else {
+                    toastActions.error('购买失败', '你已拥有高级通行证');
+                  }
+                });
               }}
               balance={userData.balance}
             />
@@ -380,6 +395,17 @@ function App() {
 
           {uiData.gameState === 'RANKED' && (
             <RankedLadder onBack={() => uiActions.setGameState('LOBBY')} />
+          )}
+
+          {uiData.gameState === 'FRIENDS' && (
+            <FriendsPage
+              userId={userData.activeAddress || 'guest'}
+              username={localStorage.getItem('wizard_display_name') || (userData.activeAddress ? `Wizard_${userData.activeAddress.slice(0, 6)}` : 'Guest')}
+              onBack={() => uiActions.setGameState('LOBBY')}
+              onStartFriendBattle={(friendId, roomId) => {
+                toastActions.info('好友对战', '正在准备对战房间...');
+              }}
+            />
           )}
 
           {uiData.gameState === 'PVP_SYNC' && uiData.pvpRole && uiData.pvpSeed !== null && userData.selectedDeck && (

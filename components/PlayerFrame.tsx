@@ -118,7 +118,9 @@ export const PlayerFrame: React.FC<PlayerFrameProps> = ({
           <HealthBar current={hp} max={maxHp} isPlayer={isPlayer} />
           
           {/* 法力水晶 */}
-          <ManaDisplay current={mana} max={maxMana} />
+          <div id="player-mana-display">
+            <ManaDisplay current={mana} max={maxMana} />
+          </div>
           
           {/* 状态效果 */}
           {effects.length > 0 && (
