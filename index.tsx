@@ -36,6 +36,13 @@ import ErrorBoundary from './components/ErrorBoundary';
 
 import './index.css';
 
+// [Phase 4] Chunk 加载失败自动恢复：部署后旧 hash chunk 404 → 刷新获取新 SW
+window.addEventListener('vite:preloadError', (event) => {
+  console.warn('[App] Chunk load failed, reloading:', event.payload);
+  event.preventDefault();
+  window.location.reload();
+});
+
 // Wagmi Configuration
 export const config = createConfig({
   chains: [mainnet, sepolia, xLayer],

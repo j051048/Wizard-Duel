@@ -49,9 +49,23 @@ export default defineConfig(({ mode }) => {
             ]
           },
           workbox: {
+            skipWaiting: true,
+            clientsClaim: true,
+            cleanupOutdatedCaches: true,
             maximumFileSizeToCacheInBytes: 15 * 1024 * 1024, // 15 MiB
             globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'], // 移除了 mp3，不在构建时预缓存
+            navigateFallback: 'index.html',
             runtimeCaching: [
+              {
+                // 同源 JS/CSS chunks: 网络优先，避免部署后旧 chunk hash 404
+                urlPattern: ({ url }) => url.origin === self.location.origin &&
+                  (/\/assets\/[^/]+\.(js|css)$/.test(url.pathname)),
+                handler: 'NetworkFirst',
+                options: {
+                  cacheName: 'asset-chunks-cache',
+                  expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 7 },
+                },
+              },
               {
                 // 运行时缓存音频文件
                 urlPattern: ({ request, url }) => request.destination === 'audio' || url.pathname.endsWith('.mp3') || url.pathname.endsWith('.webm'),
