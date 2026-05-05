@@ -63,5 +63,11 @@ export const PACK_CONFIG = {
     rare: 0.18,
     mythic: 0.05,
     legendary: 0.02
+  },
+  // 阶梯保底：高级卡包每包至少保证的最低稀有度
+  packGuarantees: {
+    standard: null,        // 普通包无保底
+    premium: 'rare' as const,      // 黄金包：每包至少 1 张 Rare+
+    legendary: 'legendary' as const // 传说包：每包至少 1 张 Legendary
   }
 };

@@ -206,7 +206,7 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({ onBack }) => {
                   return;
               }
               
-              const { cards, newPity } = openPack(pityCounter);
+              const { cards, newPity } = openPack(pityCounter, packType);
               setPityCounter(newPity);
               
               // 更新本地状态

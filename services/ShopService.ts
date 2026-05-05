@@ -144,7 +144,7 @@ export const SHOP_CATALOG: Product[] = [
         originalPrice: 4000,
         currencyType: 'mana',
         items: [
-            { type: 'card', id: 'fire5', count: 1 }, // Dragon/Wave
+            { type: 'card', id: 'fire6', count: 1 }, // 火焰波 (Legendary)
             { type: 'pack', id: 'legendary', count: 1 },
             { type: 'mana', count: 500 }
         ],

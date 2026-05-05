@@ -100,14 +100,15 @@ export function validateDeck(deck: SpellType[]): { valid: boolean; errors: strin
   return { valid: errors.length === 0, errors };
 }
 
-export const openPack = (currentPity: { rare: number, mythic: number, legendary: number }): { cards: Spell[], newPity: typeof currentPity } => {
+export const openPack = (currentPity: { rare: number, mythic: number, legendary: number }, packType: 'standard' | 'premium' | 'legendary' = 'standard'): { cards: Spell[], newPity: typeof currentPity } => {
   const cards: Spell[] = [];
   let newPity = { ...currentPity };
-  
+  const rarityOrder: Rarity[] = ['common', 'rare', 'mythic', 'legendary'];
+
   for (let i = 0; i < PACK_CONFIG.cardsPerPack; i++) {
     let rarity: Rarity = 'common';
     const rand = Math.random();
-    
+
     // 保底检查
     if (newPity.legendary >= PACK_CONFIG.pitySystem.legendary.threshold - 1) {
       rarity = 'legendary';
@@ -130,23 +131,23 @@ export const openPack = (currentPity: { rare: number, mythic: number, legendary:
         rarity = 'common';
       }
     }
-    
+
     // 选择该稀有度的随机卡牌 (排除英雄技能和空卡)
-    const availableCards = SPELLS.filter(s => 
-      s.rarity === rarity && 
-      !s.id.startsWith('hero_') && 
+    const availableCards = SPELLS.filter(s =>
+      s.rarity === rarity &&
+      !s.id.startsWith('hero_') &&
       s.id !== 'skip'
     );
-    
+
     // 降级保护：如果该稀有度没有卡（可能是扩展示例），向下寻找
     let finalCard = availableCards[Math.floor(Math.random() * availableCards.length)];
     if (!finalCard) {
        const fallbackCards = SPELLS.filter(s => s.rarity === 'common' && s.id !== 'skip');
        finalCard = fallbackCards[Math.floor(Math.random() * fallbackCards.length)];
     }
-    
+
     cards.push(finalCard);
-    
+
     // 更新保底计数器
     if (rarity === 'common') {
       newPity.rare++;
@@ -166,6 +167,25 @@ export const openPack = (currentPity: { rare: number, mythic: number, legendary:
       newPity.legendary = 0;
     }
   }
-  
+
+  // 阶梯保底：高级卡包每包至少保证对应稀有度
+  const guarantee = PACK_CONFIG.packGuarantees[packType];
+  if (guarantee) {
+    const guaranteeIdx = rarityOrder.indexOf(guarantee);
+    const hasGuaranteed = cards.some(c => rarityOrder.indexOf(c.rarity as Rarity) >= guaranteeIdx);
+    if (!hasGuaranteed) {
+      // 随机选一张卡替换为目标稀有度
+      const replaceIdx = Math.floor(Math.random() * cards.length);
+      const pool = SPELLS.filter(s =>
+        s.rarity === guarantee &&
+        !s.id.startsWith('hero_') &&
+        s.id !== 'skip'
+      );
+      if (pool.length > 0) {
+        cards[replaceIdx] = pool[Math.floor(Math.random() * pool.length)];
+      }
+    }
+  }
+
   return { cards, newPity };
 };
