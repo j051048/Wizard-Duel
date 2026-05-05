@@ -56,7 +56,7 @@ export const Lobby: React.FC<LobbyProps> = ({
     useShallow(s => ({ selectedBet: s.selectedBet, setSelectedBet: s.setSelectedBet, gameMode: s.gameMode, language: s.language, setLanguage: s.setLanguage, setGameState: s.setGameState, showSettings: s.showSettings, setShowSettings: s.setShowSettings }))
   );
   const { quality, setQuality, isLowQuality } = useSettingsStore();
-  const toast = useToastStore(s => ({ success: s.success }));
+  const toast = useToastStore(useShallow(s => ({ success: s.success })));
 
   const [isRulesOpen, setIsRulesOpen] = useState(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
