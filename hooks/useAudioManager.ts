@@ -9,7 +9,7 @@
  * - 优先级系统
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { SpellType } from '../types';
 
 // 音效配置
@@ -470,14 +470,14 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
     };
   }, [isAudioBlocked, isPlaying]);
 
-  const state: AudioManagerState = {
+  const state: AudioManagerState = useMemo(() => ({
     isMuted,
     bgmVolume,
     sfxVolume,
     isPlaying,
-  };
+  }), [isMuted, bgmVolume, sfxVolume, isPlaying]);
 
-  const actions: AudioManagerActions = {
+  const actions: AudioManagerActions = useMemo(() => ({
     toggleMute,
     setBgmVolume,
     setSfxVolume,
@@ -486,7 +486,7 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
     playSfx,
     playSpellSfx,
     updateBattleBGM,
-  };
+  }), [toggleMute, setBgmVolume, setSfxVolume, playBgm, stopBgm, playSfx, playSpellSfx, updateBattleBGM]);
 
   return [state, actions];
 }

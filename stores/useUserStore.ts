@@ -160,11 +160,9 @@ export const useUserStore = create<UserState>((set, get) => ({
    * 加载用户数据 — 优先从 Supabase，回退到 localStorage/Mock
    */
   loadUserData: async (address: string) => {
-    // Prevent concurrent loads
     if (get().isLoading) return;
     set({ isLoading: true });
     try {
-      // ========== 1. 尝试从 Supabase 加载全部数据 ==========
       let supabaseLoaded = false;
       try {
         const {
@@ -175,12 +173,10 @@ export const useUserStore = create<UserState>((set, get) => ({
         if (!isSupabaseConfigured) throw new Error('Supabase not configured');
 
         const { data: { session } } = await supabase.auth.getSession();
-        
+
         if (session) {
           const userId = session.user.id;
-          set({ supabaseUserId: userId });
 
-          // -- 并行加载全部数据（Profile + 卡牌 + 卡组 + 卡包）
           const [profile, cards, decks, packs] = await Promise.all([
             getProfile(userId),
             getUserCards(userId),
@@ -188,25 +184,27 @@ export const useUserStore = create<UserState>((set, get) => ({
             getUserPacks(userId),
           ]);
 
+          const batchUpdate: Partial<UserState> = {
+            supabaseUserId: userId,
+            inventory: cards,
+            decks,
+            packInventory: packs,
+          };
+
           if (profile) {
             const score = profile.rank_score ?? 0;
             const rank = (profile.rank_tier as Rank) || getRankByScore(score);
-            set({
-              balance: profile.gold || 0,
-              userRank: rank,
-              rankScore: score,
-              winStreak: profile.win_count || 0,
-            });
+            batchUpdate.balance = profile.gold || 0;
+            batchUpdate.userRank = rank;
+            batchUpdate.rankScore = score;
+            batchUpdate.winStreak = profile.win_count || 0;
           }
 
-          set({ inventory: cards });
-
-          set({ decks });
           if (decks.length > 0 && !get().selectedDeck) {
-            set({ selectedDeck: decks[0] });
+            batchUpdate.selectedDeck = decks[0];
           }
 
-          set({ packInventory: packs });
+          set(batchUpdate);
           try { localStorage.setItem('wizard_duel_packs', JSON.stringify(packs)); } catch { /* ignore */ }
 
           supabaseLoaded = true;
@@ -216,36 +214,34 @@ export const useUserStore = create<UserState>((set, get) => ({
         console.warn('Supabase unavailable, falling back to local/mock:', supabaseErr);
       }
 
-      // ========== 2. 回退到 Mock/本地逻辑 ==========
       if (!supabaseLoaded) {
-        const profile = await ApiService.getProfile(address);
-        set({
+        const [profile, userDecks, inventory] = await Promise.all([
+          ApiService.getProfile(address),
+          ApiService.getDecks(address),
+          ApiService.getInventory(address),
+        ]);
+
+        const batchUpdate: Partial<UserState> = {
           balance: profile.balance,
           userRank: profile.userRank || 'Iron',
           rankScore: profile.rankScore || 0,
           winStreak: profile.stats?.winStreak || 0,
-        });
+          decks: userDecks,
+          inventory,
+        };
 
-        // 卡组（localStorage mock）
-        const userDecks = await ApiService.getDecks(address);
-        set({ decks: userDecks });
         if (userDecks.length > 0 && !get().selectedDeck) {
-          set({ selectedDeck: userDecks[0] });
+          batchUpdate.selectedDeck = userDecks[0];
         }
 
-        // 卡牌收藏（localStorage mock）
-        const inventory = await ApiService.getInventory(address);
-        set({ inventory });
+        set(batchUpdate);
       }
 
-      // ========== 3. 本地补充数据（PWA 离线兼容） ==========
-      // 注意：只有在 Supabase 未成功加载时才使用 localStorage 数据
       const savedPurchases = localStorage.getItem('wizard_duel_purchases');
       if (savedPurchases) {
         try { set({ purchasedBundles: JSON.parse(savedPurchases) }); } catch { /* ignore */ }
       }
-      
-      // [Fix] 卡包库存：Supabase 加载成功则跳过 localStorage，避免旧数据覆盖
+
       if (!supabaseLoaded) {
         const savedPacks = localStorage.getItem('wizard_duel_packs');
         if (savedPacks) {

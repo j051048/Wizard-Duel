@@ -143,7 +143,7 @@ function App() {
   })));
 
   // ============ Stores: Actions (stable refs, never cause re-render) ============
-  const userActions = useUserStore(state => ({
+  const userActions = useUserStore(useShallow(state => ({
     setActiveAddress: state.setActiveAddress,
     loadUserData: state.loadUserData,
     loadLeaderboard: state.loadLeaderboard,
@@ -155,8 +155,8 @@ function App() {
     addPacks: state.addPacks,
     consumePack: state.consumePack,
     setPackInventory: state.setPackInventory
-  }));
-  const uiActions = useUIStore(state => ({
+  })));
+  const uiActions = useUIStore(useShallow(state => ({
     setGameState: state.setGameState,
     setIsResourcesLoaded: state.setIsResourcesLoaded,
     setDungeonRun: state.setDungeonRun,
@@ -166,14 +166,14 @@ function App() {
     setPvpRoomId: state.setPvpRoomId,
     setPvpRole: state.setPvpRole,
     setPvpSeed: state.setPvpSeed,
-  }));
-  const toastActions = useToastStore(state => ({
+  })));
+  const toastActions = useToastStore(useShallow(state => ({
     removeToast: state.removeToast,
     success: state.success,
     warning: state.warning,
     error: state.error,
     info: state.info,
-  }));
+  })));
 
   // ============ Core Hooks ============
   const { progress, startPreloading } = usePreloader();

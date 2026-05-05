@@ -377,34 +377,35 @@ export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoo
   }, [setPhase]);
 
   // ============ Return ============
-  return [
-    {
-      duelState,
-      phase,
-      isProcessing,
-      turnTimeLeft,
-      turnBanner,
-      actionQueue: queue,
-      ...uiState
-    },
-    {
-      startDuel,
-      startTavernDuel,
-      startPvpDuel,
-      playCard,
-      passTurn,
-      reset,
-      setTargeting,
-      handleMulligan,
-      selectHeroSkill,
-      useHeroSkill,
-      startFirstTurn: startNewRound,
-      handleRemotePlayCard,
-      handleRemoteEndTurn,
-      getSerializedState,
-      restoreFromSync,
-    }
-  ];
+  const gameLoopState: GameLoopState = useMemo(() => ({
+    duelState,
+    phase,
+    isProcessing,
+    turnTimeLeft,
+    turnBanner,
+    actionQueue: queue,
+    ...uiState
+  }), [duelState, phase, isProcessing, turnTimeLeft, turnBanner, queue, uiState]);
+
+  const gameLoopActions: GameLoopActions = useMemo(() => ({
+    startDuel,
+    startTavernDuel,
+    startPvpDuel,
+    playCard,
+    passTurn,
+    reset,
+    setTargeting,
+    handleMulligan,
+    selectHeroSkill,
+    useHeroSkill,
+    startFirstTurn: startNewRound,
+    handleRemotePlayCard,
+    handleRemoteEndTurn,
+    getSerializedState,
+    restoreFromSync,
+  }), [startDuel, startTavernDuel, startPvpDuel, playCard, passTurn, reset, setTargeting, handleMulligan, selectHeroSkill, useHeroSkill, startNewRound, handleRemotePlayCard, handleRemoteEndTurn, getSerializedState, restoreFromSync]);
+
+  return [gameLoopState, gameLoopActions];
 }
 
 export default useGameLoop;

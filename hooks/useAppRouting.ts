@@ -125,13 +125,9 @@ export function useAppRouting({ gameLoopActions, audioActions }: UseAppRoutingDe
   const handleLoginComplete = useCallback((address: string, isGuest: boolean) => {
     const userStore = useUserStore.getState();
     userStore.setActiveAddress(address);
-    // Load user data directly (no useEffect dependency on activeAddress)
     userStore.loadUserData(address);
     userStore.loadLeaderboard();
-    const ui = useUIStore.getState();
-    ui.setIsLoggedIn(true);
-    ui.setIsGuest(isGuest);
-    ui.setGameState('LOBBY');
+    useUIStore.setState({ isLoggedIn: true, isGuest, gameState: 'LOBBY' });
     useToastStore.getState().success('欢迎回来', isGuest ? '游客模式已开启' : `钱包已连接: ${address.slice(0, 6)}...`);
   }, []);
 
