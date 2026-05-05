@@ -19,6 +19,7 @@ import { calculateSpellProjection } from '../services/projection';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { pvpService } from '../services/pvpService';
 import { useUserStore } from '../stores/useUserStore';
+import { useBattleStore } from '../stores/useBattleStore';
 
 // Components
 import { SpellCard } from './SpellCard'; // Needed for Drag Preview
@@ -134,8 +135,19 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   getSerializedState,
   restoreFromSync,
 }) => {
-  const { duelState, phase, playerCard, opponentCard, resultText, effectMessages, aiStatus } =
-    gameLoopState;
+  // [Phase 3] Subscribe to store directly instead of receiving via props
+  const duelState        = useBattleStore(s => s.duelState);
+  const phase            = useBattleStore(s => s.phase);
+  const playerCard       = useBattleStore(s => s.playerCard);
+  const opponentCard     = useBattleStore(s => s.opponentCard);
+  const resultText       = useBattleStore(s => s.resultText);
+  const effectMessages   = useBattleStore(s => s.effectMessages);
+  const aiStatus         = useBattleStore(s => s.aiStatus);
+  const isProcessing     = useBattleStore(s => s.isProcessing);
+  const isGameOver       = useBattleStore(s => s.isGameOver);
+  const gameResult       = useBattleStore(s => s.gameResult);
+  const turnBanner       = useBattleStore(s => s.turnBanner);
+  const targetingData    = useBattleStore(s => s.targetingData);
 
   const isMobile = useIsMobile();
   const { t } = useTranslation();
@@ -250,7 +262,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   const { dragState, startDrag, dragX, dragY } = useDragToPlay(
     (id, confirmed) => handlePlayCard(id, confirmed),
     setTargeting,
-    gameLoopState.isProcessing,
+    isProcessing,
     phase,
     id => playableCards.includes(id),
     updateDragTrail
@@ -270,17 +282,17 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   // Projection Logic - [P1-20] hover即显示伤害预览
   const projection = useMemo(() => {
     const activeId = dragState?.spellId || hoveredSpellId;
-    if (!activeId || !duelState || phase !== 'PLAYER_TURN' || gameLoopState.isProcessing)
+    if (!activeId || !duelState || phase !== 'PLAYER_TURN' || isProcessing)
       return null;
     return calculateSpellProjection(duelState, 'player', activeId);
-  }, [dragState?.spellId, hoveredSpellId, phase, duelState, gameLoopState.isProcessing]);
+  }, [dragState?.spellId, hoveredSpellId, phase, duelState, isProcessing]);
 
   // [P0 新手引导] 判断是否显示首次出牌气泡
   const shouldShowTutorial =
     !hasShownTutorial &&
     duelState?.roundNumber === 1 &&
     phase === 'PLAYER_TURN' &&
-    !gameLoopState.isProcessing &&
+    !isProcessing &&
     playableCards.length > 0;
 
   // [P3] Track battle stats from effect messages + [P3] keyword SFX
@@ -317,13 +329,13 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
   // [P3] Show summary when game is over
   useEffect(() => {
-    if (gameLoopState.isGameOver && gameLoopState.gameResult) {
+    if (isGameOver && gameResult) {
       battleStatsRef.current.turnsPlayed = duelState?.roundNumber || 0;
       battleStatsRef.current.cardsPlayed = Math.max(1, (duelState?.roundNumber || 1) * 2);
       const timer = setTimeout(() => setShowSummary(true), 2000);
       return () => clearTimeout(timer);
     }
-  }, [gameLoopState.isGameOver, gameLoopState.gameResult, duelState?.roundNumber]);
+  }, [isGameOver, gameResult, duelState?.roundNumber]);
 
   // Effects Monitoring
   useEffect(() => {
@@ -628,7 +640,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   if (!duelState) return null;
 
   // 玩家回合时边框发光
-  const isPlayerTurnGlow = phase === 'PLAYER_TURN' && !gameLoopState.isProcessing;
+  const isPlayerTurnGlow = phase === 'PLAYER_TURN' && !isProcessing;
 
   return (
     <div
@@ -636,12 +648,12 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       fixed inset-0 w-full h-full bg-slate-950 no-select flex flex-col z-40 overflow-hidden
             ${shakeClass}
       ${isPlayerTurnGlow ? 'ring-4 ring-amber-500/30 ring-inset' : ''}
-      ${gameLoopState.isGameOver ? 'bullet-time' : ''}
+      ${isGameOver ? 'bullet-time' : ''}
     `}
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
       {/* [P0 Fix A-2] 回合横幅 — 统一由 useTurnManager 驱动 */}
-      <TurnBanner type={gameLoopState.turnBanner} roundNumber={duelState?.roundNumber || 1} />
+      <TurnBanner type={turnBanner} roundNumber={duelState?.roundNumber || 1} />
 
       {/* Background - [P1-18] 低端机降级优化 */}
       <div className="absolute inset-0 z-0 pointer-events-none arena-bg-overlay overflow-hidden">
@@ -693,7 +705,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       {/* [P1] Element Counter Indicator */}
       <ElementIndicator
         opponentLastSpell={duelState?.opponentLastSpell || null}
-        isPlayerTurn={phase === 'PLAYER_TURN' && !gameLoopState.isProcessing}
+        isPlayerTurn={phase === 'PLAYER_TURN' && !isProcessing}
       />
 
       {/* Opponent Area */}
@@ -713,7 +725,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         />
       </div>
 
-      <TargetingArrow data={gameLoopState.targetingData} isMobile={isMobile} />
+      <TargetingArrow data={targetingData} isMobile={isMobile} />
 
       {!isLowQuality && (
         <canvas
@@ -741,7 +753,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         <PlayerHUD
           duelState={duelState}
           phase={phase}
-          isProcessing={gameLoopState.isProcessing}
+          isProcessing={isProcessing}
           isPlayerShaking={isPlayerShaking}
           projection={projection}
           onPlayCard={handlePlayCard}
@@ -755,7 +767,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         hand={duelState.playerHand}
         playableCards={playableCards}
         phase={phase}
-        isProcessing={gameLoopState.isProcessing}
+        isProcessing={isProcessing}
         isMobile={isMobile}
         dragState={dragState}
         startDrag={startDrag}
@@ -831,7 +843,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
       {/* [P0 Fix A-3] 回合计时器 — 统一在 BattleArena 内部渲染，由 useTurnManager 驱动 */}
       <TurnTimer
-        isActive={phase === 'PLAYER_TURN' && !gameLoopState.isProcessing}
+        isActive={phase === 'PLAYER_TURN' && !isProcessing}
         duration={60}
         warningTime={15}
         onTimeUp={handleEndTurn}
@@ -893,9 +905,9 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       )}
 
       {/* [P3] Battle Summary overlay */}
-      {showSummary && gameLoopState.gameResult && (
+      {showSummary && gameResult && (
         <BattleSummary
-          result={gameLoopState.gameResult}
+          result={gameResult}
           stats={battleStatsRef.current}
           onClose={() => { setShowSummary(false); onSurrender(); }}
         />

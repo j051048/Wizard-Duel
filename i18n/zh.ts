@@ -303,7 +303,7 @@ export const zh = {
 
   // Assets
   'Diamonds': '钻石',
-  'Donate for Points': '捐赠获取积分',
+  'Donate for Points': '捐赠获取钻石',
   'Overall Win Rate': '总胜率',
   'Last 10 Games:': '近10局:',
 

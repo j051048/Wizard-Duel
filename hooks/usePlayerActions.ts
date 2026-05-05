@@ -6,9 +6,9 @@
  * - 换牌 (handleMulligan)
  */
 
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import {
-  SpellType, DuelState, DuelPhase, GameMode, AIProfile, GameActionCommand, AIStatus
+  SpellType, DuelState, DuelPhase, GameMode, AIProfile, GameActionCommand
 } from '../types';
 import {
   createInitialDuelState, createTavernDuelState, canAffordSpell, createPvpDuelState
@@ -22,8 +22,6 @@ import {
   PHASE_TRANSITION_DELAY, BANNER_WAIT_DELAY, ROUND_TRANSITION_DELAY
 } from '../config/timing';
 
-const initialAIStatus: AIStatus = { emote: null, message: null };
-
 interface UsePlayerActionsDeps {
   duelStateRef: React.MutableRefObject<DuelState | null>;
   phaseRef: React.MutableRefObject<string>;
@@ -32,16 +30,10 @@ interface UsePlayerActionsDeps {
   showTurnBanner: (type: 'player' | 'opponent') => void;
   setDuelState: (state: DuelState | null) => void;
   setPhase: (phase: DuelPhase) => void;
-  setUiState: React.Dispatch<React.SetStateAction<{
-    playerCard: SpellType | null;
-    opponentCard: SpellType | null;
-    resultText: string;
-    effectMessages: string[];
-    isGameOver: boolean;
-    gameResult: 'WIN' | 'LOSS' | 'DRAW' | null;
-    aiStatus: AIStatus;
-    targetingData: { isTargeting: boolean; sourceIndex?: number; startX: number; startY: number; endX: number; endY: number } | null;
-  }>>;
+  addMessage: (msg: string) => void;
+  setPlayerCard: (card: SpellType | null) => void;
+  clearMessages: () => void;
+  resetBattleUI: () => void;
   startNewRound: (state: DuelState) => void;
   pvpRoleRef?: React.MutableRefObject<'player1' | 'player2' | null>;
 }
@@ -54,7 +46,10 @@ export function usePlayerActions({
   showTurnBanner,
   setDuelState,
   setPhase,
-  setUiState,
+  addMessage,
+  setPlayerCard,
+  clearMessages,
+  resetBattleUI,
   startNewRound,
   pvpRoleRef,
 }: UsePlayerActionsDeps) {
@@ -70,29 +65,23 @@ export function usePlayerActions({
       const criticalViolation = violations.find(v => v.severity === 'critical' || v.severity === 'error');
       if (criticalViolation) {
         console.warn('[AntiCheat] Card play rejected:', violations);
-        setUiState((prev: any) => ({
-          ...prev,
-          effectMessages: [...prev.effectMessages, criticalViolation.message || '非法操作']
-        }));
+        addMessage(criticalViolation.message || '非法操作');
         return false;
       }
     }
 
     const affordable = canAffordSpell(spellId, state.playerMana, state.playerEffects, state.playerCostMod);
     if (!affordable.canAfford) {
-      setUiState((prev: any) => ({
-        ...prev,
-        effectMessages: [...prev.effectMessages, affordable.reason || '无法出牌']
-      }));
+      addMessage(affordable.reason || '无法出牌');
       return false;
     }
 
-    setUiState((prev: any) => ({ ...prev, playerCard: spellId }));
+    setPlayerCard(spellId);
 
     const { newState, commands: engineCommands } = GameRuleEngine.castSpell(state, spellId, 'player');
     enqueue([...engineCommands], `play_${spellId}_${Date.now()}`);
     return true;
-  }, [duelStateRef, phaseRef, isProcessing, enqueue, setUiState]);
+  }, [duelStateRef, phaseRef, isProcessing, enqueue, addMessage, setPlayerCard]);
 
   /** 起手换牌 */
   const handleMulligan = useCallback((indicesToReplace: number[]) => {
@@ -127,9 +116,9 @@ export function usePlayerActions({
       }
     ];
 
-    setUiState((prev: any) => ({ ...prev, effectMessages: [] }));
+    clearMessages();
     enqueue(commands, 'mulligan');
-  }, [duelStateRef, enqueue, setDuelState, setUiState, setPhase]);
+  }, [duelStateRef, enqueue, setDuelState, clearMessages, setPhase]);
 
   /** [P3-2] 英雄技能选择完成后开始对战 */
   const selectHeroSkill = useCallback((skillId: string) => {
@@ -181,9 +170,10 @@ export function usePlayerActions({
       }
     ];
 
-    setUiState((prev: any) => ({ ...prev, effectMessages: [`已选择英雄技能：${skill.emoji} ${skill.name}`] }));
+    clearMessages();
+    addMessage(`已选择英雄技能：${skill.emoji} ${skill.name}`);
     enqueue(commands, 'select_skill');
-  }, [duelStateRef, enqueue, showTurnBanner, setDuelState, setUiState, startNewRound, pvpRoleRef]);
+  }, [duelStateRef, enqueue, showTurnBanner, setDuelState, addMessage, clearMessages, startNewRound, pvpRoleRef]);
 
   /** [P3-2] 使用英雄技能（每回合一次，2 费） */
   const useHeroSkill = useCallback((): boolean => {
@@ -191,10 +181,7 @@ export function usePlayerActions({
     if (!state || phaseRef.current !== 'PLAYER_TURN' || isProcessing) return false;
     if (!state.selectedHeroSkill) return false;
     if (state.heroSkillsUsed) {
-      setUiState((prev: any) => ({
-        ...prev,
-        effectMessages: [...prev.effectMessages, '本回合已使用过英雄技能']
-      }));
+      addMessage('本回合已使用过英雄技能');
       return false;
     }
 
@@ -203,10 +190,7 @@ export function usePlayerActions({
 
     const effectiveCost = Math.max(0, skill.manaCost + state.playerCostMod);
     if (state.playerMana < effectiveCost) {
-      setUiState((prev: any) => ({
-        ...prev,
-        effectMessages: [...prev.effectMessages, '法力不足']
-      }));
+      addMessage('法力不足');
       return false;
     }
 
@@ -246,35 +230,23 @@ export function usePlayerActions({
     actions.unshift({ type: 'UPDATE_STATE', payload: newState });
     enqueue(actions, `hero_skill_${skill.id}_${Date.now()}`);
     return true;
-  }, [duelStateRef, phaseRef, isProcessing, enqueue, setUiState]);
+  }, [duelStateRef, phaseRef, isProcessing, enqueue, addMessage]);
 
   /** 初始化标准对战 */
   const startDuel = useCallback((playerDeck: SpellType[], _opponentDeck: SpellType[], gameMode: GameMode = 'standard') => {
     const initialState = createInitialDuelState(playerDeck || [], gameMode);
     setDuelState(initialState);
     setPhase('MULLIGAN_PHASE');
-    setUiState((prev: any) => ({
-      ...prev,
-      isGameOver: false,
-      gameResult: null,
-      effectMessages: [],
-      resultText: ''
-    }));
-  }, [setDuelState, setPhase, setUiState]);
+    resetBattleUI();
+  }, [setDuelState, setPhase, resetBattleUI]);
 
   /** 初始化酒馆对战 */
   const startTavernDuel = useCallback((deck: SpellType[], aiProfile: AIProfile, gameMode: GameMode = 'standard') => {
     const state = createTavernDuelState(deck, aiProfile, gameMode);
     setDuelState(state);
     setPhase('MULLIGAN_PHASE');
-    setUiState((prev: any) => ({
-      ...prev,
-      isGameOver: false,
-      gameResult: null,
-      effectMessages: [],
-      resultText: ''
-    }));
-  }, [setDuelState, setPhase, setUiState]);
+    resetBattleUI();
+  }, [setDuelState, setPhase, resetBattleUI]);
 
   /** [PVP] 初始化 PVP 对战 (已认证同步版 & P0 Fix) */
   const startPvpDuel = useCallback((p1Deck: SpellType[], p2Deck: SpellType[], role: 'player1' | 'player2', seed?: number) => {
@@ -283,17 +255,11 @@ export function usePlayerActions({
     // PVP 模式不再默认 Standard，而是使用 createPvpDuelState 创建完全一致的初始状态
     // 此函数内部会对 p1Deck/p2Deck 进行确定性洗牌并根据 role 分配视角
     const initialState = createPvpDuelState(p1Deck, p2Deck, seed || 0, role);
-    
+
     setDuelState(initialState);
     setPhase('MULLIGAN_PHASE');
-    setUiState((prev: any) => ({
-      ...prev,
-      isGameOver: false,
-      gameResult: null,
-      effectMessages: [],
-      resultText: ''
-    }));
-  }, [setDuelState, setPhase, setUiState, pvpRoleRef]);
+    resetBattleUI();
+  }, [setDuelState, setPhase, resetBattleUI, pvpRoleRef]);
 
   return {
     playCard,

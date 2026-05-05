@@ -14,11 +14,12 @@
  * - 优化状态更新批处理
  */
 
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { 
+import React, { useCallback, useRef, useEffect, useMemo } from 'react';
+import {
   SpellType, DuelState, GameMode, AIProfile,
-  GameLoopState, AIStatus, GameActionCommand
+  GameLoopState, GameActionCommand
 } from '../types';
+import { useBattleStore } from '../stores/useBattleStore';
 import { useAnimationQueue } from './useAnimationQueue';
 import { useTurnManager } from './useTurnManager';
 import { useRoundManager } from './useRoundManager';
@@ -30,8 +31,6 @@ import { restoreGameRNG } from '../utils/seededRandom';
 import { GameRuleEngine } from '../services/GameRuleEngine';
 import { AI_DIFFICULTY_PRESETS } from '../services/ai';
 import { resolveDifficultyKey } from '../data/aiDecks';
-
-const initialAIStatus: AIStatus = { emote: null, message: null };
 
 // [P2 Fix #22] 节流保存函数，3秒内只保存一次
 const throttledSave = throttle((data: object) => {
@@ -67,29 +66,17 @@ export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoo
   // ============ [P0 Fix #1] FSM 实例 ============
   const fsmRef = useRef(new GameFSM('DRAFT_PHASE'));
 
-  // 1. Core State
-  const [duelState, setDuelState] = useState<DuelState | null>(null);
-  
-  // 2. UI State - 合并为单一对象减少更新次数
-  const [uiState, setUiState] = useState<{
-    playerCard: SpellType | null;
-    opponentCard: SpellType | null;
-    resultText: string;
-    effectMessages: string[];
-    isGameOver: boolean;
-    gameResult: 'WIN' | 'LOSS' | 'DRAW' | null;
-    aiStatus: AIStatus;
-    targetingData: GameLoopState['targetingData']; 
-  }>({
-    playerCard: null,
-    opponentCard: null,
-    resultText: '',
-    effectMessages: [],
-    isGameOver: false,
-    gameResult: null,
-    aiStatus: initialAIStatus,
-    targetingData: null,
-  });
+  // 1. Core State — from useBattleStore (replaces useState)
+  const duelState        = useBattleStore(s => s.duelState);
+  const playerCard       = useBattleStore(s => s.playerCard);
+  const opponentCard     = useBattleStore(s => s.opponentCard);
+  const resultText       = useBattleStore(s => s.resultText);
+  const effectMessages   = useBattleStore(s => s.effectMessages);
+  const isGameOver       = useBattleStore(s => s.isGameOver);
+  const gameResult       = useBattleStore(s => s.gameResult);
+  const aiStatus         = useBattleStore(s => s.aiStatus);
+  const targetingData    = useBattleStore(s => s.targetingData);
+  const isStoreProcessing = useBattleStore(s => s.isProcessing);
 
   // Ref to access passTurn in TurnManager
   const passTurnRef = useRef<(() => void) | undefined>(undefined);
@@ -105,50 +92,41 @@ export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoo
     }
   });
 
-  // 4. Command Processor - [#6] 优化批处理
+  // 4. Command Processor — delegates to useBattleStore
   const processAction = useCallback((action: GameActionCommand) => {
+    const store = useBattleStore.getState();
     switch (action.type) {
       case 'UPDATE_STATE':
-        setDuelState(prev => {
-          if (!prev) return null;
-          // [#6] 浅合并优化，避免深拷贝
-          return { ...prev, ...action.payload };
-        });
+        store.updateDuelState(action.payload);
         break;
-        
+
       case 'ADD_MESSAGE':
-        setUiState(prev => ({ 
-          ...prev, 
-          // [#6] 限制消息数量，防止内存泄漏
-          effectMessages: [...prev.effectMessages.slice(-30), action.payload] 
-        }));
+        store.addEffectMessage(action.payload);
         break;
-        
+
       case 'SET_PHASE':
         setPhase(action.payload);
         break;
-        
+
       case 'UPDATE_UI':
-        setUiState(prev => ({ ...prev, ...action.payload }));
+        // Zustand set() shallow-merges partial objects
+        useBattleStore.setState(action.payload as any);
         break;
-        
+
       case 'SET_AI_STATUS':
-        setUiState(prev => ({ 
-          ...prev, 
-          aiStatus: { ...prev.aiStatus, ...action.payload } 
-        }));
+        store.setAIStatus(action.payload);
         break;
-        
+
       case 'SET_TARGETING':
-        setUiState(prev => ({ ...prev, targetingData: action.payload }));
+        store.setTargetingData(action.payload as any);
         break;
-        
+
       case 'EXECUTE_LOGIC':
         if (typeof action.payload === 'function') {
           action.payload();
         }
         break;
-        
+
       // PLAY_ANIMATION and WAIT are handled implicitly by queue delay
     }
   }, [setPhase]);
@@ -161,12 +139,22 @@ export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoo
     return isQueueProcessing || processingLockRef.current;
   }, [isQueueProcessing]);
 
-  // Refs for checking current state in callbacks
+  // Sync isProcessing to store for child component subscriptions
+  useEffect(() => {
+    useBattleStore.setState({ isProcessing });
+  }, [isProcessing]);
+
+  // Refs for checking current state in callbacks (sub-hooks read these)
   const duelStateRef = useRef(duelState);
   useEffect(() => { duelStateRef.current = duelState; }, [duelState]);
-  
+
   const phaseRef = useRef(phase);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
+
+  // Sync useTurnManager values to store for child component selectors
+  useEffect(() => { useBattleStore.setState({ phase }); }, [phase]);
+  useEffect(() => { useBattleStore.setState({ turnTimeLeft }); }, [turnTimeLeft]);
+  useEffect(() => { useBattleStore.setState({ turnBanner }); }, [turnBanner]);
 
   // [PVP] 角色引用，用于在各个 Hook 间共享角色信息
   const pvpRoleRef = useRef<'player1' | 'player2' | null>(null);
@@ -208,9 +196,14 @@ export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoo
     isProcessing,
     enqueue: safeEnqueue,
     showTurnBanner,
-    setDuelState: (s) => setDuelState(s),
+    setDuelState: useBattleStore.getState().setDuelState,
     setPhase,
-    setUiState,
+    addMessage: useBattleStore.getState().addEffectMessage,
+    setPlayerCard: useBattleStore.getState().setPlayerCard,
+    clearMessages: useBattleStore.getState().clearEffectMessages,
+    resetBattleUI: () => useBattleStore.setState({
+      isGameOver: false, gameResult: null, effectMessages: [], resultText: ''
+    }),
     startNewRound,
     pvpRoleRef
   });
@@ -244,75 +237,61 @@ export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoo
     console.log(`🌐 [PVP] 执行对手远程出牌: ${spellId}`);
 
     // 设置对手出牌 UI
-    setUiState(prev => ({ ...prev, opponentCard: spellId }));
+    useBattleStore.getState().setOpponentCard(spellId);
 
     // PVP 模式下本地 opponentHand 与远程实际不同步（隐藏信息）
     // skipHandCheck 跳过 casterHasCard 校验，直接执行法术效果
     const { commands: engineCommands } = GameRuleEngine.castSpell(state, spellId, 'opponent', { skipHandCheck: true });
     safeEnqueue([...engineCommands], `remote_play_${spellId}_${Date.now()}`);
-  }, [duelStateRef, safeEnqueue, setUiState]);
+  }, [duelStateRef, safeEnqueue]);
   
   passTurnRef.current = passTurn;
   
   // ============ Persistence ============
   // [P0 Bug 4 Fix] 完整保存战斗状态，包括回合数、状态效果剩余回合等
   useEffect(() => {
-    if (duelState && phase !== 'DRAFT_PHASE' && !uiState.isGameOver) {
-      // [#6] 使用 requestIdleCallback 延迟保存，避免阻塞主线程
-      // [P0 Bug 4] 完整保存 duelState，确保断线重连时能恢复：
-      // - roundNumber (当前回合数)
-      // - playerEffects/opponentEffects (状态效果及剩余回合数)
-      // - playerFatigue/opponentFatigue (疲劳计数)
-      // - heroSkillsUsed/opponentHeroSkillUsed (英雄技能使用状态)
+    if (duelState && phase !== 'DRAFT_PHASE' && !isGameOver) {
       const saveData = {
         duelState: {
           ...duelState,
-          // 确保状态效果完整保存（包括 duration）
           playerEffects: duelState.playerEffects.map(e => ({ ...e })),
           opponentEffects: duelState.opponentEffects.map(e => ({ ...e })),
         },
         phase,
-        effectMessages: uiState.effectMessages.slice(-20), // 只保存最近20条
-        savedAt: Date.now(), // 记录保存时间，用于调试
+        effectMessages: effectMessages.slice(-20),
+        savedAt: Date.now(),
       };
-      
-      // [P2 Fix #22] 使用节流保存，减少 localStorage 写入频率
+
       if ('requestIdleCallback' in window) {
         requestIdleCallback(() => throttledSave(saveData));
       } else {
         throttledSave(saveData);
       }
-    } else if (uiState.isGameOver) {
+    } else if (isGameOver) {
       localStorage.removeItem('wizard_duel_save');
     }
-  }, [duelState, phase, uiState.isGameOver, uiState.effectMessages]);
+  }, [duelState, phase, isGameOver, effectMessages]);
   
   // Restore saved game on mount
-  // [P0 Bug 4 Fix] 完整恢复战斗状态
   useEffect(() => {
     const saved = localStorage.getItem('wizard_duel_save');
     if (saved && !duelState) {
       try {
         const parsed = JSON.parse(saved);
-              // [P0 Bug 4] 验证保存数据的完整性
-        if (parsed.duelState && 
+        if (parsed.duelState &&
             typeof parsed.duelState.roundNumber === 'number' &&
             Array.isArray(parsed.duelState.playerEffects) &&
             Array.isArray(parsed.duelState.opponentEffects)) {
-          // 恢复完整的 duelState
-          setDuelState(parsed.duelState);
+          const store = useBattleStore.getState();
+          store.setDuelState(parsed.duelState);
           setPhase(parsed.phase);
-          // [P0 Fix #1] 恢复 FSM 状态
           fsmRef.current.reset(parsed.phase);
-          // [P0 Fix #2] 恢复 RNG 状态（确定性重连）
           if (parsed.duelState.rngState) {
             restoreGameRNG(parsed.duelState.rngState);
             console.log('[GameLoop] RNG 状态已恢复, seed:', parsed.duelState.rngState.initialSeed, 'calls:', parsed.duelState.rngState.callCount);
           }
-          setUiState(prev => ({ 
-            ...prev, 
-            effectMessages: parsed.effectMessages || [],
-          }));
+          store.clearEffectMessages();
+          (parsed.effectMessages || []).forEach((m: string) => store.addEffectMessage(m));
           console.log('[GameLoop] 战斗状态已恢复', {
             roundNumber: parsed.duelState.roundNumber,
             playerEffects: parsed.duelState.playerEffects.length,
@@ -331,45 +310,29 @@ export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoo
   }, []); // Once on mount
   
   // ============ Reset ============
-    const reset = useCallback(() => {
-    // [#6] 清除所有锁和进行中的动作
+  const reset = useCallback(() => {
     processingLockRef.current = false;
     actionInProgressRef.current = null;
-    // [P0 Fix #1] 重置 FSM
     fsmRef.current.reset('DRAFT_PHASE');
-    
+
     clearQueue();
     resetTurnManager();
-    setDuelState(null);
-    setUiState({
-      playerCard: null,
-      opponentCard: null,
-      resultText: '',
-      effectMessages: [],
-      isGameOver: false,
-      gameResult: null,
-      aiStatus: initialAIStatus,
-      targetingData: null,
-    });
+    useBattleStore.getState().resetBattle();
   }, [clearQueue, resetTurnManager]);
 
-  // ============ [#6] 优化的 setTargeting ============
+  // ============ setTargeting ============
   const setTargeting = useCallback((data: GameLoopState['targetingData']) => {
-    setUiState(prev => {
-      // 避免不必要的更新
-      if (prev.targetingData === data) return prev;
-      return { ...prev, targetingData: data };
-    });
+    useBattleStore.getState().setTargetingData(data as any);
   }, []);
 
   // ============ [P0-4] PvP State Sync ============
   const getSerializedState = useCallback(() => {
-    return { duelState, phase };
-  }, [duelState, phase]);
+    return { duelState: useBattleStore.getState().duelState, phase };
+  }, [phase]);
 
   const restoreFromSync = useCallback((syncData: { duelState: DuelState; phase: string }) => {
     if (syncData.duelState) {
-      setDuelState(syncData.duelState);
+      useBattleStore.getState().setDuelState(syncData.duelState);
     }
     if (syncData.phase) {
       setPhase(syncData.phase as any);
@@ -384,8 +347,15 @@ export function useGameLoop(isPVPMode: boolean = false): [GameLoopState, GameLoo
     turnTimeLeft,
     turnBanner,
     actionQueue: queue,
-    ...uiState
-  }), [duelState, phase, isProcessing, turnTimeLeft, turnBanner, queue, uiState]);
+    playerCard,
+    opponentCard,
+    resultText,
+    effectMessages,
+    isGameOver,
+    gameResult,
+    aiStatus,
+    targetingData,
+  }), [duelState, phase, isProcessing, turnTimeLeft, turnBanner, queue, playerCard, opponentCard, resultText, effectMessages, isGameOver, gameResult, aiStatus, targetingData]);
 
   const gameLoopActions: GameLoopActions = useMemo(() => ({
     startDuel,

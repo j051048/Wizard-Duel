@@ -1,5 +1,5 @@
 /**
- * DonatePanel - 捐赠获取积分面板
+ * DonatePanel - 捐赠获取钻石面板
  */
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
@@ -129,7 +129,7 @@ export const DonatePanel: React.FC<DonatePanelProps> = ({
       <div className="flex items-center justify-between">
         <h3 className="font-bold text-white flex items-center gap-2">
           <Wallet size={18} className="text-purple-400" />
-          捐赠获取积分
+          捐赠获取钻石
         </h3>
         <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-lg">
           <X size={16} className="text-gray-400" />

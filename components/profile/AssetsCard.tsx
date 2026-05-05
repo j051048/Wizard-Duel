@@ -32,7 +32,7 @@ export const AssetsCard: React.FC<AssetsCardProps> = ({
           className="mt-3 w-full py-2 bg-purple-600/30 hover:bg-purple-600/40 border border-purple-500/30 rounded-lg text-xs font-bold text-purple-300 transition-all flex items-center justify-center gap-1.5"
         >
           <Wallet size={12} />
-          捐赠获取积分
+          捐赠获取钻石
         </button>
       </div>
 

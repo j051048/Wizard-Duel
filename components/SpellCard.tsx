@@ -10,7 +10,7 @@
  * [P0 性能优化] - React.memo + 精准 Props 比较
  */
 
-import React, { useState, memo } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Spell, SpellType } from '../types';
 import { getMechanicName } from '../constants';
@@ -86,6 +86,11 @@ export const SpellCard = memo<SpellCardProps>(({
   const [isHovered, setIsHovered] = useState(false);
   const [rotate, setRotate] = useState({ x: 0, y: 0 });
   const [imgError, setImgError] = useState(false);
+
+  // [Phase 2] 卡牌切换时重置错误状态，避免旧卡牌的加载失败影响新卡牌
+  useEffect(() => {
+    setImgError(false);
+  }, [spell?.id]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (disabled || isFaceDown) return;
@@ -239,12 +244,20 @@ export const SpellCard = memo<SpellCardProps>(({
                {/* Main Art / Emoji */}
                <div className="absolute inset-0 z-0 transform transition-transform duration-500 group-hover:scale-110">
                   {!imgError && spell.artSrc ? (
-                     <img 
-                      src={spell.artSrc} 
-                      alt={spell.name} 
-                      loading="eager"
+                     <img
+                      src={spell.artSrc}
+                      alt={spell.name}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover"
                       onError={() => setImgError(true)}
+                     />
+                  ) : spell.artSrc ? (
+                     // artSrc 存在但图片未加载 — 用卡背占位
+                     <img
+                      src="/ui/card_back.webp"
+                      alt=""
+                      className="w-full h-full object-cover opacity-60"
                      />
                   ) : (
                      <div className="flex items-center justify-center h-full text-6xl drop-shadow-2xl grayscale-[0.2] group-hover:grayscale-0 transition-all">{spell.emoji}</div>

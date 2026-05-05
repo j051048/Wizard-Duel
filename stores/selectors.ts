@@ -126,3 +126,80 @@ export const usePackCount = (packId: string) => {
 export const useHasCard = (cardId: string) => {
   return useUserStore((state) => state.inventory.includes(cardId as never));
 };
+
+// ============ Battle Store Selectors ============
+
+import { useBattleStore } from './useBattleStore';
+
+/**
+ * 对手状态（浅比较）
+ * 只有当对手 HP / 护甲 / 法力 / 手牌数 / 状态效果 / AI 头像变化时才重新渲染
+ */
+export const useOpponentStatus = () => {
+  return useBattleStore(
+    useShallow((s) => ({
+      opponentHP:        s.duelState?.opponentHP ?? 0,
+      opponentArmor:     s.duelState?.opponentArmor ?? 0,
+      opponentMana:      s.duelState?.opponentMana ?? 0,
+      opponentMaxMana:   s.duelState?.opponentMaxMana ?? 0,
+      opponentHandSize:  s.duelState?.opponentHandSize ?? 0,
+      opponentEffects:   s.duelState?.opponentEffects ?? [],
+      aiProfile:         s.duelState?.aiProfile,
+    }))
+  );
+};
+
+/**
+ * 玩家状态（浅比较）
+ */
+export const usePlayerStatus = () => {
+  return useBattleStore(
+    useShallow((s) => ({
+      playerHP:          s.duelState?.playerHP ?? 0,
+      playerArmor:       s.duelState?.playerArmor ?? 0,
+      playerMana:        s.duelState?.playerMana ?? 0,
+      playerMaxMana:     s.duelState?.playerMaxMana ?? 0,
+      playerEffects:     s.duelState?.playerEffects ?? [],
+      heroSkillsUsed:    s.duelState?.heroSkillsUsed ?? false,
+      selectedHeroSkill: s.duelState?.selectedHeroSkill,
+    }))
+  );
+};
+
+/**
+ * 玩家手牌（引用比较）
+ */
+export const usePlayerHand = () => {
+  return useBattleStore((s) => s.duelState?.playerHand ?? []);
+};
+
+/**
+ * 战斗阶段 + 是否在处理中（浅比较）
+ */
+export const useBattlePhase = () => {
+  return useBattleStore(
+    useShallow((s) => ({
+      phase:        s.phase,
+      isProcessing: s.isProcessing,
+    }))
+  );
+};
+
+/**
+ * 战斗消息（引用比较）
+ */
+export const useEffectMessages = () => {
+  return useBattleStore((s) => s.effectMessages);
+};
+
+/**
+ * 游戏结束状态（浅比较）
+ */
+export const useGameOver = () => {
+  return useBattleStore(
+    useShallow((s) => ({
+      isGameOver: s.isGameOver,
+      gameResult: s.gameResult,
+    }))
+  );
+};

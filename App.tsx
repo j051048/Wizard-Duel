@@ -177,7 +177,7 @@ function App() {
   })));
 
   // ============ Core Hooks ============
-  const { progress, startPreloading } = usePreloader();
+  const { progress, startPreloading, startTier2, startTier3 } = usePreloader();
   const [gameLoopState, gameLoopActions] = useGameLoop(!!uiData.pvpRoomId);
   const [audioState, audioActions] = useAudioManager();
   const { isMobileLandscape } = useScreenOrientation();
@@ -238,7 +238,16 @@ function App() {
   const handleResourcesLoaded = () => {
     uiActions.setIsResourcesLoaded(true);
     audioActions.playBgm('lobby');
+    // Tier 1 完成后，立即启动 Tier 2 后台加载卡牌图片
+    startTier2();
   };
+
+  // [Phase 2] Tier 3: 进入战斗时加载战斗音频
+  useEffect(() => {
+    if (uiData.gameState === 'DUEL' || uiData.gameState === 'MULLIGAN') {
+      startTier3();
+    }
+  }, [uiData.gameState, startTier3]);
 
   // ============ Render: Loading ============
   if (!uiData.isResourcesLoaded) {
