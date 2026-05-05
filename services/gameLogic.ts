@@ -718,42 +718,42 @@ export const AI_PROFILES: AIProfile[] = [
     name: '新手法师',
     difficulty: 'easy',
     description: '法师学徒，正在通过实践学习基础的元素相克原理。',
-    avatar: '/avatars/ai-easy.png',
+    avatar: '/avatars/ai-easy.webp',
     strategy: 'balanced'
   },
   {
     name: '战斗法师',
     difficulty: 'medium',
     description: '经验丰富的战场指挥官，擅长通过高爆发法术迅速压制对手。',
-    avatar: '/avatars/ai-medium.png',
+    avatar: '/avatars/ai-medium.webp',
     strategy: 'aggressive'
   },
   {
     name: '大法师梅林',
     difficulty: 'hard',
     description: '掌握了禁忌奥秘的强者，能够看穿你的每一次出牌并进行完美反制。',
-    avatar: '/avatars/ai-hard.png',
+    avatar: '/avatars/ai-hard.webp',
     strategy: 'defensive'
   },
   {
     name: '召唤师',
     difficulty: 'medium',
     description: '精通自然之力的召唤师，擅长用随从大军淹没对手。',
-    avatar: '/avatars/ai-summoner.png',
+    avatar: '/avatars/ai-summoner.webp',
     strategy: 'summoner'
   },
   {
     name: '宗师',
     difficulty: 'expert',
     description: '传说中的棋道宗师，能预判你的每一步棋并做出完美回应。',
-    avatar: '/avatars/ai-grandmaster.png',
+    avatar: '/avatars/ai-grandmaster.webp',
     strategy: 'combo'
   },
   {
     name: '治疗师',
     difficulty: 'easy',
     description: '温和的自然治疗师，擅长用藤蔓法术持续恢复生命值，以持久战拖垮对手。',
-    avatar: '/avatars/ai-healer.png',
+    avatar: '/avatars/ai-healer.webp',
     strategy: 'healer',
     deckTemplate: AI_DECK_TEMPLATES.healer_vine?.cards
   },
@@ -761,7 +761,7 @@ export const AI_PROFILES: AIProfile[] = [
     name: '毒师',
     difficulty: 'medium',
     description: '来自沼泽的毒术大师，精通缠绕与剧毒之术，让对手在缓慢衰竭中倒下。',
-    avatar: '/avatars/ai-disruption.png',
+    avatar: '/avatars/ai-disruption.webp',
     strategy: 'disruption',
     deckTemplate: AI_DECK_TEMPLATES.disruption_poison?.cards
   },
@@ -769,7 +769,7 @@ export const AI_PROFILES: AIProfile[] = [
     name: '时空法师',
     difficulty: 'hard',
     description: '操纵时间与空间的神秘法师，用冰霜和沉默封锁对手行动，直至牌库枯竭。',
-    avatar: '/avatars/ai-mill.png',
+    avatar: '/avatars/ai-mill.webp',
     strategy: 'mill',
     deckTemplate: AI_DECK_TEMPLATES.mill_ice?.cards
   },
@@ -777,14 +777,14 @@ export const AI_PROFILES: AIProfile[] = [
     name: '元素使',
     difficulty: 'medium',
     description: '精通五元素的全能法师，能根据战场形势灵活切换攻防节奏。',
-    avatar: '/avatars/ai-midrange.png',
+    avatar: '/avatars/ai-midrange.webp',
     strategy: 'midrange'
   },
   {
     name: '火焰领主',
     difficulty: 'expert',
     description: '烈焰的化身，掌控灼热凤凰与末日之火，一切皆在其炽焰下化为灰烬。',
-    avatar: '/avatars/ai-fire-lord.png',
+    avatar: '/avatars/ai-fire-lord.webp',
     strategy: 'aggressive',
     deckTemplate: AI_DECK_TEMPLATES.boss_fire_lord?.cards
   },
@@ -792,7 +792,7 @@ export const AI_PROFILES: AIProfile[] = [
     name: '冰霜女巫',
     difficulty: 'expert',
     description: '永恒寒冬的女主人，极致冰霜控制配合圣盾随从，构筑起无法逾越的冰墙。',
-    avatar: '/avatars/ai-frost-witch.png',
+    avatar: '/avatars/ai-frost-witch.webp',
     strategy: 'defensive',
     deckTemplate: AI_DECK_TEMPLATES.boss_frost_witch?.cards
   },
@@ -800,7 +800,7 @@ export const AI_PROFILES: AIProfile[] = [
     name: '岩石守卫',
     difficulty: 'expert',
     description: '远古岩石巨灵的化身，以极限护甲和嘲讽随从筑起铜墙铁壁，永不陷落。',
-    avatar: '/avatars/ai-rock-guardian.png',
+    avatar: '/avatars/ai-rock-guardian.webp',
     strategy: 'summoner',
     deckTemplate: AI_DECK_TEMPLATES.boss_rock_guardian?.cards
   },
@@ -808,7 +808,7 @@ export const AI_PROFILES: AIProfile[] = [
     name: '暗影刺客',
     difficulty: 'hard',
     description: '隐匿于暗影中的雷电刺客，以雷系和岩石连击瞬间爆发，一击致命。',
-    avatar: '/avatars/ai-assassin.png',
+    avatar: '/avatars/ai-assassin.webp',
     strategy: 'aggressive',
     deckTemplate: AI_DECK_TEMPLATES.assassin_thunder?.cards
   }

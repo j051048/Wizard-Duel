@@ -288,8 +288,8 @@ class FriendServiceClass {
     if (!query.trim()) return [];
     
     return [
-      { id: 'user_mock_1', username: `Player_${query}`, avatar: '/avatars/default.png' },
-      { id: 'user_mock_2', username: `${query}_Wizard`, avatar: '/avatars/default.png' },
+      { id: 'user_mock_1', username: `Player_${query}`, avatar: '/avatars/default.webp' },
+      { id: 'user_mock_2', username: `${query}_Wizard`, avatar: '/avatars/default.webp' },
     ];
   }
 }

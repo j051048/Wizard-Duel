@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
         viteCompression({ algorithm: 'gzip' }),
         VitePWA({
           registerType: 'autoUpdate',
-          includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+          includeAssets: ['favicon.png'],
           manifest: {
             name: 'Wizard Duel: Arcane Bet',
             short_name: 'WizardDuel',

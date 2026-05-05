@@ -79,7 +79,7 @@ export const HealthBar: React.FC<HealthBarProps> = ({ current, max, isPlayer }) 
           `}
           style={{ width: `${displayPercentage}%` }}
         >
-          <div className="absolute inset-0 bg-[url('/ui/textures/magic_noise.png')] opacity-20 mix-blend-overlay" />
+          <div className="absolute inset-0 bg-[url('/noise.webp')] opacity-20 mix-blend-overlay" />
           <div className="absolute top-0 left-0 right-0 h-[45%] bg-gradient-to-b from-white/30 to-transparent" />
         </div>
       </div>

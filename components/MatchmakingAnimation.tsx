@@ -108,7 +108,7 @@ export const MatchmakingAnimation: React.FC<MatchmakingAnimationProps> = ({
            
            {/* The Scrying Orb */}
            <div className="absolute w-32 h-32 md:w-40 md:h-40 bg-gradient-to-br from-indigo-600 to-purple-800 rounded-full shadow-[0_0_50px_rgba(79,70,229,0.5)] flex items-center justify-center overflow-hidden">
-              <div className="absolute inset-0 bg-[url('/noise.png')] opacity-30 mix-blend-overlay animate-pulse" />
+              <div className="absolute inset-0 bg-[url('/noise.webp')] opacity-30 mix-blend-overlay animate-pulse" />
               <div className="absolute -inset-4 bg-gradient-to-t from-black/50 to-transparent z-10" />
               
               {/* Center Icon */}

@@ -45,7 +45,7 @@ export const ManaDisplay: React.FC<ManaDisplayProps> = ({ current, max }) => {
           >
             {/* 水晶基底（始终显示灰色） */}
             <img 
-              src="/ui/mana_crystal_inactive_v2.png"
+              src="/ui/mana_crystal_inactive_v2.webp"
               alt="Empty Mana"
               className="w-full h-full object-contain absolute inset-0 grayscale opacity-80"
             />
@@ -65,7 +65,7 @@ export const ManaDisplay: React.FC<ManaDisplayProps> = ({ current, max }) => {
               }}
             >
               <img 
-                src="/ui/mana_crystal_active_v2.png"
+                src="/ui/mana_crystal_active_v2.webp"
                 alt="Full Mana" 
                 className="w-full h-full object-contain filter drop-shadow-md brightness-110"
               />
