@@ -17,7 +17,26 @@ interface CardPoolProps {
   onSearchChange: (val: string) => void;
   activeCostFilter: number | null;
   onCostFilterChange: (cost: number | null) => void;
+  activeElementFilter?: string | null;
+  onElementFilterChange?: (el: string | null) => void;
+  activeRarityFilter?: string | null;
+  onRarityFilterChange?: (r: string | null) => void;
 }
+
+const ELEMENTS = [
+  { id: 'fire', emoji: '🔥', label: '火' },
+  { id: 'ice', emoji: '❄️', label: '冰' },
+  { id: 'thunder', emoji: '⚡', label: '雷' },
+  { id: 'vine', emoji: '🌿', label: '木' },
+  { id: 'rock', emoji: '🪨', label: '岩' },
+];
+
+const RARITIES = [
+  { id: 'common', label: '普通', color: 'text-slate-400' },
+  { id: 'rare', label: '稀有', color: 'text-blue-400' },
+  { id: 'mythic', label: '史诗', color: 'text-purple-400' },
+  { id: 'legendary', label: '传说', color: 'text-amber-400' },
+];
 
 // 悬停提示组件 - 使用 Portal 渲染到 body
 const CardTooltip: React.FC<{ spell: Spell; targetRect: DOMRect | null; visible: boolean }> = ({ spell, targetRect, visible }) => {
@@ -120,7 +139,11 @@ const CardPool: React.FC<CardPoolProps> = ({
   searchTerm,
   onSearchChange,
   activeCostFilter,
-  onCostFilterChange
+  onCostFilterChange,
+  activeElementFilter,
+  onElementFilterChange,
+  activeRarityFilter,
+  onRarityFilterChange
 }) => {
   const isMobile = useIsMobile();
   const [hoveredSpell, setHoveredSpell] = useState<Spell | null>(null);
@@ -209,6 +232,53 @@ const CardPool: React.FC<CardPoolProps> = ({
                  </button>
                ))}
             </div>
+
+            {/* Element & Rarity Filters */}
+            {(onElementFilterChange || onRarityFilterChange) && (
+              <div className={`flex ${isMobile ? 'gap-1.5 overflow-x-auto no-scrollbar' : 'gap-2 items-center'} ${isMobile ? 'mt-1.5' : 'mt-2'}`}>
+                {onElementFilterChange && (
+                  <div className="flex items-center gap-1">
+                    {!isMobile && <span className="text-[10px] text-gray-500 shrink-0 uppercase tracking-tighter mr-1">元素:</span>}
+                    {ELEMENTS.map(el => (
+                      <button
+                        key={el.id}
+                        onClick={() => onElementFilterChange(activeElementFilter === el.id ? null : el.id)}
+                        className={`shrink-0 rounded-full flex items-center justify-center transition-all border
+                          ${isMobile ? 'w-7 h-7 text-[10px]' : 'w-7 h-7 text-xs'}
+                          ${activeElementFilter === el.id
+                            ? 'bg-amber-600 border-amber-400 text-white scale-110'
+                            : 'bg-transparent border-white/10 text-gray-500 hover:border-white/30'
+                          }
+                        `}
+                        title={el.label}
+                      >
+                        {el.emoji}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {onRarityFilterChange && (
+                  <div className={`flex items-center gap-1 ${isMobile ? '' : 'ml-2'}`}>
+                    {!isMobile && <span className="text-[10px] text-gray-500 shrink-0 uppercase tracking-tighter mr-1">稀有度:</span>}
+                    {RARITIES.map(r => (
+                      <button
+                        key={r.id}
+                        onClick={() => onRarityFilterChange(activeRarityFilter === r.id ? null : r.id)}
+                        className={`shrink-0 rounded-full font-bold transition-all border
+                          ${isMobile ? 'px-2 py-0.5 text-[9px]' : 'px-2.5 py-1 text-[10px]'}
+                          ${activeRarityFilter === r.id
+                            ? 'bg-amber-600 border-amber-400 text-white'
+                            : `bg-transparent border-white/10 ${r.color} hover:border-white/30`
+                          }
+                        `}
+                      >
+                        {r.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
        </div>
 

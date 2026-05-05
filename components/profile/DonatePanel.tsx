@@ -6,6 +6,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Wallet, X, Loader2, Zap, ExternalLink } from 'lucide-react';
 import { useAccount, useSwitchChain, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseUnits } from 'viem';
+import { useToastStore } from '../../stores/useToastStore';
 
 const XLAYER_CHAIN_ID = 196;
 const DONATION_TOKEN_ADDRESS = '0xdcc83b32b6b4e95a61951bfcc9d71967515c0fca' as const;
@@ -48,6 +49,7 @@ export const DonatePanel: React.FC<DonatePanelProps> = ({
 }) => {
   const { address, chainId } = useAccount();
   const { switchChain } = useSwitchChain();
+  const toast = useToastStore();
   
   const [donateAmount, setDonateAmount] = useState(50);
   const [customAmount, setCustomAmount] = useState('');
@@ -64,7 +66,7 @@ export const DonatePanel: React.FC<DonatePanelProps> = ({
       try {
         switchChain({ chainId: XLAYER_CHAIN_ID });
       } catch {
-        alert('请先切换到 X Layer 网络');
+        toast.error('网络错误', '请先切换到 X Layer 网络');
       }
       return;
     }

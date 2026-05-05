@@ -59,9 +59,9 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const styles = getTypeStyles();
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title">
       {/* 背景遮罩 */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
         onClick={onCancel}
       />
@@ -87,7 +87,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         </div>
 
         {/* 标题 */}
-        <h3 className="text-xl font-bold text-white text-center mb-2">
+        <h3 id="confirm-dialog-title" className="text-xl font-bold text-white text-center mb-2">
           {title}
         </h3>
 

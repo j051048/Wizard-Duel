@@ -110,7 +110,6 @@ export const CollectionBook: React.FC<CollectionBookProps> = ({ onBack }) => {
     }
     setClaimingMilestone(null);
     HapticService.success();
-    window.location.reload(); // Reload to refresh milestone claimed state
   };
 
   const nextMilestone = milestones.find(m => !m.claimed);
@@ -127,6 +126,7 @@ export const CollectionBook: React.FC<CollectionBookProps> = ({ onBack }) => {
           <div className="flex items-center gap-4">
             <button
               onClick={() => { HapticService.light(); onBack(); }}
+              aria-label="返回大厅"
               className="p-2 hover:bg-white/10 rounded-full transition-colors text-white"
             >
               <ArrowLeft size={24} />
@@ -252,6 +252,49 @@ export const CollectionBook: React.FC<CollectionBookProps> = ({ onBack }) => {
 
         {/* Main Grid */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-950 relative">
+            {/* Mobile Filters - collapsible strip */}
+            <div className="md:hidden mb-3 space-y-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 text-slate-500" size={14} />
+                <input
+                  type="text"
+                  placeholder="搜索法术..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 pl-8 pr-3 text-xs text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                />
+              </div>
+              <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                {[1,2,3,4,5,6,7,8].map(cost => (
+                  <button
+                    key={cost}
+                    onClick={() => setFilterMana(filterMana === cost ? null : cost)}
+                    className={`shrink-0 w-8 h-8 rounded-full text-xs font-bold transition-all border
+                      ${filterMana === cost ? 'bg-purple-600 border-purple-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}
+                    `}
+                  >{cost}</button>
+                ))}
+                <span className="shrink-0 w-px h-8 bg-slate-700 mx-0.5" />
+                {[
+                  { id: 'fire', emoji: '🔥' }, { id: 'ice', emoji: '❄️' }, { id: 'thunder', emoji: '⚡' },
+                  { id: 'vine', emoji: '🌿' }, { id: 'rock', emoji: '🪨' }, { id: 'arcane', emoji: '🔮' },
+                ].map(el => (
+                  <button
+                    key={el.id}
+                    onClick={() => setFilterElement(filterElement === el.id ? null : el.id)}
+                    className={`shrink-0 w-8 h-8 rounded-full text-sm flex items-center justify-center transition-all border
+                      ${filterElement === el.id ? 'bg-slate-700 border-white/30' : 'bg-slate-800/50 border-slate-700/50'}
+                    `}
+                  >{el.emoji}</button>
+                ))}
+                {(filterMana !== null || filterElement !== null) && (
+                  <button
+                    onClick={() => { setFilterMana(null); setFilterElement(null); }}
+                    className="shrink-0 px-2 h-8 rounded-full text-[10px] text-slate-400 bg-slate-800 border border-slate-700"
+                  >清除</button>
+                )}
+              </div>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-8 pb-20">
                 {filteredSpells.map(spell => {
                     const isOwned = inventory.includes(spell.id);

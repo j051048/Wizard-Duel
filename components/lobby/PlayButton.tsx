@@ -25,6 +25,7 @@ const PlayButton: React.FC<PlayButtonProps> = ({
       <button
         onClick={onStartDuel}
         disabled={!canStart || !selectedDeck}
+        aria-label={!selectedDeck ? '请先选择卡组' : !canStart ? '余额不足' : '进入竞技场'}
         className={`
           w-full relative group ${isMobile ? 'h-14' : 'h-16 md:h-20'} rounded-full flex items-center justify-center overflow-hidden transition-all duration-500
           ${canStart && selectedDeck

@@ -8,12 +8,12 @@ interface AchievementPanelProps {
   onBack: () => void;
 }
 
-const CATEGORY_CONFIG: Record<AchievementCategory, { label: string; icon: React.ReactNode; color: string }> = {
-  battle:    { label: '战斗', icon: <Swords size={16} />,   color: 'red' },
-  collection:{ label: '收藏', icon: <BookOpen size={16} />, color: 'blue' },
-  dungeon:   { label: '地牢', icon: <Mountain size={16} />, color: 'amber' },
-  social:    { label: '社交', icon: <Star size={16} />,     color: 'green' },
-  special:   { label: '特殊', icon: <Star size={16} />,     color: 'purple' },
+const CATEGORY_CONFIG: Record<AchievementCategory, { label: string; icon: React.ReactNode; color: string; activeBg: string }> = {
+  battle:    { label: '战斗', icon: <Swords size={16} />,   color: 'red',    activeBg: 'bg-red-600' },
+  collection:{ label: '收藏', icon: <BookOpen size={16} />, color: 'blue',   activeBg: 'bg-blue-600' },
+  dungeon:   { label: '地牢', icon: <Mountain size={16} />, color: 'amber',  activeBg: 'bg-amber-600' },
+  social:    { label: '社交', icon: <Star size={16} />,     color: 'green',  activeBg: 'bg-green-600' },
+  special:   { label: '特殊', icon: <Star size={16} />,     color: 'purple', activeBg: 'bg-purple-600' },
 };
 
 export const AchievementPanel: React.FC<AchievementPanelProps> = ({ onBack }) => {
@@ -80,7 +80,7 @@ export const AchievementPanel: React.FC<AchievementPanelProps> = ({ onBack }) =>
             key={cat}
             onClick={() => setActiveCategory(cat)}
             className={`px-4 py-2 rounded-full text-sm font-bold transition-colors flex items-center gap-1.5 whitespace-nowrap ${
-              activeCategory === cat ? `bg-${CATEGORY_CONFIG[cat].color}-600 text-white` : 'bg-slate-800 text-gray-400 hover:bg-slate-700'
+              activeCategory === cat ? `${CATEGORY_CONFIG[cat].activeBg} text-white` : 'bg-slate-800 text-gray-400 hover:bg-slate-700'
             }`}
           >
             {CATEGORY_CONFIG[cat].icon} {CATEGORY_CONFIG[cat].label}

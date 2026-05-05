@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { Friend, FriendRequest, FriendBattleInvite, FriendStatus } from '../../types/social';
 import { FriendService } from '../../services/FriendService';
+import { useToastStore } from '../../stores/useToastStore';
+import { useUIStore } from '../../stores/useUIStore';
 
 interface FriendsPageProps {
   userId: string;
@@ -27,6 +29,8 @@ export const FriendsPage: React.FC<FriendsPageProps> = ({
   onBack,
   onStartFriendBattle 
 }) => {
+  const toast = useToastStore();
+  const { showConfirmDialog } = useUIStore();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [invites, setInvites] = useState<FriendBattleInvite[]>([]);
@@ -80,17 +84,24 @@ export const FriendsPage: React.FC<FriendsPageProps> = ({
 
   // 删除好友
   const handleRemoveFriend = (oduserId: string) => {
-    if (confirm('确定要删除这位好友吗？')) {
-      FriendService.removeFriend(oduserId);
-      setFriends(FriendService.getFriends());
-      setSelectedFriend(null);
-    }
+    showConfirmDialog({
+      type: 'danger',
+      title: '删除好友',
+      message: '确定要删除这位好友吗？',
+      confirmText: '删除',
+      onConfirm: () => {
+        FriendService.removeFriend(oduserId);
+        setFriends(FriendService.getFriends());
+        setSelectedFriend(null);
+        toast.success('已删除', '好友已移除');
+      }
+    });
   };
 
   // 发送对战邀请
   const handleSendBattleInvite = (friend: Friend) => {
-    const invite = FriendService.sendBattleInvite(friend.oduserId, friend.username, 0);
-    alert(`已向 ${friend.username} 发送对战邀请！`);
+    FriendService.sendBattleInvite(friend.oduserId, friend.username, 0);
+    toast.success('邀请已发送', `已向 ${friend.username} 发送对战邀请`);
   };
 
   // 接受对战邀请

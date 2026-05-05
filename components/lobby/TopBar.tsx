@@ -1,7 +1,8 @@
 import React from 'react';
-import { Volume2, VolumeX, BookOpen, Crown, Zap, Calendar } from 'lucide-react';
+import { Volume2, VolumeX, BookOpen, Crown, Zap, Calendar, Settings, Sparkles } from 'lucide-react';
 import { Language, GameMode, Rank } from '../../types';
 import { getRankLevel } from '../../services/rankSystem';
+import { QualityLevel } from '../../stores/useSettingsStore';
 
 interface TopBarProps {
   userRank: string;
@@ -17,6 +18,12 @@ interface TopBarProps {
   onOpenProfile?: () => void;
   hasPendingQuests?: boolean;
   t: (key: string) => string;
+  balance?: number;
+  isLowQuality?: boolean;
+  showSettings?: boolean;
+  onToggleSettings?: () => void;
+  quality?: QualityLevel;
+  onSetQuality?: (q: QualityLevel) => void;
 }
 
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -34,7 +41,13 @@ const TopBar: React.FC<TopBarProps> = ({
   onOpenQuests,
   onOpenProfile,
   hasPendingQuests,
-  t
+  t,
+  balance,
+  isLowQuality,
+  showSettings,
+  onToggleSettings,
+  quality,
+  onSetQuality
 }) => {
   const isMobile = useIsMobile();
 
@@ -73,7 +86,38 @@ const TopBar: React.FC<TopBarProps> = ({
       </div>
 
       {/* System & Mode Controls */}
-      <div className={`flex ${isMobile ? 'gap-1.5' : 'gap-3'} animate-slide-in-right`}>
+      <div className={`flex ${isMobile ? 'gap-1.5' : 'gap-3'} animate-slide-in-right items-start`}>
+         {/* Balance Display */}
+         {balance !== undefined && (
+           <div className="bg-black/60 border border-purple-500/30 rounded-xl px-3 py-1.5 flex items-center gap-1.5 shadow-lg">
+             <span className="text-purple-400 text-[10px] uppercase font-bold text-nowrap">💎</span>
+             <span className="font-mono font-bold text-white text-sm">{balance}</span>
+           </div>
+         )}
+         {/* Settings Gear */}
+         {onToggleSettings && (
+           <div className="relative">
+             <button
+               onClick={onToggleSettings}
+               className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} rounded-full bg-black/40 backdrop-blur border border-white/10 flex items-center justify-center transition-all hover:border-white/30`}
+             >
+               <Settings size={isMobile ? 14 : 18} className="text-gray-300" />
+             </button>
+             {showSettings && onSetQuality && (
+               <div className="absolute top-full right-0 mt-2 w-48 bg-slate-900 border border-white/10 rounded-xl shadow-2xl p-2 z-[60]">
+                 <div className="text-[10px] text-gray-400 font-bold uppercase px-2 mb-1 tracking-wider">画面设置</div>
+                 <button onClick={() => { quality !== 'high' && onSetQuality('high'); onToggleSettings(); }} className={`w-full flex items-center justify-between p-2 rounded-lg text-sm transition-colors ${quality === 'high' ? 'bg-purple-600/20 text-purple-300' : 'hover:bg-white/5'}`}>
+                   <span>高画质</span>
+                   {quality === 'high' && <span className="text-green-400 text-xs">✓</span>}
+                 </button>
+                 <button onClick={() => { quality !== 'low' && onSetQuality('low'); onToggleSettings(); }} className={`w-full flex items-center justify-between p-2 rounded-lg text-sm transition-colors ${quality === 'low' ? 'bg-purple-600/20 text-purple-300' : 'hover:bg-white/5'}`}>
+                   <span>低画质</span>
+                   {quality === 'low' && <span className="text-green-400 text-xs">✓</span>}
+                 </button>
+               </div>
+             )}
+           </div>
+         )}
          {!isMobile && (
            <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-purple-500/20 mr-2 shadow-lg">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>

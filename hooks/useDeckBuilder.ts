@@ -14,14 +14,37 @@ export const useDeckBuilder = (selectedDeck: Deck | null | undefined, gameMode: 
   const [selectedCards, setSelectedCards] = useState<SpellType[]>(selectedDeck?.cards || []);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCostFilter, setActiveCostFilter] = useState<number | null>(null);
+  const [activeElementFilter, setActiveElementFilter] = useState<string | null>(null);
+  const [activeRarityFilter, setActiveRarityFilter] = useState<string | null>(null);
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [detailSpell, setDetailSpell] = useState<SpellType | null>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 当外部选中的卡组发生变化（如切换槽位）时，重置内部编辑器状态
+  // 缓存每个卡槽的编辑进度，防止切换 Tab 时丢失
+  const editCacheRef = useRef<Record<string, { name: string; cards: SpellType[] }>>({});
+  const currentDeckKeyRef = useRef<string | null>(selectedDeck?.id ?? '__new__');
+
+  // 当外部选中的卡组发生变化（如切换槽位）时，保存旧状态并恢复新状态
   useEffect(() => {
-    setDeckName(selectedDeck?.name || `新卡组`);
-    setSelectedCards(selectedDeck?.cards || []);
+    const newKey = selectedDeck?.id ?? '__new__';
+    const oldKey = currentDeckKeyRef.current;
+
+    // 保存当前编辑中的状态
+    if (oldKey && (deckName !== (selectedDeck?.name || '新卡组') || selectedCards.length > 0)) {
+      editCacheRef.current[oldKey] = { name: deckName, cards: selectedCards };
+    }
+
+    // 恢复缓存或使用卡组原始数据
+    const cached = editCacheRef.current[newKey];
+    if (cached) {
+      setDeckName(cached.name);
+      setSelectedCards(cached.cards);
+    } else {
+      setDeckName(selectedDeck?.name || '新卡组');
+      setSelectedCards(selectedDeck?.cards || []);
+    }
+
+    currentDeckKeyRef.current = newKey;
   }, [selectedDeck?.id]);
 
   const handleCardPressStart = useCallback((spellId: SpellType) => {
@@ -74,11 +97,15 @@ export const useDeckBuilder = (selectedDeck: Deck | null | undefined, gameMode: 
   });
 
   const filteredCardPool = rawCardPool.filter(card => {
-    const matchesSearch = card.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const matchesSearch = card.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           card.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCost = activeCostFilter === null || 
+    const matchesCost = activeCostFilter === null ||
                         (activeCostFilter === 7 ? card.manaCost >= 7 : card.manaCost === activeCostFilter);
-    return matchesSearch && matchesCost;
+    const matchesElement = activeElementFilter === null ||
+                          card.id.startsWith(activeElementFilter) ||
+                          (activeElementFilter === 'neutral' && !['fire','vine','ice','thunder','rock','hero'].some(e => card.id.startsWith(e)));
+    const matchesRarity = activeRarityFilter === null || card.rarity === activeRarityFilter;
+    return matchesSearch && matchesCost && matchesElement && matchesRarity;
   });
 
   const cardCounts = selectedCards.reduce((acc, card) => {
@@ -138,6 +165,10 @@ export const useDeckBuilder = (selectedDeck: Deck | null | undefined, gameMode: 
     setSearchTerm,
     activeCostFilter,
     setActiveCostFilter,
+    activeElementFilter,
+    setActiveElementFilter,
+    activeRarityFilter,
+    setActiveRarityFilter,
     lastAddedId,
     detailSpell,
     setDetailSpell,

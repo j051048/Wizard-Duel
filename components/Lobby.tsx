@@ -19,7 +19,7 @@ import { useUserStore } from '../stores/useUserStore';
 import { useUIStore } from '../stores/useUIStore';
 import { useToastStore } from '../stores/useToastStore';
 import { useShallow } from 'zustand/react/shallow';
-import { ShoppingBag, Book, Swords, MessageCircle, Settings, CheckCircle, Sparkles, Trophy, TrendingUp } from 'lucide-react';
+import { ShoppingBag, Book, Swords, MessageCircle, Trophy, TrendingUp } from 'lucide-react';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { MatchmakingOverlay } from './MatchmakingOverlay';
 import { QuestManager } from '../services/QuestManager';
@@ -63,6 +63,17 @@ export const Lobby: React.FC<LobbyProps> = ({
   const [isQuestModalOpen, setIsQuestModalOpen] = useState(false);
   const [quests, setQuests] = useState<Quest[]>([]);
 
+  // First-time onboarding
+  const [onboardingStep, setOnboardingStep] = useState<number | null>(() => {
+    try {
+      return localStorage.getItem('wizard_lobby_onboarding_v1') ? null : 0;
+    } catch { return null; }
+  });
+  const dismissOnboarding = () => {
+    try { localStorage.setItem('wizard_lobby_onboarding_v1', '1'); } catch {}
+    setOnboardingStep(null);
+  };
+
   const canStart = balance >= selectedBet;
 
   const t = (key: string) => TRANSLATIONS[language][key] || key;
@@ -97,50 +108,6 @@ export const Lobby: React.FC<LobbyProps> = ({
 
   return (
     <div className="min-h-full relative no-select overflow-hidden flex flex-col">
-      {/* Lobby Header — moved from App.tsx to reduce prop drilling */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-md border-b border-white/10 px-4 py-3 flex justify-between items-center safe-area-top">
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg">
-            <Sparkles size={20} className="text-white" />
-          </div>
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/70"
-          >
-            <Settings size={20} />
-          </button>
-        </div>
-        <div className="flex items-center gap-3">
-          {isLowQuality && (
-            <span className="text-[10px] bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded border border-amber-500/30 font-bold uppercase">
-              省电模式
-            </span>
-          )}
-          <div className="bg-black/60 border border-purple-500/30 rounded-xl px-4 py-2 flex items-center gap-2">
-            <span className="text-purple-400 text-xs uppercase font-bold text-nowrap">{TRANSLATIONS[language]?.['GOLD'] || '钻石'}</span>
-            <span className="font-mono font-bold text-white">{isLoading ? '...' : balance}</span>
-          </div>
-        </div>
-        {showSettings && (
-          <div className="absolute top-full left-4 mt-2 w-48 bg-slate-900 border border-white/10 rounded-xl shadow-2xl p-2 z-[60] animate-in fade-in slide-in-from-top-2">
-            <div className="text-[10px] text-gray-400 font-bold uppercase px-2 mb-1 tracking-wider">画面设置</div>
-            <button onClick={() => { quality !== 'high' && setQuality('high'); setShowSettings(false); }} className={`w-full flex items-center justify-between p-2 rounded-lg text-sm transition-colors ${quality === 'high' ? 'bg-purple-600/20 text-purple-300' : 'hover:bg-white/5'}`}>
-              <span>高画质 (全特效)</span>
-              {quality === 'high' && <CheckCircle size={14} />}
-            </button>
-            <button onClick={() => { quality !== 'low' && setQuality('low'); setShowSettings(false); }} className={`w-full flex items-center justify-between p-2 rounded-lg text-sm transition-colors ${quality === 'low' ? 'bg-purple-600/20 text-purple-300' : 'hover:bg-white/5'}`}>
-              <span>低画质 (更流畅)</span>
-              {quality === 'low' && <CheckCircle size={14} />}
-            </button>
-          </div>
-        )}
-      </header>
-
-      {/* Click-outside overlay for settings */}
-      {showSettings && (
-        <div className="fixed inset-0 z-[55]" onClick={() => setShowSettings(false)} />
-      )}
-
       {/* Immersive Background — B-5: 微视差浮动 */}
       <div
         className="absolute inset-0 bg-cover bg-center pointer-events-none lobby-bg-float"
@@ -160,11 +127,22 @@ export const Lobby: React.FC<LobbyProps> = ({
         gameMode={gameMode}
         onOpenModeSelect={() => setGameState('MODE_SELECT')}
         onOpenTutorial={() => { setIsTutorialOpen(true); audioBridge.playSfx('modal_open'); }}
-                onOpenQuests={() => { setIsQuestModalOpen(true); audioBridge.playSfx('modal_open'); }}
+        onOpenQuests={() => { setIsQuestModalOpen(true); audioBridge.playSfx('modal_open'); }}
         onOpenProfile={() => setGameState('PROFILE')}
         hasPendingQuests={hasPendingQuests}
         t={t}
+        balance={isLoading ? undefined : balance}
+        isLowQuality={isLowQuality}
+        showSettings={showSettings}
+        onToggleSettings={() => setShowSettings(!showSettings)}
+        quality={quality}
+        onSetQuality={setQuality}
       />
+
+      {/* Click-outside overlay for settings dropdown */}
+      {showSettings && (
+        <div className="fixed inset-0 z-[55]" onClick={() => setShowSettings(false)} />
+      )}
 
       {/* CENTER STAGE: DECK CAROUSEL */}
       <div className={`relative z-10 flex-1 flex flex-col items-center justify-center ${isMobile ? 'mt-0' : '-mt-10'}`}>
@@ -223,6 +201,7 @@ export const Lobby: React.FC<LobbyProps> = ({
          {/* 商店入口 */}
             <button
                onClick={() => setGameState('SHOP')}
+               aria-label="商店"
                className="flex items-center gap-2 text-xs text-purple-400 hover:text-purple-300 font-bold uppercase tracking-widest border border-purple-500/30 px-4 py-2 rounded-full hover:bg-purple-900/20 hover:scale-105 active:scale-95 transition-all duration-150 bg-purple-500/10"
             >
                <ShoppingBag size={14} />
@@ -232,6 +211,7 @@ export const Lobby: React.FC<LobbyProps> = ({
          {/* 收藏入口 */}
             <button
                onClick={() => setGameState('COLLECTION')}
+               aria-label="卡牌收藏"
                className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 font-bold uppercase tracking-widest border border-blue-500/30 px-4 py-2 rounded-full hover:bg-blue-900/20 hover:scale-105 active:scale-95 transition-all duration-150 bg-blue-500/10"
             >
                <Book size={14} />
@@ -248,8 +228,9 @@ export const Lobby: React.FC<LobbyProps> = ({
             </button>
 
          {/* PvP 对战入口 */}
-         <button 
+         <button
             onClick={() => setIsMatchmaking(true)}
+            aria-label="PvP 对战"
             className="flex items-center gap-2 text-xs text-red-400 hover:text-red-300 font-bold uppercase tracking-widest border border-red-500/30 px-4 py-2 rounded-full hover:bg-red-900/20 hover:scale-105 active:scale-95 transition-all duration-150 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.2)]"
          >
             <Swords size={14} />
@@ -320,6 +301,50 @@ export const Lobby: React.FC<LobbyProps> = ({
         onClaim={handleClaimQuest}
         t={t}
       />
+
+      {/* First-time Onboarding Overlay */}
+      {onboardingStep !== null && (
+        <div className="fixed inset-0 z-[200] flex items-end justify-center pb-32 px-6 pointer-events-none">
+          <div className="pointer-events-auto max-w-sm w-full bg-slate-900/95 backdrop-blur-md border border-amber-500/30 rounded-2xl p-5 shadow-2xl shadow-amber-500/10 animate-in fade-in slide-in-from-bottom-4">
+            {onboardingStep === 0 && (
+              <>
+                <div className="text-2xl mb-2">🏰</div>
+                <h3 className="text-lg font-wizard text-amber-200 mb-1">欢迎来到魔法竞技场</h3>
+                <p className="text-sm text-slate-300 mb-4">在这里与其他法师一决高下。首先，你需要一套卡组！</p>
+                <button onClick={() => setOnboardingStep(1)} className="w-full py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-xl font-bold text-sm active:scale-95 transition-transform">
+                  继续 →
+                </button>
+              </>
+            )}
+            {onboardingStep === 1 && (
+              <>
+                <div className="text-2xl mb-2">📖</div>
+                <h3 className="text-lg font-wizard text-amber-200 mb-1">组建你的卡组</h3>
+                <p className="text-sm text-slate-300 mb-4">点击底部的「收藏」按钮可以浏览和组卡。至少需要 20 张卡才能上场。</p>
+                <div className="flex gap-2">
+                  <button onClick={() => setOnboardingStep(0)} className="px-4 py-2.5 bg-slate-800 text-slate-300 rounded-xl text-sm">← 返回</button>
+                  <button onClick={() => setOnboardingStep(2)} className="flex-1 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-xl font-bold text-sm active:scale-95 transition-transform">
+                    继续 →
+                  </button>
+                </div>
+              </>
+            )}
+            {onboardingStep === 2 && (
+              <>
+                <div className="text-2xl mb-2">⚔️</div>
+                <h3 className="text-lg font-wizard text-amber-200 mb-1">开始对战</h3>
+                <p className="text-sm text-slate-300 mb-4">选好卡组后，选择下注金额，点击「进入竞技场」即可开始！胜利获得钻石，用于购买更多卡包。</p>
+                <button onClick={dismissOnboarding} className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold text-sm active:scale-95 transition-transform">
+                  开始冒险 ✨
+                </button>
+              </>
+            )}
+            <button onClick={dismissOnboarding} className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs text-slate-400 hover:text-white">
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

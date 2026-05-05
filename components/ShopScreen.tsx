@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Package, Gift, Crown, Sparkles, Star, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, Package, Gift, Crown, Sparkles, Star, ShoppingBag, CheckCircle } from 'lucide-react';
 import { Spell, SpellType } from '../types';
 import { HapticService } from '../services/haptic';
 import { audioBridge } from '../hooks/useAudioManager';
@@ -20,6 +20,18 @@ import { SPELLS } from '../data/spells';
 interface ShopScreenProps {
   onBack: () => void;
 }
+
+// Static Tailwind class map — dynamic classnames are purged in production builds
+const BADGE_GRADIENT_MAP: Record<string, string> = {
+  'bg-yellow-500': 'from-yellow-500/5 to-transparent hover:border-yellow-500',
+  'bg-blue-500': 'from-blue-500/5 to-transparent hover:border-blue-500',
+  'bg-purple-500': 'from-purple-500/5 to-transparent hover:border-purple-500',
+  'bg-green-500': 'from-green-500/5 to-transparent hover:border-green-500',
+  'bg-orange-500': 'from-orange-500/5 to-transparent hover:border-orange-500',
+  'bg-red-600': 'from-red-500/5 to-transparent hover:border-red-500',
+  'bg-gradient-to-r from-yellow-500 to-amber-600': 'from-yellow-500/5 to-transparent hover:border-yellow-500',
+  'bg-gradient-to-r from-red-500 to-pink-600': 'from-red-500/5 to-transparent hover:border-red-500',
+};
 
 export const ShopScreen: React.FC<ShopScreenProps> = ({ onBack }) => {
   const { balance, setBalance, packInventory, setPackInventory, addPacks, consumePack, purchasedBundles, purchaseBundle, addCardsToInventory } = useUserStore(
@@ -250,7 +262,7 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({ onBack }) => {
     <div className="min-h-screen bg-slate-950 pb-20 pt-20 px-4 animate-in fade-in">
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 bg-slate-900/80 backdrop-blur-md z-40 p-4 border-b border-white/10 flex items-center justify-between safe-area-top">
-        <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+        <button onClick={onBack} aria-label="返回大厅" className="p-2 hover:bg-white/10 rounded-full transition-colors">
           <ArrowLeft size={24} />
         </button>
         <div className="flex items-center gap-2 font-bold text-xl tracking-widest text-[#ffd700]">
@@ -315,7 +327,7 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({ onBack }) => {
             ))}
 
             {products.map(pack => (
-                <div key={pack.id} onMouseEnter={() => audioBridge.playSfx('pack_hover')} className={`bg-gradient-to-b from-${pack.badgeColor?.split('-')[1] || 'blue'}-500/5 to-transparent border border-white/10 hover:border-${pack.badgeColor?.split('-')[1] || 'blue'}-500 rounded-2xl p-6 flex flex-col items-center gap-4 transition-all group relative overflow-hidden`}>
+                <div key={pack.id} onMouseEnter={() => audioBridge.playSfx('pack_hover')} className={`bg-gradient-to-b ${BADGE_GRADIENT_MAP[pack.badgeColor || ''] || 'from-blue-500/5 to-transparent hover:border-blue-500'} border border-white/10 rounded-2xl p-6 flex flex-col items-center gap-4 transition-all group relative overflow-hidden`}>
                     
                     <div className={`w-20 h-20 rounded-xl bg-gradient-to-br from-gray-800 to-gray-700 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-500`}>
                         {GetProductIcon(pack)}
@@ -444,12 +456,6 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({ onBack }) => {
 };
 
 export default ShopScreen;
-
-const CheckCircle = ({size, className}: {size: number, className?: string}) => (
-    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="20 6 9 17 4 12"></polyline>
-    </svg>
-);
 
 const GetProductIcon = (product: Product) => {
     if (product.id.includes('dragon')) return <span className="text-3xl">🐲</span>;

@@ -63,6 +63,10 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     setSearchTerm,
     activeCostFilter,
     setActiveCostFilter,
+    activeElementFilter,
+    setActiveElementFilter,
+    activeRarityFilter,
+    setActiveRarityFilter,
     lastAddedId,
     detailSpell,
     setDetailSpell,
@@ -207,7 +211,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
         <div className={`flex-1 min-h-0 ${isMobile ? 'flex flex-col relative' : 'grid grid-cols-12 gap-8'}`}>
           {/* 1. Card Pool (Main View) */}
           <div className={isMobile ? 'flex-1 overflow-hidden absolute inset-0 pb-[80px]' : 'lg:col-span-8 h-full min-h-0'}>
-            <CardPool 
+            <CardPool
               filteredCardPool={filteredCardPool}
               onAddCard={addCard}
               onRightClick={handleRightClick}
@@ -217,6 +221,10 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               onSearchChange={setSearchTerm}
               activeCostFilter={activeCostFilter}
               onCostFilterChange={setActiveCostFilter}
+              activeElementFilter={activeElementFilter}
+              onElementFilterChange={setActiveElementFilter}
+              activeRarityFilter={activeRarityFilter}
+              onRarityFilterChange={setActiveRarityFilter}
             />
           </div>
 
