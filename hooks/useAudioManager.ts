@@ -25,6 +25,32 @@ const getAudioContext = () => {
     return globalAudioCtx;
 };
 
+// ─── WebM/Opus format detection (checked once at first hook render) ───
+let _webmSupported: boolean | null = null;
+const isWebmSupported = (): boolean => {
+  if (_webmSupported === null) {
+    const a = document.createElement('audio');
+    _webmSupported = !!a.canPlayType && a.canPlayType('audio/webm; codecs="opus"') !== '';
+  }
+  return _webmSupported;
+};
+
+/**
+ * Resolve an MP3 path to WebM if supported, falling back to the original.
+ * Only transforms paths that end in '.mp3' and whose .webm counterpart exists.
+ */
+const RESOLVABLE_PATHS = new Set([
+  '/audio/bgm-lobby.webm',
+  '/audio/bgm-battle_tavern.webm',
+  '/audio/sfx-hit.webm',
+]);
+
+const resolveSrc = (src: string): string => {
+  if (!src.endsWith('.mp3') || !isWebmSupported()) return src;
+  const webmSrc = src.replace(/\.mp3$/, '.webm');
+  return RESOLVABLE_PATHS.has(webmSrc) ? webmSrc : src;
+};
+
 // SFX mapping with optional rate/volume overrides for pitch-variant reuse
 interface SfxMapping {
   src: string;
@@ -209,25 +235,26 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
   // 创建或获取音效实例
   const getAudioInstance = useCallback((src: string): HTMLAudioElement | null => {
     if (!src) return null;
+    const resolved = resolveSrc(src);
 
-    if (!sfxPoolRef.current.has(src)) {
+    if (!sfxPoolRef.current.has(resolved)) {
       const audio = new Audio();
       audio.preload = 'auto';
-      audio.src = src;
-      
+      audio.src = resolved;
+
       // 音效结束时减少计数
       audio.addEventListener('ended', () => {
         activeSfxCountRef.current = Math.max(0, activeSfxCountRef.current - 1);
       });
-      
-      sfxPoolRef.current.set(src, audio);
+
+      sfxPoolRef.current.set(resolved, audio);
     }
-    return sfxPoolRef.current.get(src) || null;
+    return sfxPoolRef.current.get(resolved) || null;
   }, []);
 
   // 播放 BGM
   const playBgm = useCallback((track: 'lobby' | 'battle') => {
-    const src = AUDIO_CONFIG.bgm[track];
+    const src = resolveSrc(AUDIO_CONFIG.bgm[track]);
     if (!src) return;
 
     try {
@@ -247,16 +274,17 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
         }, 50);
       }
 
-      // 创建新BGM
+      // 创建新BGM — preload='metadata' 只下载帧头，触发 play 时才拉流
       bgmRef.current = new Audio(src);
+      bgmRef.current.preload = 'metadata';
       bgmRef.current.loop = true;
       bgmRef.current.volume = isMuted ? 0 : bgmVolume;
-      
+
       bgmRef.current.play().catch(() => {
         setIsAudioBlocked(true);
         console.log('BGM autoplay blocked, waiting for user interaction');
       });
-      
+
       setIsPlaying(true);
     } catch (e) {
       console.warn('Failed to play BGM:', e);

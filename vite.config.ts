@@ -54,7 +54,7 @@ export default defineConfig(({ mode }) => {
             runtimeCaching: [
               {
                 // 运行时缓存音频文件
-                urlPattern: ({ request, url }) => request.destination === 'audio' || url.pathname.endsWith('.mp3'),
+                urlPattern: ({ request, url }) => request.destination === 'audio' || url.pathname.endsWith('.mp3') || url.pathname.endsWith('.webm'),
                 handler: 'CacheFirst',
                 options: {
                   cacheName: 'audio-cache',

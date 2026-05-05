@@ -10,6 +10,29 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { SPELLS } from '../constants';
 
+// ─── WebM 格式支持检测 ───
+let _webmOk: boolean | null = null;
+const canPlayWebm = (): boolean => {
+  if (_webmOk === null) {
+    const a = document.createElement('audio');
+    _webmOk = !!a.canPlayType && a.canPlayType('audio/webm; codecs="opus"') !== '';
+  }
+  return _webmOk;
+};
+
+/** 仅转换明确已生成 .webm 的音频文件 */
+const WEBM_PATHS = new Set([
+  '/audio/bgm-lobby.webm',
+  '/audio/bgm-battle_tavern.webm',
+  '/audio/sfx-hit.webm',
+]);
+
+const resolveAudioSrc = (src: string): string => {
+  if (!src.endsWith('.mp3') || !canPlayWebm()) return src;
+  const webm = src.replace(/\.mp3$/, '.webm');
+  return WEBM_PATHS.has(webm) ? webm : src;
+};
+
 // ─── Tier 1: 必须阻塞加载的静态 UI 资源 ───
 const STATIC_UI = [
   '/battle-bg.webp',
@@ -88,14 +111,16 @@ function loadOneImage(src: string): Promise<void> {
 }
 
 function loadOneAudio(src: string): Promise<void> {
+  const resolved = resolveAudioSrc(src);
   return new Promise((resolve) => {
     const audio = new Audio();
+    audio.preload = 'auto';
     audio.oncanplaythrough = () => resolve();
     audio.onerror = () => {
-      console.warn(`[Preloader] 音频加载失败: ${src}`);
+      console.warn(`[Preloader] 音频加载失败: ${resolved}`);
       resolve();
     };
-    audio.src = src;
+    audio.src = resolved;
     audio.load();
   });
 }
