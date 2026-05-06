@@ -32,7 +32,12 @@ export type QuestType =
   | 'single_game_damage'
   | 'perfect_game'
   | 'counter_element'
-  | 'total_games';
+  | 'total_games'
+  // [Phase 4] 新任务类型
+  | 'trigger_synergy'       // 触发跨元素联动
+  | 'play_new_mechanic'     // 使用新机制卡牌
+  | 'weekly_wins'           // 每周胜利
+  | 'weekly_games';         // 每周对战场次
 
 export interface Quest {
   id: string;

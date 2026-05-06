@@ -2,9 +2,35 @@ import { Quest, QuestRarity, QuestType } from '../types/quest';
 
 const STORAGE_KEY_QUESTS = 'wizard_duel_quests_v1';
 const STORAGE_KEY_LAST_REFRESH = 'wizard_duel_quests_last_refresh';
+const STORAGE_KEY_WEEKLY_QUESTS = 'wizard_duel_weekly_quests_v1';
+const STORAGE_KEY_WEEKLY_REFRESH = 'wizard_duel_weekly_last_refresh';
 
 // [P1] 经验奖励：按稀有度分级
 const XP_BY_RARITY = { common: 20, rare: 40, epic: 80, legendary: 150 } as const;
+
+// [Phase 4] 每周任务模板
+const WEEKLY_QUEST_TEMPLATES: Array<Omit<Quest, 'id' | 'current' | 'isClaimed' | 'isCompleted'>> = [
+  {
+    title: "周冠军",
+    description: "赢得15场对战",
+    type: 'weekly_wins',
+    target: 15,
+    rewardGold: 500,
+    rewardExp: XP_BY_RARITY.legendary,
+    rarity: 'legendary',
+    icon: 'crown'
+  },
+  {
+    title: "百战老兵",
+    description: "完成25场对战",
+    type: 'weekly_games',
+    target: 25,
+    rewardGold: 300,
+    rewardExp: XP_BY_RARITY.epic,
+    rarity: 'epic',
+    icon: 'shield'
+  },
+];
 
 // 任务模板库
 const QUEST_TEMPLATES: Array<Omit<Quest, 'id' | 'current' | 'isClaimed' | 'isCompleted'>> = [
@@ -321,6 +347,30 @@ const QUEST_TEMPLATES: Array<Omit<Quest, 'id' | 'current' | 'isClaimed' | 'isCom
     rewardExp: XP_BY_RARITY.common,
     rarity: 'common',
     icon: 'trophy'
+  },
+
+  // [Phase 4] 联动任务
+  {
+    title: "元素共鸣",
+    description: "触发跨元素联动3次",
+    type: 'trigger_synergy',
+    target: 3,
+    rewardGold: 120,
+    rewardExp: XP_BY_RARITY.rare,
+    rarity: 'rare',
+    icon: 'zap'
+  },
+
+  // [Phase 4] 新机制任务
+  {
+    title: "时空旅者",
+    description: "使用新机制卡牌5次",
+    type: 'play_new_mechanic',
+    target: 5,
+    rewardGold: 100,
+    rewardExp: XP_BY_RARITY.rare,
+    rarity: 'rare',
+    icon: 'scroll'
   }
 ];
 
@@ -437,6 +487,81 @@ export const QuestManager = {
     quests[questIndex] = { ...quest, isClaimed: true };
     this.saveQuests(quests);
 
+    return { success: true, reward: quest.rewardGold, rewardExp: quest.rewardExp, quests };
+  },
+
+  // ============ [Phase 4] 每周任务 ============
+
+  /** 初始化每周任务（每周一刷新） */
+  initWeekly(): Quest[] {
+    const lastRefresh = localStorage.getItem(STORAGE_KEY_WEEKLY_REFRESH);
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay() + 1); // Monday
+    weekStart.setHours(0, 0, 0, 0);
+    const weekKey = weekStart.toISOString().split('T')[0];
+
+    const storedQuests = this.loadWeeklyQuests();
+
+    if (lastRefresh !== weekKey || storedQuests.length === 0) {
+      const newQuests = this.generateWeeklyQuests();
+      this.saveWeeklyQuests(newQuests);
+      localStorage.setItem(STORAGE_KEY_WEEKLY_REFRESH, weekKey);
+      return newQuests;
+    }
+
+    return storedQuests;
+  },
+
+  loadWeeklyQuests(): Quest[] {
+    try {
+      const data = localStorage.getItem(STORAGE_KEY_WEEKLY_QUESTS);
+      return data ? JSON.parse(data) : [];
+    } catch { return []; }
+  },
+
+  saveWeeklyQuests(quests: Quest[]) {
+    localStorage.setItem(STORAGE_KEY_WEEKLY_QUESTS, JSON.stringify(quests));
+  },
+
+  generateWeeklyQuests(): Quest[] {
+    return WEEKLY_QUEST_TEMPLATES.map(template => ({
+      ...template,
+      id: `weekly_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      current: 0,
+      isClaimed: false,
+      isCompleted: false
+    }));
+  },
+
+  /** 更新每周任务进度 */
+  updateWeeklyProgress(type: QuestType, amount: number = 1): Quest[] {
+    const quests = this.loadWeeklyQuests();
+    let hasUpdates = false;
+
+    const updatedQuests = quests.map(quest => {
+      if (quest.isCompleted || quest.type !== type) return quest;
+      const newCurrent = Math.min(quest.current + amount, quest.target);
+      if (newCurrent !== quest.current) {
+        hasUpdates = true;
+        return { ...quest, current: newCurrent, isCompleted: newCurrent >= quest.target };
+      }
+      return quest;
+    });
+
+    if (hasUpdates) this.saveWeeklyQuests(updatedQuests);
+    return updatedQuests;
+  },
+
+  /** 领取每周任务奖励 */
+  claimWeeklyReward(questId: string): { success: boolean; reward?: number; rewardExp?: number; quests: Quest[] } {
+    const quests = this.loadWeeklyQuests();
+    const idx = quests.findIndex(q => q.id === questId);
+    if (idx === -1) return { success: false, quests };
+    const quest = quests[idx];
+    if (!quest.isCompleted || quest.isClaimed) return { success: false, quests };
+    quests[idx] = { ...quest, isClaimed: true };
+    this.saveWeeklyQuests(quests);
     return { success: true, reward: quest.rewardGold, rewardExp: quest.rewardExp, quests };
   }
 };

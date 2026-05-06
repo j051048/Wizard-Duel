@@ -22,6 +22,13 @@ const REWARDS = [
   { day: 7, label: '第7天', gems: 100, icon: '🏆' },
 ];
 
+// [Phase 4] 月度里程碑奖励（第14/21/30天额外奖励）
+const MONTHLY_MILESTONES: Record<number, { gems: number; pack?: string; label: string; icon: string }> = {
+  14: { gems: 150, label: '两周坚持', icon: '⭐' },
+  21: { gems: 200, pack: 'standard', label: '三周大师', icon: '🌟' },
+  30: { gems: 500, pack: 'legendary', label: '月度传奇', icon: '👑' },
+};
+
 function getTodayStr(): string {
   return new Date().toISOString().split('T')[0];
 }
@@ -106,6 +113,17 @@ class CheckInServiceClass {
 
     this.save();
 
+    // [Phase 4] 月度里程碑检查
+    const milestone = MONTHLY_MILESTONES[this.state.totalCheckIns];
+    if (milestone) {
+      return {
+        success: true,
+        gems: reward.gems + milestone.gems,
+        streak: this.state.streak,
+        message: `签到成功！获得 ${reward.gems} 宝石 + ${milestone.label}奖励 ${milestone.gems} 宝石${milestone.pack ? ' + 卡包' : ''}`,
+      };
+    }
+
     return {
       success: true,
       gems: reward.gems,
@@ -120,6 +138,27 @@ class CheckInServiceClass {
 
   getCurrentWeekDay(): number {
     return ((this.state.streak) % 7);
+  }
+
+  // [Phase 4] 获取月度里程碑信息
+  getMonthlyMilestones() {
+    return Object.entries(MONTHLY_MILESTONES).map(([day, info]) => ({
+      day: Number(day),
+      ...info,
+      isReached: this.state.totalCheckIns >= Number(day),
+      isNext: this.state.totalCheckIns < Number(day),
+    }));
+  }
+
+  // [Phase 4] 获取下一里程碑
+  getNextMilestone(): { day: number; remaining: number; info: typeof MONTHLY_MILESTONES[number] } | null {
+    for (const [day, info] of Object.entries(MONTHLY_MILESTONES)) {
+      const d = Number(day);
+      if (this.state.totalCheckIns < d) {
+        return { day: d, remaining: d - this.state.totalCheckIns, info };
+      }
+    }
+    return null;
   }
 }
 
