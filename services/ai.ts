@@ -11,6 +11,215 @@ import { getElementType, doesElementBeat } from './combat/elementSystem';
 import { getGameRNG } from '../utils/seededRandom';
 import type { Minion } from '../types';
 
+// ============ [Phase 1] 玩家记忆系统 ============
+
+/** 玩家行为画像 */
+export interface PlayerProfile {
+  /** 元素使用频率 */
+  elementFrequency: Record<string, number>;
+  /** 平均出牌法力消耗 */
+  avgManaCurve: number;
+  /** 激进度 0-1 (高费牌占比) */
+  aggressiveness: number;
+  /** 总出牌数 */
+  totalCardsPlayed: number;
+  /** 每回合平均出牌数 */
+  avgCardsPerRound: number;
+  /** 治疗/护甲使用频率 */
+  defensivePlayRate: number;
+  /** 组合技使用频率 */
+  comboPlayRate: number;
+}
+
+/** 检测到的对手策略模式 */
+export type OpponentStrategy =
+  | 'fire_rush'      // 火系快攻
+  | 'ice_control'    // 冰系控制
+  | 'thunder_combo'  // 雷系连击
+  | 'rock_defense'   // 岩系防御
+  | 'vine_sustain'   // 自然续航
+  | 'balanced'       // 均衡
+  | 'unknown';
+
+/** 反制策略配置 */
+export interface CounterStrategy {
+  /** 优先选择的元素 */
+  preferredElements: string[];
+  /** 优先选择的机制 */
+  preferredMechanics: string[];
+  /** 法力分配倾向: 'tempo' | 'value' | 'aggro' */
+  manaStrategy: 'tempo' | 'value' | 'aggro';
+  /** 额外分数加成 (应用于匹配的卡牌) */
+  bonusScore: number;
+}
+
+export const COUNTER_STRATEGIES: Record<OpponentStrategy, CounterStrategy> = {
+  fire_rush: {
+    preferredElements: ['ice', 'rock'],
+    preferredMechanics: ['heal', 'armor', 'freeze'],
+    manaStrategy: 'value',
+    bonusScore: 3,
+  },
+  ice_control: {
+    preferredElements: ['fire', 'thunder'],
+    preferredMechanics: ['damage', 'charge'],
+    manaStrategy: 'aggro',
+    bonusScore: 2.5,
+  },
+  thunder_combo: {
+    preferredElements: ['rock', 'ice'],
+    preferredMechanics: ['taunt', 'silence'],
+    manaStrategy: 'tempo',
+    bonusScore: 2,
+  },
+  rock_defense: {
+    preferredElements: ['fire', 'vine'],
+    preferredMechanics: ['damage', 'burn'],
+    manaStrategy: 'aggro',
+    bonusScore: 2,
+  },
+  vine_sustain: {
+    preferredElements: ['fire', 'thunder'],
+    preferredMechanics: ['damage', 'aoe'],
+    manaStrategy: 'aggro',
+    bonusScore: 2.5,
+  },
+  balanced: {
+    preferredElements: [],
+    preferredMechanics: [],
+    manaStrategy: 'value',
+    bonusScore: 0,
+  },
+  unknown: {
+    preferredElements: [],
+    preferredMechanics: [],
+    manaStrategy: 'value',
+    bonusScore: 0,
+  },
+};
+
+/**
+ * 追踪玩家行为，构建行为画像
+ */
+export class PlayerMemoryTracker {
+  private cardsPlayed: Array<{ spellId: string; manaCost: number; round: number }> = [];
+  private roundStartCallback: number = 0;
+  private cardsThisRound: number = 0;
+  private totalRounds: number = 0;
+
+  /** 记录一次出牌 */
+  recordCardPlayed(spellId: string, manaCost: number, roundNumber: number): void {
+    if (roundNumber !== this.roundStartCallback) {
+      if (this.roundStartCallback > 0) {
+        this.totalRounds++;
+      }
+      this.roundStartCallback = roundNumber;
+      this.cardsThisRound = 0;
+    }
+    this.cardsThisRound++;
+    this.cardsPlayed.push({ spellId, manaCost, round: roundNumber });
+  }
+
+  /** 获取玩家行为画像 */
+  getProfile(): PlayerProfile {
+    const total = this.cardsPlayed.length;
+    if (total === 0) {
+      return {
+        elementFrequency: {},
+        avgManaCurve: 0,
+        aggressiveness: 0,
+        totalCardsPlayed: 0,
+        avgCardsPerRound: 0,
+        defensivePlayRate: 0,
+        comboPlayRate: 0,
+      };
+    }
+
+    const elementFrequency: Record<string, number> = {};
+    let totalMana = 0;
+    let highCostCount = 0; // >= 5 mana
+    let defensiveCount = 0;
+    let comboCount = 0;
+
+    for (const card of this.cardsPlayed) {
+      const element = card.spellId.split(/\d/)[0].replace('hero_', '');
+      elementFrequency[element] = (elementFrequency[element] || 0) + 1;
+      totalMana += card.manaCost;
+      if (card.manaCost >= 5) highCostCount++;
+      // 治疗/护甲类
+      if (card.spellId.includes('heal') || card.spellId.includes('shield') || card.spellId.includes('armor')) {
+        defensiveCount++;
+      }
+      // 雷系连击
+      if (card.spellId.startsWith('thunder')) {
+        comboCount++;
+      }
+    }
+
+    return {
+      elementFrequency,
+      avgManaCurve: totalMana / total,
+      aggressiveness: highCostCount / total,
+      totalCardsPlayed: total,
+      avgCardsPerRound: this.totalRounds > 0 ? total / this.totalRounds : total,
+      defensivePlayRate: defensiveCount / total,
+      comboPlayRate: comboCount / total,
+    };
+  }
+
+  /** 检测对手策略模式 */
+  detectStrategy(): OpponentStrategy {
+    const profile = this.getProfile();
+    if (profile.totalCardsPlayed < 3) return 'unknown';
+
+    const freq = profile.elementFrequency;
+    const total = profile.totalCardsPlayed;
+
+    // 找出使用最多的元素
+    let topElement = '';
+    let topCount = 0;
+    for (const [el, count] of Object.entries(freq)) {
+      if (count > topCount) {
+        topCount = count;
+        topElement = el;
+      }
+    }
+
+    const topRatio = topCount / total;
+
+    // 主元素占比 > 50% 才认定为单元素策略
+    if (topRatio > 0.5) {
+      switch (topElement) {
+        case 'fire':
+          return profile.aggressiveness > 0.4 ? 'fire_rush' : 'balanced';
+        case 'ice':
+          return 'ice_control';
+        case 'thunder':
+          return profile.comboPlayRate > 0.3 ? 'thunder_combo' : 'balanced';
+        case 'rock':
+          return profile.defensivePlayRate > 0.3 ? 'rock_defense' : 'balanced';
+        case 'vine':
+          return profile.defensivePlayRate > 0.2 ? 'vine_sustain' : 'balanced';
+        default:
+          return 'balanced';
+      }
+    }
+
+    return 'balanced';
+  }
+
+  /** 重置（新对局时调用） */
+  reset(): void {
+    this.cardsPlayed = [];
+    this.roundStartCallback = 0;
+    this.cardsThisRound = 0;
+    this.totalRounds = 0;
+  }
+}
+
+/** 全局单例，供 hooks 层在对局开始时 reset，出牌时 record */
+export const playerMemoryTracker = new PlayerMemoryTracker();
+
 // ============ [Phase C-1] 难度配置 ============
 
 export interface AIDifficultyConfig {
@@ -308,6 +517,20 @@ export const pickBestSpellForAI = (
     if (counterSpell) return counterSpell;
   }
 
+  // --- Step 5b: [Phase 1] Counter-strategy based on player memory ---
+  const detectedStrategy = playerMemoryTracker.detectStrategy();
+  const counterConfig = COUNTER_STRATEGIES[detectedStrategy];
+  if (detectedStrategy !== 'unknown' && counterConfig.bonusScore > 0) {
+    // 低血量时优先反制防御策略
+    if (state.opponentHP <= 12 && (detectedStrategy === 'fire_rush' || detectedStrategy === 'thunder_combo')) {
+      const healOrShield = affordable.find(s => {
+        const spell = getSpellById(s);
+        return spell.mechanic === 'heal' || (spell.armorGain || 0) >= 3;
+      });
+      if (healOrShield) return healOrShield;
+    }
+  }
+
   // --- Step 6: Ranked damage + lookahead (with personality bias) ---
   const personality = config.personality;
   const damageSpells = affordable.filter(s => {
@@ -333,6 +556,10 @@ export const pickBestSpellForAI = (
   }
 
   if (candidateSpells.length > 0) {
+    // [Phase 1] 获取反制策略
+    const currentStrategy = playerMemoryTracker.detectStrategy();
+    const currentCounter = COUNTER_STRATEGIES[currentStrategy];
+
     // [Phase G-1] Personality-biased scoring
     candidateSpells.sort((a, b) => {
       const spellA = getSpellById(a);
@@ -361,6 +588,16 @@ export const pickBestSpellForAI = (
           if (a.startsWith('thunder')) scoreA += personality.comboFocus * 1.5;
           if (b.startsWith('thunder')) scoreB += personality.comboFocus * 1.5;
         }
+      }
+
+      // [Phase 1] Counter-strategy bonus: prefer elements & mechanics that counter the detected pattern
+      if (currentCounter.bonusScore > 0) {
+        const elementA = getElementType(a);
+        const elementB = getElementType(b);
+        if (currentCounter.preferredElements.includes(elementA)) scoreA += currentCounter.bonusScore;
+        if (currentCounter.preferredElements.includes(elementB)) scoreB += currentCounter.bonusScore;
+        if (spellA.mechanic && currentCounter.preferredMechanics.includes(spellA.mechanic)) scoreA += currentCounter.bonusScore * 0.8;
+        if (spellB.mechanic && currentCounter.preferredMechanics.includes(spellB.mechanic)) scoreB += currentCounter.bonusScore * 0.8;
       }
 
       return scoreB - scoreA;

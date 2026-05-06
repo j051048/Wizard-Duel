@@ -23,6 +23,8 @@ import {
   PHASE_TRANSITION_DELAY, BANNER_WAIT_DELAY, ROUND_TRANSITION_DELAY
 } from '../config/timing';
 import { AnalyticsService } from '../services/AnalyticsService';
+import { playerMemoryTracker } from '../services/ai';
+import { getSpellById } from '../services/gameLogic';
 
 interface UsePlayerActionsDeps {
   duelStateRef: React.MutableRefObject<DuelState | null>;
@@ -91,6 +93,10 @@ export function usePlayerActions({
       wasCountered: false,
       damageDealt: 0,
     });
+
+    // [Phase 1] AI 记忆系统：记录玩家出牌行为
+    const spellInfo = getSpellById(spellId);
+    playerMemoryTracker.recordCardPlayed(spellId, spellInfo.manaCost, state.roundNumber);
 
     return true;
   }, [duelStateRef, phaseRef, isProcessing, enqueue, addMessage, setPlayerCard]);
@@ -250,6 +256,7 @@ export function usePlayerActions({
 
   /** 初始化标准对战 */
   const startDuel = useCallback((playerDeck: SpellType[], _opponentDeck: SpellType[], gameMode: GameMode = 'standard') => {
+    playerMemoryTracker.reset();
     const initialState = createInitialDuelState(playerDeck || [], gameMode);
     setDuelState(initialState);
     setPhase('MULLIGAN_PHASE');
@@ -258,6 +265,7 @@ export function usePlayerActions({
 
   /** 初始化酒馆对战 */
   const startTavernDuel = useCallback((deck: SpellType[], aiProfile: AIProfile, gameMode: GameMode = 'standard') => {
+    playerMemoryTracker.reset();
     const state = createTavernDuelState(deck, aiProfile, gameMode);
     setDuelState(state);
     setPhase('MULLIGAN_PHASE');
@@ -267,7 +275,8 @@ export function usePlayerActions({
   /** [PVP] 初始化 PVP 对战 (已认证同步版 & P0 Fix) */
   const startPvpDuel = useCallback((p1Deck: SpellType[], p2Deck: SpellType[], role: 'player1' | 'player2', seed?: number) => {
     if (pvpRoleRef) pvpRoleRef.current = role;
-    
+    playerMemoryTracker.reset();
+
     // PVP 模式不再默认 Standard，而是使用 createPvpDuelState 创建完全一致的初始状态
     // 此函数内部会对 p1Deck/p2Deck 进行确定性洗牌并根据 role 分配视角
     const initialState = createPvpDuelState(p1Deck, p2Deck, seed || 0, role);
