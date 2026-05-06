@@ -132,7 +132,7 @@ class RemoteConfigServiceClass {
     }
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('remote_config')
         .select('config, version, updated_at')
         .eq('id', 'game_config')
