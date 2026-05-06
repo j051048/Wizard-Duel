@@ -22,6 +22,7 @@ import { validateCardPlay } from '../services/validation/antiCheat';
 import {
   PHASE_TRANSITION_DELAY, BANNER_WAIT_DELAY, ROUND_TRANSITION_DELAY
 } from '../config/timing';
+import { AnalyticsService } from '../services/AnalyticsService';
 
 interface UsePlayerActionsDeps {
   duelStateRef: React.MutableRefObject<DuelState | null>;
@@ -81,6 +82,16 @@ export function usePlayerActions({
 
     const { newState, commands: engineCommands } = GameRuleEngine.castSpell(state, spellId, 'player', { target });
     enqueue([...engineCommands], `play_${spellId}_${Date.now()}`);
+
+    // 行为分析：追踪出牌
+    AnalyticsService.trackCardPlayed({
+      spellId,
+      manaCost: 0,
+      roundNumber: state.roundNumber,
+      wasCountered: false,
+      damageDealt: 0,
+    });
+
     return true;
   }, [duelStateRef, phaseRef, isProcessing, enqueue, addMessage, setPlayerCard]);
 

@@ -22,6 +22,7 @@ import { BattlePassService } from '../services/BattlePassService';
 import { AchievementService } from '../services/AchievementService';
 import { useToastStore } from '../stores/useToastStore';
 import { audioBridge } from './useAudioManager';
+import { AnalyticsService } from '../services/AnalyticsService';
 
 interface GameLoopState {
   isGameOver: boolean;
@@ -141,6 +142,19 @@ export function useGameEndHandler({
     const user = useUserStore.getState();
     const ui = useUIStore.getState();
     const gs = gameLoopStateRef.current;
+
+    // 行为分析：追踪游戏结束
+    const dState = gs.duelState;
+    if (dState) {
+      AnalyticsService.trackGameEnd({
+        result,
+        totalRounds: dState.roundNumber,
+        durationMs: Date.now() - (dState.rngState?.initialSeed || Date.now()),
+        playerHP: dState.playerHP,
+        opponentHP: dState.opponentHP,
+        deckElementDistribution: {},
+      });
+    }
 
     onGameEndFeedbackRef.current(result);
 
