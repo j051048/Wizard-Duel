@@ -119,22 +119,22 @@ export const CollectionBook: React.FC<CollectionBookProps> = ({ onBack }) => {
     : 1;
 
   return (
-    <div className="relative w-full h-full bg-slate-950 overflow-hidden flex flex-col">
+    <div className="relative w-full h-full bg-slate-950 overflow-hidden flex flex-col safe-area-all">
       {/* Header */}
-      <div className="relative z-10 bg-slate-900/80 backdrop-blur-md border-b border-white/10 p-4 shadow-lg">
+      <div className="relative z-10 bg-slate-900/80 backdrop-blur-md border-b border-white/10 p-4 shadow-lg safe-area-top">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => { HapticService.light(); onBack(); }}
               aria-label="返回大厅"
-              className="p-2 hover:bg-white/10 rounded-full transition-colors text-white"
+              className="p-2 hover:bg-white/10 rounded-full transition-colors text-white touch-target"
             >
               <ArrowLeft size={24} />
             </button>
-            <h1 className="text-2xl font-wizard text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500">
+            <h1 className="text-xl md:text-2xl font-wizard text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500">
               法术典籍
             </h1>
-            <div className="px-3 py-1 bg-slate-800 rounded-full border border-slate-700 text-xs font-mono text-slate-400">
+            <div className="px-3 py-1 bg-slate-800 rounded-full border border-slate-700 text-[10px] md:text-xs font-mono text-slate-400">
               收集进度: <span className="text-amber-400">{ownedCount}</span> / {totalCount}
             </div>
           </div>
@@ -251,7 +251,7 @@ export const CollectionBook: React.FC<CollectionBookProps> = ({ onBack }) => {
         </div>
 
         {/* Main Grid */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-950 relative">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-950 relative safe-area-bottom">
             {/* Mobile Filters - collapsible strip */}
             <div className="md:hidden mb-3 space-y-2">
               <div className="relative">
