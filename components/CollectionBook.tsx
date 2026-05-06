@@ -112,9 +112,6 @@ export const CollectionBook: React.FC<CollectionBookProps> = ({ onBack }) => {
     HapticService.success();
   };
 
-  const nextMilestone = milestones.find(m => !m.claimed);
-  const prevMilestone = [...milestones].reverse().find(m => m.claimed || collectionPercent >= m.threshold);
-
   return (
     <div className="relative w-full h-full bg-slate-950 overflow-hidden flex flex-col safe-area-all">
       {/* Header */}
