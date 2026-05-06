@@ -115,6 +115,12 @@ export interface DuelState {
   /** [P3-2] 英雄技能选择 */
   selectedHeroSkill?: string;
   opponentSelectedHeroSkill?: string;
+
+  /** [Phase 3] 时间扭曲：获得额外回合的玩家 */
+  extraTurnPlayer?: 'player' | 'opponent';
+  /** [Phase 3] 法力电池：永久最大法力加成 */
+  playerMaxManaBonus?: number;
+  opponentMaxManaBonus?: number;
 }
 
 export type ActionType =
@@ -138,7 +144,11 @@ export type ActionType =
   | 'HEAL'               // 吸血/直接治疗
   | 'DISCOVER'           // 发现：从3张卡中选择1张
   | 'TRANSFORM_MINION'   // 变形：将随从变形为指定形态
-  | 'CLEAVE';            // 横扫：对相邻随从造成伤害
+  | 'CLEAVE'             // 横扫：对相邻随从造成伤害
+  // [Phase 3] 新机制
+  | 'EXTRA_TURN'         // 时间扭曲：获得额外回合
+  | 'COPY_SPELL'         // 镜像：复制对手上一个法术
+  | 'MANA_RAMP';         // 法力电池：永久+1最大法力
 
 export interface GameAction {
   type: ActionType;

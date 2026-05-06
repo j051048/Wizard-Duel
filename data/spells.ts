@@ -518,10 +518,41 @@ export const SPELLS: Spell[] = [
     color: 'text-purple-400', borderColor: 'border-purple-400', shadowColor: 'rgba(167,139,250,0.5)',
     artSrc: '/cards/dual_ice_vine.webp',
 }),
+
+  // ============================================================
+  // [Phase 3] Expansion 3: 新机制卡牌
+  // ============================================================
+
+  // --- 时间扭曲：额外回合 ---
+  defineSpell({
+    id: 'time_warp' as SpellType, name: '时间扭曲', manaCost: 8, damage: 0, rarity: 'legendary', mechanic: 'extra_turn', cardSet: 'expansion_3',
+    emoji: '⏳', artSrc: '/cards/time_warp.webp',
+    color: 'text-indigo-400', borderColor: 'border-indigo-400', shadowColor: 'rgba(129,140,248,0.5)',
+    description: '获得一个额外回合，但下回合跳过抽牌。',
+    shortDesc: '额外回合',
+  }),
+
+  // --- 镜像：复制对手上一个法术 ---
+  defineSpell({
+    id: 'mirror_image' as SpellType, name: '镜像', manaCost: 3, damage: 0, rarity: 'rare', mechanic: 'copy_spell', cardSet: 'expansion_3',
+    emoji: '🪞', artSrc: '/cards/mirror_image.webp',
+    color: 'text-cyan-300', borderColor: 'border-cyan-300', shadowColor: 'rgba(103,232,249,0.5)',
+    description: '复制对手上一个法术并施放。',
+    shortDesc: '复制法术',
+  }),
+
+  // --- 法力电池：永久+1最大法力 ---
+  defineSpell({
+    id: 'mana_battery' as SpellType, name: '法力电池', manaCost: 2, damage: 0, rarity: 'rare', mechanic: 'mana_ramp', cardSet: 'expansion_3',
+    emoji: '🔋', artSrc: '/cards/mana_battery.webp',
+    color: 'text-blue-300', borderColor: 'border-blue-300', shadowColor: 'rgba(147,197,253,0.5)',
+    description: '永久+1最大法力值。',
+    shortDesc: '+1最大法力',
+  }),
 ];
 
-export const STANDARD_SETS: CardSet[] = ['core', 'classic', 'tournament', 'expansion_1', 'expansion_2'];
-export const WILD_SETS: CardSet[] = ['core', 'classic', 'tournament', 'legacy', 'expansion_1', 'expansion_2'];
+export const STANDARD_SETS: CardSet[] = ['core', 'classic', 'tournament', 'expansion_1', 'expansion_2', 'expansion_3'];
+export const WILD_SETS: CardSet[] = ['core', 'classic', 'tournament', 'legacy', 'expansion_1', 'expansion_2', 'expansion_3'];
 
 export const PRESET_DECKS: { name: string; cards: SpellType[]; description: string; style: 'aggro' | 'control' | 'combo' }[] = [
   {
@@ -613,6 +644,9 @@ export const getMechanicName = (mechanic: string): string => {
     discover: '发现',
     transform: '变形',
     cleave: '横扫',
+    extra_turn: '时间扭曲',
+    copy_spell: '法术复制',
+    mana_ramp: '法力加速',
   };
   return names[mechanic] || mechanic;
 };

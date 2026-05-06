@@ -295,6 +295,34 @@ const cleave: MechanicHandler = (state, caster, spell, countered) => {
   }];
 };
 
+// [Phase 3] 额外回合：设置 extraTurnPlayer 标志
+const extraTurn: MechanicHandler = (_state, caster, _spell, countered) => {
+  if (countered) return [];
+  return [
+    { type: 'EXTRA_TURN', target: caster, description: `⏳ ${caster === 'player' ? '你' : '对手'}获得了额外回合！` },
+  ];
+};
+
+// [Phase 3] 法术复制：复制对手上一个法术并施放
+const copySpell: MechanicHandler = (state, caster, _spell, countered) => {
+  if (countered) return [];
+  const lastSpell = caster === 'player' ? state.opponentLastSpell : state.playerLastSpell;
+  if (!lastSpell || lastSpell === 'skip') {
+    return [{ type: 'MESSAGE', target: 'system', description: '🪞 镜像失败：对手没有可用的法术记录。' }];
+  }
+  return [
+    { type: 'COPY_SPELL', target: caster, value: lastSpell, description: `🪞 ${caster === 'player' ? '你' : '对手'}复制了「${lastSpell}」！` },
+  ];
+};
+
+// [Phase 3] 法力加速：永久+1最大法力值
+const manaRamp: MechanicHandler = (_state, caster, _spell, countered) => {
+  if (countered) return [];
+  return [
+    { type: 'MANA_RAMP', target: caster, value: 1, description: `🔋 ${caster === 'player' ? '你' : '对手'}永久+1最大法力值！` },
+  ];
+};
+
 // [P3-1] 秘密机制 handler：打出秘密牌时，将秘密挂载到 caster 的 secrets 数组
 const secret: MechanicHandler = (state, caster, spell, countered) => {
   if (countered) return [];
@@ -334,6 +362,10 @@ export const MECHANIC_DEFINITIONS: Record<string, MechanicHandler> = {
   transform,
   cleave,
   secret,
+  // [Phase 3] 新机制
+  extra_turn: extraTurn,
+  copy_spell: copySpell,
+  mana_ramp: manaRamp,
 };
 
 /**

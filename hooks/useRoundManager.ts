@@ -60,20 +60,38 @@ export function useRoundManager({ enqueue, showTurnBanner, pvpRoleRef }: UseRoun
       });
       commands.push({ type: 'SET_PHASE', payload: 'ROUND_RESET' });
     } else {
-      // 4. Start Player Turn or Wait in PVP
-      // [PVP Fix] 如果是后手玩家 (player2)，新回合开始时也是等待对手
-      const isPlayer2 = pvpRoleRef?.current === 'player2';
-      
-      if (isPlayer2) {
-        // 后手逻辑：进入等待
-        commands.push({ type: 'EXECUTE_LOGIC', payload: () => showTurnBanner('opponent'), delay: PHASE_TRANSITION_DELAY });
-        commands.push({ type: 'WAIT', payload: null, delay: BANNER_WAIT_DELAY });
-        commands.push({ type: 'SET_PHASE', payload: 'WAITING_FOR_OPPONENT' });
+      // [Phase 3] 额外回合检查：如果 extraTurnPlayer 被设置，给该玩家额外行动机会
+      const extraTurn = newState.extraTurnPlayer;
+      if (extraTurn) {
+        // 清除 extraTurnPlayer 标志
+        commands.push({ type: 'UPDATE_STATE', payload: { extraTurnPlayer: undefined } as any });
+        if (extraTurn === 'player') {
+          commands.push({ type: 'EXECUTE_LOGIC', payload: () => showTurnBanner('player'), delay: PHASE_TRANSITION_DELAY });
+          commands.push({ type: 'WAIT', payload: null, delay: BANNER_WAIT_DELAY });
+          commands.push({ type: 'SET_PHASE', payload: 'PLAYER_TURN' });
+          commands.push({ type: 'ADD_MESSAGE', payload: '⏳ 时间扭曲！你获得了额外回合！' });
+        } else {
+          commands.push({ type: 'EXECUTE_LOGIC', payload: () => showTurnBanner('opponent'), delay: PHASE_TRANSITION_DELAY });
+          commands.push({ type: 'WAIT', payload: null, delay: BANNER_WAIT_DELAY });
+          commands.push({ type: 'SET_PHASE', payload: 'OPPONENT_TURN' });
+          commands.push({ type: 'ADD_MESSAGE', payload: '⏳ 对手获得了额外回合！' });
+        }
       } else {
-        // 先手/PVE逻辑：进入玩家回合
-        commands.push({ type: 'EXECUTE_LOGIC', payload: () => showTurnBanner('player'), delay: PHASE_TRANSITION_DELAY });
-        commands.push({ type: 'WAIT', payload: null, delay: BANNER_WAIT_DELAY });
-        commands.push({ type: 'SET_PHASE', payload: 'PLAYER_TURN' });
+        // 4. Normal: Start Player Turn or Wait in PVP
+        // [PVP Fix] 如果是后手玩家 (player2)，新回合开始时也是等待对手
+        const isPlayer2 = pvpRoleRef?.current === 'player2';
+
+        if (isPlayer2) {
+          // 后手逻辑：进入等待
+          commands.push({ type: 'EXECUTE_LOGIC', payload: () => showTurnBanner('opponent'), delay: PHASE_TRANSITION_DELAY });
+          commands.push({ type: 'WAIT', payload: null, delay: BANNER_WAIT_DELAY });
+          commands.push({ type: 'SET_PHASE', payload: 'WAITING_FOR_OPPONENT' });
+        } else {
+          // 先手/PVE逻辑：进入玩家回合
+          commands.push({ type: 'EXECUTE_LOGIC', payload: () => showTurnBanner('player'), delay: PHASE_TRANSITION_DELAY });
+          commands.push({ type: 'WAIT', payload: null, delay: BANNER_WAIT_DELAY });
+          commands.push({ type: 'SET_PHASE', payload: 'PLAYER_TURN' });
+        }
       }
 
       commands.push({

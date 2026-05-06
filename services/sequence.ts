@@ -1,4 +1,4 @@
-import { DuelState, GameAction, GameCommand, ActionType, TriggerTiming, GameTrigger } from '../types';
+import { DuelState, GameAction, GameCommand, ActionType, TriggerTiming, GameTrigger, SpellType } from '../types';
 import type { Minion } from '../types/card';
 import { GAME_CONFIG } from '../constants';
 import { getGameRNG } from '../utils/seededRandom';
@@ -377,6 +377,44 @@ export class GameSequenceExecutor {
               else newState.playerMinions = minions;
           }
           break;
+      }
+
+      // [Phase 3] 额外回合：设置 extraTurnPlayer 标志
+      case 'EXTRA_TURN': {
+        const target = action.target as 'player' | 'opponent';
+        newState.extraTurnPlayer = target;
+        break;
+      }
+
+      // [Phase 3] 法术复制：复制对手上一个法术并施放
+      case 'COPY_SPELL': {
+        const caster = action.target as 'player' | 'opponent';
+        const spellToCopy = action.value as string;
+        if (!spellToCopy) break;
+        // 将复制的法术加入手牌（在游戏逻辑层处理实际施放）
+        if (caster === 'player') {
+          newState.playerHand = [...newState.playerHand, spellToCopy as SpellType];
+        } else {
+          newState.opponentHand = [...newState.opponentHand, spellToCopy as SpellType];
+          newState.opponentHandSize = newState.opponentHand.length;
+        }
+        break;
+      }
+
+      // [Phase 3] 法力加速：永久+1最大法力值
+      case 'MANA_RAMP': {
+        const target = action.target as 'player' | 'opponent';
+        const amount = (action.value as number) || 1;
+        if (target === 'player') {
+          newState.playerMaxManaBonus = (newState.playerMaxManaBonus || 0) + amount;
+          newState.playerMaxMana = Math.min(10, newState.playerMaxMana + amount);
+          newState.playerMana = Math.min(newState.playerMaxMana, newState.playerMana + amount);
+        } else {
+          newState.opponentMaxManaBonus = (newState.opponentMaxManaBonus || 0) + amount;
+          newState.opponentMaxMana = Math.min(10, newState.opponentMaxMana + amount);
+          newState.opponentMana = Math.min(newState.opponentMaxMana, newState.opponentMana + amount);
+        }
+        break;
       }
     }
 
