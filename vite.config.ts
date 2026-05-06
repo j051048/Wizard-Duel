@@ -141,9 +141,6 @@ export default defineConfig(({ mode }) => {
                 if (id.includes('lucide-react')) {
                   return 'vendor-lucide';
                 }
-                if (id.includes('zustand')) {
-                  return 'vendor-zustand';
-                }
               }
               // Game logic services
               if (id.includes('/services/gameLogic') ||
