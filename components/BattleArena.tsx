@@ -400,12 +400,21 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   }, [effectMessages, triggerCrit, triggerCounterFlash, addDamageNumber, triggerShake]);
 
   const prevOppCard = useRef<SpellType | null>(null);
+  const prevPlayerCard = useRef<SpellType | null>(null);
   useEffect(() => {
     if (opponentCard && opponentCard !== prevOppCard.current) {
       spawnProjectile('opp');
+      triggerSlam();
     }
     prevOppCard.current = opponentCard;
-  }, [opponentCard, spawnProjectile]);
+  }, [opponentCard, spawnProjectile, triggerSlam]);
+
+  useEffect(() => {
+    if (playerCard && playerCard !== prevPlayerCard.current) {
+      triggerSlam();
+    }
+    prevPlayerCard.current = playerCard;
+  }, [playerCard, triggerSlam]);
 
   useEffect(() => {
     isMounted.current = true;
@@ -686,6 +695,9 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       onPointerMove={handlePointerMove}
     >
+      {/* Slam 冲击闪光 */}
+      {slamFlash && <div className="slam-flash" />}
+
       {/* [P0 Fix A-2] 回合横幅 — 统一由 useTurnManager 驱动 */}
       <TurnBanner type={turnBanner} roundNumber={duelState?.roundNumber || 1} />
 
