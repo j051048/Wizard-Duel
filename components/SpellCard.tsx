@@ -229,14 +229,14 @@ export const SpellCard = memo<SpellCardProps>(({
           {/* Layer 1: Base Card Background & Art (Middle) */}
           <div
                className={`
-               relative bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center
+               relative bg-slate-900/40 rounded-lg overflow-hidden flex items-center justify-center
                border-2 md:border-4 ${rarityStyles.borderClass} ${rarityStyles.glowClass}
                ${canPlay ? 'ring-2 ring-green-500/30 animate-pulse-gentle' : ''}
           `}
                style={{ boxShadow: rarityStyles.borderGlow !== 'none' ? rarityStyles.borderGlow : undefined }}
           >
               {/* Background Gradient */}
-              <div className={`absolute inset-0 bg-gradient-to-b from-slate-800 to-black ${canPlay ? '' : 'opacity-50'}`} />
+              <div className={`absolute inset-0 bg-gradient-to-b from-slate-800 to-black opacity-60`} />
               
               {/* Element Glow */}
                <div
@@ -253,7 +253,6 @@ export const SpellCard = memo<SpellCardProps>(({
                      <img
                       src={spell.artSrc}
                       alt={spell.name}
-                      decoding="async"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       style={{ 
                         imageRendering: 'auto',
