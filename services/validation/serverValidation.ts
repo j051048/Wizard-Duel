@@ -17,6 +17,11 @@ import { PACK_CONFIG } from '../../config/gameConfig';
 // [P0 Fix #6] 生产环境自动关闭 MOCK_MODE
 const MOCK_MODE = import.meta.env.DEV || import.meta.env.VITE_FORCE_MOCK === 'true';
 
+const serverValidationUnavailable = (operation: string) => ({
+  valid: false,
+  reason: `Server validation unavailable for ${operation}`,
+});
+
 // ============ 开包概率安全性 ============
 
 /**
@@ -143,7 +148,7 @@ export const validateCardPlay = async (
     return { valid: true };
   }
   
-  return { valid: true };
+  return serverValidationUnavailable('card play');
 };
 
 /**
@@ -167,7 +172,7 @@ export const validateDamageCalculation = async (
     return { valid: true, calculatedDamage: expectedDamage };
   }
   
-  return { valid: true };
+  return serverValidationUnavailable('damage calculation');
 };
 
 /**
@@ -197,5 +202,5 @@ export const validateGameResult = async (
     return { valid: true, result };
   }
   
-  return { valid: true };
+  return serverValidationUnavailable('game result');
 };

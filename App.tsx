@@ -107,6 +107,13 @@ class LazyLoadErrorBoundary extends Component<{ children: ReactNode }, ErrorBoun
   }
 }
 
+const lazyFallback = (
+  <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950 text-white gap-4">
+    <div className="w-8 h-8 border-2 border-purple-500/30 border-t-purple-400 rounded-full animate-spin" />
+    <p className="text-sm text-gray-400 font-tech">Loading...</p>
+  </div>
+);
+
 
 function App() {
   const { isLowQuality } = useSettingsStore();
@@ -295,7 +302,11 @@ function App() {
   if (uiData.gameState === 'LOGIN') {
     return (
       <>
-        <LoginScreen onLoginComplete={routing.handleLoginComplete} />
+        <LazyLoadErrorBoundary>
+          <React.Suspense fallback={lazyFallback}>
+            <LoginScreen onLoginComplete={routing.handleLoginComplete} />
+          </React.Suspense>
+        </LazyLoadErrorBoundary>
         <ToastContainer toasts={toastData.toasts} onDismiss={toastActions.removeToast} />
       </>
     );
@@ -308,6 +319,8 @@ function App() {
       {isMobileLandscape && <OrientationWarning />}
 
       <main className={`${uiData.gameState === 'LOBBY' ? 'pt-16' : ''} ${(['LOBBY', 'SHOP', 'COLLECTION', 'PROFILE', 'FRIENDS', 'ACHIEVEMENTS'] as string[]).includes(uiData.gameState) ? 'pb-24' : ''}`}>
+        <LazyLoadErrorBoundary>
+        <React.Suspense fallback={lazyFallback}>
 
         {uiData.gameState === 'LOBBY' && (
           <Lobby
@@ -334,14 +347,6 @@ function App() {
             isTavernMode={!!uiData.pendingTavernDuel}
           />
         )}
-
-        <LazyLoadErrorBoundary>
-        <React.Suspense fallback={
-          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950 text-white gap-4">
-            <div className="w-8 h-8 border-2 border-purple-500/30 border-t-purple-400 rounded-full animate-spin" />
-            <p className="text-sm text-gray-400 font-tech">Loading...</p>
-          </div>
-        }>
 
           {uiData.gameState === 'TAVERN' && (
             <TavernMode

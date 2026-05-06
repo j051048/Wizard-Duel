@@ -7,6 +7,7 @@ import viteCompression from 'vite-plugin-compression';
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
+    const enablePrecompression = env.VITE_PRECOMPRESS === 'true';
     return {
       server: {
         port: 3000,
@@ -15,12 +16,15 @@ export default defineConfig(({ mode }) => {
       plugins: [
         tailwindcss(),
         react(),
-        // [Phase F-2] Brotli + Gzip 压缩
-        viteCompression({ algorithm: 'brotliCompress', ext: '.br' }),
-        viteCompression({ algorithm: 'gzip' }),
+        // Optional static precompression; most hosts handle this at the edge.
+        enablePrecompression && viteCompression({
+          algorithm: 'gzip',
+          threshold: 10 * 1024,
+          filter: /\.(js|mjs|json|css|html|svg)$/i,
+        }),
         VitePWA({
           registerType: 'autoUpdate',
-          includeAssets: ['favicon.png'],
+          includeAssets: ['favicon.png', 'mask-icon.svg'],
           manifest: {
             name: 'Wizard Duel: Arcane Bet',
             short_name: 'WizardDuel',
@@ -52,8 +56,9 @@ export default defineConfig(({ mode }) => {
             skipWaiting: true,
             clientsClaim: true,
             cleanupOutdatedCaches: true,
-            maximumFileSizeToCacheInBytes: 15 * 1024 * 1024, // 15 MiB
-            globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'], // 移除了 mp3，不在构建时预缓存
+            maximumFileSizeToCacheInBytes: 1024 * 1024,
+            globPatterns: ['**/*.{js,css,html,ico,svg,webmanifest}'],
+            globIgnores: ['**/*.map', '**/*.br', '**/*.gz'],
             navigateFallback: 'index.html',
             runtimeCaching: [
               {
@@ -67,6 +72,21 @@ export default defineConfig(({ mode }) => {
                 },
               },
               {
+                urlPattern: ({ request, url }) => request.destination === 'image' ||
+                  /\.(png|svg|webp|jpg|jpeg|gif)$/i.test(url.pathname),
+                handler: 'CacheFirst',
+                options: {
+                  cacheName: 'image-cache',
+                  expiration: {
+                    maxEntries: 250,
+                    maxAgeSeconds: 60 * 60 * 24 * 30
+                  },
+                  cacheableResponse: {
+                    statuses: [0, 200]
+                  }
+                }
+              },
+              {
                 // 运行时缓存音频文件
                 urlPattern: ({ request, url }) => request.destination === 'audio' || url.pathname.endsWith('.mp3') || url.pathname.endsWith('.webm'),
                 handler: 'CacheFirst',
@@ -77,6 +97,9 @@ export default defineConfig(({ mode }) => {
                     maxAgeSeconds: 60 * 60 * 24 * 30 // 30 Days
                   },
                   rangeRequests: true, // 支持音频拖动
+                  cacheableResponse: {
+                    statuses: [0, 200]
+                  }
                 }
               },
               {
