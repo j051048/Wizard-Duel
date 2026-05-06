@@ -1,1 +1,41 @@
-{"name":"Wizard Duel: Arcane Bet","short_name":"Wizard Duel","description":"巫师对决 - 策略卡牌对战游戏","start_url":"/","display":"standalone","orientation":"portrait","background_color":"#020617","theme_color":"#7c3aed","icons":[{"src":"/icons/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},{"src":"/icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}],"categories":["games","entertainment"],"lang":"zh-CN"}
+{
+  "id": "/",
+  "name": "Wizard Duel: Arcane Bet",
+  "short_name": "Wizard Duel",
+  "description": "元素魔法卡牌对战游戏 — 收集火冰雷藤岩五大元素，实时 PvP 对战，赢取链上奖励",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#020617",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "开始对战",
+      "short_name": "对战",
+      "url": "/?action=duel",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "卡牌收藏",
+      "short_name": "收藏",
+      "url": "/?action=collection",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "categories": ["games", "entertainment"],
+  "lang": "zh-CN"
+}

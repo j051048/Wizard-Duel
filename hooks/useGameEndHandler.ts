@@ -99,7 +99,9 @@ export function useGameEndHandler({
           console.log(`[Battle] Supabase RPC 成功: score=${rpcResult.new_score}, rank=${rpcResult.new_rank}`);
         }
 
-        user.loadUserData(user.activeAddress).catch(() => {});
+        user.loadUserData(user.activeAddress).catch(err =>
+          console.warn('[BattleEnd] Failed to refresh user data after Supabase save:', err)
+        );
         return;
       }
     } catch (supabaseErr) {
@@ -218,7 +220,9 @@ export function useGameEndHandler({
 
     isProcessingRef.current = false;
 
-    saveToSupabase(result, scoreDelta, opponentHP).catch(() => {});
+    saveToSupabase(result, scoreDelta, opponentHP).catch(err =>
+      console.warn('[BattleEnd] Background Supabase save failed (local state preserved):', err)
+    );
   }, [saveToSupabase]);
 
   useEffect(() => {

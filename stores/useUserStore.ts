@@ -120,10 +120,10 @@ export const useUserStore = create<UserState>((set, get) => ({
         addUserPacks(supabaseUserId, packId, count).catch(err =>
           console.warn('Supabase pack add failed:', err)
         );
-      }).catch(() => { /* ignore */ });
+      }).catch(err => console.warn('[Store] Supabase module load failed (packs will sync on next login):', err));
     }
   },
-  
+
   consumePack: (packId) => {
     const { packInventory, supabaseUserId } = get();
     if (!packInventory[packId] || packInventory[packId] <= 0) return false;
@@ -137,7 +137,7 @@ export const useUserStore = create<UserState>((set, get) => ({
         consumeUserPack(supabaseUserId, packId).catch(err =>
           console.warn('Supabase pack consume failed:', err)
         );
-      }).catch(() => { /* ignore */ });
+      }).catch(err => console.warn('[Store] Supabase module load failed:', err));
     }
     return true;
   },

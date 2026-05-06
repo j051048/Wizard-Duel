@@ -24,8 +24,8 @@ export default defineConfig(({ mode }) => {
           manifest: {
             name: 'Wizard Duel: Arcane Bet',
             short_name: 'WizardDuel',
-            description: '元素魔法对战游戏',
-            theme_color: '#0f172a',
+            description: '元素魔法卡牌对战游戏 — 收集火冰雷藤岩五大元素，实时 PvP 对战，赢取链上奖励',
+            theme_color: '#7c3aed',
             background_color: '#0f172a',
             display: 'standalone',
             orientation: 'portrait',
