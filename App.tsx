@@ -50,13 +50,13 @@ const RankedLadder = React.lazy(() => import('./components/RankedLadder'));
 const FriendsPage = React.lazy(() => import('./components/social/FriendsPage'));
 
 // Immediate Components
-import { ResultsModal } from './components/ResultsModal';
+const ResultsModal = React.lazy(() => import('./components/ResultsModal').then(m => ({ default: m.ResultsModal })));
 import { LoadingScreen } from './components/LoadingScreen';
-import { Lobby } from './components/Lobby';
-import { ModeSelect } from './components/ModeSelect';
-import { MatchmakingAnimation } from './components/MatchmakingAnimation';
-import { LoginScreen } from './components/LoginScreen';
-import { MulliganScreen } from './components/MulliganScreen';
+const Lobby = React.lazy(() => import('./components/Lobby').then(m => ({ default: m.Lobby })));
+const ModeSelect = React.lazy(() => import('./components/ModeSelect').then(m => ({ default: m.ModeSelect })));
+const MatchmakingAnimation = React.lazy(() => import('./components/MatchmakingAnimation').then(m => ({ default: m.MatchmakingAnimation })));
+const LoginScreen = React.lazy(() => import('./components/LoginScreen').then(m => ({ default: m.LoginScreen })));
+const MulliganScreen = React.lazy(() => import('./components/MulliganScreen').then(m => ({ default: m.MulliganScreen })));
 import { ToastContainer } from './components/ui/Toast';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { TutorialOverlay } from './components/battle/TutorialOverlay';

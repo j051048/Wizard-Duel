@@ -295,16 +295,16 @@ export const CollectionBook: React.FC<CollectionBookProps> = ({ onBack }) => {
                 )}
               </div>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-8 pb-20">
+            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-10 pb-20">
                 {filteredSpells.map(spell => {
                     const isOwned = inventory.includes(spell.id);
                     return (
                         <motion.div 
                           key={spell.id}
                           initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: isOwned ? 1 : 0.5, scale: 1 }}
-                          whileHover={{ scale: 1.05, opacity: isOwned ? 1 : 0.7, zIndex: 10 }}
-                          className={`relative cursor-pointer group ${!isOwned ? 'grayscale' : ''}`}
+                          animate={{ opacity: isOwned ? 1 : 0.85, scale: 1 }}
+                          whileHover={{ scale: 1.05, opacity: isOwned ? 1 : 0.95, zIndex: 10 }}
+                          className={`relative cursor-pointer group ${!isOwned ? 'grayscale-[40%]' : ''}`}
                           onClick={() => {
                               setSelectedSpell(spell);
                               HapticService.light();
@@ -315,8 +315,8 @@ export const CollectionBook: React.FC<CollectionBookProps> = ({ onBack }) => {
                             </div>
                             
                             {!isOwned && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-xl">
-                                    <div className="px-3 py-1 bg-black/80 backdrop-blur rounded border border-white/20 text-xs text-gray-400 font-mono">
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/10 rounded-xl">
+                                    <div className="px-3 py-1 bg-black/40 backdrop-blur rounded border border-white/20 text-xs text-gray-400 font-mono">
                                         未拥有
                                     </div>
                                 </div>
