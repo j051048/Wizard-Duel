@@ -150,7 +150,7 @@ export const Lobby: React.FC<LobbyProps> = ({
       )}
 
       {/* CENTER STAGE: DECK CAROUSEL */}
-      <div className={`relative z-10 flex-1 flex flex-col items-center justify-center ${isMobile ? 'mt-0' : '-mt-10'}`}>
+      <div className={`relative z-10 flex-auto min-h-fit flex flex-col items-center justify-center py-4 ${isMobile ? 'mt-0' : '-mt-10'}`}>
 
          {/* Introduction / Season Text — B-5: 标题模糊渐入 */}
          <div className="text-center mb-6 lobby-title-enter">

@@ -119,7 +119,7 @@ export const CollectionBook: React.FC<CollectionBookProps> = ({ onBack }) => {
     : 1;
 
   return (
-    <div className="fixed inset-0 bg-slate-950 z-50 overflow-hidden flex flex-col">
+    <div className="relative w-full h-full bg-slate-950 overflow-hidden flex flex-col">
       {/* Header */}
       <div className="relative z-10 bg-slate-900/80 backdrop-blur-md border-b border-white/10 p-4 shadow-lg">
         <div className="flex items-center justify-between">

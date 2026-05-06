@@ -69,7 +69,7 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({
   const rankStyle = RANK_COLORS[userRank] || RANK_COLORS.Iron;
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-b from-slate-950 via-indigo-950/50 to-slate-950 z-50 overflow-y-auto">
+    <div className="relative w-full h-full bg-gradient-to-b from-slate-950 via-indigo-950/50 to-slate-950">
       {/* Header */}
       <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/5 safe-area-top">
         <div className="flex items-center justify-between px-4 py-3">
@@ -82,7 +82,7 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({
         </div>
       </div>
 
-      <div className={`max-w-2xl mx-auto ${isMobile ? 'px-4 pb-24' : 'px-6 pb-12'} pt-6 space-y-6`}>
+      <div className={`max-w-2xl mx-auto ${isMobile ? 'px-4 pb-8' : 'px-6 pb-12'} pt-6 space-y-6`}>
         
         <ProfileHeader
           displayName={displayName}

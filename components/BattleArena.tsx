@@ -232,8 +232,12 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     triggerCrit,
     triggerCounterFlash,
     triggerShake,
+    triggerSlowMotion,
+    triggerSlam,
     spawnProjectile,
     shakeClass,
+    slowMoClass,
+    slamFlash,
     updateDragTrail,
   } = useBattleAnimations(isLowQuality);
 
@@ -675,6 +679,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       className={`
       fixed inset-0 w-full h-full bg-slate-950 no-select flex flex-col z-40 overflow-hidden
             ${shakeClass}
+      ${slowMoClass}
       ${isPlayerTurnGlow ? 'ring-4 ring-amber-500/30 ring-inset' : ''}
       ${isGameOver ? 'bullet-time' : ''}
     `}

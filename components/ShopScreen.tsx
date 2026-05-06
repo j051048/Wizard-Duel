@@ -259,7 +259,7 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({ onBack }) => {
   const products = ShopService.getProducts(activeTab === 'packs' ? 'pack' : 'bundle');
 
   return (
-    <div className="min-h-screen bg-slate-950 pb-20 pt-20 px-4 animate-in fade-in">
+    <div className="min-h-full bg-slate-950 pt-20 px-4 animate-in fade-in">
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 bg-slate-900/80 backdrop-blur-md z-40 p-4 border-b border-white/10 flex items-center justify-between safe-area-top">
         <button onClick={onBack} aria-label="返回大厅" className="p-2 hover:bg-white/10 rounded-full transition-colors">

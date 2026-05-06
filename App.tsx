@@ -307,7 +307,7 @@ function App() {
 
       {isMobileLandscape && <OrientationWarning />}
 
-      <main className={uiData.gameState === 'LOBBY' ? 'pt-16' : ''}>
+      <main className={`${uiData.gameState === 'LOBBY' ? 'pt-16' : ''} ${(['LOBBY', 'SHOP', 'COLLECTION', 'PROFILE', 'FRIENDS', 'ACHIEVEMENTS'] as string[]).includes(uiData.gameState) ? 'pb-24' : ''}`}>
 
         {uiData.gameState === 'LOBBY' && (
           <Lobby

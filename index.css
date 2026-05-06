@@ -488,6 +488,51 @@
     }
 }
 
+/* ── 致命慢镜头效果 ── */
+.slow-mo-active {
+  animation: slowMoZoom 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  filter: contrast(1.15) saturate(1.2);
+  z-index: 100;
+}
+@keyframes slowMoZoom {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.06); }
+  70% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+/* ── 卡牌 slam 冲击闪白 ── */
+.slam-flash {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 70%);
+  pointer-events: none;
+  z-index: 90;
+  animation: slamFlash 0.15s ease-out forwards;
+}
+@keyframes slamFlash {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ── 方向性震动 ── */
+.shake-dir-up {
+  --shake-dir-x: 0;
+  --shake-dir-y: -1;
+}
+.shake-dir-down {
+  --shake-dir-x: 0;
+  --shake-dir-y: 1;
+}
+.shake-dir-left {
+  --shake-dir-x: -1;
+  --shake-dir-y: 0;
+}
+.shake-dir-right {
+  --shake-dir-x: 1;
+  --shake-dir-y: 0;
+}
+
 /* --- Mobile Adaptation Fixes --- */
 @media (max-width: 375px) {
     .spell-card-container {

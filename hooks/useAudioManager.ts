@@ -11,6 +11,7 @@
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { SpellType } from '../types';
+import { SFX_DEFS, LEGACY_SFX_MAP, randRange } from '../config/sfxRegistry';
 
 // 音效配置
 // 使用单例管理 AudioContext 以防止 iOS 崩溃
@@ -269,7 +270,7 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
     const tick = (now: number) => {
       const elapsed = now - startTime;
       const t = Math.min(elapsed / duration, 1);
-      audio.volume = startVol * (1 - t); // 线性衰减
+      audio.volume = startVol * (1 - t);
       if (t < 1) {
         requestAnimationFrame(tick);
       } else {
@@ -279,24 +280,43 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
     requestAnimationFrame(tick);
   }, []);
 
-  // 播放 BGM
+  // 平滑 BGM 淡入（RAF 驱动）
+  const fadeInBgm = useCallback((audio: HTMLAudioElement, targetVol: number, duration: number = 800) => {
+    audio.volume = 0;
+    const startTime = performance.now();
+    const tick = (now: number) => {
+      const elapsed = now - startTime;
+      const t = Math.min(elapsed / duration, 1);
+      // ease-out 曲线，开头快后面慢
+      const eased = 1 - (1 - t) * (1 - t);
+      audio.volume = targetVol * eased;
+      if (t < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, []);
+
+  // 播放 BGM（支持平滑交叉淡入淡出）
   const playBgm = useCallback((track: 'lobby' | 'battle') => {
     const src = resolveSrc(AUDIO_CONFIG.bgm[track]);
     if (!src) return;
 
+    const targetVol = isMuted ? 0 : bgmVolume;
+
     try {
-      // [P4-6] 平滑淡出当前 BGM
-      if (bgmRef.current) {
-        fadeOutBgm(bgmRef.current);
-      }
+      const prevBgm = bgmRef.current;
 
-      // 创建新BGM — preload='metadata' 只下载帧头，触发 play 时才拉流
-      bgmRef.current = new Audio(src);
-      bgmRef.current.preload = 'metadata';
-      bgmRef.current.loop = true;
-      bgmRef.current.volume = isMuted ? 0 : bgmVolume;
+      // 创建新BGM
+      const newBgm = new Audio(src);
+      newBgm.preload = 'metadata';
+      newBgm.loop = true;
+      bgmRef.current = newBgm;
 
-      bgmRef.current.play().catch(() => {
+      newBgm.play().then(() => {
+        // 新 BGM 淡入
+        if (!isMuted) fadeInBgm(newBgm, targetVol, 800);
+        // 旧 BGM 淡出
+        if (prevBgm) fadeOutBgm(prevBgm, 600);
+      }).catch(() => {
         setIsAudioBlocked(true);
         console.log('BGM autoplay blocked, waiting for user interaction');
       });
@@ -305,7 +325,7 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
     } catch (e) {
       console.warn('Failed to play BGM:', e);
     }
-  }, [isMuted, bgmVolume, fadeOutBgm]);
+  }, [isMuted, bgmVolume, fadeOutBgm, fadeInBgm]);
 
   // 停止 BGM（平滑淡出）
   const stopBgm = useCallback(() => {
@@ -315,20 +335,43 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
     }
   }, [fadeOutBgm]);
 
-  // 播放音效（带冷却、优先级、rate/volume 覆盖）
+  // 播放音效（带冷却、优先级、rate/volume 覆盖、变体随机化）
   const playSfx = useCallback((effect: string, overrides?: SfxOverrides) => {
     if (isMuted) return;
 
-    // 检查冷却
-    if (isOnCooldown(effect)) {
-      return; // 静默忽略，防止音效重叠
+    // 向后兼容：旧 key → 新 registry key
+    const registryKey = LEGACY_SFX_MAP[effect] || effect;
+    const def = SFX_DEFS[registryKey];
+
+    if (def) {
+      // ── 新注册表路径：变体随机化 + 范围随机 rate/volume ──
+      if (isOnCooldown(registryKey)) return;
+      if (activeSfxCountRef.current >= MAX_CONCURRENT_SFX && def.priority < 5) return;
+
+      const variantIdx = Math.floor(Math.random() * def.variants.length);
+      const src = def.variants[variantIdx];
+      if (!src) return;
+
+      try {
+        const audio = getAudioInstance(src);
+        if (audio) {
+          audio.currentTime = 0;
+          audio.volume = sfxVolume * (overrides?.volume ?? randRange(def.volume));
+          audio.playbackRate = overrides?.rate ?? randRange(def.rate);
+          audio.play().catch(() => {});
+          activeSfxCountRef.current++;
+          setCooldown(registryKey);
+        }
+      } catch (e) {
+        console.warn('Failed to play SFX:', e);
+      }
+      return;
     }
 
-    // 检查同时播放数量限制
+    // ── 回退：旧 AUDIO_CONFIG 路径（保持向后兼容）──
+    if (isOnCooldown(effect)) return;
     const priority = SFX_PRIORITY[effect] || 1;
-    if (activeSfxCountRef.current >= MAX_CONCURRENT_SFX && priority < 5) {
-      return; // 低优先级音效被跳过
-    }
+    if (activeSfxCountRef.current >= MAX_CONCURRENT_SFX && priority < 5) return;
 
     const mapping: SfxMapping | undefined = (AUDIO_CONFIG.sfx as any)[effect];
     if (!mapping) return;
@@ -339,12 +382,10 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
     try {
       const audio = getAudioInstance(src);
       if (audio) {
-        // [P4-6] ring buffer 已处理重叠，直接播放
         audio.currentTime = 0;
         audio.volume = sfxVolume * (overrides?.volume ?? mapping.volume ?? 1);
         audio.playbackRate = overrides?.rate ?? mapping.rate ?? 1;
         audio.play().catch(() => {});
-
         activeSfxCountRef.current++;
         setCooldown(effect);
       }
@@ -396,8 +437,35 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
     }
   }, [isMuted, sfxVolume, getAudioInstance, isOnCooldown, setCooldown]);
 
-  // Dynamic BGM: adjust playback rate/volume based on battle state
+  // Dynamic BGM: RAF 平滑过渡 playbackRate/volume
   const currentBgmStateRef = useRef<'neutral' | 'advantage' | 'danger' | 'lethal'>('neutral');
+  const bgmTransitionRef = useRef<{ startTime: number; duration: number; fromRate: number; toRate: number; fromVol: number; toVol: number } | null>(null);
+
+  const animateBgmTransition = useCallback((targetRate: number, targetVol: number, duration: number = 1200) => {
+    const audio = bgmRef.current;
+    if (!audio) return;
+
+    bgmTransitionRef.current = {
+      startTime: performance.now(),
+      duration,
+      fromRate: audio.playbackRate,
+      toRate: targetRate,
+      fromVol: audio.volume,
+      toVol: targetVol,
+    };
+
+    const tick = (now: number) => {
+      const tRef = bgmTransitionRef.current;
+      if (!tRef) return;
+      const t = Math.min((now - tRef.startTime) / tRef.duration, 1);
+      const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // easeInOutQuad
+      audio.playbackRate = tRef.fromRate + (tRef.toRate - tRef.fromRate) * eased;
+      audio.volume = tRef.fromVol + (tRef.toVol - tRef.fromVol) * eased;
+      if (t < 1) requestAnimationFrame(tick);
+      else bgmTransitionRef.current = null;
+    };
+    requestAnimationFrame(tick);
+  }, []);
 
   const updateBattleBGM = useCallback((playerHP: number, opponentHP: number, maxHP: number) => {
     if (isMuted || !bgmRef.current) return;
@@ -417,26 +485,21 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
     if (newState === currentBgmStateRef.current) return;
     currentBgmStateRef.current = newState;
 
-    const audio = bgmRef.current;
     switch (newState) {
       case 'danger':
-        audio.playbackRate = 1.1;
-        audio.volume = Math.min(1, bgmVolume * 0.8);
+        animateBgmTransition(1.08, Math.min(1, bgmVolume * 0.8), 1000);
         break;
       case 'lethal':
-        audio.playbackRate = 1.2;
-        audio.volume = Math.min(1, bgmVolume);
+        animateBgmTransition(1.15, Math.min(1, bgmVolume), 800);
         break;
       case 'advantage':
-        audio.playbackRate = 1.0;
-        audio.volume = Math.min(1, bgmVolume * 0.6);
+        animateBgmTransition(1.0, Math.min(1, bgmVolume * 0.6), 1200);
         break;
       default:
-        audio.playbackRate = 1.0;
-        audio.volume = Math.min(1, bgmVolume * 0.5);
+        animateBgmTransition(1.0, Math.min(1, bgmVolume * 0.5), 1500);
         break;
     }
-  }, [isMuted, bgmVolume]);
+  }, [isMuted, bgmVolume, animateBgmTransition]);
 
   // Populate module-level bridge so non-hook consumers can access audio
   useEffect(() => {

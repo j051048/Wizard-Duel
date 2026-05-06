@@ -131,7 +131,7 @@ export const FriendsPage: React.FC<FriendsPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-indigo-950/30 to-slate-950 text-white">
+    <div className="min-h-full bg-gradient-to-b from-slate-950 via-indigo-950/30 to-slate-950 text-white">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-black/50 backdrop-blur-md border-b border-white/10 px-4 py-3 safe-area-top">
         <div className="flex items-center justify-between max-w-2xl mx-auto">

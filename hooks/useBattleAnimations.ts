@@ -71,17 +71,33 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
   const [counterFlashElement, setCounterFlashElement] = useState<string | null>(null);
   const [shakeClass, setShakeClass] = useState('');
   const shakeTimer = useRef<NodeJS.Timeout | null>(null);
+  const [slowMoClass, setSlowMoClass] = useState('');
+  const slowMoTimer = useRef<NodeJS.Timeout | null>(null);
+  const [slamFlash, setSlamFlash] = useState(false);
 
-  const triggerShake = useCallback((type: ParticleType) => {
+  const triggerShake = useCallback((type: ParticleType, dir: 'up' | 'down' | 'left' | 'right' | 'center' = 'center') => {
       if (shakeTimer.current) clearTimeout(shakeTimer.current);
       let className = 'animate-shake-strong';
       let duration = 600;
       if (type === 'rock' || type === 'ice') { className = 'animate-shake-heavy'; duration = 500; }
       else if (type === 'thunder') { className = 'animate-shake-electric'; duration = 300; }
       else if (type === 'poison') { className = 'animate-shake-tremor'; duration = 500; }
-      else if (type === 'default' ) { className = 'animate-shake-gentle'; duration = 400; } 
-      setShakeClass(className);
+      else if (type === 'default' ) { className = 'animate-shake-gentle'; duration = 400; }
+      const dirClass = dir !== 'center' ? ` shake-dir-${dir}` : '';
+      setShakeClass(className + dirClass);
       shakeTimer.current = setTimeout(() => setShakeClass(''), duration);
+  }, []);
+
+  const triggerSlowMotion = useCallback((duration: number = 1200) => {
+    if (isLowQuality) return;
+    if (slowMoTimer.current) clearTimeout(slowMoTimer.current);
+    setSlowMoClass('slow-mo-active');
+    slowMoTimer.current = setTimeout(() => setSlowMoClass(''), duration);
+  }, [isLowQuality]);
+
+  const triggerSlam = useCallback(() => {
+    setSlamFlash(true);
+    setTimeout(() => setSlamFlash(false), 150);
   }, []);
 
   /**
@@ -176,7 +192,16 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
     const x = 50 + (Math.random() - 0.5) * 15;
     const y = isPlayer ? 70 : 30;
     spawnParticles(x, y, isCrit ? 40 : (tier === 'heavy' ? 30 : 20), type);
-  }, [addFloatingText, spawnParticles, triggerHitStop]);
+
+    // 方向性震动：受击方向 = 被打方相反方向
+    const dir = isPlayer ? 'down' : 'up';
+    triggerShake(type, dir);
+
+    // 致命伤害慢镜头（>=10 伤害或暴击）
+    if (damage >= 10 || isCrit) {
+      triggerSlowMotion(damage >= 15 ? 1500 : 1000);
+    }
+  }, [addFloatingText, spawnParticles, triggerHitStop, triggerShake, triggerSlowMotion]);
 
   const addComboText = useCallback((comboCount: number, element: ParticleType = 'arcane') => {
     addFloatingText(`COMBO x${comboCount}!`, 'combo', false);
@@ -315,6 +340,8 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
     showBloodFlash,
     counterFlashElement,
     shakeClass,
+    slowMoClass,
+    slamFlash,
     floatingTexts,
     addFloatingText,
     addDamageNumber,
@@ -322,6 +349,8 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
     triggerCrit,
     triggerCounterFlash,
     triggerShake,
+    triggerSlowMotion,
+    triggerSlam,
     spawnProjectile,
     updateDragTrail
   };
