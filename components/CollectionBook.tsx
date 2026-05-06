@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Filter, Search, Grid, LayoutList, Gift, Trophy } from 'lucide-react';
+import { ArrowLeft, Filter, Search } from 'lucide-react';
 import { ALL_SPELLS } from '../data/spells';
-import { SpellType, Spell } from '../types';
+import { Spell } from '../types';
 import { useUserStore } from '../stores/useUserStore';
 import { SpellCard } from './SpellCard';
 import { HapticService } from '../services/haptic';
@@ -25,7 +25,7 @@ interface CollectionMilestone {
 const MILESTONES_STORAGE_KEY = 'wizard_collection_milestones_v1';
 
 export const CollectionBook: React.FC<CollectionBookProps> = ({ onBack }) => {
-  const { inventory, addPacks, setBalance, balance } = useUserStore();
+  const { inventory, addPacks } = useUserStore();
   const [filterMana, setFilterMana] = useState<number | null>(null);
   const [filterElement, setFilterElement] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -114,9 +114,6 @@ export const CollectionBook: React.FC<CollectionBookProps> = ({ onBack }) => {
 
   const nextMilestone = milestones.find(m => !m.claimed);
   const prevMilestone = [...milestones].reverse().find(m => m.claimed || collectionPercent >= m.threshold);
-  const progressPercent = nextMilestone
-    ? Math.min(1, (collectionPercent - (prevMilestone?.threshold ?? 0)) / (nextMilestone.threshold - (prevMilestone?.threshold ?? 0)))
-    : 1;
 
   return (
     <div className="relative w-full h-full bg-slate-950 overflow-hidden flex flex-col safe-area-all">

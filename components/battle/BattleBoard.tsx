@@ -107,7 +107,7 @@ interface AtmosphereLayerProps {
   scenery: typeof SCENERY_CONFIG[SceneryTheme];
 }
 
-const AtmosphereLayer: React.FC<AtmosphereLayerProps> = ({ roundNumber, isMobile, scenery }) => {
+const AtmosphereLayer: React.FC<AtmosphereLayerProps> = ({ roundNumber }) => {
   // 回合数越高，氛围越暗沉
   const intensity = Math.min(roundNumber / 15, 1); // 0 at round 1, ~1 at round 15+
   const darken = intensity * 0.25; // 最多暗 25%
