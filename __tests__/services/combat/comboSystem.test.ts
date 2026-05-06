@@ -59,7 +59,7 @@ describe('Combo System', () => {
     const result = calculateComboBonus(state, 'player', 'thunder2', true);
 
     // Combo persists through counter — the 50% damage reduction is handled in gameLogic, not here
-    expect(result.multiplier).toBe(1.5);
+    expect(result.multiplier).toBeCloseTo(1.35); // 1 + (1 * 0.35)
     expect(result.newComboCount).toBe(1);
     expect(result.comboMessage).toContain('闪电连击');
   });
@@ -68,7 +68,7 @@ describe('Combo System', () => {
     const state = { ...mockState, playerLastSpell: 'thunder' as SpellType, playerConsecutiveThunder: 2 };
     const result = calculateComboBonus(state, 'player', 'thunder2', false);
 
-    expect(result.multiplier).toBe(2.0); // Max multiplier
+    expect(result.multiplier).toBeCloseTo(1.7); // Max multiplier: 1 + (2 * 0.35)
     expect(result.newComboCount).toBe(2); // No increase
   });
 
