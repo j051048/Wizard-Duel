@@ -39,6 +39,8 @@ interface LobbyProps {
   onPvpStart: (role: 'player1' | 'player2', seed?: number) => void;
   isMuted: boolean;
   onToggleMute: () => void;
+  /** Tier 2 preload progress (card images, background loaded) */
+  tier2Progress?: { percentage: number; isComplete: boolean };
 }
 
 export const Lobby: React.FC<LobbyProps> = ({
@@ -46,6 +48,7 @@ export const Lobby: React.FC<LobbyProps> = ({
   onPvpStart,
   isMuted,
   onToggleMute,
+  tier2Progress,
 }) => {
   const isMobile = useIsMobile();
 
@@ -197,6 +200,19 @@ export const Lobby: React.FC<LobbyProps> = ({
          </div>
 
       </div>
+
+      {/* [P4-5] Tier 2 后台加载进度条 — 仅在加载中显示 */}
+      {tier2Progress && !tier2Progress.isComplete && (
+        <div className="relative z-10 px-6 pb-2">
+          <div className="flex items-center gap-2 text-[10px] text-gray-500">
+            <div className="w-2 h-2 border border-gray-500 border-t-purple-400 rounded-full animate-spin" />
+            <span>Loading cards {tier2Progress.percentage}%</span>
+            <div className="flex-1 h-1 bg-slate-800 rounded-full overflow-hidden">
+              <div className="h-full bg-purple-500/60 rounded-full transition-all duration-500" style={{ width: `${tier2Progress.percentage}%` }} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* FOOTER: EXTRA MODES — B-5: 依次滑入 */}
       <div className="relative z-10 p-4 flex justify-center gap-4 pb-8 flex-wrap lobby-section-enter" style={{ animationDelay: '0.6s' }}>

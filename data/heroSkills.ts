@@ -86,9 +86,10 @@ export const HERO_SKILLS: HeroSkill[] = [
   {
     id: 'skill_mana_surge',
     name: '雷霆充能',
-    description: '恢复 2 点法力值',
+    description: '消耗 1 法力，恢复 2 法力',
     emoji: '💎',
-    manaCost: 0,
+    manaCost: 1,
+    manaRestore: 2,
     mechanic: 'charge',
     element: 'thunder',
   },

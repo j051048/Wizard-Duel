@@ -10,6 +10,7 @@ export interface FloatingTextItem {
   x: number;
   y: number;
   duration?: number;
+  tier?: 'light' | 'medium' | 'heavy';
 }
 
 interface FloatingTextProps {
@@ -96,18 +97,44 @@ const FloatingText: React.FC<{ item: FloatingTextItem }> = ({ item }) => {
           shake: false
         };
       case 'damage':
-      default:
+      default: {
+        // 伤害分级视觉反馈：轻/中/重
+        const tier = item.tier;
+        if (tier === 'heavy') {
+          return {
+            color: 'text-red-400',
+            shadow: 'drop-shadow-[0_0_12px_rgba(239,68,68,0.8)]',
+            scale: [0.5, 1.8, 1.1],
+            yOffset: -130,
+            emoji: '💥',
+            fontSize: 'text-5xl font-extrabold',
+            shake: true
+          };
+        }
+        if (tier === 'medium') {
+          return {
+            color: 'text-orange-300',
+            shadow: 'drop-shadow-[0_0_8px_rgba(251,146,60,0.7)]',
+            scale: [0.7, 1.6, 1],
+            yOffset: -115,
+            emoji: '',
+            fontSize: 'text-4xl font-bold',
+            shake: false
+          };
+        }
+        // light (default)
         return {
           color: 'text-white',
           shadow: 'drop-shadow-[0_0_4px_rgba(0,0,0,0.8)]',
-          scale: [0.8, 1.6, 1],  // 更大的弹跳
-          yOffset: -110,
+          scale: [0.8, 1.4, 1],
+          yOffset: -100,
           emoji: '',
-          fontSize: 'text-4xl font-bold',  // 更大字体
+          fontSize: 'text-3xl font-bold',
           shake: false
         };
+      }
     }
-  }, [item.type]);
+  }, [item.type, item.tier]);
 
   // [P0 UX] 延长显示时间：暴击/combo 2.5s，普通 2s
   const duration = (item.type === 'crit' || item.type === 'combo') ? 2.5 : (item.duration || 2.0);

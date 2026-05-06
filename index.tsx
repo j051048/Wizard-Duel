@@ -43,6 +43,14 @@ window.addEventListener('vite:preloadError', (event) => {
   window.location.reload();
 });
 
+// [Task 22] 全局未捕获错误监听 → Sentry 上报
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('[Global] Unhandled promise rejection:', event.reason);
+  if (import.meta.env.VITE_SENTRY_DSN) {
+    Sentry.captureException(event.reason instanceof Error ? event.reason : new Error(String(event.reason)));
+  }
+});
+
 // Wagmi Configuration
 export const config = createConfig({
   chains: [mainnet, sepolia, xLayer],

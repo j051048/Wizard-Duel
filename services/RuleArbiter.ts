@@ -25,7 +25,7 @@ import { GameSequenceExecutor } from './sequence';
 import { getGameRNG } from '../utils/seededRandom';
 
 export interface ArbiterEvent {
-  type: 'DAMAGE' | 'HEAL' | 'EFFECT_TICK' | 'EFFECT_EXPIRE' | 'DRAW' | 'FATIGUE' | 'MANA_RESTORE' | 'DEATH' | 'ROUND_START';
+  type: 'DAMAGE' | 'HEAL' | 'EFFECT_TICK' | 'EFFECT_EXPIRE' | 'EFFECT_APPLY' | 'DRAW' | 'FATIGUE' | 'MANA_RESTORE' | 'DEATH' | 'ROUND_START';
   target: 'player' | 'opponent' | 'system';
   value?: number;
   description: string;
@@ -191,6 +191,10 @@ export class RuleArbiter {
         newPlayerEffects.push({ ...e, duration: nextDur });
       } else {
         events.push({ type: 'EFFECT_EXPIRE', target: 'player', description: `✨ 你的${this.getEffectName(e.type)}效果消失了` });
+        if (e.type === 'frozen' && !s.playerEffects.some(x => x.type === 'thawed')) {
+          newPlayerEffects.push({ type: 'thawed', duration: 2 });
+          events.push({ type: 'EFFECT_APPLY', target: 'player', description: '💧 你获得 2 回合冻结免疫' });
+        }
       }
     }
     s.playerEffects = newPlayerEffects;
@@ -211,6 +215,10 @@ export class RuleArbiter {
         newOppEffects.push({ ...e, duration: nextDur });
       } else {
         events.push({ type: 'EFFECT_EXPIRE', target: 'opponent', description: `✨ 对手的${this.getEffectName(e.type)}效果消失了` });
+        if (e.type === 'frozen' && !s.opponentEffects.some(x => x.type === 'thawed')) {
+          newOppEffects.push({ type: 'thawed', duration: 2 });
+          events.push({ type: 'EFFECT_APPLY', target: 'opponent', description: '💧 对手获得 2 回合冻结免疫' });
+        }
       }
     }
     s.opponentEffects = newOppEffects;

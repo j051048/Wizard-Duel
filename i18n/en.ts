@@ -268,6 +268,9 @@ export const en = {
   'Waiting for opponent to reconnect...': 'Waiting for opponent to reconnect...',
   'If opponent reconnects in time, battle resumes': 'If opponent reconnects in time, battle will resume',
   'Opponent did not reconnect in time, Victory': 'Opponent did not reconnect in time. Victory!',
+  'Connection Lost': 'Connection Lost',
+  'Auto-reconnect failed. Try reconnecting manually.': 'Auto-reconnect failed. Try reconnecting manually.',
+  'Reconnect': 'Reconnect',
 
   // Profile
   'Guest Mode': 'Guest Mode',

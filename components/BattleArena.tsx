@@ -96,9 +96,10 @@ const EnvironmentParticles: React.FC<{ element: string | null }> = ({ element })
 interface BattleArenaProps {
   gameLoopState: GameLoopState;
   selectedBet: number;
-  onPlayCard: (spellId: SpellType, isConfirmed?: boolean) => void;
+  onPlayCard: (spellId: SpellType, isConfirmed?: boolean, target?: { type: 'hero' | 'minion'; id?: string }) => void;
   onPass?: () => void;
   onSurrender: () => void;
+  onRematch?: () => void;
   isMuted: boolean;
   onToggleMute: () => void;
   isPlayerShaking?: boolean;
@@ -122,6 +123,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   onPlayCard,
   onPass,
   onSurrender,
+  onRematch,
   isMuted,
   onToggleMute,
   isPlayerShaking = false,
@@ -168,11 +170,32 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   // [P0-4] Opponent disconnect tracking
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
   const [reconnectCountdown, setReconnectCountdown] = useState(30);
+  // [P0-4] 本地连接状态追踪（用于断线重连 UI）
+  const [localConnState, setLocalConnState] = useState<'connected' | 'connecting' | 'reconnecting' | 'disconnected'>('connected');
   const disconnectTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [detailSpell, setDetailSpell] = useState<SpellType | null>(null);
   // [P1-1] Target selection state
   const [pendingTargetSpell, setPendingTargetSpell] = useState<SpellType | null>(null);
+
+  // [P4-4] Parallax offset for arena background (gated behind !isLowQuality)
+  const parallaxRef = useRef({ x: 0, y: 0 });
+  const [, forceParallaxUpdate] = useState(0);
+  const parallaxTimerRef = useRef<number | null>(null);
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (isLowQuality) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const nx = (e.clientX - rect.left) / rect.width - 0.5;   // -0.5 to 0.5
+    const ny = (e.clientY - rect.top) / rect.height - 0.5;
+    parallaxRef.current = { x: nx * 12, y: ny * 8 };          // max ±12px, ±8px
+    // Throttle re-render to ~30fps
+    if (!parallaxTimerRef.current) {
+      parallaxTimerRef.current = requestAnimationFrame(() => {
+        parallaxTimerRef.current = null;
+        forceParallaxUpdate(n => n + 1);
+      });
+    }
+  }, [isLowQuality]);
 
   // [P0+P1] PVP 模式由 pvpRoomId 是否有值来决定，不再硬编码
   const isPVPMode = !!pvpRoomId;
@@ -399,6 +422,12 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
     console.log(`[PVP] 正在连接服务器: ${pvpRoomId}...`);
 
+    // Track local connection state for disconnect UI
+    pvpService.onConnectionStateChange = (state) => {
+      setLocalConnState(state);
+    };
+    setLocalConnState('connecting');
+
     pvpService.connect(pvpRoomId, playerIdRef.current, data => {
       if (!isMounted.current) return;
 
@@ -589,15 +618,14 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
     setTargeting(null);
     spawnProjectile('player');
 
-    // For now, just play the card normally — the target selection is a UX enhancement
-    // The actual targeting is applied at the game logic layer
+    // 传递目标选择给游戏逻辑层
     if (isPVPMode && !isRemoteActionRef.current) {
       pvpService.sendAction({
         type: 'ACTION',
         action: { type: 'PLAY_CARD', spellId, isConfirmed: true, playerId: playerIdRef.current, timestamp: Date.now() },
       });
     }
-    onPlayCard(spellId, true);
+    onPlayCard(spellId, true, target);
   }, [pendingTargetSpell, shouldShowTutorial, isPVPMode, spawnProjectile, setTargeting, onPlayCard]);
 
   const handleTargetCancel = useCallback(() => {
@@ -651,6 +679,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       ${isGameOver ? 'bullet-time' : ''}
     `}
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      onPointerMove={handlePointerMove}
     >
       {/* [P0 Fix A-2] 回合横幅 — 统一由 useTurnManager 驱动 */}
       <TurnBanner type={turnBanner} roundNumber={duelState?.roundNumber || 1} />
@@ -661,7 +690,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           src="/ui/bg_arena.webp"
           alt="Arena Background"
           className={`absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay scale-110 optimize-gpu ${isLowQuality ? '' : 'blur-[2px] animate-bg-breathing'}`}
-          style={{ objectPosition: 'center 40%' }}
+          style={{
+            objectPosition: 'center 40%',
+            transform: isLowQuality ? undefined : `translate(${parallaxRef.current.x}px, ${parallaxRef.current.y}px)`,
+            transition: 'transform 0.15s ease-out',
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-slate-950/80" />
         {/* [P2-3] Dynamic battlefield theme based on opponent element */}
@@ -689,14 +722,23 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
       <FloatingTextOverlay items={floatingTexts} />
 
-      {/* PVP 状态指示器 - 强提醒版 */}
-      <div className="fixed top-4 left-4 z-[99] animate-pulse">
-        <span
-          className={`px-2 py-1 rounded text-[10px] font-bold ${isPVPMode ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}
-        >
-          {isPVPMode ? 'PVP: ONLINE' : 'PVP: OFFLINE'}
-        </span>
-      </div>
+      {/* PVP 状态指示器 - 根据连接状态动态更新 */}
+      {isPVPMode && (
+        <div className="fixed top-4 left-4 z-[99]">
+          <span
+            className={`px-2 py-1 rounded text-[10px] font-bold animate-pulse ${
+              localConnState === 'connected' ? 'bg-emerald-500 text-white' :
+              localConnState === 'reconnecting' || localConnState === 'connecting' ? 'bg-yellow-500 text-white' :
+              'bg-red-500 text-white'
+            }`}
+          >
+            {localConnState === 'connected' ? 'PVP: ONLINE' :
+             localConnState === 'reconnecting' ? 'PVP: RECONNECTING...' :
+             localConnState === 'connecting' ? 'PVP: CONNECTING...' :
+             'PVP: OFFLINE'}
+          </span>
+        </div>
+      )}
 
       {/* [P1] Spell Cast Effects */}
       <SpellCastEffect spellId={playerCard} caster="player" />
@@ -870,6 +912,25 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         </div>
       )}
 
+      {/* [P0-4] Local player disconnect overlay with manual reconnect */}
+      {isPVPMode && localConnState === 'disconnected' && !opponentDisconnected && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="text-center p-8 rounded-2xl bg-gray-900/90 border border-red-500/40 max-w-sm mx-4">
+            <div className="text-5xl mb-4">🔌</div>
+            <h2 className="text-2xl font-bold text-red-400 mb-2">{t('Connection Lost')}</h2>
+            <p className="text-gray-300 mb-6">
+              {t('Auto-reconnect failed. Try reconnecting manually.')}
+            </p>
+            <button
+              onClick={() => pvpService.manualReconnect()}
+              className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-bold text-white transition-colors shadow-lg shadow-emerald-900/30"
+            >
+              {t('Reconnect')}
+            </button>
+          </div>
+        </div>
+      )}
+
       {detailSpell && (
         <CardDetailModal spell={getSpellById(detailSpell)} onClose={() => setDetailSpell(null)} />
       )}
@@ -910,6 +971,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           result={gameResult}
           stats={battleStatsRef.current}
           onClose={() => { setShowSummary(false); onSurrender(); }}
+          onRematch={onRematch}
         />
       )}
     </div>

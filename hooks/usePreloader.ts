@@ -35,7 +35,6 @@ const resolveAudioSrc = (src: string): string => {
 
 // ─── Tier 1: 必须阻塞加载的静态 UI 资源 ───
 const STATIC_UI = [
-  '/battle-bg.webp',
   '/lobby-bg.webp',
   '/avatars/player-wizard.webp',
   '/avatars/opponent-sorcerer.webp',

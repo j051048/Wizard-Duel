@@ -114,7 +114,7 @@ export const SPELLS: Spell[] = [
     artSrc: '/cards/thunder-chain.webp', targetMode: 'hero_or_minion'
   }),
   defineSpell({
-    id: 'rock2', name: '石墙', manaCost: 2, armorGain: 7, rarity: 'rare', mechanic: 'fortify', cardSet: 'classic',
+    id: 'rock2', name: '石墙', manaCost: 2, armorGain: 5, rarity: 'rare', mechanic: 'fortify', cardSet: 'classic',
     artSrc: '/cards/rock-wall.webp'
   }),
   
@@ -167,8 +167,8 @@ export const SPELLS: Spell[] = [
   
   // 0费卡牌 - 灵活过渡
   defineSpell({
-    id: 'fire7', name: '余烬', manaCost: 0, damage: 1, rarity: 'common', mechanic: 'burn',
-    artSrc: '/cards/fire-embers.webp', value: 1  // 0费1伤+1灼烧，弱但免费
+    id: 'fire7', name: '余烬', manaCost: 0, damage: 1, rarity: 'common', mechanic: 'charge',
+    artSrc: '/cards/fire-embers.webp'  // 0费1伤，简洁低费打点
   }),
   defineSpell({
     id: 'vine7', name: '嫩芽', manaCost: 0, damage: 0, rarity: 'common', mechanic: 'tangle',
@@ -347,7 +347,7 @@ export const SPELLS: Spell[] = [
 }),
   defineSpell({ id: 'vine13' as SpellType, name: '绞杀藤蔓', manaCost: 6, damage: 5, rarity: 'mythic', mechanic: 'tangle', value: 2, effectDuration: 2, cardSet: 'expansion_1',   artSrc: '/cards/vine13.webp',
 }),
-  defineSpell({ id: 'vine14' as SpellType, name: '生命之树', manaCost: 8, damage: 0, rarity: 'legendary', mechanic: 'heal', value: 12, cardSet: 'expansion_1',
+  defineSpell({ id: 'vine14' as SpellType, name: '生命之树', manaCost: 6, damage: 0, rarity: 'legendary', mechanic: 'heal', value: 12, cardSet: 'expansion_1',
     artSrc: '/cards/vine14.webp' }),
 
   // --- ICE (ice7 ~ ice12) ---
@@ -464,7 +464,7 @@ export const SPELLS: Spell[] = [
 }),
   defineSpell({ id: 'vine18' as SpellType, name: '自然愈合', manaCost: 4, damage: 2, rarity: 'mythic', mechanic: 'heal', value: 5, cardSet: 'expansion_2',   artSrc: '/cards/vine18.webp',
 }),
-  defineSpell({ id: 'vine19' as SpellType, name: '世界树之心', manaCost: 8, damage: 0, rarity: 'legendary', mechanic: 'heal', value: 15, cardSet: 'expansion_2',
+  defineSpell({ id: 'vine19' as SpellType, name: '世界树之心', manaCost: 6, damage: 0, rarity: 'legendary', mechanic: 'heal', value: 15, cardSet: 'expansion_2',
     artSrc: '/cards/vine19.webp' }),
 
   // --- ICE (ice13 ~ ice17) ---

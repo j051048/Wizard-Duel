@@ -10,6 +10,7 @@ import { useCallback } from 'react';
 import {
   SpellType, DuelState, DuelPhase, GameMode, AIProfile, GameActionCommand
 } from '../types';
+import type { SpellTarget } from '../types/card';
 import {
   createInitialDuelState, createTavernDuelState, canAffordSpell, createPvpDuelState
 } from '../services/gameLogic';
@@ -55,7 +56,7 @@ export function usePlayerActions({
 }: UsePlayerActionsDeps) {
 
     /** 出牌 */
-  const playCard = useCallback((spellId: SpellType): boolean => {
+  const playCard = useCallback((spellId: SpellType, _e?: React.MouseEvent, target?: SpellTarget): boolean => {
     const state = duelStateRef.current;
     if (!state || phaseRef.current !== 'PLAYER_TURN' || isProcessing) return false;
 
@@ -78,7 +79,7 @@ export function usePlayerActions({
 
     setPlayerCard(spellId);
 
-    const { newState, commands: engineCommands } = GameRuleEngine.castSpell(state, spellId, 'player');
+    const { newState, commands: engineCommands } = GameRuleEngine.castSpell(state, spellId, 'player', { target });
     enqueue([...engineCommands], `play_${spellId}_${Date.now()}`);
     return true;
   }, [duelStateRef, phaseRef, isProcessing, enqueue, addMessage, setPlayerCard]);
@@ -225,6 +226,10 @@ export function usePlayerActions({
       }
       newState = { ...newState, playerDeck: deck, playerHand: hand };
       actions.push({ type: 'ADD_MESSAGE', payload: `${skill.emoji} 抽了 ${drawn.length} 张牌` });
+    }
+    if (skill.manaRestore) {
+      newState = { ...newState, playerMana: newState.playerMana + skill.manaRestore };
+      actions.push({ type: 'ADD_MESSAGE', payload: `${skill.emoji} 恢复了 ${skill.manaRestore} 点法力` });
     }
 
     actions.unshift({ type: 'UPDATE_STATE', payload: newState });

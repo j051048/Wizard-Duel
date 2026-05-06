@@ -162,6 +162,19 @@
   100% { opacity: 0; }
 }
 
+/* 传说卡牌彩虹光环 */
+@keyframes legendaryShimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.legendary-glow {
+  background: linear-gradient(90deg, #a855f7, #ec4899, #f59e0b, #a855f7);
+  background-size: 300% 100%;
+  animation: legendaryShimmer 3s ease-in-out infinite;
+}
+
 /* 紧急时间燃烧效果 */
 .turn-timer.urgent .rope {
   background: linear-gradient(90deg, 

@@ -19,13 +19,19 @@ class PVPService {
     private lastOnMessage: ((data: any) => void) | null = null;
     private connectionState: ConnectionState = 'disconnected';
     private reconnectAttempt: number = 0;
-    private maxReconnectAttempts: number = 3;
+    private maxReconnectAttempts: number = 5;
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     private intentionalDisconnect: boolean = false;
+
+    private setConnectionState(state: ConnectionState) {
+        this.connectionState = state;
+        this.onConnectionStateChange?.(state);
+    }
 
     // External callbacks
     onDisconnect: (() => void) | null = null;
     onReconnect: (() => void) | null = null;
+    onConnectionStateChange: ((state: ConnectionState) => void) | null = null;
 
     // ============ 匹配队列 ============
 
@@ -74,13 +80,13 @@ class PVPService {
         console.log("🚀 [PVP] 连接对战房间:", url);
         console.log("📍 [PVP] 房间:", roomId, "玩家:", playerId);
 
-        this.connectionState = 'connecting';
+        this.setConnectionState('connecting');
         try {
             this.gameSocket = new WebSocket(url);
             this.bindGameSocketEvents(this.gameSocket, onMessage);
         } catch (e) {
             console.error("🚫 [PVP] 对战连接失败:", e);
-            this.connectionState = 'disconnected';
+            this.setConnectionState('disconnected');
         }
     }
 
@@ -100,7 +106,7 @@ class PVPService {
         this.intentionalDisconnect = true;
         this.clearReconnectTimer();
         this.cleanupSocket('game');
-        this.connectionState = 'disconnected';
+        this.setConnectionState('disconnected');
     }
 
     /**
@@ -131,7 +137,7 @@ class PVPService {
 
         if (this.reconnectAttempt >= this.maxReconnectAttempts) {
             console.error("🚫 [PVP] 重连失败，已达到最大重试次数");
-            this.connectionState = 'disconnected';
+            this.setConnectionState('disconnected');
             this.onDisconnect?.();
             return;
         }
@@ -139,7 +145,7 @@ class PVPService {
         // Exponential backoff: 1s, 2s, 4s
         const delay = Math.pow(2, this.reconnectAttempt) * 1000;
         this.reconnectAttempt++;
-        this.connectionState = 'reconnecting';
+        this.setConnectionState('reconnecting');
 
         console.log(`🔄 [PVP] 将在 ${delay}ms 后尝试第 ${this.reconnectAttempt} 次重连...`);
 
@@ -155,7 +161,7 @@ class PVPService {
         const url = `${this.serverUrl}/ws/${this.roomId}/${this.playerId}`;
         console.log(`🔄 [PVP] 正在重连: ${url} (尝试 ${this.reconnectAttempt}/${this.maxReconnectAttempts})`);
 
-        this.connectionState = 'connecting';
+        this.setConnectionState('connecting');
         try {
             this.gameSocket = new WebSocket(url);
             this.bindGameSocketEvents(this.gameSocket, this.lastOnMessage);
@@ -172,6 +178,21 @@ class PVPService {
         }
     }
 
+    /**
+     * 手动触发重连 — 重置尝试计数，立即发起连接
+     * 用于 UI 层 "重新连接" 按钮
+     */
+    manualReconnect() {
+        if (!this.roomId || !this.playerId || !this.lastOnMessage) {
+            console.warn('[PVP] manualReconnect: 缺少重连上下文');
+            return;
+        }
+        this.intentionalDisconnect = false;
+        this.reconnectAttempt = 0;
+        this.clearReconnectTimer();
+        this.attemptReconnect();
+    }
+
     // ============ 内部工具 ============
 
     /**
@@ -180,7 +201,7 @@ class PVPService {
     private bindGameSocketEvents(socket: WebSocket, onMessage: (data: any) => void) {
         socket.onopen = () => {
             console.log("✅ [PVP:GAME] WebSocket 已连接");
-            this.connectionState = 'connected';
+            this.setConnectionState('connected');
             this.reconnectAttempt = 0;
 
             // If reconnecting, send explicit RECONNECT message

@@ -209,7 +209,10 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
   const [isAudioBlocked, setIsAudioBlocked] = useState(false);
 
   const bgmRef = useRef<HTMLAudioElement | null>(null);
-  const sfxPoolRef = useRef<Map<string, HTMLAudioElement>>(new Map());
+  // [P4-6] SFX ring buffer: 每个 src 维护最多 3 个 Audio 实例，轮询复用
+  const SFX_RING_SIZE = 3;
+  const sfxPoolRef = useRef<Map<string, HTMLAudioElement[]>>(new Map());
+  const sfxRingIndexRef = useRef<Map<string, number>>(new Map());
   
   // 音效冷却追踪
   const cooldownsRef = useRef<Map<string, number>>(new Map());
@@ -232,24 +235,48 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
     cooldownsRef.current.set(effectKey, Date.now());
   }, []);
 
-  // 创建或获取音效实例
+  // [P4-6] 创建或获取音效实例 — 使用 ring buffer 支持同源音效重叠
   const getAudioInstance = useCallback((src: string): HTMLAudioElement | null => {
     if (!src) return null;
     const resolved = resolveSrc(src);
 
-    if (!sfxPoolRef.current.has(resolved)) {
-      const audio = new Audio();
-      audio.preload = 'auto';
-      audio.src = resolved;
-
-      // 音效结束时减少计数
-      audio.addEventListener('ended', () => {
-        activeSfxCountRef.current = Math.max(0, activeSfxCountRef.current - 1);
+    let ring = sfxPoolRef.current.get(resolved);
+    if (!ring) {
+      ring = Array.from({ length: SFX_RING_SIZE }, () => {
+        const audio = new Audio();
+        audio.preload = 'auto';
+        audio.src = resolved;
+        audio.addEventListener('ended', () => {
+          activeSfxCountRef.current = Math.max(0, activeSfxCountRef.current - 1);
+        });
+        return audio;
       });
-
-      sfxPoolRef.current.set(resolved, audio);
+      sfxPoolRef.current.set(resolved, ring);
+      sfxRingIndexRef.current.set(resolved, 0);
     }
-    return sfxPoolRef.current.get(resolved) || null;
+
+    // 轮询：找到空闲实例，或用下一个实例（允许打断）
+    const idx = sfxRingIndexRef.current.get(resolved) || 0;
+    const audio = ring[idx % ring.length];
+    sfxRingIndexRef.current.set(resolved, (idx + 1) % ring.length);
+    return audio;
+  }, []);
+
+  // [P4-6] 平滑 BGM 淡出（RAF 驱动，500ms 曲线衰减）
+  const fadeOutBgm = useCallback((audio: HTMLAudioElement, duration: number = 500) => {
+    const startVol = audio.volume;
+    const startTime = performance.now();
+    const tick = (now: number) => {
+      const elapsed = now - startTime;
+      const t = Math.min(elapsed / duration, 1);
+      audio.volume = startVol * (1 - t); // 线性衰减
+      if (t < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        audio.pause();
+      }
+    };
+    requestAnimationFrame(tick);
   }, []);
 
   // 播放 BGM
@@ -258,20 +285,9 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
     if (!src) return;
 
     try {
-      // 淡出当前BGM
+      // [P4-6] 平滑淡出当前 BGM
       if (bgmRef.current) {
-        const oldBgm = bgmRef.current;
-        // 简单淡出
-        let fadeVolume = oldBgm.volume;
-        const fadeOut = setInterval(() => {
-          fadeVolume -= 0.05;
-          if (fadeVolume <= 0) {
-            oldBgm.pause();
-            clearInterval(fadeOut);
-          } else {
-            oldBgm.volume = fadeVolume;
-          }
-        }, 50);
+        fadeOutBgm(bgmRef.current);
       }
 
       // 创建新BGM — preload='metadata' 只下载帧头，触发 play 时才拉流
@@ -289,16 +305,15 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
     } catch (e) {
       console.warn('Failed to play BGM:', e);
     }
-  }, [isMuted, bgmVolume]);
+  }, [isMuted, bgmVolume, fadeOutBgm]);
 
-  // 停止 BGM
+  // 停止 BGM（平滑淡出）
   const stopBgm = useCallback(() => {
     if (bgmRef.current) {
-      bgmRef.current.pause();
-      bgmRef.current.currentTime = 0;
+      fadeOutBgm(bgmRef.current, 300);
       setIsPlaying(false);
     }
-  }, []);
+  }, [fadeOutBgm]);
 
   // 播放音效（带冷却、优先级、rate/volume 覆盖）
   const playSfx = useCallback((effect: string, overrides?: SfxOverrides) => {
@@ -324,11 +339,7 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
     try {
       const audio = getAudioInstance(src);
       if (audio) {
-        // 如果音效正在播放，创建新实例（高优先级音效除外）
-        if (!audio.paused && priority < 5) {
-          return;
-        }
-
+        // [P4-6] ring buffer 已处理重叠，直接播放
         audio.currentTime = 0;
         audio.volume = sfxVolume * (overrides?.volume ?? mapping.volume ?? 1);
         audio.playbackRate = overrides?.rate ?? mapping.rate ?? 1;
@@ -461,7 +472,7 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
       if (bgmRef.current) {
         bgmRef.current.pause();
       }
-      sfxPoolRef.current.forEach(audio => audio.pause());
+      sfxPoolRef.current.forEach(ring => ring.forEach(a => a.pause()));
       sfxPoolRef.current.clear();
     };
   }, []);

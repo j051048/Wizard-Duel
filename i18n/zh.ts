@@ -269,6 +269,9 @@ export const zh = {
   'Waiting for opponent to reconnect...': '等待对手重连中...',
   'If opponent reconnects in time, battle resumes': '对手在时间内重连将恢复对战',
   'Opponent did not reconnect in time, Victory': '对手未在时间内重连，判定胜利',
+  'Connection Lost': '连接已断开',
+  'Auto-reconnect failed. Try reconnecting manually.': '自动重连失败，请手动重新连接。',
+  'Reconnect': '重新连接',
 
   // Profile
   'Guest Mode': '游客模式',

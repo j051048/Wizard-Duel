@@ -61,6 +61,7 @@ import { ToastContainer } from './components/ui/Toast';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { TutorialOverlay } from './components/battle/TutorialOverlay';
 import { OrientationWarning } from './components/ui/OrientationWarning';
+import { BottomNav } from './components/lobby/BottomNav';
 
 // Services
 import { DungeonService } from './services/dungeon';
@@ -138,6 +139,7 @@ function App() {
     pvpRoomId: state.pvpRoomId,
     pvpRole: state.pvpRole,
     pvpSeed: state.pvpSeed,
+    language: state.language,
   })));
   const toastData = useToastStore(useShallow(state => ({
     toasts: state.toasts,
@@ -177,7 +179,7 @@ function App() {
   })));
 
   // ============ Core Hooks ============
-  const { progress, startPreloading, startTier2, startTier3 } = usePreloader();
+  const { progress, startPreloading, startTier2, startTier3, tier2 } = usePreloader();
   const [gameLoopState, gameLoopActions] = useGameLoop(!!uiData.pvpRoomId);
   const [audioState, audioActions] = useAudioManager();
   const { isMobileLandscape } = useScreenOrientation();
@@ -202,6 +204,41 @@ function App() {
     gameLoopState.phase,
     gameLoopState.duelState?.roundNumber || 0
   );
+
+  // [P4-6] Auto FPS-based quality downgrade: 连续 5 秒低于 20fps 自动切低画质
+  useEffect(() => {
+    let frameCount = 0;
+    let lastTime = performance.now();
+    let lowFpsStreak = 0; // 连续低帧率秒数
+    let rafId: number;
+
+    const tick = (now: number) => {
+      frameCount++;
+      if (now - lastTime >= 1000) {
+        const fps = frameCount;
+        frameCount = 0;
+        lastTime = now;
+
+        const { quality, setQuality } = useSettingsStore.getState();
+        if (quality === 'high') {
+          if (fps < 20) {
+            lowFpsStreak++;
+            if (lowFpsStreak >= 5) {
+              console.warn(`[FPS] 连续 5 秒低于 20fps (当前 ${fps}fps)，自动切换低画质`);
+              setQuality('low');
+              lowFpsStreak = 0;
+            }
+          } else {
+            lowFpsStreak = 0;
+          }
+        }
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
 
   // ============ Initialization ============
   useEffect(() => {
@@ -278,6 +315,7 @@ function App() {
             onPvpStart={routing.handlePvpStart}
             isMuted={audioState.isMuted}
             onToggleMute={audioActions.toggleMute}
+            tier2Progress={tier2}
           />
         )}
 
@@ -298,7 +336,12 @@ function App() {
         )}
 
         <LazyLoadErrorBoundary>
-        <React.Suspense fallback={<LoadingScreen progress={{ percentage: 100, isComplete: false, loaded: 1, total: 1, currentItem: '加载中...', errors: [] }} />}>
+        <React.Suspense fallback={
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950 text-white gap-4">
+            <div className="w-8 h-8 border-2 border-purple-500/30 border-t-purple-400 rounded-full animate-spin" />
+            <p className="text-sm text-gray-400 font-tech">Loading...</p>
+          </div>
+        }>
 
           {uiData.gameState === 'TAVERN' && (
             <TavernMode
@@ -511,6 +554,24 @@ function App() {
         </React.Suspense>
         </LazyLoadErrorBoundary>
       </main>
+
+      {/* [P4-5] Bottom Tab Bar — 只在大厅相关页面显示 */}
+      {(['LOBBY', 'SHOP', 'COLLECTION', 'PROFILE', 'FRIENDS', 'ACHIEVEMENTS'] as string[]).includes(uiData.gameState) && (
+        <BottomNav
+          current={uiData.gameState}
+          onNavigate={(s) => uiActions.setGameState(s)}
+          t={(key: string) => {
+            const lang = uiData.language === 'zh' ? 'zh' : 'en';
+            const map: Record<string, Record<string, string>> = {
+              Home:       { zh: '大厅', en: 'Home' },
+              Shop:       { zh: '商店', en: 'Shop' },
+              Collection: { zh: '收藏', en: 'Collection' },
+              Profile:    { zh: '我的', en: 'Profile' },
+            };
+            return map[key]?.[lang] || key;
+          }}
+        />
+      )}
 
       <ToastContainer toasts={toastData.toasts} onDismiss={toastActions.removeToast} />
 

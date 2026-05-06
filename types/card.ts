@@ -143,5 +143,6 @@ export interface HeroSkill {
   armorGain?: number;
   heal?: number;
   draw?: number;
+  manaRestore?: number;
   element: string;
 }

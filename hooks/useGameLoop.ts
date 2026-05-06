@@ -40,7 +40,7 @@ const throttledSave = throttle((data: object) => {
 export interface GameLoopActions {
   startDuel: (playerDeck: SpellType[], opponentDeck: SpellType[], mode: GameMode) => void;
   startTavernDuel: (playerDeck: SpellType[], opponentProfile: AIProfile, mode: GameMode) => void;
-  playCard: (spellId: SpellType, e?: React.MouseEvent) => boolean;
+  playCard: (spellId: SpellType, e?: React.MouseEvent, target?: import('../types/card').SpellTarget) => boolean;
   passTurn: () => void;
   reset: () => void;
   setTargeting: (data: GameLoopState['targetingData']) => void;

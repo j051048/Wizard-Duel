@@ -1,5 +1,6 @@
 import { DuelState, GameAction, GameActionCommand, StatusEffect, SpellType } from '../types';
-import { checkGameOver, executeSpell, executeAITurn } from './gameLogic';
+import { checkGameOver, executeSpell, executeSpellWithTarget, executeAITurn } from './gameLogic';
+import type { SpellTarget } from '../types/card';
 import { GameSequenceExecutor } from './sequence';
 import { MINION_ATTACK_DELAY, MINION_COMBAT_START_DELAY } from '../config/timing';
 import { getGameRNG } from '../utils/seededRandom';
@@ -21,13 +22,15 @@ export class GameRuleEngine {
     currentState: DuelState,
     spellId: SpellType,
     caster: 'player' | 'opponent',
-    options?: { skipHandCheck?: boolean }
+    options?: { skipHandCheck?: boolean; target?: SpellTarget }
   ): { newState: DuelState, commands: GameActionCommand[] } {
     const commands: GameActionCommand[] = [];
 
     // 1. Initial Logic Execution (Calculations)
-    // executeSpell now performs validation internally (e.g. Frozen check)
-    const { newState: postCastState, logs, command: spellCommand } = executeSpell(currentState, caster, spellId, options);
+    // Use executeSpellWithTarget when explicit target is provided
+    const { newState: postCastState, logs, command: spellCommand } = options?.target
+      ? executeSpellWithTarget(currentState, caster, spellId, options.target)
+      : executeSpell(currentState, caster, spellId, options);
     
     // If validation failed (e.g. logs returned but no actions?), we still proceed but maybe state didn't change much.
     // However, if it failed completely, usually we want to show that.

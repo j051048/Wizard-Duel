@@ -138,15 +138,14 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
     p.active = true;
   };
 
-  const addFloatingText = useCallback((text: string, type: FloatingTextType, isPlayer: boolean, xOffset: number = 0) => {
+  const addFloatingText = useCallback((text: string, type: FloatingTextType, isPlayer: boolean, xOffset: number = 0, tier?: 'light' | 'medium' | 'heavy') => {
     const jitterX = (Math.random() - 0.5) * 80;
     const jitterY = (Math.random() - 0.5) * 40;
     const baseX = window.innerWidth * 0.5 + xOffset + jitterX;
     const baseY = isPlayer ? window.innerHeight * 0.70 : window.innerHeight * 0.20;
     const id = Date.now().toString() + Math.random();
-    setFloatingTexts(prev => [...prev, { id, text, type, x: baseX, y: baseY + jitterY, duration: (type === 'crit' || type === 'combo') ? 2.0 : 1.5 }]);
+    setFloatingTexts(prev => [...prev, { id, text, type, x: baseX, y: baseY + jitterY, duration: (type === 'crit' || type === 'combo') ? 2.0 : 1.5, tier }]);
     setTimeout(() => { setFloatingTexts(prev => prev.filter(item => item.id !== id)); }, (type === 'crit' || type === 'combo') ? 2100 : 1600);
-    // Auto-trigger shake for crit and combo
     if (type === 'crit' || type === 'combo') {
       triggerShake('default');
     }
@@ -164,18 +163,19 @@ export const useBattleAnimations = (isLowQuality: boolean) => {
 
   const addDamageNumber = useCallback((damage: number, isPlayer: boolean, isCrit: boolean = false, type: ParticleType = 'default') => {
     let hitStopIntensity: 'light' | 'medium' | 'heavy' | 'ultra' = 'light';
-    if (damage >= 10 || isCrit) hitStopIntensity = 'ultra';
-    else if (damage >= 6) hitStopIntensity = 'heavy';
-    else if (damage >= 3) hitStopIntensity = 'medium';
+    let tier: 'light' | 'medium' | 'heavy' = 'light';
+    if (damage >= 10 || isCrit) { hitStopIntensity = 'ultra'; tier = 'heavy'; }
+    else if (damage >= 6) { hitStopIntensity = 'heavy'; tier = 'heavy'; }
+    else if (damage >= 3) { hitStopIntensity = 'medium'; tier = 'medium'; }
 
     triggerHitStop(hitStopIntensity);
     HapticService.medium();
     if (isCrit) HapticService.heavy();
     if (isPlayer) { setShowBloodFlash(true); setTimeout(() => setShowBloodFlash(false), 400); }
-    addFloatingText(`-${damage}`, isCrit ? 'crit' : 'damage', isPlayer);
+    addFloatingText(`-${damage}`, isCrit ? 'crit' : 'damage', isPlayer, 0, tier);
     const x = 50 + (Math.random() - 0.5) * 15;
     const y = isPlayer ? 70 : 30;
-    spawnParticles(x, y, isCrit ? 40 : 20, type);
+    spawnParticles(x, y, isCrit ? 40 : (tier === 'heavy' ? 30 : 20), type);
   }, [addFloatingText, spawnParticles, triggerHitStop]);
 
   const addComboText = useCallback((comboCount: number, element: ParticleType = 'arcane') => {

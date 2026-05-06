@@ -143,6 +143,15 @@ export const SpellCard = memo<SpellCardProps>(({
   // 稀有度样式
   const getRarityStyles = (rarity: string) => {
     switch (rarity) {
+      case 'legendary':
+        return {
+          borderGlow: '0 0 25px rgba(168, 85, 247, 0.8), 0 0 50px rgba(236, 72, 153, 0.4)',
+          particleColor: 'rgba(168, 85, 247, 0.6)',
+          borderClass: 'border-purple-400',
+          glowClass: 'shadow-purple-500/50',
+          backgroundGradient: 'bg-gradient-to-br from-purple-900/20 to-pink-900/20',
+          particles: true
+        };
       case 'mythic':
         return {
           borderGlow: '0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 215, 0, 0.4)',
@@ -160,15 +169,6 @@ export const SpellCard = memo<SpellCardProps>(({
           glowClass: 'shadow-blue-400/40',
           backgroundGradient: 'bg-gradient-to-br from-blue-900/20 to-cyan-900/20',
           particles: true
-        };
-      case 'uncommon':
-        return {
-          borderGlow: '0 0 10px rgba(34, 197, 94, 0.5)',
-          particleColor: 'rgba(34, 197, 94, 0.3)',
-          borderClass: 'border-green-400',
-          glowClass: 'shadow-green-400/30',
-          backgroundGradient: 'bg-gradient-to-br from-green-900/20 to-emerald-900/20',
-          particles: false
         };
       default: // common
         return {
@@ -228,19 +228,26 @@ export const SpellCard = memo<SpellCardProps>(({
           />
   
           {/* Layer 1: Base Card Background & Art (Middle) */}
-          <div className={`
-               absolute inset-0 bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center 
+          <div
+               className={`
+               relative bg-slate-900 rounded-lg overflow-hidden flex items-center justify-center
                border-2 md:border-4 ${rarityStyles.borderClass} ${rarityStyles.glowClass}
                ${canPlay ? 'ring-2 ring-green-500/30 animate-pulse-gentle' : ''}
-          `}>
+          `}
+               style={{ boxShadow: rarityStyles.borderGlow !== 'none' ? rarityStyles.borderGlow : undefined }}
+          >
               {/* Background Gradient */}
               <div className={`absolute inset-0 bg-gradient-to-b from-slate-800 to-black ${canPlay ? '' : 'opacity-50'}`} />
               
               {/* Element Glow */}
-               <div 
+               <div
                 className="absolute inset-0 opacity-40 mix-blend-screen"
                 style={{ background: `radial-gradient(circle at center, ${spell.shadowColor}, transparent 80%)` }}
               />
+              {/* Legendary shimmer bar */}
+              {spell.rarity === 'legendary' && (
+                <div className="absolute top-0 left-0 right-0 h-1 legendary-glow opacity-80" />
+              )}
                {/* Main Art / Emoji */}
                <div className="absolute inset-0 z-0 transform transition-transform duration-500 group-hover:scale-110">
                   {!imgError && spell.artSrc ? (
