@@ -376,10 +376,11 @@ const removeCardFromCasterHand = (state: DuelState, isPlayer: boolean, spellId: 
 
 // ============ 单卡执行逻辑 (完全重构) ============
 
-import { 
+import {
   evaluateElementInteraction,
   calculateComboBonus,
-  updateComboState
+  updateComboState,
+  executeCrossElementSynergy
 } from './combat';
 
 // [P3-1] 秘密触发器工厂
@@ -564,6 +565,12 @@ export const executeSpell = (
   }
   if ((spell.armorGain || 0) > 0) {
       actions.push({ type: 'ARMOR_CHANGE', target: caster, value: spell.armorGain, description: `${isPlayer ? '获得' : '对手获得'} ${spell.armorGain} 护甲` });
+  }
+
+  // 5b. 跨元素联动 (Cross-Element Synergy)
+  const synergyResult = executeCrossElementSynergy(mutableState, caster, spellId);
+  if (synergyResult.actions.length > 0) {
+    actions.push(...synergyResult.actions);
   }
 
   // 6. 机制特效 Actions - [P0 Fix] 使用拷贝后的状态

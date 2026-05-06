@@ -198,7 +198,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ isOpen, onClose })
 
               <div>
                 <h3 className="text-lg font-bold text-white mb-2">🎯 牌组构筑</h3>
-                <p>标准牌组需要20-30张卡牌，包含各种费用和机制的平衡组合。尝试不同的元素搭配，找到适合自己的玩法风格！</p>
+                <p>标准牌组需要25-30张卡牌，包含各种费用和机制的平衡组合。尝试不同的元素搭配，找到适合自己的玩法风格！</p>
               </div>
             </div>
           )}

@@ -31,6 +31,14 @@ export {
   updateComboState
 } from './comboSystem';
 
+// 跨元素联动
+export {
+  executeCrossElementSynergy,
+  checkCrossElementSynergy,
+  CROSS_ELEMENT_SYNERGIES
+} from './crossElementSynergy';
+export type { CrossElementSynergy } from './crossElementSynergy';
+
 // 回合管理
 export {
   checkGameOver,

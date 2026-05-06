@@ -369,7 +369,7 @@ export const Lobby: React.FC<LobbyProps> = ({
               <>
                 <div className="text-2xl mb-2">📖</div>
                 <h3 className="text-lg font-wizard text-amber-200 mb-1">组建你的卡组</h3>
-                <p className="text-sm text-slate-300 mb-4">点击底部的「收藏」按钮可以浏览和组卡。至少需要 20 张卡才能上场。</p>
+                <p className="text-sm text-slate-300 mb-4">点击底部的「收藏」按钮可以浏览和组卡。至少需要 25 张卡才能上场。</p>
                 <div className="flex gap-2">
                   <button onClick={() => setOnboardingStep(0)} className="px-4 py-2.5 bg-slate-800 text-slate-300 rounded-xl text-sm">← 返回</button>
                   <button onClick={() => setOnboardingStep(2)} className="flex-1 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-xl font-bold text-sm active:scale-95 transition-transform">

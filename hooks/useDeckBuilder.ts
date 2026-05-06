@@ -114,7 +114,7 @@ export const useDeckBuilder = (selectedDeck: Deck | null | undefined, gameMode: 
   }, {} as Record<SpellType, number>);
 
   const totalCards = selectedCards.length;
-  const isValidDeck = totalCards >= 20 && totalCards <= 30;
+  const isValidDeck = totalCards >= 25 && totalCards <= 30;
 
   const addCard = useCallback((spellId: SpellType, e?: React.MouseEvent) => {
     const spell = rawCardPool.find(s => s.id === spellId);
