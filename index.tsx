@@ -8,14 +8,30 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { injected } from 'wagmi/connectors';
 import { defineChain } from 'viem';
 
-// [Phase F-1] Sentry 错误监控（仅当 VITE_SENTRY_DSN 存在时启用）
+// [Phase F-1] [Phase 2] Sentry 错误监控 + 性能追踪
 if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({
     dsn: import.meta.env.VITE_SENTRY_DSN,
     environment: import.meta.env.MODE,
+    tracePropagationTargets: ['localhost', /^https:\/\/game\.xwizard\.fun/, /^https:\/\/.*\.hodlai\.fun/],
+    integrations: [
+      Sentry.browserTracingIntegration(),
+      Sentry.replayIntegration({
+        maskAllText: false,
+        blockAllMedia: false,
+      }),
+    ],
     tracesSampleRate: 0.1,
     replaysSessionSampleRate: 0.01,
     replaysOnErrorSampleRate: 1.0,
+    // 过滤已知的无害错误
+    beforeSend(event) {
+      const msg = event.exception?.values?.[0]?.value || '';
+      if (msg.includes('ResizeObserver') || msg.includes('Non-Error promise rejection captured')) {
+        return null;
+      }
+      return event;
+    },
   });
 }
 
@@ -33,6 +49,7 @@ const xLayer = defineChain({
 });
 
 import ErrorBoundary from './components/ErrorBoundary';
+import { initPerformanceMonitoring } from './services/performance';
 
 import './index.css';
 
@@ -66,6 +83,9 @@ const queryClient = new QueryClient();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Failed to find the root element');
+
+// [Phase 2] 初始化 Web Vitals 监控
+initPerformanceMonitoring();
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>

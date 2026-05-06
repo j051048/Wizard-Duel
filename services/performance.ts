@@ -1,8 +1,105 @@
 /**
  * Wizard Duel - 性能监控工具
- * 
- * 提供运行时性能监控和优化建议
+ *
+ * [Phase 2] 增强：Web Vitals 追踪 + FPS 自动降级 + 资源加载监控
  */
+
+// ============ Web Vitals 追踪 ============
+
+export interface WebVitals {
+  fcp: number | null;   // First Contentful Paint
+  lcp: number | null;   // Largest Contentful Paint
+  fid: number | null;   // First Input Delay
+  cls: number | null;   // Cumulative Layout Shift
+  ttfb: number | null;  // Time to First Byte
+}
+
+const vitals: WebVitals = { fcp: null, lcp: null, fid: null, cls: null, ttfb: null };
+
+/** 收集 Web Vitals（自动在页面加载时调用） */
+export const initWebVitals = (): void => {
+  if (typeof PerformanceObserver === 'undefined') return;
+
+  // FCP
+  try {
+    const fcpObserver = new PerformanceObserver((list) => {
+      const entries = list.getEntries();
+      if (entries.length > 0) {
+        vitals.fcp = entries[entries.length - 1].startTime;
+      }
+    });
+    fcpObserver.observe({ type: 'paint', buffered: true });
+  } catch { /* 不支持 */ }
+
+  // LCP
+  try {
+    const lcpObserver = new PerformanceObserver((list) => {
+      const entries = list.getEntries();
+      if (entries.length > 0) {
+        vitals.lcp = entries[entries.length - 1].startTime;
+      }
+    });
+    lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true });
+  } catch { /* 不支持 */ }
+
+  // FID / INP
+  try {
+    const fidObserver = new PerformanceObserver((list) => {
+      const entry = list.getEntries()[0] as PerformanceEventTiming;
+      if (entry) {
+        vitals.fid = entry.processingStart - entry.startTime;
+      }
+    });
+    fidObserver.observe({ type: 'first-input', buffered: true });
+  } catch { /* 不支持 */ }
+
+  // CLS
+  try {
+    let clsValue = 0;
+    const clsObserver = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (!(entry as any).hadRecentInput) {
+          clsValue += (entry as any).value;
+        }
+      }
+      vitals.cls = clsValue;
+    });
+    clsObserver.observe({ type: 'layout-shift', buffered: true });
+  } catch { /* 不支持 */ }
+
+  // TTFB
+  try {
+    const navEntries = performance.getEntriesByType('navigation');
+    if (navEntries.length > 0) {
+      vitals.ttfb = (navEntries[0] as PerformanceNavigationTiming).responseStart;
+    }
+  } catch { /* 不支持 */ }
+};
+
+/** 获取当前 Web Vitals 快照 */
+export const getWebVitals = (): WebVitals => ({ ...vitals });
+
+// ============ 资源加载监控 ============
+
+export interface ResourceMetric {
+  name: string;
+  type: string;
+  duration: number;
+  size: number;
+}
+
+/** 获取慢资源列表（>500ms 或 >500KB） */
+export const getSlowResources = (thresholdMs = 500, thresholdBytes = 500 * 1024): ResourceMetric[] => {
+  if (typeof performance === 'undefined') return [];
+  return performance.getEntriesByType('resource')
+    .filter(e => e.duration > thresholdMs || (e as any).transferSize > thresholdBytes)
+    .map(e => ({
+      name: e.name.split('/').pop() || e.name,
+      type: (e as any).initiatorType || 'unknown',
+      duration: Math.round(e.duration),
+      size: (e as any).transferSize || 0,
+    }));
+};
 
 // 性能配置
 export interface PerformanceConfig {
@@ -113,3 +210,69 @@ export class FPSMonitor {
 
 // 全局 FPS 监控器实例
 export const globalFPSMonitor = new FPSMonitor();
+
+// ============ [Phase 2] 自动画质调节 ============
+
+type QualityLevel = 'low' | 'medium' | 'high';
+
+interface AutoQualityState {
+  current: QualityLevel;
+  lastCheckFrame: number;
+  downgradeCooldown: number;
+}
+
+const autoState: AutoQualityState = {
+  current: 'high',
+  lastCheckFrame: 0,
+  downgradeCooldown: 0,
+};
+
+/**
+ * 基于 FPS 自动选择画质等级
+ * 每 120 帧检测一次，FPS < 25 降级，FPS > 50 且稳定则升级
+ */
+export const getAutoQuality = (): QualityLevel => {
+  const monitor = globalFPSMonitor;
+  monitor.tick();
+
+  autoState.lastCheckFrame++;
+  if (autoState.downgradeCooldown > 0) autoState.downgradeCooldown--;
+
+  // 每 120 帧检测一次
+  if (autoState.lastCheckFrame < 120) return autoState.current;
+  autoState.lastCheckFrame = 0;
+
+  const fps = monitor.getFPS();
+
+  // 降级：FPS < 25 且无冷却
+  if (fps < 25 && autoState.downgradeCooldown === 0) {
+    if (autoState.current === 'high') {
+      autoState.current = 'medium';
+      autoState.downgradeCooldown = 240; // 冷却 240 帧
+    } else if (autoState.current === 'medium') {
+      autoState.current = 'low';
+      autoState.downgradeCooldown = 360;
+    }
+  }
+
+  // 升级：FPS > 50 且持续稳定
+  if (fps > 50 && !monitor.shouldDowngrade(45)) {
+    if (autoState.current === 'low') {
+      autoState.current = 'medium';
+    } else if (autoState.current === 'medium') {
+      autoState.current = 'high';
+    }
+  }
+
+  return autoState.current;
+};
+
+/** 获取当前自动画质对应的性能配置 */
+export const getAutoPerformanceConfig = (): PerformanceConfig => {
+  return getPerformanceConfig(getAutoQuality());
+};
+
+/** 初始化 Web Vitals 监控（在 App 启动时调用一次） */
+export const initPerformanceMonitoring = (): void => {
+  initWebVitals();
+};
