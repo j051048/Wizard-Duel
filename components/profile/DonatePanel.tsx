@@ -103,7 +103,7 @@ export const DonatePanel: React.FC<DonatePanelProps> = ({
             profiles[activeAddress].balance = newBalance;
             localStorage.setItem('wizard_user_profile', JSON.stringify(profiles));
           }
-        } catch (e) { /* ignore */ }
+        } catch { /* ignore */ }
 
         import('../../services/supabase').then(async ({ supabase, isSupabaseConfigured }) => {
           if (!isSupabaseConfigured) return;
