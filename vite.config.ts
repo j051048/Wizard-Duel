@@ -117,25 +117,42 @@ export default defineConfig(({ mode }) => {
       build: {
         rollupOptions: {
           output: {
-            manualChunks: {
-              'vendor-react': ['react', 'react-dom'],
-              'vendor-web3': ['wagmi', 'viem', '@tanstack/react-query'],
-              'vendor-animation': ['framer-motion'],
-              'vendor-supabase': ['@supabase/supabase-js'],
-              'vendor-game-logic': [
-                './services/gameLogic.ts',
-                './services/ai.ts',
-                './services/combat/elementSystem.ts',
-                './services/combat/damageCalculation.ts',
-                './services/combat/comboSystem.ts',
-                './services/combat/turnManager.ts',
-                './services/mechanics.ts',
-                './services/sequence.ts',
-              ],
-              'vendor-sentry': ['@sentry/react'],
-              'vendor-lucide': ['lucide-react'],
-              'vendor-zustand': ['zustand'],
-              'vendor-react-virtual': ['@tanstack/react-virtual'],
+            manualChunks(id: string) {
+              if (id.includes('node_modules')) {
+                // React + React DOM — single chunk, never duplicated
+                if (id.includes('/react-dom/') || id.includes('/react/') && !id.includes('/react-dom/')) {
+                  return 'vendor-react';
+                }
+                if (id.includes('@tanstack/react-virtual')) {
+                  return 'vendor-react-virtual';
+                }
+                if (id.includes('wagmi') || id.includes('/viem/') || id.includes('@tanstack/react-query')) {
+                  return 'vendor-web3';
+                }
+                if (id.includes('framer-motion')) {
+                  return 'vendor-animation';
+                }
+                if (id.includes('@supabase')) {
+                  return 'vendor-supabase';
+                }
+                if (id.includes('@sentry')) {
+                  return 'vendor-sentry';
+                }
+                if (id.includes('lucide-react')) {
+                  return 'vendor-lucide';
+                }
+                if (id.includes('zustand')) {
+                  return 'vendor-zustand';
+                }
+              }
+              // Game logic services
+              if (id.includes('/services/gameLogic') ||
+                  id.includes('/services/ai') ||
+                  id.includes('/services/combat/') ||
+                  id.includes('/services/mechanics') ||
+                  id.includes('/services/sequence')) {
+                return 'vendor-game-logic';
+              }
             },
           },
         },
