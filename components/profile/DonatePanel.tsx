@@ -138,7 +138,7 @@ export const DonatePanel: React.FC<DonatePanelProps> = ({
 
       <div className="bg-black/40 rounded-lg p-3 text-xs text-gray-400 space-y-1">
         <p>• 网络: <span className="text-white font-bold">X Layer</span></p>
-        <p>• 捐赠代币到基金会地址，每捐赠 1 枚代币 = 1 积分（取整数）</p>
+        <p>• 捐赠代币到基金会地址，每捐赠 1 枚代币 = 1 钻石（取整数）</p>
         <p className="text-[10px] text-gray-500 break-all">代币: {DONATION_TOKEN_ADDRESS}</p>
         <p className="text-[10px] text-gray-500 break-all">收款: {TREASURY_ADDRESS}</p>
       </div>
@@ -171,7 +171,7 @@ export const DonatePanel: React.FC<DonatePanelProps> = ({
           onChange={(e) => setCustomAmount(e.target.value)}
           className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm font-mono focus:outline-none focus:border-purple-500/50 placeholder-gray-600"
         />
-        <span className="text-xs text-gray-500 font-bold">= {Math.floor(Number(customAmount) || donateAmount)} 积分</span>
+        <span className="text-xs text-gray-500 font-bold">= {Math.floor(Number(customAmount) || donateAmount)} 钻石</span>
       </div>
 
       {!isGuest && address ? (
@@ -203,7 +203,7 @@ export const DonatePanel: React.FC<DonatePanelProps> = ({
       {isConfirmed && (
         <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 text-center">
           <p className="text-green-400 font-bold text-sm">✅ 捐赠成功！感谢支持！</p>
-          <p className="text-green-300/60 text-xs mt-1">+{Math.floor(Number(customAmount) || donateAmount)} 积分已到账</p>
+          <p className="text-green-300/60 text-xs mt-1">+{Math.floor(Number(customAmount) || donateAmount)} 钻石已到账</p>
           {txHash && (
             <a
               href={`https://www.oklink.com/xlayer/tx/${txHash}`}

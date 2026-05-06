@@ -126,9 +126,8 @@ export const SpellCard = memo<SpellCardProps>(({
         <img 
           src="/ui/card_back.webp" 
           alt="Card Back"
-          loading="lazy"
-          decoding="async"
           className="w-full h-full object-contain drop-shadow-xl"
+          style={{ imageRendering: 'auto', WebkitBackfaceVisibility: 'hidden' }}
         />
       </div>
     );
@@ -191,7 +190,7 @@ export const SpellCard = memo<SpellCardProps>(({
         layoutId={spell.id}
         id={`card-${spell.id}`}
         className={`
-          relative select-none
+          relative select-none group
           ${isSmall ? 'w-16 h-24' : 'w-24 h-36 sm:w-32 sm:h-44 md:w-40 md:h-56'}
           ${isDisabled ? 'opacity-80 grayscale-[0.3]' : 'cursor-pointer'}
           ${isSelected ? 'z-50' : 'z-10'}
@@ -249,15 +248,23 @@ export const SpellCard = memo<SpellCardProps>(({
                 <div className="absolute top-0 left-0 right-0 h-1 legendary-glow opacity-80" />
               )}
                {/* Main Art / Emoji */}
-               <div className="absolute inset-0 z-0 transform transition-transform duration-500 group-hover:scale-110">
+               <div className="absolute inset-0 z-0 overflow-hidden">
                   {!imgError && spell.artSrc ? (
                      <img
                       src={spell.artSrc}
                       alt={spell.name}
-                      loading="lazy"
                       decoding="async"
-                      className="w-full h-full object-cover"
-                      onError={() => setImgError(true)}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      style={{ 
+                        imageRendering: 'auto',
+                        WebkitBackfaceVisibility: 'hidden',
+                        backfaceVisibility: 'hidden',
+                        transform: 'translateZ(0)'
+                      }}
+                      onError={() => {
+                        console.error(`Failed to load spell image: ${spell.artSrc} for spell ${spell.id}`);
+                        setImgError(true);
+                      }}
                      />
                   ) : spell.artSrc ? (
                      // artSrc 存在但图片未加载 — 用卡背占位
