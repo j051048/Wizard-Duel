@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { DuelState, GameLoopState, SpellType } from '../../../types';
 import { SpellProjection } from '../../../services/projection';
 import { GAME_CONFIG } from '../../../constants';
@@ -22,7 +22,7 @@ interface OpponentHUDProps {
   setIsLogOpen?: (open: boolean) => void;
 }
 
-export const OpponentHUD: React.FC<OpponentHUDProps> = ({
+export const OpponentHUD: React.FC<OpponentHUDProps> = memo(({
   duelState,
   aiStatus,
   opponentCard: _opponentCard, // [Lint Fix] Unused variable
@@ -208,4 +208,5 @@ export const OpponentHUD: React.FC<OpponentHUDProps> = ({
       </div>
     </div>
   );
-};
+});
+OpponentHUD.displayName = 'OpponentHUD';

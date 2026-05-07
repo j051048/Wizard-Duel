@@ -8,6 +8,12 @@
 
 import { useShallow } from 'zustand/react/shallow';
 import { useUserStore } from './useUserStore';
+import type { SpellType } from '../types/card';
+import type { StatusEffect } from '../types/duel';
+
+/** 模块级空引用常量 — 避免每次 selector 调用时创建新数组/对象 */
+const EMPTY_SPELLS: SpellType[] = [];
+const EMPTY_EFFECTS: StatusEffect[] = [];
 
 // ============ 常用选择器 ============
 
@@ -143,7 +149,7 @@ export const useOpponentStatus = () => {
       opponentMana:      s.duelState?.opponentMana ?? 0,
       opponentMaxMana:   s.duelState?.opponentMaxMana ?? 0,
       opponentHandSize:  s.duelState?.opponentHandSize ?? 0,
-      opponentEffects:   s.duelState?.opponentEffects ?? [],
+      opponentEffects:   s.duelState?.opponentEffects ?? EMPTY_EFFECTS,
       aiProfile:         s.duelState?.aiProfile,
     }))
   );
@@ -159,7 +165,7 @@ export const usePlayerStatus = () => {
       playerArmor:       s.duelState?.playerArmor ?? 0,
       playerMana:        s.duelState?.playerMana ?? 0,
       playerMaxMana:     s.duelState?.playerMaxMana ?? 0,
-      playerEffects:     s.duelState?.playerEffects ?? [],
+      playerEffects:     s.duelState?.playerEffects ?? EMPTY_EFFECTS,
       heroSkillsUsed:    s.duelState?.heroSkillsUsed ?? false,
       selectedHeroSkill: s.duelState?.selectedHeroSkill,
     }))
@@ -170,7 +176,7 @@ export const usePlayerStatus = () => {
  * 玩家手牌（引用比较）
  */
 export const usePlayerHand = () => {
-  return useBattleStore((s) => s.duelState?.playerHand ?? []);
+  return useBattleStore((s) => s.duelState?.playerHand ?? EMPTY_SPELLS);
 };
 
 /**

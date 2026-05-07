@@ -2,7 +2,7 @@
  * StatusEffectBadge - 状态效果标签组件
  */
 
-import React from 'react';
+import React, { memo } from 'react';
 import { StatusEffect } from '../../types';
 import { getMechanicName } from '../../constants';
 
@@ -22,7 +22,7 @@ const EFFECT_DESCRIPTIONS: Record<string, string> = {
   empowered: '法术伤害增强',
 };
 
-export const StatusEffectBadge: React.FC<StatusEffectBadgeProps> = ({ effect }) => {
+export const StatusEffectBadge: React.FC<StatusEffectBadgeProps> = memo(({ effect }) => {
   const getBadgeStyle = () => {
     switch (effect.type) {
       case 'burn': return 'bg-orange-950/80 border-orange-500/50 text-orange-200';
@@ -101,4 +101,5 @@ export const StatusEffectBadge: React.FC<StatusEffectBadgeProps> = ({ effect }) 
       </div>
     </div>
   );
-};
+});
+StatusEffectBadge.displayName = "StatusEffectBadge";

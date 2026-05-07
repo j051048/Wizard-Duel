@@ -2,7 +2,7 @@
  * HealthBar - 血条组件（带动画）
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 
 interface HealthBarProps {
   current: number;
@@ -10,7 +10,7 @@ interface HealthBarProps {
   isPlayer: boolean;
 }
 
-export const HealthBar: React.FC<HealthBarProps> = ({ current, max, isPlayer }) => {
+export const HealthBar: React.FC<HealthBarProps> = memo(({ current, max, isPlayer }) => {
   const percentage = Math.max(0, Math.min(100, (current / max) * 100));
   const isLow = percentage <= 30;
   const isCritical = percentage <= 15;
@@ -94,4 +94,5 @@ export const HealthBar: React.FC<HealthBarProps> = ({ current, max, isPlayer }) 
       </div>
     </div>
   );
-};
+});
+HealthBar.displayName = 'HealthBar';

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, memo } from 'react';
 import { DuelState, SpellType } from '../../../types';
 import { SpellProjection } from '../../../services/projection';
 import { GAME_CONFIG } from '../../../constants';
@@ -19,7 +19,7 @@ interface PlayerHUDProps {
   onUseHeroSkill?: () => void;
 }
 
-export const PlayerHUD: React.FC<PlayerHUDProps> = ({
+export const PlayerHUD: React.FC<PlayerHUDProps> = memo(({
   duelState,
   phase,
   isProcessing,
@@ -190,4 +190,5 @@ export const PlayerHUD: React.FC<PlayerHUDProps> = ({
       />
     </div>
   );
-};
+});
+PlayerHUD.displayName = 'PlayerHUD';

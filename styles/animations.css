@@ -26,6 +26,8 @@
 
 .card-entering {
   animation: cardDraw 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform, opacity;
+  backface-visibility: hidden;
 }
 
 /* 卡牌离开动画 */
@@ -42,6 +44,8 @@
 
 .card-leaving {
   animation: cardLeave 0.3s ease-out forwards;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
 }
 
 /* ============ #36 英雄受伤效果 ============ */
@@ -58,6 +62,8 @@
 
 .hero-damaged {
   animation: heroShake 0.4s ease-in-out;
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 .hero-damaged::after {
@@ -92,6 +98,8 @@
 .minion-attacking {
   animation: minionAttack 0.5s ease-in-out;
   z-index: 100;
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 /* 随从受击效果 */
@@ -173,6 +181,8 @@
   background: linear-gradient(90deg, #a855f7, #ec4899, #f59e0b, #a855f7);
   background-size: 300% 100%;
   animation: legendaryShimmer 3s ease-in-out infinite;
+  will-change: background-position;
+  backface-visibility: hidden;
 }
 
 /* 紧急时间燃烧效果 */
@@ -254,6 +264,8 @@
 
 .minion-charge {
   animation: minionCharge 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 @keyframes minionChargeReverse {
@@ -268,6 +280,8 @@
 
 .minion-charge-reverse {
   animation: minionChargeReverse 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 /* 受击震动 */
@@ -496,6 +510,8 @@
 
 .player-card-enter {
   animation: playerCardEnter 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity, filter;
+  backface-visibility: hidden;
 }
 
 /* 对手卡牌从上方飞入 — 抛物线弧线轨迹 */
@@ -528,6 +544,8 @@
 
 .opponent-card-fly-in {
   animation: opponentCardEnter 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity, filter;
+  backface-visibility: hidden;
 }
 
 /* 碰撞闪光 */
@@ -659,6 +677,7 @@
 
 .hp-low-pulse {
   animation: hpLowPulse 1.5s ease-in-out infinite;
+  will-change: filter;
 }
 
 /* 满法力水晶脉冲 */
@@ -673,6 +692,7 @@
 
 .mana-full-glow {
   animation: manaFullGlow 2s ease-in-out infinite;
+  will-change: filter;
 }
 
 /* 环境粒子 - 火焰火星 */
@@ -727,11 +747,15 @@
 .env-particle-fire {
   background: radial-gradient(circle, #fbbf24, #f97316);
   animation: envFireSpark 4s ease-out infinite;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
 }
 
 .env-particle-ice {
   background: radial-gradient(circle, #e0f2fe, #a5f3fc);
   animation: envIceSnow 6s linear infinite;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
 }
 
 .env-particle-thunder {

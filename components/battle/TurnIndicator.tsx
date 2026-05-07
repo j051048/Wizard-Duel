@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface TurnIndicatorProps {
@@ -6,7 +6,7 @@ interface TurnIndicatorProps {
   roundNumber: number;
 }
 
-export const TurnIndicator: React.FC<TurnIndicatorProps> = ({ isPlayerTurn, roundNumber }) => {
+export const TurnIndicator: React.FC<TurnIndicatorProps> = memo(({ isPlayerTurn, roundNumber }) => {
   const [show, setShow] = useState(false);
   const [text, setText] = useState('');
 
@@ -61,4 +61,5 @@ export const TurnIndicator: React.FC<TurnIndicatorProps> = ({ isPlayerTurn, roun
       )}
     </AnimatePresence>
   );
-};
+});
+TurnIndicator.displayName = 'TurnIndicator';

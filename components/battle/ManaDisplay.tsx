@@ -3,7 +3,7 @@
  * [P1 Fix #8] 充能填充动画
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ManaDisplayProps {
@@ -11,7 +11,7 @@ interface ManaDisplayProps {
   max: number;
 }
 
-export const ManaDisplay: React.FC<ManaDisplayProps> = ({ current, max }) => {
+export const ManaDisplay: React.FC<ManaDisplayProps> = memo(({ current, max }) => {
   const prevMaxRef = useRef(max);
   const [isNewTurn, setIsNewTurn] = useState(false);
   
@@ -102,4 +102,5 @@ export const ManaDisplay: React.FC<ManaDisplayProps> = ({ current, max }) => {
       </div>
     </div>
   );
-};
+});
+ManaDisplay.displayName = 'ManaDisplay';

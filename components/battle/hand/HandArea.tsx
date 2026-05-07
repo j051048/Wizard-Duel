@@ -1,3 +1,4 @@
+import React, { memo } from 'react';
 import { SpellType, DuelPhase } from '../../../types';
 import BattleHand from '../BattleHand';
 import { TutorialBubble } from '../../ui/TutorialBubble';
@@ -26,7 +27,7 @@ interface HandAreaProps {
   shouldShowTutorial: boolean;
 }
 
-export const HandArea: React.FC<HandAreaProps> = ({
+export const HandArea: React.FC<HandAreaProps> = memo(({
   hand,
   playableCards,
   phase,
@@ -103,4 +104,5 @@ export const HandArea: React.FC<HandAreaProps> = ({
         </div>
     </div>
   );
-};
+});
+HandArea.displayName = 'HandArea';

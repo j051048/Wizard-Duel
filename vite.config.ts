@@ -161,12 +161,11 @@ export default defineConfig(({ mode }) => {
             manualChunks(id: string) {
               if (id.includes('node_modules')) {
                 // React + React DOM — single chunk, never duplicated
-                if (id.includes('/react-dom/') || id.includes('/react/') && !id.includes('/react-dom/')) {
+                if (id.includes('/react-dom/') || (id.includes('/react/') && !id.includes('/react-dom/'))) {
                   return 'vendor-react';
                 }
-                if (id.includes('@tanstack/react-virtual')) {
-                  return 'vendor-react-virtual';
-                }
+                // @tanstack/react-virtual 仅 CardPool 使用，合并到主 chunk 减少请求
+                // if (id.includes('@tanstack/react-virtual')) { return 'vendor-react-virtual'; }
                 if (id.includes('wagmi') || id.includes('/viem/') || id.includes('@tanstack/react-query')) {
                   return 'vendor-web3';
                 }
