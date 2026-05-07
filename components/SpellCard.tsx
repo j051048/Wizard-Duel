@@ -11,8 +11,8 @@
  */
 
 import React, { useState, useEffect, memo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Spell, SpellType } from '../types';
+import { motion } from 'framer-motion';
+import { Spell } from '../types';
 import { getMechanicName } from '../constants';
 import { Zap, Shield, Flame, Snowflake, Leaf } from 'lucide-react';
 
@@ -137,7 +137,6 @@ export const SpellCard = memo<SpellCardProps>(({
 
   const canPlay = isAffordable && !disabled;
   const mechanicIcon = getMechanicIcon(spell.mechanic);
-  const frameImage = getFrameImage(getElementFromId(spell.id));
 
   // 稀有度样式
   const getRarityStyles = (rarity: string) => {
