@@ -63,7 +63,7 @@ export const PlayerHUD: React.FC<PlayerHUDProps> = memo(({
            </div>
 
            {/* 状态数值条 */}
-           <div className="flex items-center gap-1.5 bg-black/70 backdrop-blur-sm rounded-full px-2.5 py-1.5">
+           <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md rounded-full px-2.5 py-1.5 border border-white/10 shadow-[0_0_15px_rgba(0,0,0,0.5)]">
              {/* HP */}
              <div className="flex items-center gap-0.5">
                <span className="text-red-400 text-xs">❤️</span>

@@ -44,20 +44,23 @@ export const HandArea: React.FC<HandAreaProps> = memo(({
   if (isMobile) {
       /* ====== 移动端：紧凑底部手牌区 ====== */
       return (
-        <div className="absolute bottom-0 left-0 right-0 z-30 pointer-events-none" 
+        <div className="absolute bottom-0 left-0 right-0 z-30 pointer-events-none"
              style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
             <div className="relative w-full">
+                {/* 背景渐变遮罩 — 让手牌区域与战场自然过渡 */}
+                <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none z-0" />
+
                 {/* 手牌容器 */}
                 <div id="player-hand-container" className="w-full relative z-40 pointer-events-auto">
                     {/* 新手引导 - [P1-14] 移动端改为单击确认 */}
-                    <TutorialBubble 
-                        isVisible={shouldShowTutorial} 
-                        text="👆 点击选牌，再点确认出牌！" 
+                    <TutorialBubble
+                        isVisible={shouldShowTutorial}
+                        text="👆 点击选牌，再点确认出牌！"
                         position="top"
                     />
-                    
+
                     {/* 横向滚动手牌 */}
-                    <BattleHand 
+                    <BattleHand
                         hand={hand}
                         playableCards={playableCards}
                         phase={phase}
@@ -71,9 +74,9 @@ export const HandArea: React.FC<HandAreaProps> = memo(({
                         onDoubleClickCard={(spellId) => handlePlayCard(spellId, true)}
                     />
                 </div>
-                
+
                 {/* 底部装饰条 - 更细 */}
-                <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-t from-[#0a0502] to-transparent pointer-events-none z-0" />
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-t from-purple-900/40 to-transparent pointer-events-none z-0" />
             </div>
         </div>
       );
@@ -82,13 +85,15 @@ export const HandArea: React.FC<HandAreaProps> = memo(({
   /* ====== 桌面端布局 ====== */
   return (
     <div id="player-hand-container" className="absolute bottom-0 left-0 right-0 z-30 pointer-events-none flex justify-center pb-4 md:pb-6 safe-area-bottom">
+        {/* 背景渐变遮罩 */}
+        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
         <div className="relative pointer-events-auto">
-             <TutorialBubble 
-                isVisible={shouldShowTutorial} 
-                text="👆 拖动或双击卡牌打出！" 
+             <TutorialBubble
+                isVisible={shouldShowTutorial}
+                text="👆 拖动或双击卡牌打出！"
                 position="top"
             />
-            <BattleHand 
+            <BattleHand
                 hand={hand}
                 playableCards={playableCards}
                 phase={phase}

@@ -12,8 +12,8 @@ const CombatFeed: React.FC<CombatFeedProps> = React.memo(({ messages, isMobile =
 
   return (
     <div className={`
-      ${isMobile 
-        ? 'flex flex-col gap-1.5 max-w-[180px]'
+      ${isMobile
+        ? 'fixed left-2 top-1/3 z-40 pointer-events-none flex flex-col gap-1.5 max-w-[160px]'
         : 'fixed left-4 top-1/2 -translate-y-1/2 z-40 pointer-events-none flex flex-col gap-2 max-w-[200px]'
       }
     `}>

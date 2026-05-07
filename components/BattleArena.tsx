@@ -42,6 +42,7 @@ import { HandArea } from './battle/hand/HandArea';
 import { DragDropZone } from './battle/board/DragDropZone';
 import { FloatingTextOverlay } from './battle/feedback/FloatingText';
 import { FloatingActionLog } from './battle/FloatingActionLog';
+import { BattleGuide } from './battle/BattleGuide';
 import { DebuffOverlay } from './battle/DebuffOverlay';
 import { TargetSelector } from './battle/TargetSelector';
 import { HeroSkillSelection } from './battle/HeroSkillSelection';
@@ -706,14 +707,15 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         <img
           src="/ui/bg_arena.webp"
           alt="Arena Background"
-          className={`absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay scale-110 optimize-gpu ${isLowQuality ? '' : 'blur-[2px] animate-bg-breathing'}`}
+          className={`absolute inset-0 w-full h-full object-cover opacity-70 scale-110 optimize-gpu ${isLowQuality ? '' : 'blur-[1px] animate-bg-breathing'}`}
           style={{
             objectPosition: 'center 40%',
+            mixBlendMode: 'luminosity',
             transform: isLowQuality ? undefined : `translate(${parallaxRef.current.x}px, ${parallaxRef.current.y}px)`,
             transition: 'transform 0.15s ease-out',
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-slate-950/80" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-slate-950/60" />
         {/* [P2-3] Dynamic battlefield theme based on opponent element */}
         {(() => {
           const opponentElement = duelState?.opponentLastSpell ? getElementType(duelState.opponentLastSpell) : null;
@@ -738,6 +740,20 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       </div>
 
       <FloatingTextOverlay items={floatingTexts} />
+
+      {/* 战斗指引 — 新手出牌提示 */}
+      {duelState && (
+        <BattleGuide
+          isPlayerTurn={phase === 'PLAYER_TURN'}
+          phase={phase}
+          playerMana={duelState.playerMana}
+          playerMaxMana={duelState.playerMaxMana}
+          handSize={duelState.playerHand.length}
+          opponentLastSpell={duelState.opponentLastSpell}
+          roundNumber={duelState.roundNumber}
+          isMobile={isMobile}
+        />
+      )}
 
       {/* PVP 状态指示器 - 根据连接状态动态更新 */}
       {isPVPMode && (

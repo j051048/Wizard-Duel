@@ -10,19 +10,19 @@ type SceneryTheme = 'volcano' | 'frost' | 'enchanted';
 const SCENERY_CONFIG: Record<SceneryTheme, { label: string; gradient: string; particleColor: string; borderColor: string }> = {
   volcano: {
     label: '火山',
-    gradient: 'linear-gradient(180deg, #1a0a0a 0%, #4a1a0a 40%, #2d1108 100%)',
+    gradient: 'linear-gradient(180deg, rgba(26,10,10,0.85) 0%, rgba(74,26,10,0.7) 40%, rgba(45,17,8,0.85) 100%)',
     particleColor: 'rgba(239,68,68,0.4)',
     borderColor: 'rgba(239,68,68,0.2)',
   },
   frost: {
     label: '冰原',
-    gradient: 'linear-gradient(180deg, #0a1a2a 0%, #0d2847 40%, #061220 100%)',
+    gradient: 'linear-gradient(180deg, rgba(10,26,42,0.85) 0%, rgba(13,40,71,0.7) 40%, rgba(6,18,32,0.85) 100%)',
     particleColor: 'rgba(34,211,238,0.3)',
     borderColor: 'rgba(34,211,238,0.2)',
   },
   enchanted: {
     label: '魔法森林',
-    gradient: 'linear-gradient(180deg, #0a1a0a 0%, #0d2a15 40%, #081a0a 100%)',
+    gradient: 'linear-gradient(180deg, rgba(10,26,10,0.85) 0%, rgba(13,42,21,0.7) 40%, rgba(8,26,10,0.85) 100%)',
     particleColor: 'rgba(34,197,94,0.3)',
     borderColor: 'rgba(34,197,94,0.2)',
   },

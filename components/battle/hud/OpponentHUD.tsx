@@ -63,7 +63,7 @@ export const OpponentHUD: React.FC<OpponentHUDProps> = memo(({
             </div>
 
             {/* 核心数值 - 一行显示 */}
-            <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-sm rounded-full px-2 py-1">
+            <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md rounded-full px-2 py-1 border border-white/10 shadow-[0_0_15px_rgba(0,0,0,0.5)]">
               {/* HP */}
               <div className="flex items-center gap-0.5">
                 <span className="text-red-400 text-xs">❤️</span>
