@@ -62,6 +62,24 @@ export default defineConfig(({ mode }) => {
             navigateFallback: 'index.html',
             runtimeCaching: [
               {
+                // Card art uses stable public URLs; prefer fresh network copies so updated art
+                // is not locked behind an old runtime cache.
+                urlPattern: ({ url }) => url.origin === self.location.origin &&
+                  url.pathname.startsWith('/cards/'),
+                handler: 'NetworkFirst',
+                options: {
+                  cacheName: 'card-art-cache',
+                  networkTimeoutSeconds: 3,
+                  expiration: {
+                    maxEntries: 200,
+                    maxAgeSeconds: 60 * 60 * 24 * 14
+                  },
+                  cacheableResponse: {
+                    statuses: [200]
+                  }
+                }
+              },
+              {
                 // 同源 JS/CSS chunks: 网络优先，避免部署后旧 chunk hash 404
                 urlPattern: ({ url }) => url.origin === self.location.origin &&
                   (/\/assets\/[^/]+\.(js|css)$/.test(url.pathname)),

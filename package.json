@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build --emptyOutDir",
+    "build": "node ./tools/clean-dist.mjs && vite build --emptyOutDir",
     "preview": "vite preview",
     "validate-cards": "tsx ./tools/card-validations.ts",
     "self-test": "tsx ./tools/self-test.ts",
