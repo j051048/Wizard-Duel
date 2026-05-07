@@ -188,7 +188,7 @@ const BattleHand: React.FC<BattleHandProps> = ({
       className="flex justify-center items-end relative pointer-events-auto h-40 md:h-48"
       style={{ maxWidth: '900px', margin: '0 auto' }}
     >
-      <AnimatePresence mode='popLayout'>
+      <AnimatePresence mode='sync'>
         {hand.map((id, index) => {
           const isAffordable = playableCards.includes(id);
           const isBeingDragged = dragState?.index === index;
@@ -229,8 +229,8 @@ const BattleHand: React.FC<BattleHandProps> = ({
           }
            
           return (
-            <motion.div 
-              key={`${id}-${index}`} 
+            <motion.div
+              key={`${id}-${index}`}
               // 移除 layoutId 以避免不必要的自动布局动画导致的抖动
               initial={{ opacity: 0, y: 100, scale: 0.8 }}
                             animate={{ 
@@ -247,11 +247,11 @@ const BattleHand: React.FC<BattleHandProps> = ({
                 scale: 0.5,
                 transition: { duration: 0.2 }
               }}
-              transition={{ 
+              transition={{
                 type: "spring",
-                stiffness: 300,
-                damping: 25,
-                mass: 0.8
+                stiffness: 200,
+                damping: 30,
+                mass: 1.0
               }}
               className="absolute origin-bottom cursor-pointer"
               style={{ bottom: '10px' }}

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HapticService } from '../../services/haptic';
 import { audioBridge } from '../../hooks/useAudioManager';
@@ -11,12 +11,15 @@ interface TurnBannerProps {
 
 export const TurnBanner: React.FC<TurnBannerProps> = ({ type, roundNumber = 0 }) => {
   const isPlayer = type === 'player';
-  
-  // [P1 增强] 播放回合开始音效
+  const lastPlayedTypeRef = useRef<string | null>(null);
+
+  // [P1 增强] 播放回合开始音效 — 加播放锁防止重复触发
   useEffect(() => {
+    if (!type || lastPlayedTypeRef.current === type) return;
+    lastPlayedTypeRef.current = type;
+
     if (type === 'player') {
       HapticService.medium();
-      // 尝试播放回合开始音效
       try {
         audioBridge.playSfx('turn_start');
       } catch (e) {
@@ -25,6 +28,12 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({ type, roundNumber = 0 })
     } else if (type === 'opponent') {
       HapticService.light();
     }
+
+    // 清理：横幅消失后重置锁
+    const timer = setTimeout(() => {
+      lastPlayedTypeRef.current = null;
+    }, 2000);
+    return () => clearTimeout(timer);
   }, [type]);
   
   // Theme configuration - [P1 增强] 更鲜艳的配色

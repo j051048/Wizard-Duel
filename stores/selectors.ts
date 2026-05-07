@@ -173,10 +173,12 @@ export const usePlayerStatus = () => {
 };
 
 /**
- * 玩家手牌（引用比较）
+ * 玩家手牌（浅比较 — 手牌内容相同时不触发重渲染）
  */
 export const usePlayerHand = () => {
-  return useBattleStore((s) => s.duelState?.playerHand ?? EMPTY_SPELLS);
+  return useBattleStore(
+    useShallow((s) => s.duelState?.playerHand ?? EMPTY_SPELLS)
+  );
 };
 
 /**

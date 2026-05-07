@@ -205,7 +205,7 @@ export const SpellCard = memo<SpellCardProps>(({
                className={`
                relative w-full h-full bg-slate-900/40 rounded-lg overflow-hidden flex items-center justify-center
                border-2 md:border-4 ${rarityStyles.borderClass} ${rarityStyles.glowClass}
-               ${canPlay ? 'ring-2 ring-green-500/30 animate-pulse-gentle' : ''}
+               ${canPlay ? 'ring-2 ring-green-500/30' : ''}
           `}
                style={{ boxShadow: rarityStyles.borderGlow !== 'none' ? rarityStyles.borderGlow : undefined }}
           >

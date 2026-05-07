@@ -159,6 +159,17 @@ const AUDIO_CONFIG = {
     pack_open_special: 2000,
     combo_x5: 800,
     discover_select: 400,
+    // 防止高频音效重叠
+    turn_start: 1500,
+    turn_end: 1000,
+    card_draw: 300,
+    damage: 400,
+    burn: 500,
+    freeze: 500,
+    heal: 500,
+    page_transition: 300,
+    modal_open: 300,
+    modal_close: 300,
   } as Record<string, number>,
 };
 
@@ -210,17 +221,17 @@ export function useAudioManager(): [AudioManagerState, AudioManagerActions] {
   const [isAudioBlocked, setIsAudioBlocked] = useState(false);
 
   const bgmRef = useRef<HTMLAudioElement | null>(null);
-  // [P4-6] SFX ring buffer: 每个 src 维护最多 3 个 Audio 实例，轮询复用
-  const SFX_RING_SIZE = 3;
+  // [P4-6] SFX ring buffer: 每个 src 维护最多 2 个 Audio 实例，轮询复用
+  const SFX_RING_SIZE = 2;
   const sfxPoolRef = useRef<Map<string, HTMLAudioElement[]>>(new Map());
   const sfxRingIndexRef = useRef<Map<string, number>>(new Map());
-  
+
   // 音效冷却追踪
   const cooldownsRef = useRef<Map<string, number>>(new Map());
-  
+
   // 当前正在播放的音效数量（限制同时播放数）
   const activeSfxCountRef = useRef(0);
-  const MAX_CONCURRENT_SFX = 3; // 最多同时播放3个音效
+  const MAX_CONCURRENT_SFX = 2; // 最多同时播放2个音效
 
   // 检查音效是否在冷却中
   const isOnCooldown = useCallback((effectKey: string): boolean => {
