@@ -16,6 +16,7 @@ import { audioBridge } from '../hooks/useAudioManager';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { GlobalChat } from './GlobalChat';
 import CheckInPanel from './CheckInPanel';
+import { DailyQuestWidget } from './lobby/DailyQuestWidget';
 import { useUserStore } from '../stores/useUserStore';
 import { useUIStore } from '../stores/useUIStore';
 import { useToastStore } from '../stores/useToastStore';
@@ -273,6 +274,15 @@ export const Lobby: React.FC<LobbyProps> = ({
                <span>{t('Achievements') || '成就'}</span>
             </button>
 
+         {/* 公会入口 */}
+            <button
+               onClick={() => setGameState('GUILD')}
+               className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 font-bold uppercase tracking-widest border border-blue-500/30 px-4 py-2 rounded-full hover:bg-blue-900/20 hover:scale-105 active:scale-95 transition-all duration-150 bg-blue-500/10"
+            >
+               <span>🏰</span>
+               <span>公会</span>
+            </button>
+
          {/* 签到入口 */}
          <button
             onClick={() => setIsCheckInOpen(true)}
@@ -301,6 +311,11 @@ export const Lobby: React.FC<LobbyProps> = ({
             <MessageCircle size={14} />
             <span>{t('Chat')}</span>
          </button>
+      </div>
+
+      {/* 每日任务组件 */}
+      <div className="w-full max-w-2xl px-4 mb-4">
+        <DailyQuestWidget />
       </div>
 
       {/* 实时聊天组件 */}

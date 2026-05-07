@@ -26,6 +26,12 @@ export const MINION_DATA: Record<string, MinionTemplate> = {
   'ice_colossus': { name: '冰霜巨像', atk: 3, hp: 7, type: 'ice', keywords: ['taunt'] },
   'thunder_elemental': { name: '雷元素', atk: 3, hp: 3, type: 'thunder', keywords: ['rush'] },
   'rock_serpent': { name: '岩石巨蟒', atk: 4, hp: 5, type: 'rock', keywords: ['taunt'] },
+  // [Expansion 4] 新随从
+  'fire_phoenix_guard': { name: '凤凰守卫', atk: 5, hp: 4, type: 'fire', keywords: ['lifesteal'] },
+  'vine_ancient_treant': { name: '远古树人', atk: 3, hp: 8, type: 'vine', keywords: ['taunt'], onDeath: { type: 'heal', value: 5 } },
+  'ice_crystal_dragon': { name: '冰晶龙', atk: 4, hp: 5, type: 'ice', keywords: ['divine_shield'] },
+  'thunder_phoenix': { name: '雷凤凰', atk: 5, hp: 3, type: 'thunder', keywords: ['rush', 'windfury'] },
+  'rock_earth_titan': { name: '大地泰坦', atk: 6, hp: 8, type: 'rock', keywords: ['taunt'] },
 };
 
 // Helper: Define spell with auto-generated descriptions
@@ -549,10 +555,72 @@ export const SPELLS: Spell[] = [
     description: '永久+1最大法力值。',
     shortDesc: '+1最大法力',
   }),
+
+  // ============================================================
+  // [Expansion 4] 幻境之门 — 每元素5张 + 中立5张 + 双元素2张 + 传说3张
+  // ============================================================
+
+  // --- FIRE (fire20 ~ fire24) ---
+  defineSpell({ id: 'fire20' as SpellType, name: '火之吐息', manaCost: 1, damage: 2, rarity: 'common', mechanic: 'burn', cardSet: 'expansion_4', artSrc: '/cards/fire20.webp' }),
+  defineSpell({ id: 'fire21' as SpellType, name: '烈焰之心', manaCost: 2, damage: 3, rarity: 'rare', mechanic: 'burn', value: 1, effectDuration: 1, cardSet: 'expansion_4', artSrc: '/cards/fire21.webp' }),
+  defineSpell({ id: 'fire22' as SpellType, name: '召唤凤凰守卫', manaCost: 4, damage: 0, rarity: 'rare', mechanic: 'summon', summonId: 'fire_phoenix_guard', cardSet: 'expansion_4', artSrc: '/cards/fire22.webp' }),
+  defineSpell({ id: 'fire23' as SpellType, name: '陨石坠落', manaCost: 6, damage: 8, rarity: 'mythic', mechanic: 'burn', value: 2, effectDuration: 1, aoeMinionDamage: 2, cardSet: 'expansion_4', artSrc: '/cards/fire23.webp' }),
+  defineSpell({ id: 'fire24' as SpellType, name: '焚天之焰', manaCost: 9, damage: 12, rarity: 'legendary', mechanic: 'burn', value: 4, effectDuration: 2, cardSet: 'expansion_4', artSrc: '/cards/fire24.webp' }),
+
+  // --- VINE (vine20 ~ vine24) ---
+  defineSpell({ id: 'vine20' as SpellType, name: '荆棘之皮', manaCost: 1, damage: 1, armorGain: 2, rarity: 'common', mechanic: 'tangle', cardSet: 'expansion_4', artSrc: '/cards/vine20.webp' }),
+  defineSpell({ id: 'vine21' as SpellType, name: '自然恩赐', manaCost: 2, damage: 0, rarity: 'rare', mechanic: 'heal', value: 5, cardSet: 'expansion_4', artSrc: '/cards/vine21.webp' }),
+  defineSpell({ id: 'vine22' as SpellType, name: '召唤远古树人', manaCost: 4, damage: 0, rarity: 'rare', mechanic: 'deathrattle', summonId: 'vine_ancient_treant', cardSet: 'expansion_4', artSrc: '/cards/vine22.webp' }),
+  defineSpell({ id: 'vine23' as SpellType, name: '万藤缠绕', manaCost: 5, damage: 4, rarity: 'mythic', mechanic: 'tangle', value: 3, effectDuration: 2, cardSet: 'expansion_4', artSrc: '/cards/vine23.webp' }),
+  defineSpell({ id: 'vine24' as SpellType, name: '永恒之树', manaCost: 8, damage: 0, rarity: 'legendary', mechanic: 'heal', value: 20, cardSet: 'expansion_4', artSrc: '/cards/vine24.webp' }),
+
+  // --- ICE (ice18 ~ ice22) ---
+  defineSpell({ id: 'ice18' as SpellType, name: '冰甲术', manaCost: 1, damage: 0, armorGain: 3, rarity: 'common', mechanic: 'freeze', cardSet: 'expansion_4', artSrc: '/cards/ice18.webp' }),
+  defineSpell({ id: 'ice19' as SpellType, name: '冰锥穿刺', manaCost: 2, damage: 3, rarity: 'rare', mechanic: 'freeze', effectDuration: 1, cardSet: 'expansion_4', artSrc: '/cards/ice19.webp' }),
+  defineSpell({ id: 'ice20' as SpellType, name: '召唤冰晶龙', manaCost: 4, damage: 0, rarity: 'rare', mechanic: 'divine_shield', summonId: 'ice_crystal_dragon', cardSet: 'expansion_4', artSrc: '/cards/ice20.webp' }),
+  defineSpell({ id: 'ice21' as SpellType, name: '寒冰风暴', manaCost: 5, damage: 4, rarity: 'mythic', mechanic: 'freeze', effectDuration: 1, aoeMinionDamage: 3, cardSet: 'expansion_4', artSrc: '/cards/ice21.webp' }),
+  defineSpell({ id: 'ice22' as SpellType, name: '冰封王座', manaCost: 8, damage: 8, rarity: 'legendary', mechanic: 'freeze', effectDuration: 2, armorGain: 5, cardSet: 'expansion_4', artSrc: '/cards/ice22.webp' }),
+
+  // --- THUNDER (thunder18 ~ thunder22) ---
+  defineSpell({ id: 'thunder18' as SpellType, name: '雷击', manaCost: 1, damage: 2, rarity: 'common', mechanic: 'charge', cardSet: 'expansion_4', artSrc: '/cards/thunder18.webp' }),
+  defineSpell({ id: 'thunder19' as SpellType, name: '连锁雷击', manaCost: 2, damage: 3, rarity: 'rare', mechanic: 'charge', cardSet: 'expansion_4', artSrc: '/cards/thunder19.webp' }),
+  defineSpell({ id: 'thunder20' as SpellType, name: '召唤雷凤凰', manaCost: 4, damage: 0, rarity: 'rare', mechanic: 'charge', summonId: 'thunder_phoenix', cardSet: 'expansion_4', artSrc: '/cards/thunder20.webp' }),
+  defineSpell({ id: 'thunder21' as SpellType, name: '雷霆万钧', manaCost: 6, damage: 8, rarity: 'mythic', mechanic: 'charge', cardSet: 'expansion_4', artSrc: '/cards/thunder21.webp' }),
+  defineSpell({ id: 'thunder22' as SpellType, name: '神罚雷霆', manaCost: 9, damage: 12, rarity: 'legendary', mechanic: 'charge', cardSet: 'expansion_4', artSrc: '/cards/thunder22.webp' }),
+
+  // --- ROCK (rock19 ~ rock23) ---
+  defineSpell({ id: 'rock19' as SpellType, name: '石化皮肤', manaCost: 1, damage: 0, armorGain: 4, rarity: 'common', mechanic: 'fortify', cardSet: 'expansion_4', artSrc: '/cards/rock19.webp' }),
+  defineSpell({ id: 'rock20' as SpellType, name: '巨石投掷', manaCost: 2, damage: 2, armorGain: 3, rarity: 'rare', mechanic: 'fortify', cardSet: 'expansion_4', artSrc: '/cards/rock20.webp' }),
+  defineSpell({ id: 'rock21' as SpellType, name: '召唤大地泰坦', manaCost: 5, damage: 0, rarity: 'rare', mechanic: 'summon', summonId: 'rock_earth_titan', cardSet: 'expansion_4', artSrc: '/cards/rock21.webp' }),
+  defineSpell({ id: 'rock22' as SpellType, name: '山崩地裂', manaCost: 6, damage: 4, armorGain: 6, rarity: 'mythic', mechanic: 'cleave', cardSet: 'expansion_4', artSrc: '/cards/rock22.webp' }),
+  defineSpell({ id: 'rock23' as SpellType, name: '不灭磐石', manaCost: 9, damage: 8, armorGain: 15, rarity: 'legendary', mechanic: 'fortify', cardSet: 'expansion_4', artSrc: '/cards/rock23.webp' }),
+
+  // --- NEUTRAL (neutral6 ~ neutral10) ---
+  defineSpell({ id: 'neutral6' as SpellType, name: '法力涌流', manaCost: 1, damage: 0, rarity: 'common', mechanic: 'draw', value: 1, cardSet: 'expansion_4', color: 'text-cyan-400', borderColor: 'border-cyan-400', shadowColor: 'rgba(34,211,238,0.5)', artSrc: '/cards/neutral6.webp' }),
+  defineSpell({ id: 'neutral7' as SpellType, name: '生命涌泉', manaCost: 3, damage: 0, rarity: 'rare', mechanic: 'heal', value: 6, cardSet: 'expansion_4', color: 'text-green-300', borderColor: 'border-green-300', shadowColor: 'rgba(134,239,172,0.5)', artSrc: '/cards/neutral7.webp' }),
+  defineSpell({ id: 'neutral8' as SpellType, name: '奥术增幅', manaCost: 2, damage: 0, rarity: 'rare', mechanic: 'mana_ramp', cardSet: 'expansion_4', color: 'text-blue-300', borderColor: 'border-blue-300', shadowColor: 'rgba(147,197,253,0.5)', artSrc: '/cards/neutral8.webp', description: '永久+1最大法力值。', shortDesc: '+1最大法力' }),
+  defineSpell({ id: 'neutral9' as SpellType, name: '命运之轮', manaCost: 3, damage: 0, rarity: 'rare', mechanic: 'draw', value: 3, cardSet: 'expansion_4', color: 'text-amber-300', borderColor: 'border-amber-300', shadowColor: 'rgba(252,211,77,0.5)', artSrc: '/cards/neutral9.webp' }),
+  defineSpell({ id: 'neutral10' as SpellType, name: '万灵药剂', manaCost: 4, damage: 0, rarity: 'mythic', mechanic: 'heal', value: 10, cardSet: 'expansion_4', color: 'text-pink-300', borderColor: 'border-pink-300', shadowColor: 'rgba(249,168,212,0.5)', artSrc: '/cards/neutral10.webp', armorGain: 5 }),
+
+  // --- DUAL ELEMENT ---
+  defineSpell({
+    id: 'dual_fire_vine' as SpellType, name: '焦土重生', manaCost: 5, damage: 4, rarity: 'mythic', mechanic: 'burn',
+    value: 2, effectDuration: 1, cardSet: 'expansion_4',
+    description: '造成4点伤害并灼烧2。恢复3点生命值。', shortDesc: '4伤+灼烧+回3',
+    color: 'text-purple-400', borderColor: 'border-purple-400', shadowColor: 'rgba(167,139,250,0.5)',
+    artSrc: '/cards/dual_fire_vine.webp',
+  }),
+  defineSpell({
+    id: 'dual_ice_rock' as SpellType, name: '冰岩壁垒', manaCost: 5, damage: 3, rarity: 'mythic', mechanic: 'freeze',
+    armorGain: 5, effectDuration: 1, cardSet: 'expansion_4',
+    description: '造成3点伤害并冻结。获得5点护甲。', shortDesc: '3伤+冻结+5甲',
+    color: 'text-purple-400', borderColor: 'border-purple-400', shadowColor: 'rgba(167,139,250,0.5)',
+    artSrc: '/cards/dual_ice_rock.webp',
+  }),
 ];
 
-export const STANDARD_SETS: CardSet[] = ['core', 'classic', 'tournament', 'expansion_1', 'expansion_2', 'expansion_3'];
-export const WILD_SETS: CardSet[] = ['core', 'classic', 'tournament', 'legacy', 'expansion_1', 'expansion_2', 'expansion_3'];
+export const STANDARD_SETS: CardSet[] = ['core', 'classic', 'tournament', 'expansion_1', 'expansion_2', 'expansion_3', 'expansion_4'];
+export const WILD_SETS: CardSet[] = ['core', 'classic', 'tournament', 'legacy', 'expansion_1', 'expansion_2', 'expansion_3', 'expansion_4'];
 
 export const PRESET_DECKS: { name: string; cards: SpellType[]; description: string; style: 'aggro' | 'control' | 'combo' }[] = [
   {

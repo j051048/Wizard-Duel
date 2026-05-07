@@ -13,9 +13,9 @@ export type Rarity = "common" | "rare" | "mythic" | "legendary";
 // [A-3] 新增 charge/divine_shield/deathrattle/aura/summon
 export type Mechanic = "burn" | "tangle" | "freeze" | "charge" | "fortify" | "heal" | "aoe" | "draw" | "silence" | "skip" | "divine_shield" | "deathrattle" | "aura" | "summon" | "poison" | "secret" | "lifesteal" | "discover" | "transform" | "cleave" | "extra_turn" | "copy_spell" | "mana_ramp";
 
-export type CardSet = "core" | "classic" | "tournament" | "legacy" | "expansion_1" | "expansion_2" | "expansion_3";
+export type CardSet = "core" | "classic" | "tournament" | "legacy" | "expansion_1" | "expansion_2" | "expansion_3" | "expansion_4";
 
-export type GameMode = "standard" | "wild" | "dungeon";
+export type GameMode = "standard" | "wild" | "dungeon" | "arena" | "tavern_brawl" | "endless_tower";
 
 // [P1-1] Target selection system
 export type TargetMode = 'auto' | 'hero_or_minion' | 'minion_only' | 'hero_only';

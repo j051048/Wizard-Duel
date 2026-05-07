@@ -20,6 +20,7 @@ import { QuestManager } from '../services/QuestManager';
 import { calculatePayout } from '../services/gameLogic';
 import { BattlePassService } from '../services/BattlePassService';
 import { AchievementService } from '../services/AchievementService';
+import { DailyQuestService } from '../services/DailyQuestService';
 import { useToastStore } from '../stores/useToastStore';
 import { audioBridge } from './useAudioManager';
 import { AnalyticsService } from '../services/AnalyticsService';
@@ -187,6 +188,23 @@ export function useGameEndHandler({
     }
     const damage = opponentMaxMana - opponentHP;
     if (damage > 0) QuestManager.updateProgress('deal_damage', damage);
+
+    // 每日/每周任务进度更新
+    DailyQuestService.updateProgress('complete_games', 1);
+    DailyQuestService.updateProgress('play_cards', 1);
+    if (result === 'WIN') {
+      DailyQuestService.updateProgress('win_games', 1);
+    }
+    if (damage > 0) {
+      DailyQuestService.updateProgress('deal_damage', damage);
+      if (damage >= 15) {
+        DailyQuestService.updateProgress('deal_single_game_damage', damage);
+      }
+    }
+    const mainElement = playerCard.split('_')[0];
+    if (['fire', 'ice', 'thunder', 'vine', 'rock'].includes(mainElement)) {
+      DailyQuestService.updateProgress('play_element', 1, mainElement);
+    }
 
     const bpXP = result === 'WIN' ? 50 : 10;
     BattlePassService.addXP(bpXP);

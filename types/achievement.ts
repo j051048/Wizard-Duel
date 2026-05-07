@@ -15,7 +15,14 @@ export type AchievementConditionType =
   | 'total_damage'
   | 'total_games'
   | 'legendary_owned'
-  | 'minion_summoned';
+  | 'minion_summoned'
+  | 'arena_complete'
+  | 'arena_high_wins'
+  | 'arena_perfect'
+  | 'tower_floor'
+  | 'guild_joined'
+  | 'guild_contribution'
+  | 'daily_streak';
 
 export interface AchievementCondition {
   type: AchievementConditionType;

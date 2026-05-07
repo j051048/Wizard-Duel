@@ -51,6 +51,23 @@ export function useAppRouting({ gameLoopActions, audioActions }: UseAppRoutingDe
       ui.setDungeonRun(newRun);
       ui.setGameState('DUNGEON_MAP');
       audioActions.playBgm('lobby');
+    } else if (mode === 'arena') {
+      ui.setGameMode(mode);
+      ui.setGameState('ARENA');
+      audioActions.playBgm('lobby');
+    } else if (mode === 'tavern_brawl') {
+      ui.setGameMode(mode);
+      ui.setGameState('TAVERN_BRAWL');
+      audioActions.playBgm('lobby');
+    } else if (mode === 'endless_tower') {
+      if (!selectedDeck) {
+        toast.warning('需要牌组', '无尽塔需要先在牌组编辑器中选择一个起始牌组！');
+        ui.setGameState('LOBBY');
+        return;
+      }
+      ui.setGameMode(mode);
+      ui.setGameState('ENDLESS_TOWER');
+      audioActions.playBgm('lobby');
     } else {
       ui.setGameMode(mode);
       ui.setGameState('LOBBY');

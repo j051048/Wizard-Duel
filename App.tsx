@@ -48,6 +48,10 @@ const PvpStateSync = React.lazy(() => import('./components/PvpStateSync').then(m
 const AchievementPanel = React.lazy(() => import('./components/AchievementPanel'));
 const RankedLadder = React.lazy(() => import('./components/RankedLadder'));
 const FriendsPage = React.lazy(() => import('./components/social/FriendsPage'));
+const ArenaScreen = React.lazy(() => import('./components/ArenaScreen').then(m => ({ default: m.ArenaScreen })));
+const TavernBrawlScreen = React.lazy(() => import('./components/TavernBrawlScreen').then(m => ({ default: m.TavernBrawlScreen })));
+const EndlessTowerScreen = React.lazy(() => import('./components/EndlessTowerScreen').then(m => ({ default: m.EndlessTowerScreen })));
+const GuildScreen = React.lazy(() => import('./components/GuildScreen').then(m => ({ default: m.GuildScreen })));
 
 // Immediate Components
 const ResultsModal = React.lazy(() => import('./components/ResultsModal').then(m => ({ default: m.ResultsModal })));
@@ -381,6 +385,22 @@ function App() {
                 }
               }}
             />
+          )}
+
+          {uiData.gameState === 'ARENA' && (
+            <ArenaScreen onBack={() => uiActions.setGameState('LOBBY')} />
+          )}
+
+          {uiData.gameState === 'TAVERN_BRAWL' && (
+            <TavernBrawlScreen onBack={() => uiActions.setGameState('LOBBY')} />
+          )}
+
+          {uiData.gameState === 'ENDLESS_TOWER' && (
+            <EndlessTowerScreen onBack={() => uiActions.setGameState('LOBBY')} />
+          )}
+
+          {uiData.gameState === 'GUILD' && (
+            <GuildScreen onBack={() => uiActions.setGameState('LOBBY')} />
           )}
 
           {uiData.gameState === 'DECK_BUILDER' && (
