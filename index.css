@@ -342,6 +342,13 @@
     backface-visibility: hidden;
     perspective: 1000px;
   }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
   .animate-bg-breathing {
     animation: bg-breathing 15s ease-in-out infinite;
     will-change: transform, opacity;

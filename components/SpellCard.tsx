@@ -65,7 +65,7 @@ export const SpellCard = memo<SpellCardProps>(({
   // [Phase 2] 卡牌切换时重置错误状态，避免旧卡牌的加载失败影响新卡牌
   useEffect(() => {
     setImgError(false);
-  }, [spell?.id]);
+  }, [spell?.id, spell?.artSrc]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (disabled || isFaceDown) return;
@@ -231,26 +231,19 @@ export const SpellCard = memo<SpellCardProps>(({
                       decoding="async"
                       draggable={false}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                      style={{ 
+                      style={{
                         imageRendering: 'auto',
                         WebkitBackfaceVisibility: 'hidden',
                         backfaceVisibility: 'hidden',
                         transform: 'translateZ(0)'
                       }}
                       onError={() => {
-                        console.error(`Failed to load spell image: ${spell.artSrc} for spell ${spell.id}`);
                         setImgError(true);
                       }}
                      />
-                  ) : spell.artSrc ? (
-                     // artSrc 存在但图片未加载 — 用卡背占位
-                     <img
-                      src="/ui/card_back.webp"
-                      alt=""
-                      className="w-full h-full object-cover opacity-60"
-                     />
                   ) : (
-                     <div className="flex items-center justify-center h-full text-6xl drop-shadow-2xl grayscale-[0.2] group-hover:grayscale-0 transition-all">{spell.emoji}</div>
+                     // 图片加载失败或无 artSrc — 始终显示 emoji 兜底，保证卡牌不空白
+                     <div className="flex items-center justify-center h-full text-6xl drop-shadow-2xl grayscale-[0.2] group-hover:grayscale-0 transition-all">{spell.emoji || '🃏'}</div>
                   )}
                </div>
           </div>

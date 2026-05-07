@@ -159,11 +159,11 @@ const BattleHand: React.FC<BattleHandProps> = ({
     );
   }
 
-    /* ====== 桌面端：平铺排列布局 ====== */
+    /* ====== 桌面端：平铺排列布局（可横向滚动） ====== */
   return (
     <div
-      className="flex justify-center items-end gap-2 pointer-events-auto"
-      style={{ maxWidth: '900px', margin: '0 auto' }}
+      className="flex items-end gap-2 pointer-events-auto overflow-x-auto overflow-y-visible scrollbar-hide px-4 pb-2"
+      style={{ maxWidth: '95vw' }}
     >
       {hand.map((id, index) => {
         const isAffordable = playableCards.includes(id);
@@ -175,7 +175,7 @@ const BattleHand: React.FC<BattleHandProps> = ({
           <div
             key={`${id}-${index}`}
             className={`
-              relative cursor-pointer transition-all duration-200 ease-out
+              relative cursor-pointer transition-all duration-200 ease-out flex-shrink-0
               ${isBeingDragged ? 'opacity-0' : ''}
               ${isSelectedForAction ? 'z-[100] -translate-y-16 scale-110' : ''}
               ${isHovered && !isSelectedForAction ? 'z-[50] -translate-y-10 scale-105' : ''}
