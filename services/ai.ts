@@ -456,6 +456,8 @@ export const pickBestSpellForAI = (
   // --- Step 1: Hero skill ---
   if (!state.opponentHeroSkillUsed) {
     const heroSkills: SpellType[] = ['hero_fire', 'hero_vine', 'hero_ice', 'hero_thunder', 'hero_rock'];
+    
+    // [P1 Fix] 动态获取当前元素分布，优先选择匹配手牌最多的元素技能
     const elementCounts: Record<string, number> = {};
     state.opponentHand.forEach(cardId => {
       const el = cardId.split(/\d/)[0];

@@ -325,7 +325,7 @@ export const SPELLS: Spell[] = [
   // ============================================================
 
   // --- FIRE (fire8 ~ fire14) ---
-  defineSpell({ id: 'fire8' as SpellType, name: '小火球', manaCost: 1, damage: 2, rarity: 'common', mechanic: 'burn', cardSet: 'expansion_1',   artSrc: '/cards/fire8.webp',
+  defineSpell({ id: 'fire8', name: '小火球', manaCost: 1, damage: 2, rarity: 'common', mechanic: 'burn', cardSet: 'expansion_1',   artSrc: '/cards/fire8.webp',
 }),
   defineSpell({ id: 'fire9' as SpellType, name: '烈焰冲击', manaCost: 2, damage: 3, rarity: 'rare', mechanic: 'burn', effectDuration: 1, value: 2, cardSet: 'expansion_1',   artSrc: '/cards/fire9.webp',
 }),

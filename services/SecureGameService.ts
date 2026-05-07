@@ -130,53 +130,54 @@ export const SecureGameService = {
   },
 
   /**
-   * 安全战斗结算
-   * [P0 Fix #5] 服务端验证战斗结果
+   * 安全战斗结算 (Rank System v2.0)
+   * [P0 Fix #5] 服务端验证战斗结果，自动计算金币与积分
    */
   async settleBattle(
     userId: string,
-    result: 'win' | 'loss' | 'draw',
-    goldEarned: number,
-    xpEarned: number,
-    opponentName: string,
-    turns: number,
-    battleHash?: string
-  ): Promise<BattleSettleResult> {
+    betAmount: number,
+    result: 'WIN' | 'LOSS' | 'DRAW',
+    playerSpell: any,
+    opponentSpell: any,
+    metadata: any = {}
+  ): Promise<any> {
     if (!isSupabaseConfigured) {
       console.warn('[SecureGameService] Supabase not configured, using mock');
-      return { success: true, newGold: 1000 + goldEarned, newXp: xpEarned };
+      return { 
+        success: true, 
+        new_score: 100, 
+        new_balance: 1000 + (result === 'WIN' ? betAmount * 2 : 0) 
+      };
     }
 
     try {
       const { data, error } = await supabase.rpc('settle_battle_secure', {
         p_user_id: userId,
+        p_bet_amount: betAmount,
         p_result: result,
-        p_gold_earned: goldEarned,
-        p_xp_earned: xpEarned,
-        p_opponent_name: opponentName,
-        p_turns: turns,
-        p_battle_hash: battleHash || null
+        p_player_spell: playerSpell,
+        p_opponent_spell: opponentSpell,
+        p_meta: metadata
       });
 
       if (error) {
         console.error('[SecureGameService] settleBattle error:', error);
-        return { success: false, newGold: 0, newXp: 0, error: error.message };
+        return { success: false, error: error.message };
       }
 
-      const res = data?.[0];
+      // RPC 返回的是单个 JSON 对象
+      const res = data;
       if (!res?.success) {
         return { 
           success: false, 
-          newGold: res?.new_gold || 0, 
-          newXp: res?.new_xp || 0,
-          error: res?.error_message || 'Unknown error' 
+          error: res?.error || 'Unknown settlement error' 
         };
       }
 
-      return { success: true, newGold: res.new_gold, newXp: res.new_xp };
+      return res;
     } catch (e: any) {
       console.error('[SecureGameService] settleBattle exception:', e);
-      return { success: false, newGold: 0, newXp: 0, error: e.message };
+      return { success: false, error: e.message };
     }
   },
 
