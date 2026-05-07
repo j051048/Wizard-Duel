@@ -44,31 +44,6 @@ const getMechanicIcon = (mechanic?: string) => {
   }
 };
 
-// 根据卡牌ID推断元素类型
-const getElementFromId = (id: string): string => {
-  if (id.startsWith('fire') || id.startsWith('hero_fire')) return 'fire';
-  if (id.startsWith('vine') || id.startsWith('hero_vine')) return 'nature';
-  if (id.startsWith('ice') || id.startsWith('hero_ice')) return 'water';
-  if (id.startsWith('thunder') || id.startsWith('hero_thunder')) return 'wind';
-  if (id.startsWith('rock') || id.startsWith('hero_rock')) return 'earth';
-  if (id === 'healing') return 'water';
-  if (id === 'aoe' || id === 'draw') return 'wind';
-  if (id === 'silence') return 'earth';
-  return 'wind'; // 默认
-};
-
-// 映射元素属性到边框素材
-const getFrameImage = (element: string) => {
-  switch (element) {
-    case 'fire': return '/ui/frame_fire.webp';
-    case 'water': return '/ui/frame_water.webp';
-    case 'wind': return '/ui/frame_wind.webp';
-    case 'earth': 
-    case 'nature': return '/ui/frame_earth.webp';
-    default: return '/ui/frame_wind.webp'; // Fallback
-  }
-};
-
 export const SpellCard = memo<SpellCardProps>(({ 
   spell, 
   isSelected, 
